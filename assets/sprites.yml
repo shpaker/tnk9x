@@ -1,0 +1,157 @@
+base:
+  flag:
+    x: 80
+    y: 64
+    w: 16
+    h: 16
+  castle:
+    x: 64
+    y: 64
+    w: 16
+    h: 16
+  base_destroyed:
+    x: 96
+    y: 64
+    w: 16
+    h: 16
+
+blocks:
+  brick:
+    x: 0
+    y: 64
+    w: 16
+    h: 16
+  steel:
+    x: 16
+    y: 64
+    w: 16
+    h: 16
+  forest:
+    x: 32
+    y: 64
+    w: 16
+    h: 16
+  water:
+    x: 48
+    y: 64
+    w: 16
+    h: 16
+  ice:
+    x: 64
+    y: 64
+    w: 16
+    h: 16
+
+bonuses:
+  helmet:
+    x: 0
+    y: 16
+    w: 16
+    h: 16
+  clock:
+    x: 16
+    y: 16
+    w: 16
+    h: 16
+  shovel:
+    x: 32
+    y: 16
+    w: 16
+    h: 16
+  star:
+    x: 48
+    y: 16
+    w: 16
+    h: 16
+  grenade:
+    x: 64
+    y: 16
+    w: 16
+    h: 16
+  tank_life:
+    x: 80
+    y: 16
+    w: 16
+    h: 16
+
+effects:
+  explosion_1:
+    x: 0
+    y: 80
+    w: 16
+    h: 16
+  explosion_2:
+    x: 16
+    y: 80
+    w: 16
+    h: 16
+  explosion_3:
+    x: 32
+    y: 80
+    w: 16
+    h: 16
+
+enemies:
+  enemy_basic:
+    x: 0
+    y: 0
+    w: 16
+    h: 16
+  enemy_fast:
+    x: 16
+    y: 0
+    w: 16
+    h: 16
+  enemy_power:
+    x: 32
+    y: 0
+    w: 16
+    h: 16
+  enemy_armor:
+    x: 48
+    y: 0
+    w: 16
+    h: 16
+  enemy_boss:
+    x: 64
+    y: 0
+    w: 16
+    h: 16
+  enemy_bonus:
+    x: 80
+    y: 0
+    w: 16
+    h: 16
+
+ui:
+  eagle_badge:
+    x: 0
+    y: 32
+    w: 16
+    h: 16
+  enemy_badge:
+    x: 16
+    y: 32
+    w: 16
+    h: 16
+  player_badge:
+    x: 32
+    y: 32
+    w: 16
+    h: 16
+  score_star:
+    x: 48
+    y: 32
+    w: 16
+    h: 16
+  helmet_icon:
+    x: 64
+    y: 32
+    w: 16
+    h: 16
+  clock_icon:
+    x: 80
+    y: 32
+    w: 16
+    h: 16
+
