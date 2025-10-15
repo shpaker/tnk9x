@@ -1,5 +1,22 @@
 package config
 
+import (
+	"os"
+	"strconv"
+)
+
+// AppConfig содержит настройки приложения
+type AppConfig struct {
+	Name         string `json:"name"`
+	ScreenWidth  int
+	ScreenHeight int
+}
+
+// LogConfig содержит настройки логирования
+type LogConfig struct {
+	Level string `json:"level"`
+}
+
 // Config содержит конфигурацию приложения
 type Config struct {
 	AppConfig
@@ -20,4 +37,22 @@ func Load() (*Config, error) {
 	}
 
 	return cfg, nil
+}
+
+// getEnv получает переменную окружения или возвращает значение по умолчанию
+func getEnv(key, defaultValue string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return defaultValue
+}
+
+// getEnvAsInt получает переменную окружения как int или возвращает значение по умолчанию
+func getEnvAsInt(key string, defaultValue int) int {
+	if value := os.Getenv(key); value != "" {
+		if intValue, err := strconv.Atoi(value); err == nil {
+			return intValue
+		}
+	}
+	return defaultValue
 }

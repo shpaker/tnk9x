@@ -2,7 +2,10 @@ module github.com/shpaker/gonflict
 
 go 1.24.3
 
-require github.com/hajimehoshi/ebiten/v2 v2.9.1
+require (
+	github.com/hajimehoshi/ebiten/v2 v2.9.1
+	gopkg.in/yaml.v3 v3.0.1
+)
 
 require (
 	github.com/ebitengine/gomobile v0.0.0-20250923094054-ea854a63cce1 // indirect
@@ -11,5 +14,4 @@ require (
 	github.com/jezek/xgb v1.1.1 // indirect
 	golang.org/x/sync v0.17.0 // indirect
 	golang.org/x/sys v0.36.0 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

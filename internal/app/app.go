@@ -8,6 +8,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/shpaker/gonflict/internal/config"
 	"github.com/shpaker/gonflict/internal/interfaces"
+	"github.com/shpaker/gonflict/internal/repositories"
 	services "github.com/shpaker/gonflict/internal/services"
 	"github.com/shpaker/gonflict/internal/states"
 )
@@ -41,10 +42,25 @@ func (app *App) Draw(screen *ebiten.Image) {
 
 func New(cfg *config.Config) *App {
 	svc := services.NewWindowService()
+
+	// Создаем репозиторий ассетов
+	assetsRepo := repositories.NewAssetsService("assets")
+
+	// Создаем репозиторий спрайтов
+	spritesRepo, err := repositories.NewSpritesRepository(assetsRepo)
+	if err != nil {
+		// Логируем ошибку и падаем
+		fmt.Printf("Ошибка создания SpritesRepository: %v\n", err)
+		panic(err)
+	}
+
+	// Создаем GameState с переданным репозиторием спрайтов
+	gameState := states.NewGameState(spritesRepo)
+
 	return &App{
 		config:  cfg,
 		service: svc,
-		State:   &states.GameState{},
+		State:   gameState,
 	}
 }
 

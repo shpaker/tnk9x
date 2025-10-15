@@ -4,6 +4,7 @@ import (
 	"image"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/shpaker/gonflict/internal/models"
 )
 
 // IAssetsRepository определяет интерфейс для работы с ассетами
@@ -19,4 +20,10 @@ type IAssetsRepository interface {
 type ISpritesRepository interface {
 	// GetSprite возвращает изображение спрайта по группе и идентификатору
 	GetSprite(group_id string, sprite_id string) (*ebiten.Image, error)
+}
+
+// ILevelsRepository определяет интерфейс для работы с уровнями
+type ILevelsRepository interface {
+	// GetLevel загружает уровень по номеру и возвращает его данные
+	GetLevel(num int) (*models.Level, error)
 }
