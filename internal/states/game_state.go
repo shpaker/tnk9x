@@ -1,13 +1,16 @@
 package states
 
 import (
+	"image/color"
+
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/vector"
 	"github.com/shpaker/gonflict/internal/interfaces"
 	"github.com/shpaker/gonflict/internal/services"
 )
 
 type GameState struct {
-	worldService services.WorldService
+	BattleFieldService services.BattleFieldService
 }
 
 // NewGameState создает новое состояние игры с переданным репозиторием спрайтов
@@ -19,7 +22,7 @@ func NewGameState(
 		return GameState{}, err
 	}
 	return GameState{
-		worldService: services.NewWorldService(level),
+		BattleFieldService: services.NewBattleFieldService(level),
 	}, nil
 }
 
@@ -28,14 +31,14 @@ func (state GameState) Update() (interfaces.State, error) {
 }
 
 func (state GameState) Draw(screen *ebiten.Image) {
-	level := state.worldService.Level
-	for _, block := range level {
-		if block.Image == nil {
-			continue
-		}
-		op := &ebiten.DrawImageOptions{}
-		// Предполагаем, что блоки имеют координаты X, Y в WorldPosition
-		op.GeoM.Translate(float64(block.WorldPosition.X*8), float64(block.WorldPosition.Y*8))
-		screen.DrawImage(block.Image, op)
-	}
+	vector.FillRect(
+		screen,
+		float32(0),
+		float32(0),
+		float32(screen.Bounds().Dx()),
+		float32(screen.Bounds().Dy()),
+		color.Gray{Y: 128},
+		false,
+	)
+	state.BattleFieldService.Draw(screen)
 }

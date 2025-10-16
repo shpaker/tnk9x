@@ -7,6 +7,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/shpaker/gonflict/internal/config"
+	"github.com/shpaker/gonflict/internal/constants"
 	"github.com/shpaker/gonflict/internal/interfaces"
 	"github.com/shpaker/gonflict/internal/repositories"
 	services "github.com/shpaker/gonflict/internal/services"
@@ -21,7 +22,7 @@ type App struct {
 
 // ebiten game interface
 func (app *App) Layout(outsideWidth, outsideHeight int) (int, int) {
-	return app.config.AppConfig.ScreenWidth, app.config.AppConfig.ScreenHeight
+	return constants.ScreenWidth, constants.ScreenHeight
 }
 
 func (app *App) Update() error {
@@ -37,7 +38,7 @@ func (app *App) Update() error {
 
 func (app *App) Draw(screen *ebiten.Image) {
 	app.State.Draw(screen)
-	ebitenutil.DebugPrint(screen, fmt.Sprintf("TPS: %0.2f", ebiten.ActualTPS()))
+	ebitenutil.DebugPrintAt(screen, fmt.Sprintf("TPS: %.2f,\nFPS: %.2f", ebiten.ActualTPS(), ebiten.ActualFPS()), 0, 0)
 }
 
 func New(cfg *config.Config) *App {
@@ -73,7 +74,7 @@ func New(cfg *config.Config) *App {
 }
 
 func (app *App) Run(ctx context.Context) error {
-	ebiten.SetWindowSize(app.config.AppConfig.ScreenWidth, app.config.AppConfig.ScreenHeight)
+	ebiten.SetWindowSize(constants.ScreenWidth*3, constants.ScreenHeight*3)
 	ebiten.SetWindowTitle(app.config.AppConfig.Name)
 
 	if err := ebiten.RunGame(app); err != nil {

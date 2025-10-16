@@ -7,9 +7,7 @@ import (
 
 // AppConfig содержит настройки приложения
 type AppConfig struct {
-	Name         string `json:"name"`
-	ScreenWidth  int
-	ScreenHeight int
+	Name string `json:"name"`
 }
 
 // LogConfig содержит настройки логирования
@@ -27,9 +25,7 @@ type Config struct {
 func Load() (*Config, error) {
 	cfg := &Config{
 		AppConfig{
-			Name:         getEnv("APP_NAME", "gonflict"),
-			ScreenWidth:  640,
-			ScreenHeight: 480,
+			Name: getEnv("APP_NAME", "gonflict"),
 		},
 		LogConfig{
 			Level: getEnv("LOG_LEVEL", "info"),
