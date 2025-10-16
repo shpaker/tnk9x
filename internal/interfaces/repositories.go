@@ -27,3 +27,9 @@ type ILevelsService interface {
 	// GetLevel загружает уровень по номеру и возвращает его данные
 	GetLevel(num int) (models.Level, error)
 }
+
+// IPlayerService определяет интерфейс для работы с игроком
+type IPlayerService interface {
+	// GetPlayer возвращает данные игрока с начальными параметрами
+	GetPlayer() (models.Player, error)
+}

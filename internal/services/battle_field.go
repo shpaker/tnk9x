@@ -10,11 +10,12 @@ import (
 )
 
 type BattleFieldService struct {
-	Level models.Level
+	Level  models.Level
+	Player models.Player
 }
 
-func NewBattleFieldService(level models.Level) BattleFieldService {
-	return BattleFieldService{Level: level}
+func NewBattleFieldService(level models.Level, player models.Player) BattleFieldService {
+	return BattleFieldService{Level: level, Player: player}
 }
 
 func (s *BattleFieldService) Draw(screen *ebiten.Image) {
@@ -27,6 +28,8 @@ func (s *BattleFieldService) Draw(screen *ebiten.Image) {
 		color.Black,
 		false,
 	)
+
+	// Draw blocks on the battle field
 	for _, block := range s.Level {
 		if block.Image == nil {
 			continue
@@ -38,5 +41,15 @@ func (s *BattleFieldService) Draw(screen *ebiten.Image) {
 			float64(constants.BattleFieldOffset+block.WorldPosition.Y*constants.TileMinSize),
 		)
 		screen.DrawImage(block.Image, op)
+	}
+
+	// Draw player on the battle field
+	if s.Player.Image != nil {
+		op := &ebiten.DrawImageOptions{}
+		op.GeoM.Translate(
+			float64(constants.BattleFieldOffset+s.Player.WorldPosition.X),
+			float64(constants.BattleFieldOffset+s.Player.WorldPosition.Y),
+		)
+		screen.DrawImage(s.Player.Image, op)
 	}
 }

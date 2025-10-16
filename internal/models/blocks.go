@@ -21,4 +21,17 @@ type Block struct {
 	WorldPosition Position
 }
 
+// type TankVersion struct {
+// 	AnimationFrames [2]*ebiten.Image
+// }
+// type TankVariation = [4]TankVersion
+
+type Player struct {
+	// TankVariation
+	Image *ebiten.Image
+	// Level         uint8
+	SpawnPosition Position
+	WorldPosition Position
+}
+
 type Level []Block

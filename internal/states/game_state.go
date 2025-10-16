@@ -16,13 +16,20 @@ type GameState struct {
 // NewGameState создает новое состояние игры с переданным репозиторием спрайтов
 func NewGameState(
 	levelService interfaces.ILevelsService,
+	playerService interfaces.IPlayerService,
 ) (GameState, error) {
 	level, err := levelService.GetLevel(1)
 	if err != nil {
 		return GameState{}, err
 	}
+
+	player, err := playerService.GetPlayer()
+	if err != nil {
+		return GameState{}, err
+	}
+
 	return GameState{
-		BattleFieldService: services.NewBattleFieldService(level),
+		BattleFieldService: services.NewBattleFieldService(level, player),
 	}, nil
 }
 

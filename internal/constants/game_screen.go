@@ -2,6 +2,7 @@ package constants
 
 const (
 	TileMinSize             = 8
+	TankSpriteSize          = 16
 	BattleFieldBlocksLength = 26
 	UpDownLeftPanelLength   = 2
 	RightPanelLength        = 4

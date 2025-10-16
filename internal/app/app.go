@@ -58,8 +58,11 @@ func New(cfg *config.Config) *App {
 	// Создаем сервис уровней
 	levelsService := services.NewLevelsService(assetsRepo, spritesRepo)
 
-	// Создаем GameState с переданным сервисом уровней
-	gameState, err := states.NewGameState(levelsService)
+	// Создаем сервис игрока
+	playerService := services.NewPlayerService(spritesRepo)
+
+	// Создаем GameState с переданными сервисами
+	gameState, err := states.NewGameState(levelsService, playerService)
 	if err != nil {
 		// Логируем ошибку и падаем
 		fmt.Printf("Ошибка создания GameState: %v\n", err)
