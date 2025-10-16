@@ -22,8 +22,8 @@ type ISpritesRepository interface {
 	GetSprite(group_id string, sprite_id string) (*ebiten.Image, error)
 }
 
-// ILevelsRepository определяет интерфейс для работы с уровнями
-type ILevelsRepository interface {
+// ILevelsService определяет интерфейс для работы с уровнями
+type ILevelsService interface {
 	// GetLevel загружает уровень по номеру и возвращает его данные
-	GetLevel(num int) (*models.Level, error)
+	GetLevel(num int) (models.Level, error)
 }

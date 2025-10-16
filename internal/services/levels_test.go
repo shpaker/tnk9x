@@ -1,11 +1,13 @@
-package repositories
+package services
 
 import (
 	"errors"
 	"image"
 	"testing"
 
+	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/shpaker/gonflict/internal/interfaces"
+	"github.com/shpaker/gonflict/internal/types"
 )
 
 // MockAssetsRepository - простой мок для тестирования
@@ -34,9 +36,23 @@ func (m *MockAssetsRepository) AddAsset(name string, data []byte) {
 	m.assets[name] = data
 }
 
+// MockSpritesRepository - простой мок для тестирования спрайтов
+type MockSpritesRepository struct{}
+
+func NewMockSpritesRepository() *MockSpritesRepository {
+	return &MockSpritesRepository{}
+}
+
+func (m *MockSpritesRepository) GetSprite(group_id string, sprite_id string) (*ebiten.Image, error) {
+	// Создаем простое изображение 8x8 для тестов
+	img := ebiten.NewImage(8, 8)
+	return img, nil
+}
+
 func TestGetLevel_Positive(t *testing.T) {
 	// Создаем мок репозитория
 	mockRepo := NewMockAssetsRepository()
+	mockSpritesRepo := NewMockSpritesRepository()
 
 	// Создаем тестовую карту 26x26 с несколькими блоками
 	levelData := []byte(`..........................
@@ -68,11 +84,11 @@ func TestGetLevel_Positive(t *testing.T) {
 
 	mockRepo.AddAsset("levels/1", levelData)
 
-	// Создаем репозиторий уровней
-	levelsRepo := NewLevelsRepository(mockRepo)
+	// Создаем сервис уровней
+	levelsService := NewLevelsService(mockRepo, mockSpritesRepo)
 
 	// Вызываем функцию
-	level, err := levelsRepo.GetLevel(1)
+	level, err := levelsService.GetLevel(1)
 
 	// Проверяем результат
 	if err != nil {
@@ -84,18 +100,18 @@ func TestGetLevel_Positive(t *testing.T) {
 	}
 
 	// Проверяем, что уровень не пустой (должны быть блоки # и @)
-	if len(*level) == 0 {
+	if len(level) == 0 {
 		t.Fatal("Уровень пустой")
 	}
 
 	// Проверяем, что есть блоки типа brick
 	foundBrick := false
 	foundSteel := false
-	for _, block := range *level {
-		if block.Name == "brick" {
+	for _, block := range level {
+		if block.Data.Name == types.Brick {
 			foundBrick = true
 		}
-		if block.Name == "steel" {
+		if block.Data.Name == types.Steel {
 			foundSteel = true
 		}
 	}
@@ -112,6 +128,7 @@ func TestGetLevel_Positive(t *testing.T) {
 func TestGetLevel_InvalidCharacter(t *testing.T) {
 	// Создаем мок репозитория
 	mockRepo := NewMockAssetsRepository()
+	mockSpritesRepo := NewMockSpritesRepository()
 
 	// Создаем карту с недопустимым символом (правильного размера 26x26)
 	levelData := []byte(`..........................
@@ -143,11 +160,11 @@ func TestGetLevel_InvalidCharacter(t *testing.T) {
 
 	mockRepo.AddAsset("levels/1", levelData)
 
-	// Создаем репозиторий уровней
-	levelsRepo := NewLevelsRepository(mockRepo)
+	// Создаем сервис уровней
+	levelsService := NewLevelsService(mockRepo, mockSpritesRepo)
 
 	// Вызываем функцию
-	_, err := levelsRepo.GetLevel(1)
+	_, err := levelsService.GetLevel(1)
 
 	// Проверяем, что получили ошибку
 	if err == nil {
@@ -162,6 +179,7 @@ func TestGetLevel_InvalidCharacter(t *testing.T) {
 func TestGetLevel_WrongSize(t *testing.T) {
 	// Создаем мок репозитория
 	mockRepo := NewMockAssetsRepository()
+	mockSpritesRepo := NewMockSpritesRepository()
 
 	// Создаем карту неправильного размера (26 строк, но одна строка короче)
 	levelData := []byte(`..........................
@@ -194,11 +212,11 @@ func TestGetLevel_WrongSize(t *testing.T) {
 
 	mockRepo.AddAsset("levels/1", levelData)
 
-	// Создаем репозиторий уровней
-	levelsRepo := NewLevelsRepository(mockRepo)
+	// Создаем сервис уровней
+	levelsService := NewLevelsService(mockRepo, mockSpritesRepo)
 
 	// Вызываем функцию
-	_, err := levelsRepo.GetLevel(1)
+	_, err := levelsService.GetLevel(1)
 
 	// Проверяем, что получили ошибку
 	if err == nil {
@@ -210,9 +228,10 @@ func TestGetLevel_WrongSize(t *testing.T) {
 	}
 }
 
-func TestILevelsRepository_Interface(t *testing.T) {
+func TestILevelsService_Interface(t *testing.T) {
 	// Создаем мок репозитория
 	mockRepo := NewMockAssetsRepository()
+	mockSpritesRepo := NewMockSpritesRepository()
 
 	// Создаем тестовую карту
 	levelData := []byte(`..........................
@@ -244,11 +263,11 @@ func TestILevelsRepository_Interface(t *testing.T) {
 
 	mockRepo.AddAsset("levels/1", levelData)
 
-	// Создаем репозиторий уровней через интерфейс
-	var levelsRepo interfaces.ILevelsRepository = NewLevelsRepository(mockRepo)
+	// Создаем сервис уровней через интерфейс
+	var levelsService interfaces.ILevelsService = NewLevelsService(mockRepo, mockSpritesRepo)
 
 	// Вызываем функцию через интерфейс
-	level, err := levelsRepo.GetLevel(1)
+	level, err := levelsService.GetLevel(1)
 
 	// Проверяем результат
 	if err != nil {
@@ -260,7 +279,7 @@ func TestILevelsRepository_Interface(t *testing.T) {
 	}
 
 	// Проверяем, что уровень не пустой
-	if len(*level) == 0 {
+	if len(level) == 0 {
 		t.Fatal("Уровень пустой")
 	}
 }

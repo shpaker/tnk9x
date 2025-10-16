@@ -54,8 +54,16 @@ func New(cfg *config.Config) *App {
 		panic(err)
 	}
 
-	// Создаем GameState с переданным репозиторием спрайтов
-	gameState := states.NewGameState(spritesRepo)
+	// Создаем сервис уровней
+	levelsService := services.NewLevelsService(assetsRepo, spritesRepo)
+
+	// Создаем GameState с переданным сервисом уровней
+	gameState, err := states.NewGameState(levelsService)
+	if err != nil {
+		// Логируем ошибку и падаем
+		fmt.Printf("Ошибка создания GameState: %v\n", err)
+		panic(err)
+	}
 
 	return &App{
 		config:  cfg,
