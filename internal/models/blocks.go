@@ -37,3 +37,11 @@ type Tank struct {
 }
 
 type Level []Block
+
+type Bullet struct {
+	Image         *ebiten.Image
+	WorldPosition Position
+	Speed         float64
+	Direction     types.Direction
+	Owner         *Tank
+}

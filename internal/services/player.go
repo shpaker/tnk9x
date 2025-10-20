@@ -177,8 +177,9 @@ func (s *PlayerService) Draw(screen *ebiten.Image) {
 	}
 }
 
-func (s *PlayerService) KeyPressed() {
+func (s *PlayerService) KeyPressed() (isShoot bool) {
 	// Rotate the tank if the key is pressed
+	isShoot = false
 	playerRotated := false
 	if ebiten.IsKeyPressed(ebiten.KeyW) && !playerRotated {
 		playerRotated = s.Rotate(types.DirectionUp)
@@ -205,4 +206,11 @@ func (s *PlayerService) KeyPressed() {
 	if inpututil.IsKeyJustReleased(ebiten.KeyD) && s.tank.Direction == types.DirectionRight {
 		s.Stop(false)
 	}
+
+	// Shoot if the space key is pressed
+	if inpututil.IsKeyJustPressed(ebiten.KeySpace) {
+		isShoot = true
+	}
+
+	return isShoot
 }

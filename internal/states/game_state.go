@@ -14,12 +14,14 @@ import (
 type GameState struct {
 	battleFieldService services.BattleFieldService
 	playerService      *services.PlayerService
+	bulletsService     *services.BulletsService
 }
 
 // NewGameState создает новое состояние игры с переданным репозиторием спрайтов
 func NewGameState(
 	levelService interfaces.ILevelsDataService,
 	playerOneService *services.PlayerService,
+	bulletsService *services.BulletsService,
 ) (GameState, error) {
 	level, err := levelService.GetLevel(1)
 	if err != nil {
@@ -33,6 +35,7 @@ func NewGameState(
 	return GameState{
 		battleFieldService: services.NewBattleFieldService(level),
 		playerService:      playerOneService,
+		bulletsService:     bulletsService,
 	}, nil
 }
 
@@ -40,8 +43,16 @@ func (state GameState) Update() (interfaces.State, error) {
 	if ebiten.IsKeyPressed(ebiten.KeyEscape) {
 		return nil, errors.New("exit application")
 	}
-	state.playerService.KeyPressed()
+
+	isShoot := state.playerService.KeyPressed()
+	if isShoot {
+		player, err := state.playerService.GetPlayer()
+		if err == nil {
+			state.bulletsService.AddBullet(player)
+		}
+	}
 	state.playerService.Update(constants.DT, state.battleFieldService.GetBlocks())
+	state.bulletsService.Update(constants.DT)
 	return nil, nil
 }
 
@@ -57,4 +68,5 @@ func (state GameState) Draw(screen *ebiten.Image) {
 	)
 	state.battleFieldService.Draw(screen)
 	state.playerService.Draw(screen)
+	state.bulletsService.Draw(screen)
 }
