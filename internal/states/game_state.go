@@ -41,7 +41,7 @@ func (state GameState) Update() (interfaces.State, error) {
 		return nil, errors.New("exit application")
 	}
 	state.playerService.KeyPressed()
-	state.playerService.Update(constants.DT, state.battleFieldService.GetWallsColliders())
+	state.playerService.Update(constants.DT, state.battleFieldService.GetBlocks())
 	return nil, nil
 }
 

@@ -7,7 +7,6 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/vector"
 	"github.com/shpaker/gonflict/internal/constants"
 	"github.com/shpaker/gonflict/internal/models"
-	"github.com/shpaker/gonflict/internal/types"
 )
 
 type BattleFieldService struct {
@@ -49,18 +48,18 @@ func (s *BattleFieldService) Draw(screen *ebiten.Image) {
 
 }
 
-// GetWallsColliders возвращает список блоков-стен для коллизий
-func (s *BattleFieldService) GetWallsColliders() []*models.Block {
-	var colliders []*models.Block
-	for i := range s.Level {
-		block := &s.Level[i]
-		if block.Data == nil {
-			continue
-		}
-		// Считаем стенами только кирпич и сталь
-		if block.Data.Name == types.Brick || block.Data.Name == types.Steel {
-			colliders = append(colliders, block)
-		}
-	}
-	return colliders
+// GetBlocks возвращает список блоков-стен для коллизий
+func (s *BattleFieldService) GetBlocks() *models.Level {
+	// var colliders []*models.Block
+	// for i := range s.Level {
+	// 	block := &s.Level[i]
+	// 	if block.Data == nil {
+	// 		continue
+	// 	}
+	// 	// Считаем стенами только кирпич и сталь
+	// 	if block.Data.Name == types.Brick || block.Data.Name == types.Steel {
+	// 		colliders = append(colliders, block)
+	// 	}
+	// }
+	return &s.Level
 }
