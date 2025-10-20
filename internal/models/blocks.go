@@ -26,12 +26,14 @@ type Block struct {
 // }
 // type TankVariation = [4]TankVersion
 
-type Player struct {
+type Tank struct {
 	// TankVariation
 	Image *ebiten.Image
 	// Level         uint8
 	SpawnPosition Position
 	WorldPosition Position
+	Speed         float64
+	Direction     types.Direction
 }
 
 type Level []Block

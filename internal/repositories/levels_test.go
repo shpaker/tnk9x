@@ -1,4 +1,4 @@
-package services
+package repositories
 
 import (
 	"errors"
@@ -85,7 +85,7 @@ func TestGetLevel_Positive(t *testing.T) {
 	mockRepo.AddAsset("levels/1", levelData)
 
 	// Создаем сервис уровней
-	levelsService := NewLevelsService(mockRepo, mockSpritesRepo)
+	levelsService := NewLevelsRepository(mockRepo, mockSpritesRepo)
 
 	// Вызываем функцию
 	level, err := levelsService.GetLevel(1)
@@ -161,7 +161,7 @@ func TestGetLevel_InvalidCharacter(t *testing.T) {
 	mockRepo.AddAsset("levels/1", levelData)
 
 	// Создаем сервис уровней
-	levelsService := NewLevelsService(mockRepo, mockSpritesRepo)
+	levelsService := NewLevelsRepository(mockRepo, mockSpritesRepo)
 
 	// Вызываем функцию
 	_, err := levelsService.GetLevel(1)
@@ -213,7 +213,7 @@ func TestGetLevel_WrongSize(t *testing.T) {
 	mockRepo.AddAsset("levels/1", levelData)
 
 	// Создаем сервис уровней
-	levelsService := NewLevelsService(mockRepo, mockSpritesRepo)
+	levelsService := NewLevelsRepository(mockRepo, mockSpritesRepo)
 
 	// Вызываем функцию
 	_, err := levelsService.GetLevel(1)
@@ -264,7 +264,7 @@ func TestILevelsService_Interface(t *testing.T) {
 	mockRepo.AddAsset("levels/1", levelData)
 
 	// Создаем сервис уровней через интерфейс
-	var levelsService interfaces.ILevelsService = NewLevelsService(mockRepo, mockSpritesRepo)
+	var levelsService interfaces.ILevelsDataService = NewLevelsRepository(mockRepo, mockSpritesRepo)
 
 	// Вызываем функцию через интерфейс
 	level, err := levelsService.GetLevel(1)

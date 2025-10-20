@@ -56,7 +56,7 @@ func New(cfg *config.Config) *App {
 	}
 
 	// Создаем сервис уровней
-	levelsService := services.NewLevelsService(assetsRepo, spritesRepo)
+	levelsService := repositories.NewLevelsRepository(assetsRepo, spritesRepo)
 
 	// Создаем сервис игрока
 	playerService := services.NewPlayerService(spritesRepo)

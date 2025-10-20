@@ -1,4 +1,4 @@
-package services
+package repositories
 
 import (
 	"fmt"
@@ -12,25 +12,28 @@ import (
 	"github.com/shpaker/gonflict/internal/types"
 )
 
-type LevelsService struct {
+type LevelsRepository struct {
 	assetsRepository  interfaces.IAssetsRepository
 	spritesRepository interfaces.ISpritesRepository
 }
 
-func NewLevelsService(assetsRepository interfaces.IAssetsRepository, spritesRepository interfaces.ISpritesRepository) interfaces.ILevelsService {
-	return &LevelsService{
+func NewLevelsRepository(
+	assetsRepository interfaces.IAssetsRepository,
+	spritesRepository interfaces.ISpritesRepository,
+) interfaces.ILevelsDataService {
+	return &LevelsRepository{
 		assetsRepository:  assetsRepository,
 		spritesRepository: spritesRepository,
 	}
 }
 
 // getBlockSprite получает спрайт для блока по его типу
-func (s *LevelsService) getBlockSprite(blockType types.BlockType) (*ebiten.Image, error) {
+func (s *LevelsRepository) getBlockSprite(blockType types.BlockType) (*ebiten.Image, error) {
 	return s.spritesRepository.GetSprite("blocks", string(blockType))
 }
 
 // readAndValidateLevelFile читает файл уровня и проверяет его размер
-func (s *LevelsService) readAndValidateLevelFile(levelNumber int) ([]string, error) {
+func (s *LevelsRepository) readAndValidateLevelFile(levelNumber int) ([]string, error) {
 	levelName := "levels/" + strconv.Itoa(levelNumber)
 
 	// Читаем текстовый файл уровня
@@ -51,7 +54,7 @@ func (s *LevelsService) readAndValidateLevelFile(levelNumber int) ([]string, err
 }
 
 // createBlockFromChar создает блок из символа карты
-func (s *LevelsService) createBlockFromChar(charStr string, x, y int) (*models.Block, error) {
+func (s *LevelsRepository) createBlockFromChar(charStr string, x, y int) (*models.Block, error) {
 	// Пропускаем пустые места
 	if charStr == "." {
 		return nil, nil
@@ -73,18 +76,18 @@ func (s *LevelsService) createBlockFromChar(charStr string, x, y int) (*models.B
 	block := &models.Block{
 		Image: sprite,
 		Data: &models.BlockData{
-			Position: models.Position{X: x, Y: y},
+			Position: models.Position{X: float64(x), Y: float64(y)},
 			Name:     blockType,
 		},
 		Properties:    s.createBlockProperties(blockType),
-		WorldPosition: models.Position{X: x, Y: y}, // Пока используем те же координаты
+		WorldPosition: models.Position{X: float64(x), Y: float64(y)}, // Пока используем те же координаты
 	}
 
 	return block, nil
 }
 
 // parseLevelLines парсит строки карты и создает блоки
-func (s *LevelsService) parseLevelLines(lines []string) (models.Level, error) {
+func (s *LevelsRepository) parseLevelLines(lines []string) (models.Level, error) {
 	var level models.Level
 
 	// Парсим каждую строку
@@ -117,13 +120,13 @@ func (s *LevelsService) parseLevelLines(lines []string) (models.Level, error) {
 }
 
 // createBlockProperties создает свойства блока на основе его типа
-func (s *LevelsService) createBlockProperties(blockType types.BlockType) *models.BlockProperties {
+func (s *LevelsRepository) createBlockProperties(blockType types.BlockType) *models.BlockProperties {
 	return &models.BlockProperties{
 		Collidable: true,
 	}
 }
 
-func (s *LevelsService) GetLevel(levelNumber int) (models.Level, error) {
+func (s *LevelsRepository) GetLevel(levelNumber int) (models.Level, error) {
 	// Читаем и валидируем файл уровня
 	lines, err := s.readAndValidateLevelFile(levelNumber)
 	if err != nil {

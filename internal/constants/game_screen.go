@@ -10,4 +10,5 @@ const (
 	BattleFieldWidthHeight  = BattleFieldBlocksLength * TileMinSize
 	ScreenWidth             = BattleFieldWidthHeight + UpDownLeftPanelLength*TileMinSize + RightPanelLength*TileMinSize
 	ScreenHeight            = BattleFieldWidthHeight + UpDownLeftPanelLength*TileMinSize*2
+	DT                      = 1.0 / 60.0
 )

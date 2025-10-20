@@ -22,8 +22,8 @@ type ISpritesRepository interface {
 	GetSprite(group_id string, sprite_id string) (*ebiten.Image, error)
 }
 
-// ILevelsService определяет интерфейс для работы с уровнями
-type ILevelsService interface {
+// ILevelsDataService определяет интерфейс для работы с уровнями
+type ILevelsDataService interface {
 	// GetLevel загружает уровень по номеру и возвращает его данные
 	GetLevel(num int) (models.Level, error)
 }
@@ -31,5 +31,6 @@ type ILevelsService interface {
 // IPlayerService определяет интерфейс для работы с игроком
 type IPlayerService interface {
 	// GetPlayer возвращает данные игрока с начальными параметрами
-	GetPlayer() (models.Player, error)
+	GetPlayer() (models.Tank, error)
+	Update(dt float32)
 }
