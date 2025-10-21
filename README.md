@@ -150,6 +150,26 @@ just dev
 - Используйте пулы объектов для пуль и эффектов
 - Профилируйте систему коллизий при большом количестве объектов
 
+## CI/CD
+
+Проект использует GitHub Actions для автоматической проверки кода:
+
+### Автоматические проверки
+
+- **Тесты** - запуск `just test` при каждом push и pull request
+- **Линтер** - проверка качества кода с помощью golangci-lint
+- **Форматирование** - проверка соответствия стандартам Go
+
+### Workflows
+
+- `test.yml` - минимальный CI с запуском только тестов
+- `ci.yml` - полный CI с тестами, линтером и проверкой форматирования
+
+### Статус
+
+[![Tests](https://github.com/username/gonflict/workflows/Tests/badge.svg)](https://github.com/username/gonflict/actions)
+[![CI](https://github.com/username/gonflict/workflows/CI/badge.svg)](https://github.com/username/gonflict/actions)
+
 ## Лицензия
 
 MIT License
