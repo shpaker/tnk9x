@@ -89,7 +89,7 @@ func (s *PlayerService) Stop(byCollision bool) {
 	}
 }
 
-func (s *PlayerService) Move(dt float64, level *models.Level) {
+func (s *PlayerService) Move(dt float64, level models.Level) {
 	delta := s.tank.Speed * dt
 
 	newX := s.tank.WorldPosition.X
@@ -140,7 +140,7 @@ func (s *PlayerService) Move(dt float64, level *models.Level) {
 
 	// Преобразуем блоки уровня в массив IMapObject
 	var mapObjects []interfaces.IMapObject
-	for _, wall := range *level {
+	for _, wall := range level {
 		if wall.Data != nil {
 			// Создаем блок с правильной позицией в мире
 			block := models.Block{
@@ -185,7 +185,7 @@ func (s *PlayerService) Move(dt float64, level *models.Level) {
 	s.tank.WorldPosition.Y = newY
 }
 
-func (s *PlayerService) Update(dt float64, level *models.Level) {
+func (s *PlayerService) Update(dt float64, level models.Level) {
 	// println(s.tank.WorldPosition.X, s.tank.WorldPosition.Y)
 	s.Move(dt, level)
 }

@@ -49,7 +49,7 @@ func (s *BattlefieldService) Draw(screen *ebiten.Image) {
 }
 
 // GetBlocks возвращает список блоков-стен для коллизий
-func (s *BattlefieldService) GetBlocks() *models.Level {
+func (s *BattlefieldService) GetBlocks() models.Level {
 	// var colliders []*models.Block
 	// for i := range s.Level {
 	// 	block := &s.Level[i]
@@ -61,5 +61,5 @@ func (s *BattlefieldService) GetBlocks() *models.Level {
 	// 		colliders = append(colliders, block)
 	// 	}
 	// }
-	return &s.Level
+	return s.Level
 }

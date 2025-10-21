@@ -32,8 +32,8 @@ func (s *LevelsRepository) getBlockSprite(blockType types.BlockType) (*ebiten.Im
 	return s.spritesRepository.GetSprite("blocks", string(blockType))
 }
 
-// readAndValidateLevelFile читает файл уровня и проверяет его размер
-func (s *LevelsRepository) readAndValidateLevelFile(levelNumber int) ([]string, error) {
+// readLevelFile читает файл уровня
+func (s *LevelsRepository) readLevelFile(levelNumber int) ([]string, error) {
 	levelName := "levels/" + strconv.Itoa(levelNumber)
 
 	// Читаем текстовый файл уровня
@@ -44,11 +44,6 @@ func (s *LevelsRepository) readAndValidateLevelFile(levelNumber int) ([]string, 
 
 	// Разбиваем на строки
 	lines := strings.Split(strings.TrimSpace(string(data)), "\n")
-
-	// Проверяем размер карты
-	if len(lines) != constants.BattleFieldBlocksLength {
-		return nil, fmt.Errorf("неверная высота карты: ожидалось %d, получено %d", constants.BattleFieldBlocksLength, len(lines))
-	}
 
 	return lines, nil
 }
@@ -89,15 +84,11 @@ func (s *LevelsRepository) createBlockFromChar(charStr string, x, y int) (*model
 // parseLevelLines парсит строки карты и создает блоки
 func (s *LevelsRepository) parseLevelLines(lines []string) (models.Level, error) {
 	var level models.Level
+	index := 0
 
 	// Парсим каждую строку
 	for y, line := range lines {
 		line = strings.TrimSpace(line)
-
-		// Проверяем ширину строки
-		if len(line) != constants.BattleFieldBlocksLength {
-			return nil, fmt.Errorf("неверная ширина карты в строке %d: ожидалось %d, получено %d", y+1, constants.BattleFieldBlocksLength, len(line))
-		}
 
 		// Парсим каждый символ в строке
 		for x, char := range line {
@@ -106,12 +97,16 @@ func (s *LevelsRepository) parseLevelLines(lines []string) (models.Level, error)
 			// Создаем блок из символа
 			block, err := s.createBlockFromChar(charStr, x, y)
 			if err != nil {
-				return nil, err
+				return level, err
 			}
 
 			// Добавляем блок в уровень (если он не nil)
 			if block != nil {
-				level = append(level, *block)
+				if index >= len(level) {
+					return level, fmt.Errorf("превышен размер массива уровня: индекс %d", index)
+				}
+				level[index] = *block
+				index++
 			}
 		}
 	}
@@ -127,16 +122,16 @@ func (s *LevelsRepository) createBlockProperties(blockType types.BlockType) *mod
 }
 
 func (s *LevelsRepository) GetLevel(levelNumber int) (models.Level, error) {
-	// Читаем и валидируем файл уровня
-	lines, err := s.readAndValidateLevelFile(levelNumber)
+	// Читаем файл уровня
+	lines, err := s.readLevelFile(levelNumber)
 	if err != nil {
-		return nil, err
+		return models.Level{}, err
 	}
 
 	// Парсим строки и создаем блоки
 	level, err := s.parseLevelLines(lines)
 	if err != nil {
-		return nil, err
+		return models.Level{}, err
 	}
 
 	return level, nil
