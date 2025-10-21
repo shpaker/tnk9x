@@ -1,4 +1,4 @@
 package models
 
 // Level представляет уровень игры как массив блоков
-type Level []Block
+type Level [169]Block
