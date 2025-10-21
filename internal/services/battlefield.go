@@ -9,19 +9,19 @@ import (
 	"github.com/shpaker/gonflict/internal/models"
 )
 
-type BattleFieldService struct {
+type BattlefieldService struct {
 	Level models.Level
 }
 
-func NewBattleFieldService(
+func NewBattlefieldService(
 	level models.Level,
-) BattleFieldService {
-	return BattleFieldService{
+) BattlefieldService {
+	return BattlefieldService{
 		Level: level,
 	}
 }
 
-func (s *BattleFieldService) Draw(screen *ebiten.Image) {
+func (s *BattlefieldService) Draw(screen *ebiten.Image) {
 	vector.FillRect(
 		screen,
 		float32(constants.BattleFieldOffset),
@@ -49,7 +49,7 @@ func (s *BattleFieldService) Draw(screen *ebiten.Image) {
 }
 
 // GetBlocks возвращает список блоков-стен для коллизий
-func (s *BattleFieldService) GetBlocks() *models.Level {
+func (s *BattlefieldService) GetBlocks() *models.Level {
 	// var colliders []*models.Block
 	// for i := range s.Level {
 	// 	block := &s.Level[i]

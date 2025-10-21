@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/shpaker/gonflict/internal/models"
+	"github.com/shpaker/gonflict/internal/types"
 )
 
 func TestGetSprite(t *testing.T) {
@@ -13,9 +13,9 @@ func TestGetSprite(t *testing.T) {
 	testImage := image.NewRGBA(image.Rect(0, 0, 16, 16))
 
 	// Создаем конфиг с тестовым спрайтом
-	config := models.SpritesConfig{
+	config := types.SpritesConfig{
 		"base": {
-			"test": models.SpriteData{X: 0, Y: 0, W: 8, H: 8},
+			"test": types.SpriteData{X: 0, Y: 0, W: 8, H: 8},
 		},
 	}
 

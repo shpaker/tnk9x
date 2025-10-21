@@ -76,11 +76,11 @@ func (s *LevelsRepository) createBlockFromChar(charStr string, x, y int) (*model
 	block := &models.Block{
 		Image: sprite,
 		Data: &models.BlockData{
-			Position: models.Position{X: float64(x), Y: float64(y)},
+			Position: types.Position{X: float64(x), Y: float64(y)},
 			Name:     blockType,
 		},
 		Properties:    s.createBlockProperties(blockType),
-		WorldPosition: models.Position{X: float64(x), Y: float64(y)}, // Пока используем те же координаты
+		WorldPosition: types.Position{X: float64(x), Y: float64(y)}, // Пока используем те же координаты
 	}
 
 	return block, nil

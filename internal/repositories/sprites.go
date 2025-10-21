@@ -7,18 +7,18 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/shpaker/gonflict/internal/interfaces"
-	"github.com/shpaker/gonflict/internal/models"
+	"github.com/shpaker/gonflict/internal/types"
 )
 
 type SpritesRepository struct {
 	assetsRepository *interfaces.IAssetsRepository
-	tilesetConfig    models.SpritesConfig
+	tilesetConfig    types.SpritesConfig
 	tilesetImage     *ebiten.Image
 }
 
 func NewSpritesRepository(assetsRepository interfaces.IAssetsRepository) (*SpritesRepository, error) {
 	// Загружаем конфиг спрайтов
-	config, err := ReadConfig[models.SpritesConfig](assetsRepository, filepath.Join("sprites"))
+	config, err := ReadConfig[types.SpritesConfig](assetsRepository, filepath.Join("sprites"))
 	if err != nil {
 		return nil, err
 	}

@@ -34,12 +34,12 @@ func (s *PlayerService) makePlayer() (models.Tank, error) {
 	}
 
 	// Создаем игрока с начальными параметрами
-	spawnPosition := models.Position{X: 4 * constants.TankSpriteSize, Y: 12 * constants.TankSpriteSize}
+	spawnPosition := types.Position{X: 4 * constants.TankSpriteSize, Y: 12 * constants.TankSpriteSize}
 
 	player := models.Tank{
 		Image:         tankSprite,
 		SpawnPosition: spawnPosition, // Начальная позиция спавна
-		WorldPosition: models.Position{
+		WorldPosition: types.Position{
 			X: spawnPosition.X,
 			Y: spawnPosition.Y,
 		}, // Текущая позиция в мире
@@ -94,6 +94,7 @@ func (s *PlayerService) Move(dt float64, level *models.Level) {
 
 	newX := s.tank.WorldPosition.X
 	newY := s.tank.WorldPosition.Y
+
 	switch s.tank.Direction {
 	case types.DirectionUp:
 		newY = s.tank.WorldPosition.Y - delta
@@ -105,42 +106,80 @@ func (s *PlayerService) Move(dt float64, level *models.Level) {
 		newX = s.tank.WorldPosition.X + delta
 	}
 
-	// Проверка пересечения танка с коллайдерами стен
+	if newX < 0 {
+		s.tank.WorldPosition.X = 0
+		s.Stop(false)
+		return
+	}
+
+	if newY < 0 {
+		s.tank.WorldPosition.Y = 0
+		s.Stop(false)
+		return
+	}
+
+	if newX > constants.BattleFieldWidthHeight-constants.TankSpriteSize {
+		s.tank.WorldPosition.X = constants.BattleFieldWidthHeight - constants.TankSpriteSize
+		s.Stop(false)
+		return
+	}
+
+	if newY > constants.BattleFieldWidthHeight-constants.TankSpriteSize {
+		s.tank.WorldPosition.Y = constants.BattleFieldWidthHeight - constants.TankSpriteSize
+		s.Stop(false)
+		return
+	}
+
+	// Создаем временный объект танка с новой позицией для проверки коллизий
+	tempTank := models.Tank{
+		Image:         s.tank.Image,
+		WorldPosition: types.Position{X: newX, Y: newY},
+		Speed:         s.tank.Speed,
+		Direction:     s.tank.Direction,
+	}
+
+	// Преобразуем блоки уровня в массив IMapObject
+	var mapObjects []interfaces.IMapObject
 	for _, wall := range *level {
-		if wall.Data == nil {
-			continue
-		}
-		// Прямоугольники танка и блока
-		tankLeft := newX
-		tankRight := newX + constants.TankSpriteSize
-		tankTop := newY
-		tankBottom := newY + constants.TankSpriteSize
-
-		blockLeft := wall.WorldPosition.X * constants.TileMinSize
-		blockRight := blockLeft + constants.TileMinSize
-		blockTop := wall.WorldPosition.Y * constants.TileMinSize
-		blockBottom := blockTop + constants.TileMinSize
-
-		if tankRight > blockLeft && tankLeft < blockRight &&
-			tankBottom > blockTop && tankTop < blockBottom {
-			// Разрешаем коллизию: ставим танк вплотную к препятствию в сторону движения
-			switch s.tank.Direction {
-			case types.DirectionUp:
-				// верх танка упирается в низ блока
-				newY = blockBottom
-			case types.DirectionDown:
-				// низ танка упирается в верх блока
-				newY = blockTop - constants.TankSpriteSize
-			case types.DirectionLeft:
-				// левая сторона танка упирается в правую сторону блока
-				newX = blockRight
-			case types.DirectionRight:
-				// правая сторона танка упирается в левую сторону блока
-				newX = blockLeft - constants.TankSpriteSize
+		if wall.Data != nil {
+			// Создаем блок с правильной позицией в мире
+			block := models.Block{
+				Image:      wall.Image,
+				Data:       wall.Data,
+				Properties: wall.Properties,
+				WorldPosition: types.Position{
+					X: wall.WorldPosition.X * constants.TileMinSize,
+					Y: wall.WorldPosition.Y * constants.TileMinSize,
+				},
 			}
-			s.Stop(true)
-			break
+			mapObjects = append(mapObjects, &block)
 		}
+	}
+
+	// Проверяем коллизии с использованием утилит
+	collidingObject := utils.CheckCollidersWithArrayFirst(&tempTank, mapObjects)
+
+	if collidingObject != nil {
+		// Есть коллизия - ставим танк вплотную к препятствию в сторону движения
+		block := collidingObject.(*models.Block)
+		blockPos := block.GetWorldPosition()
+		blockSize := block.GetSize()
+
+		switch s.tank.Direction {
+		case types.DirectionUp:
+			// верх танка упирается в низ блока
+			newY = blockPos.Y + float64(blockSize.Height)
+		case types.DirectionDown:
+			// низ танка упирается в верх блока
+			newY = blockPos.Y - float64(constants.TankSpriteSize)
+		case types.DirectionLeft:
+			// левая сторона танка упирается в правую сторону блока
+			newX = blockPos.X + float64(blockSize.Width)
+		case types.DirectionRight:
+			// правая сторона танка упирается в левую сторону блока
+			newX = blockPos.X - float64(constants.TankSpriteSize)
+		}
+		s.Stop(true)
 	}
 	s.tank.WorldPosition.X = newX
 	s.tank.WorldPosition.Y = newY

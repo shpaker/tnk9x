@@ -12,7 +12,7 @@ import (
 )
 
 type GameState struct {
-	battleFieldService services.BattleFieldService
+	battleFieldService services.BattlefieldService
 	playerService      *services.PlayerService
 	bulletsService     *services.BulletsService
 }
@@ -33,7 +33,7 @@ func NewGameState(
 	}
 
 	return GameState{
-		battleFieldService: services.NewBattleFieldService(level),
+		battleFieldService: services.NewBattlefieldService(level),
 		playerService:      playerOneService,
 		bulletsService:     bulletsService,
 	}, nil
