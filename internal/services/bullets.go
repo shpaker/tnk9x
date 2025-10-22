@@ -71,12 +71,6 @@ func (s *BulletsService) Update(dt float64) {
 		case types.DirectionRight:
 			bullet.WorldPosition.X += delta
 		}
-
-		// Удаляем пули, которые вышли за границы экрана
-		if bullet.WorldPosition.X < 0 || bullet.WorldPosition.X > constants.BattleFieldWidthHeight ||
-			bullet.WorldPosition.Y < 0 || bullet.WorldPosition.Y > constants.BattleFieldWidthHeight {
-			s.bullets = append(s.bullets[:i], s.bullets[i+1:]...)
-		}
 	}
 }
 

@@ -16,6 +16,7 @@ type GameState struct {
 	playerOneService           *services.PlayerService
 	playerOneControllerService *services.ControllerService
 	bulletsService             *services.BulletsService
+	collidersService           *services.CollidersService
 	rendererService            *services.RendererService
 }
 
@@ -36,10 +37,16 @@ func NewGameState(
 	}
 
 	battleFieldService := services.NewMapService(level)
+	collidersService := services.NewCollidersService(
+		bulletsService,
+		playerOneService,
+		battleFieldService,
+	)
 	rendererService := services.NewRendererService(
 		battleFieldService,
 		playerOneService,
 		bulletsService,
+		collidersService,
 	)
 
 	return GameState{
@@ -47,6 +54,7 @@ func NewGameState(
 		playerOneService:           playerOneService,
 		playerOneControllerService: playerOneControllerService,
 		bulletsService:             bulletsService,
+		collidersService:           collidersService,
 		rendererService:            rendererService,
 	}, nil
 }
@@ -57,16 +65,17 @@ func (state GameState) Update() (interfaces.State, error) {
 	}
 
 	state.playerOneControllerService.Update()
-	state.playerOneService.Update(constants.DT, state.battleFieldService.GetBlocks())
+	state.playerOneService.Update(constants.DT)
 	state.bulletsService.Update(constants.DT)
+	state.collidersService.Update()
 	return nil, nil
 }
 
 func (state GameState) Draw(screen *ebiten.Image) {
 	vector.FillRect(
 		screen,
-		float32(0),
-		float32(0),
+		0,
+		0,
 		float32(screen.Bounds().Dx()),
 		float32(screen.Bounds().Dy()),
 		color.Gray{Y: 128},

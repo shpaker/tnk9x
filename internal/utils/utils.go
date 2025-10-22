@@ -5,7 +5,6 @@ import (
 	"math"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/shpaker/gonflict/internal/interfaces"
 )
 
 // FormatGreeting форматирует приветственное сообщение
@@ -90,51 +89,4 @@ func RoundToDivisible(
 		return upper
 	}
 	return lower
-}
-
-// CheckColliders проверяет коллизию между двумя объектами карты
-func CheckColliders(
-	obj1 interfaces.IMapObject,
-	obj2 interfaces.IMapObject,
-) bool {
-	pos1 := obj1.GetWorldPosition()
-	size1 := obj1.GetSize()
-	pos2 := obj2.GetWorldPosition()
-	size2 := obj2.GetSize()
-
-	// Проверяем пересечение прямоугольников
-	return pos1.X < pos2.X+float64(size2.Width) &&
-		pos1.X+float64(size1.Width) > pos2.X &&
-		pos1.Y < pos2.Y+float64(size2.Height) &&
-		pos1.Y+float64(size1.Height) > pos2.Y
-}
-
-// CheckColliders проверяет коллизии между объектом и массивом объектов карты
-func CheckCollidersWithArray(
-	obj interfaces.IMapObject,
-	objects []interfaces.IMapObject,
-) []interfaces.IMapObject {
-	var collidingObjects []interfaces.IMapObject
-
-	for _, mapObj := range objects {
-		if CheckColliders(obj, mapObj) {
-			collidingObjects = append(collidingObjects, mapObj)
-		}
-	}
-
-	return collidingObjects
-}
-
-// CheckCollidersWithArrayFirst проверяет коллизии между объектом и массивом объектов карты
-// Возвращает первый коллидирующий объект или nil, если коллизий нет
-func CheckCollidersWithArrayFirst(
-	obj interfaces.IMapObject,
-	objects []interfaces.IMapObject,
-) interfaces.IMapObject {
-	for _, mapObj := range objects {
-		if CheckColliders(obj, mapObj) {
-			return mapObj
-		}
-	}
-	return nil
 }

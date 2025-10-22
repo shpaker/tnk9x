@@ -15,17 +15,20 @@ type RendererService struct {
 	battleFieldService MapService
 	playerOneService   *PlayerService
 	bulletsService     *BulletsService
+	collidersService   *CollidersService
 }
 
 func NewRendererService(
 	battleFieldService MapService,
 	playerOneService *PlayerService,
 	bulletsService *BulletsService,
+	collidersService *CollidersService,
 ) *RendererService {
 	return &RendererService{
 		battleFieldService: battleFieldService,
 		playerOneService:   playerOneService,
 		bulletsService:     bulletsService,
+		collidersService:   collidersService,
 	}
 }
 

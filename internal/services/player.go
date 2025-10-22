@@ -92,105 +92,24 @@ func (s *PlayerService) Stop(byCollision bool) {
 	}
 }
 
-func (s *PlayerService) Move(dt float64, level models.Level) {
+func (s *PlayerService) Move(dt float64) {
 	delta := s.tank.Speed * dt
-
-	newX := s.tank.WorldPosition.X
-	newY := s.tank.WorldPosition.Y
 
 	switch s.tank.Direction {
 	case types.DirectionUp:
-		newY = s.tank.WorldPosition.Y - delta
+		s.tank.WorldPosition.Y -= delta
 	case types.DirectionDown:
-		newY = s.tank.WorldPosition.Y + delta
+		s.tank.WorldPosition.Y += delta
 	case types.DirectionLeft:
-		newX = s.tank.WorldPosition.X - delta
+		s.tank.WorldPosition.X -= delta
 	case types.DirectionRight:
-		newX = s.tank.WorldPosition.X + delta
+		s.tank.WorldPosition.X += delta
 	}
-
-	if newX < 0 {
-		s.tank.WorldPosition.X = 0
-		s.Stop(false)
-		return
-	}
-
-	if newY < 0 {
-		s.tank.WorldPosition.Y = 0
-		s.Stop(false)
-		return
-	}
-
-	if newX > constants.BattleFieldWidthHeight-constants.TankSpriteSize {
-		s.tank.WorldPosition.X = constants.BattleFieldWidthHeight - constants.TankSpriteSize
-		s.Stop(false)
-		return
-	}
-
-	if newY > constants.BattleFieldWidthHeight-constants.TankSpriteSize {
-		s.tank.WorldPosition.Y = constants.BattleFieldWidthHeight - constants.TankSpriteSize
-		s.Stop(false)
-		return
-	}
-
-	// Создаем временный объект танка с новой позицией для проверки коллизий
-	tempTank := models.Tank{
-		Image:         s.tank.Image,
-		WorldPosition: types.Position{X: newX, Y: newY},
-		Speed:         s.tank.Speed,
-		Direction:     s.tank.Direction,
-	}
-
-	// Преобразуем блоки уровня в массив IMapObject
-	var mapObjects []interfaces.IMapObject
-	for _, wall := range level {
-		if wall.Data != nil {
-			// Создаем блок с правильной позицией в мире
-			block := models.Block{
-				Image:      wall.Image,
-				Data:       wall.Data,
-				Properties: wall.Properties,
-				WorldPosition: types.Position{
-					X: wall.WorldPosition.X * constants.TileMinSize,
-					Y: wall.WorldPosition.Y * constants.TileMinSize,
-				},
-			}
-			mapObjects = append(mapObjects, &block)
-		}
-	}
-
-	// Проверяем коллизии с использованием утилит
-	collidingObject := utils.CheckCollidersWithArrayFirst(&tempTank, mapObjects)
-
-	if collidingObject != nil {
-		// Есть коллизия - ставим танк вплотную к препятствию в сторону движения
-		block := collidingObject.(*models.Block)
-		blockPos := block.GetWorldPosition()
-		blockSize := block.GetSize()
-
-		switch s.tank.Direction {
-		case types.DirectionUp:
-			// верх танка упирается в низ блока
-			newY = blockPos.Y + float64(blockSize.Height)
-		case types.DirectionDown:
-			// низ танка упирается в верх блока
-			newY = blockPos.Y - float64(constants.TankSpriteSize)
-		case types.DirectionLeft:
-			// левая сторона танка упирается в правую сторону блока
-			newX = blockPos.X + float64(blockSize.Width)
-		case types.DirectionRight:
-			// правая сторона танка упирается в левую сторону блока
-			newX = blockPos.X - float64(constants.TankSpriteSize)
-		}
-		s.Stop(true)
-	}
-	s.tank.WorldPosition.X = newX
-	s.tank.WorldPosition.Y = newY
 }
 
-func (s *PlayerService) Update(dt float64, level models.Level) {
+func (s *PlayerService) Update(dt float64) {
 	// println(s.tank.WorldPosition.X, s.tank.WorldPosition.Y)
-	s.Move(dt, level)
+	s.Move(dt)
 }
 
 func (s *PlayerService) Draw(screen *ebiten.Image) {
