@@ -64,8 +64,19 @@ func New(cfg *config.Config) *App {
 	// Создаем сервис пуль
 	bulletsService := services.NewBulletsService()
 
+	// Создаем сервис контроллера
+	controllerService := services.NewControllerService(
+		playerService,
+		bulletsService,
+		ebiten.KeyW,     // up
+		ebiten.KeyS,     // down
+		ebiten.KeyA,     // left
+		ebiten.KeyD,     // right
+		ebiten.KeySpace, // shoot
+	)
+
 	// Создаем GameState с переданными сервисами
-	gameState, err := states.NewGameState(levelsService, playerService, bulletsService)
+	gameState, err := states.NewGameState(levelsService, playerService, controllerService, bulletsService)
 	if err != nil {
 		// Логируем ошибку и падаем
 		fmt.Printf("Ошибка создания GameState: %v\n", err)

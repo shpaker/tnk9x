@@ -4,7 +4,6 @@ import (
 	"math"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/shpaker/gonflict/internal/constants"
 	"github.com/shpaker/gonflict/internal/interfaces"
 	"github.com/shpaker/gonflict/internal/models"
@@ -52,6 +51,10 @@ func (s *PlayerService) makePlayer() (models.Tank, error) {
 
 func (s *PlayerService) GetPlayer() (*models.Tank, error) {
 	return &s.tank, nil
+}
+
+func (s *PlayerService) GetDirection() types.Direction {
+	return s.tank.Direction
 }
 
 func (s *PlayerService) Rotate(
@@ -214,42 +217,4 @@ func (s *PlayerService) Draw(screen *ebiten.Image) {
 
 		screen.DrawImage(s.tank.Image, op)
 	}
-}
-
-func (s *PlayerService) KeyPressed() (isShoot bool) {
-	// Rotate the tank if the key is pressed
-	isShoot = false
-	playerRotated := false
-	if ebiten.IsKeyPressed(ebiten.KeyW) && !playerRotated {
-		playerRotated = s.Rotate(types.DirectionUp)
-	}
-	if ebiten.IsKeyPressed(ebiten.KeyS) && !playerRotated {
-		playerRotated = s.Rotate(types.DirectionDown)
-	}
-	if ebiten.IsKeyPressed(ebiten.KeyA) && !playerRotated {
-		playerRotated = s.Rotate(types.DirectionLeft)
-	}
-	if ebiten.IsKeyPressed(ebiten.KeyD) && !playerRotated {
-		playerRotated = s.Rotate(types.DirectionRight)
-	}
-	// Stop the tank if the key is released
-	if inpututil.IsKeyJustReleased(ebiten.KeyW) && s.tank.Direction == types.DirectionUp {
-		s.Stop(false)
-	}
-	if inpututil.IsKeyJustReleased(ebiten.KeyS) && s.tank.Direction == types.DirectionDown {
-		s.Stop(false)
-	}
-	if inpututil.IsKeyJustReleased(ebiten.KeyA) && s.tank.Direction == types.DirectionLeft {
-		s.Stop(false)
-	}
-	if inpututil.IsKeyJustReleased(ebiten.KeyD) && s.tank.Direction == types.DirectionRight {
-		s.Stop(false)
-	}
-
-	// Shoot if the space key is pressed
-	if inpututil.IsKeyJustPressed(ebiten.KeySpace) {
-		isShoot = true
-	}
-
-	return isShoot
 }

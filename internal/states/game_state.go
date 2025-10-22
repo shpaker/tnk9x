@@ -12,15 +12,17 @@ import (
 )
 
 type GameState struct {
-	battleFieldService services.BattlefieldService
-	playerService      *services.PlayerService
-	bulletsService     *services.BulletsService
+	battleFieldService         services.BattlefieldService
+	playerOneService           *services.PlayerService
+	playerOneControllerService *services.ControllerService
+	bulletsService             *services.BulletsService
 }
 
 // NewGameState создает новое состояние игры с переданным репозиторием спрайтов
 func NewGameState(
 	levelService interfaces.ILevelsDataService,
 	playerOneService *services.PlayerService,
+	playerOneControllerService *services.ControllerService,
 	bulletsService *services.BulletsService,
 ) (GameState, error) {
 	level, err := levelService.GetLevel(1)
@@ -33,9 +35,10 @@ func NewGameState(
 	}
 
 	return GameState{
-		battleFieldService: services.NewBattlefieldService(level),
-		playerService:      playerOneService,
-		bulletsService:     bulletsService,
+		battleFieldService:         services.NewBattlefieldService(level),
+		playerOneService:           playerOneService,
+		playerOneControllerService: playerOneControllerService,
+		bulletsService:             bulletsService,
 	}, nil
 }
 
@@ -44,14 +47,8 @@ func (state GameState) Update() (interfaces.State, error) {
 		return nil, errors.New("exit application")
 	}
 
-	isShoot := state.playerService.KeyPressed()
-	if isShoot {
-		player, err := state.playerService.GetPlayer()
-		if err == nil {
-			state.bulletsService.AddBullet(player)
-		}
-	}
-	state.playerService.Update(constants.DT, state.battleFieldService.GetBlocks())
+	state.playerOneControllerService.Update()
+	state.playerOneService.Update(constants.DT, state.battleFieldService.GetBlocks())
 	state.bulletsService.Update(constants.DT)
 	return nil, nil
 }
@@ -67,6 +64,6 @@ func (state GameState) Draw(screen *ebiten.Image) {
 		false,
 	)
 	state.battleFieldService.Draw(screen)
-	state.playerService.Draw(screen)
+	state.playerOneService.Draw(screen)
 	state.bulletsService.Draw(screen)
 }
