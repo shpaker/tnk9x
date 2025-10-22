@@ -79,7 +79,10 @@ func (s *CollidersService) checkBulletWallCollisions() {
 		bullet := &bullets[i]
 
 		// Проверяем коллизии пули со стенами
-		for _, wall := range level {
+		bulletHit := false
+		var blocksToRemove []int
+
+		for j, wall := range level {
 			if wall.Data == nil {
 				continue
 			}
@@ -93,12 +96,25 @@ func (s *CollidersService) checkBulletWallCollisions() {
 
 			// Проверяем коллизию пули с блоком
 			if s.checkColliders(bullet, &block) {
-				// Удаляем пулю при попадании в стену
-				s.bulletsService.RemoveBullet(i)
-				// Здесь можно добавить логику обработки попадания в стену
-				// println("Bullet hit wall!")
-				break // Выходим из цикла по блокам, так как пуля уже удалена
+				// Если блок - кирпичная стена, помечаем для удаления
+				if wall.Data.Name == types.Brick {
+					blocksToRemove = append(blocksToRemove, j)
+				}
+
+				bulletHit = true
+				// Не прерываем цикл, продолжаем проверять другие блоки
 			}
+		}
+
+		// Удаляем блоки в обратном порядке (чтобы индексы не сдвигались)
+		for k := len(blocksToRemove) - 1; k >= 0; k-- {
+			blockIndex := blocksToRemove[k]
+			s.mapService.RemoveBlock(&s.mapService.Level[blockIndex])
+		}
+
+		// Удаляем пулю только после проверки всех блоков
+		if bulletHit {
+			s.bulletsService.RemoveBullet(i)
 		}
 	}
 }
@@ -124,7 +140,9 @@ func (s *CollidersService) checkPlayerBoundaryCollisions(player *models.Tank) {
 }
 
 // checkPlayerWallCollisions проверяет коллизии игрока со стенами
-func (s *CollidersService) checkPlayerWallCollisions(player *models.Tank) {
+func (s *CollidersService) checkPlayerWallCollisions(
+	player *models.Tank,
+) {
 	level := s.mapService.GetBlocks()
 	mapObjects := s.createMapObjectsFromLevel(level)
 

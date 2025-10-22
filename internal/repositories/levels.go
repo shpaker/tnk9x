@@ -84,11 +84,20 @@ func (s *LevelsRepository) createBlockFromChar(charStr string, x, y int) (*model
 // parseLevelLines парсит строки карты и создает блоки
 func (s *LevelsRepository) parseLevelLines(lines []string) (models.Level, error) {
 	var level models.Level
-	index := 0
+
+	// Проверяем количество строк (должно быть 26)
+	if len(lines) != constants.BattleFieldBlocksLength {
+		return level, fmt.Errorf("неверное количество строк в уровне: ожидалось %d, получено %d", constants.BattleFieldBlocksLength, len(lines))
+	}
 
 	// Парсим каждую строку
 	for y, line := range lines {
 		line = strings.TrimSpace(line)
+
+		// Проверяем длину строки (должна быть 26)
+		if len(line) != constants.BattleFieldBlocksLength {
+			return level, fmt.Errorf("неверная длина строки %d: ожидалось %d символов, получено %d", y+1, constants.BattleFieldBlocksLength, len(line))
+		}
 
 		// Парсим каждый символ в строке
 		for x, char := range line {
@@ -102,11 +111,7 @@ func (s *LevelsRepository) parseLevelLines(lines []string) (models.Level, error)
 
 			// Добавляем блок в уровень (если он не nil)
 			if block != nil {
-				if index >= len(level) {
-					return level, fmt.Errorf("превышен размер массива уровня: индекс %d", index)
-				}
-				level[index] = *block
-				index++
+				level = append(level, *block)
 			}
 		}
 	}

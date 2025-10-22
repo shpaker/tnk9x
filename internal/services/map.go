@@ -52,3 +52,18 @@ func (s *MapService) Draw(screen *ebiten.Image) {
 func (s *MapService) GetBlocks() models.Level {
 	return s.Level
 }
+
+func (s *MapService) RemoveBlock(block *models.Block) {
+	if block == nil {
+		return
+	}
+
+	// Ищем блок в слайсе по указателю на элемент в слайсе
+	for i := range s.Level {
+		if &s.Level[i] == block {
+			// Удаляем блок из слайса
+			s.Level = append(s.Level[:i], s.Level[i+1:]...)
+			return
+		}
+	}
+}
