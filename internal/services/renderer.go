@@ -12,13 +12,13 @@ import (
 )
 
 type RendererService struct {
-	battleFieldService BattlefieldService
+	battleFieldService MapService
 	playerOneService   *PlayerService
 	bulletsService     *BulletsService
 }
 
 func NewRendererService(
-	battleFieldService BattlefieldService,
+	battleFieldService MapService,
 	playerOneService *PlayerService,
 	bulletsService *BulletsService,
 ) *RendererService {
@@ -102,12 +102,7 @@ func (s *RendererService) drawBullets(screen *ebiten.Image) {
 }
 
 func (s *RendererService) DrawAll(screen *ebiten.Image) {
-	// Отрисовываем фон поля боя
 	s.drawBattlefield(screen)
-
-	// Отрисовываем игрока
 	s.drawPlayerOne(screen)
-
-	// Отрисовываем пули
 	s.drawBullets(screen)
 }

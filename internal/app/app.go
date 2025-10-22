@@ -76,7 +76,12 @@ func New(cfg *config.Config) *App {
 	)
 
 	// Создаем GameState с переданными сервисами
-	gameState, err := states.NewGameState(levelsService, playerService, controllerService, bulletsService)
+	gameState, err := states.NewGameState(
+		levelsService,
+		playerService,
+		controllerService,
+		bulletsService,
+	)
 	if err != nil {
 		// Логируем ошибку и падаем
 		fmt.Printf("Ошибка создания GameState: %v\n", err)
