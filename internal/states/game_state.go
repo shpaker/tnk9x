@@ -16,6 +16,7 @@ type GameState struct {
 	playerOneService           *services.PlayerService
 	playerOneControllerService *services.ControllerService
 	bulletsService             *services.BulletsService
+	rendererService            *services.RendererService
 }
 
 // NewGameState создает новое состояние игры с переданным репозиторием спрайтов
@@ -34,11 +35,19 @@ func NewGameState(
 		return GameState{}, errors.New("playerService is nil")
 	}
 
+	battleFieldService := services.NewBattlefieldService(level)
+	rendererService := services.NewRendererService(
+		battleFieldService,
+		playerOneService,
+		bulletsService,
+	)
+
 	return GameState{
-		battleFieldService:         services.NewBattlefieldService(level),
+		battleFieldService:         battleFieldService,
 		playerOneService:           playerOneService,
 		playerOneControllerService: playerOneControllerService,
 		bulletsService:             bulletsService,
+		rendererService:            rendererService,
 	}, nil
 }
 
@@ -63,7 +72,5 @@ func (state GameState) Draw(screen *ebiten.Image) {
 		color.Gray{Y: 128},
 		false,
 	)
-	state.battleFieldService.Draw(screen)
-	state.playerOneService.Draw(screen)
-	state.bulletsService.Draw(screen)
+	state.rendererService.DrawAll(screen)
 }
