@@ -96,13 +96,6 @@ graph TB
     States --> Adapters
     Adapters -.-> UseCases
     UseCases --> Repos
-    
-    style Entry fill:#e1f5ff
-    style App fill:#fff4e1
-    style States fill:#ffe1f5
-    style UseCases fill:#e1ffe1
-    style Adapters fill:#ffe1e1
-    style Repos fill:#f5e1ff
 ```
 
 ### Детальная архитектура компонентов
@@ -146,18 +139,6 @@ graph LR
     MapsRepo --> FileRepo
     MapsRepo --> SpritesRepo
     SpritesRepo --> FileRepo
-    
-    style Input fill:#ffcccc
-    style Render fill:#ffcccc
-    style Player fill:#ccffcc
-    style Bullet fill:#ccffcc
-    style Map fill:#ccffcc
-    style Collision fill:#ccffcc
-    style BlocksRepo fill:#ccccff
-    style BulletsRepo fill:#ccccff
-    style MapsRepo fill:#ccccff
-    style SpritesRepo fill:#ccccff
-    style FileRepo fill:#ccccff
 ```
 
 ### Поток данных при игре
@@ -236,19 +217,6 @@ graph TD
     CollisionUC -->|works with| Tank
     CollisionUC -->|works with| Bullet
     CollisionUC -->|works with| Block
-    
-    style Ebiten fill:#ff9999
-    style Files fill:#ff9999
-    style InputA fill:#ffcc99
-    style RenderA fill:#ffcc99
-    style FileRepo fill:#ffcc99
-    style PlayerUC fill:#99ff99
-    style BulletUC fill:#99ff99
-    style MapUC fill:#99ff99
-    style CollisionUC fill:#99ff99
-    style Tank fill:#9999ff
-    style Bullet fill:#9999ff
-    style Block fill:#9999ff
 ```
 
 ### Структура репозиториев
@@ -280,13 +248,6 @@ graph TB
     
     MapsRepo --> FileRepo
     SpritesRepo --> FileRepo
-    
-    style ReposPkg fill:#ffe6cc
-    style BlocksRepo fill:#e6f3ff
-    style BulletsRepo fill:#e6f3ff
-    style MapsRepo fill:#f0e6ff
-    style SpritesRepo fill:#f0e6ff
-    style FileRepo fill:#ffe6e6
 ```
 
 ### Принципы
