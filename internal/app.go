@@ -6,6 +6,7 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
+	"github.com/shpaker/gonflict/internal/adapters"
 	"github.com/shpaker/gonflict/internal/repositories"
 	"github.com/shpaker/gonflict/internal/repositories/raw"
 	"github.com/shpaker/gonflict/internal/states"
@@ -41,21 +42,30 @@ func New(cfg *Config) *App {
 	// Создаем файловый репозиторий
 	fileRepo := raw.NewFileRepository("assets")
 
-	// Создаем репозиторий спрайтов
-	spritesRepo, err := repositories.NewSpritesRepository(fileRepo)
+	// Создаем tilesetRepository для работы с изображениями блоков
+	tilesetRepo, err := repositories.NewTilesetRepository(fileRepo, "blocks")
 	if err != nil {
-		// Логируем ошибку и падаем
-		fmt.Printf("Ошибка создания SpritesRepository: %v\n", err)
+		fmt.Printf("Ошибка создания TilesetRepository: %v\n", err)
 		panic(err)
 	}
 
+	// Создаем tilesetRepository для работы с изображениями игрока
+	playerTilesetRepo, err := repositories.NewTilesetRepository(fileRepo, "player")
+	if err != nil {
+		fmt.Printf("Ошибка создания PlayerTilesetRepository: %v\n", err)
+		panic(err)
+	}
+
+	// Создаем tilesAdapter
+	tilesAdapter := adapters.NewTilesAdapter(tilesetRepo)
+
 	// Создаем репозиторий карт уровней
-	mapsRepo := repositories.NewMapsDataRepository(fileRepo, spritesRepo)
+	mapsRepo := repositories.NewMapsDataRepository(fileRepo, tilesAdapter)
 
 	// Создаем GameState с переданными репозиториями
 	gameState, err := states.NewGameState(
 		mapsRepo,
-		spritesRepo,
+		playerTilesetRepo,
 	)
 	if err != nil {
 		// Логируем ошибку и падаем

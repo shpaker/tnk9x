@@ -3,7 +3,6 @@ package game
 import (
 	"testing"
 
-	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/shpaker/gonflict/internal/types"
 )
 
@@ -24,8 +23,8 @@ func TestAddAndGetBlocks(t *testing.T) {
 	repo := NewBlocksRepository()
 
 	// Создаем тестовый блок
-	block := types.Block{
-		Image: ebiten.NewImage(8, 8),
+	block := types.BlockEntity{
+		ImageGetter: nil, // Для тестов не используем ImageGetter
 		Data: &types.BlockData{
 			Name:     types.Brick,
 			Position: types.Position{X: 0, Y: 0},
@@ -48,8 +47,8 @@ func TestRemoveBlockByPointer(t *testing.T) {
 	repo := NewBlocksRepository()
 
 	// Создаем тестовый блок
-	block := types.Block{
-		Image: ebiten.NewImage(8, 8),
+	block := types.BlockEntity{
+		ImageGetter: nil, // Для тестов не используем ImageGetter
 		Data: &types.BlockData{
 			Name:     types.Brick,
 			Position: types.Position{X: 0, Y: 0},

@@ -16,22 +16,22 @@ type IPlayerUseCases interface {
 	MovePlayer(direction types.Direction, dt float64) error
 	RotatePlayer(direction types.Direction) error
 	StopPlayer(byCollision bool) error
-	GetPlayer() (*types.Tank, error)
+	GetPlayer() (*types.TankEntity, error)
 	GetDirection() types.Direction
 }
 
 // IBulletUseCases интерфейс для операций с пулями
 type IBulletUseCases interface {
-	ShootBullet(tank *types.Tank) error
+	ShootBullet(tank *types.TankEntity) error
 	UpdateBullets(dt float64) error
-	GetBullets() []types.Bullet
+	GetBullets() []types.BulletEntity
 	RemoveBullet(index int) error
 }
 
 // IMapUseCases интерфейс для операций с картой
 type IMapUseCases interface {
-	GetBlocks() []types.Block
-	RemoveBlock(block *types.Block) error
+	GetBlocks() []types.BlockEntity
+	RemoveBlock(block *types.BlockEntity) error
 }
 
 // ICollisionUseCases интерфейс для операций с коллизиями

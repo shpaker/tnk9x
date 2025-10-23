@@ -18,16 +18,16 @@ func NewMapUseCases(blocksRepo repositories.IBlocksRepository) *MapUseCases {
 }
 
 // GetBlocks возвращает все блоки карты
-func (uc *MapUseCases) GetBlocks() []types.Block {
+func (uc *MapUseCases) GetBlocks() []types.BlockEntity {
 	blocks := uc.blocksRepo.GetAllBlocks()
 	if blocks == nil {
-		return []types.Block{}
+		return []types.BlockEntity{}
 	}
 	return *blocks
 }
 
 // RemoveBlock удаляет блок по указателю
-func (uc *MapUseCases) RemoveBlock(block *types.Block) error {
+func (uc *MapUseCases) RemoveBlock(block *types.BlockEntity) error {
 	if block == nil {
 		return nil
 	}

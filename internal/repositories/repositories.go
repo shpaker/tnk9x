@@ -12,18 +12,18 @@ import (
 //
 // // Создание репозиториев:
 // fileRepo := raw.NewFileRepository("assets")  // raw импортируется отдельно
-// spritesRepo, _ := repositories.NewSpritesRepository(fileRepo)
-// mapsRepo := repositories.NewMapsDataRepository(fileRepo, spritesRepo)
+// tilesetRepo, _ := repositories.NewTilesetRepository(fileRepo, "blocks")
+// mapsRepo := repositories.NewMapsDataRepository(fileRepo, tilesAdapter)
 // bulletsRepo := repositories.NewBulletsRepository()
 //
 // // Использование интерфейсов:
-// var spritesService repositories.ISpritesRepository = spritesRepo
+// var tilesetService repositories.ITilesetRepository = tilesetRepo
 // var mapsService repositories.IMapsDataRepository = mapsRepo
 
 // Re-export интерфейсов для удобства
 type (
-	// ISpritesRepository - интерфейс для работы со спрайтами
-	ISpritesRepository = processed.ISpritesRepository
+	// ITilesetRepository - интерфейс для работы с тайлсетами
+	ITilesetRepository = processed.ITilesetRepository
 
 	// IMapsDataRepository - интерфейс для работы с картами уровней
 	IMapsDataRepository = processed.IMapsDataRepository
@@ -37,8 +37,8 @@ type (
 
 // Re-export структур репозиториев для удобства
 type (
-	// SpritesRepository - репозиторий для работы со спрайтами
-	SpritesRepository = processed.SpritesRepository
+	// TilesetRepository - репозиторий для работы с тайлсетами
+	TilesetRepository = processed.TilesetDataRepository
 
 	// MapsDataRepository - репозиторий для работы с картами уровней
 	MapsDataRepository = processed.MapsDataRepository
@@ -52,7 +52,7 @@ type (
 
 // Re-export конструкторов для удобства
 var (
-	NewSpritesRepository  = processed.NewSpritesRepository
+	NewTilesetRepository  = processed.NewTilesetDataRepository
 	NewMapsDataRepository = processed.NewMapsDataRepository
 	NewBulletsRepository  = game.NewBulletsRepository
 	NewBlocksRepository   = game.NewBlocksRepository

@@ -21,7 +21,7 @@ func NewBulletUseCases(bulletsRepo repositories.IBulletsRepository) *BulletUseCa
 }
 
 // ShootBullet создает новую пулю от указанного танка
-func (uc *BulletUseCases) ShootBullet(tank *types.Tank) error {
+func (uc *BulletUseCases) ShootBullet(tank *types.TankEntity) error {
 	// Создаем простую пулю (квадрат 4x4 пикселя)
 	bulletImage := ebiten.NewImage(4, 4)
 	bulletImage.Fill(color.RGBA{255, 255, 0, 255}) // Желтый цвет
@@ -42,7 +42,7 @@ func (uc *BulletUseCases) ShootBullet(tank *types.Tank) error {
 		bulletX = tank.WorldPosition.X + TankSpriteSize
 	}
 
-	bullet := types.Bullet{
+	bullet := types.BulletEntity{
 		Image: bulletImage,
 		WorldPosition: types.Position{
 			X: bulletX,
@@ -80,7 +80,7 @@ func (uc *BulletUseCases) UpdateBullets(dt float64) error {
 }
 
 // GetBullets возвращает все активные пули
-func (uc *BulletUseCases) GetBullets() []types.Bullet {
+func (uc *BulletUseCases) GetBullets() []types.BulletEntity {
 	return uc.bulletsRepo.GetAllBullets()
 }
 

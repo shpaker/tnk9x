@@ -24,7 +24,7 @@ func TestAddAndGetBullets(t *testing.T) {
 	repo := NewBulletsRepository()
 
 	// Создаем тестовую пулю
-	bullet := types.Bullet{
+	bullet := types.BulletEntity{
 		Image:         ebiten.NewImage(4, 4),
 		WorldPosition: types.Position{X: 100, Y: 100},
 		Speed:         200.0,
@@ -43,13 +43,13 @@ func TestRemoveBullet(t *testing.T) {
 	repo := NewBulletsRepository()
 
 	// Создаем тестовые пули
-	bullet1 := types.Bullet{
+	bullet1 := types.BulletEntity{
 		Image:         ebiten.NewImage(4, 4),
 		WorldPosition: types.Position{X: 100, Y: 100},
 		Speed:         200.0,
 		Direction:     types.DirectionUp,
 	}
-	bullet2 := types.Bullet{
+	bullet2 := types.BulletEntity{
 		Image:         ebiten.NewImage(4, 4),
 		WorldPosition: types.Position{X: 200, Y: 200},
 		Speed:         200.0,

@@ -7,22 +7,22 @@ import (
 )
 
 type BulletsRepository struct {
-	bullets []types.Bullet
+	bullets []types.BulletEntity
 }
 
 func NewBulletsRepository() *BulletsRepository {
 	return &BulletsRepository{
-		bullets: make([]types.Bullet, 0),
+		bullets: make([]types.BulletEntity, 0),
 	}
 }
 
 // AddBullet добавляет пулю в репозиторий
-func (br *BulletsRepository) AddBullet(bullet types.Bullet) {
+func (br *BulletsRepository) AddBullet(bullet types.BulletEntity) {
 	br.bullets = append(br.bullets, bullet)
 }
 
 // GetAllBullets возвращает все пули
-func (br *BulletsRepository) GetAllBullets() []types.Bullet {
+func (br *BulletsRepository) GetAllBullets() []types.BulletEntity {
 	return br.bullets
 }
 

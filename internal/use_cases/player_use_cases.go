@@ -10,14 +10,14 @@ import (
 
 // PlayerUseCases реализация интерфейса PlayerUseCases
 type PlayerUseCases struct {
-	spritesRepo repositories.ISpritesRepository
-	tank        types.Tank
+	tilesetRepo repositories.ITilesetRepository
+	tank        types.TankEntity
 }
 
 // NewPlayerUseCases создает новый экземпляр PlayerUseCases
-func NewPlayerUseCases(spritesRepo repositories.ISpritesRepository) *PlayerUseCases {
+func NewPlayerUseCases(tilesetRepo repositories.ITilesetRepository) *PlayerUseCases {
 	uc := &PlayerUseCases{
-		spritesRepo: spritesRepo,
+		tilesetRepo: tilesetRepo,
 	}
 
 	// Создаем игрока при инициализации
@@ -31,16 +31,16 @@ func NewPlayerUseCases(spritesRepo repositories.ISpritesRepository) *PlayerUseCa
 }
 
 // makePlayer создает игрока с начальными параметрами
-func (uc *PlayerUseCases) makePlayer() (types.Tank, error) {
-	tankSprite, err := uc.spritesRepo.GetSprite("enemies", "enemy_basic")
+func (uc *PlayerUseCases) makePlayer() (types.TankEntity, error) {
+	tankSprite, err := uc.tilesetRepo.GetImage("base_tank_1")
 	if err != nil {
-		return types.Tank{}, err
+		return types.TankEntity{}, err
 	}
 
 	// Создаем игрока с начальными параметрами
 	spawnPosition := types.Position{X: 4 * TankSpriteSize, Y: 12 * TankSpriteSize}
 
-	player := types.Tank{
+	player := types.TankEntity{
 		Image:         tankSprite,
 		SpawnPosition: spawnPosition,
 		WorldPosition: types.Position{
@@ -55,7 +55,7 @@ func (uc *PlayerUseCases) makePlayer() (types.Tank, error) {
 }
 
 // GetPlayer возвращает данные игрока
-func (uc *PlayerUseCases) GetPlayer() (*types.Tank, error) {
+func (uc *PlayerUseCases) GetPlayer() (*types.TankEntity, error) {
 	return &uc.tank, nil
 }
 

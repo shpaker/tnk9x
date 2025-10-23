@@ -7,27 +7,27 @@ import (
 )
 
 type BlocksRepository struct {
-	blocks []types.Block
+	blocks []types.BlockEntity
 }
 
 func NewBlocksRepository() *BlocksRepository {
 	return &BlocksRepository{
-		blocks: make([]types.Block, 0),
+		blocks: make([]types.BlockEntity, 0),
 	}
 }
 
 // AddBlock добавляет блок в репозиторий
-func (br *BlocksRepository) AddBlock(block types.Block) {
+func (br *BlocksRepository) AddBlock(block types.BlockEntity) {
 	br.blocks = append(br.blocks, block)
 }
 
 // GetAllBlocks возвращает все блоки
-func (br *BlocksRepository) GetAllBlocks() *[]types.Block {
+func (br *BlocksRepository) GetAllBlocks() *[]types.BlockEntity {
 	return &br.blocks
 }
 
 // RemoveBlockByPointer удаляет блок по указателю
-func (br *BlocksRepository) RemoveBlockByPointer(block *types.Block) error {
+func (br *BlocksRepository) RemoveBlockByPointer(block *types.BlockEntity) error {
 	if block == nil {
 		return fmt.Errorf("указатель на блок не может быть nil")
 	}

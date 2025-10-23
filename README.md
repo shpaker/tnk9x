@@ -63,8 +63,11 @@ gonflict/
 ├── assets/                        # Игровые ресурсы
 │   ├── levels/                    # Уровни игры
 │   ├── sounds/                    # Звуковые эффекты
-│   ├── sprites.png                # Спрайты
-│   ├── sprites.yml                # Конфигурация спрайтов
+│   ├── new/                       # Новые ресурсы
+│   │   ├── blocks.png            # Изображения блоков
+│   │   ├── blocks.yml            # Конфигурация блоков
+│   │   ├── player.png            # Изображения игрока
+│   │   └── player.yml            # Конфигурация игрока
 │   └── blocks.yml                 # Конфигурация блоков
 │
 ├── go.mod                         # Go модуль
@@ -118,7 +121,7 @@ graph LR
         BlocksRepo[BlocksRepository<br/>In-Memory]
         BulletsRepo[BulletsRepository<br/>In-Memory]
         MapsRepo[MapsDataRepository<br/>Level Loader]
-        SpritesRepo[SpritesRepository<br/>Image Cache]
+        TilesetRepo[TilesetRepository<br/>Image Cache]
         FileRepo[FileRepository<br/>Assets Reader]
     end
     
@@ -129,7 +132,7 @@ graph LR
     Render --> Bullet
     Render --> Map
     
-    Player --> SpritesRepo
+    Player --> TilesetRepo
     Bullet --> BulletsRepo
     Map --> BlocksRepo
     Collision --> Player
@@ -137,8 +140,8 @@ graph LR
     Collision --> Map
     
     MapsRepo --> FileRepo
-    MapsRepo --> SpritesRepo
-    SpritesRepo --> FileRepo
+    MapsRepo --> TilesetRepo
+    TilesetRepo --> FileRepo
 ```
 
 ### Поток данных при игре
@@ -234,7 +237,7 @@ graph TB
     
     subgraph "Processed Repositories"
         MapsRepo[MapsDataRepository<br/>Level Parsing]
-        SpritesRepo[SpritesRepository<br/>Image Processing]
+        TilesetRepo[TilesetRepository<br/>Image Processing]
     end
     
     subgraph "Raw Repositories"
@@ -244,10 +247,10 @@ graph TB
     ReposPkg -.->|exports| BlocksRepo
     ReposPkg -.->|exports| BulletsRepo
     ReposPkg -.->|exports| MapsRepo
-    ReposPkg -.->|exports| SpritesRepo
+    ReposPkg -.->|exports| TilesetRepo
     
     MapsRepo --> FileRepo
-    SpritesRepo --> FileRepo
+    TilesetRepo --> FileRepo
 ```
 
 ### Принципы
@@ -359,7 +362,7 @@ just help             # Показать все команды
 - **BlocksRepository** - хранение блоков карты (in-memory)
 - **BulletsRepository** - хранение пуль (in-memory)
 - **MapsDataRepository** - загрузка уровней из файлов
-- **SpritesRepository** - загрузка и кеширование спрайтов
+- **TilesetRepository** - загрузка и кеширование изображений из тайлсетов
 - **FileRepository** - чтение файлов из assets
 
 ### States (Состояния)
@@ -404,7 +407,7 @@ go tool cover -html=coverage.out
 // use_cases/enemy_use_cases.go
 type EnemyUseCases struct {
     enemiesRepo repositories.IEnemiesRepository
-    spritesRepo repositories.ISpritesRepository
+    tilesetRepo repositories.ITilesetRepository
 }
 
 func (uc *EnemyUseCases) SpawnEnemy() error {

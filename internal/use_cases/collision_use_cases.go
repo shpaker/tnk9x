@@ -56,7 +56,7 @@ func (uc *CollisionUseCases) checkBulletBoundaryCollisions() {
 }
 
 // checkBulletPlayerCollisions проверяет коллизии пуль с игроком
-func (uc *CollisionUseCases) checkBulletPlayerCollisions(player *types.Tank) {
+func (uc *CollisionUseCases) checkBulletPlayerCollisions(player *types.TankEntity) {
 	bullets := uc.bulletUseCases.GetBullets()
 
 	for i := len(bullets) - 1; i >= 0; i-- {
@@ -125,7 +125,7 @@ func (uc *CollisionUseCases) checkBulletWallCollisions() {
 }
 
 // checkPlayerBoundaryCollisions проверяет коллизии игрока с границами экрана
-func (uc *CollisionUseCases) checkPlayerBoundaryCollisions(player *types.Tank) {
+func (uc *CollisionUseCases) checkPlayerBoundaryCollisions(player *types.TankEntity) {
 	if player.WorldPosition.X < 0 {
 		player.WorldPosition.X = 0
 		uc.playerUseCases.StopPlayer(false)
@@ -145,7 +145,7 @@ func (uc *CollisionUseCases) checkPlayerBoundaryCollisions(player *types.Tank) {
 }
 
 // checkPlayerWallCollisions проверяет коллизии игрока со стенами
-func (uc *CollisionUseCases) checkPlayerWallCollisions(player *types.Tank) {
+func (uc *CollisionUseCases) checkPlayerWallCollisions(player *types.TankEntity) {
 	level := uc.mapUseCases.GetBlocks()
 	mapObjects := uc.createMapObjectsFromLevel(level)
 
@@ -153,16 +153,16 @@ func (uc *CollisionUseCases) checkPlayerWallCollisions(player *types.Tank) {
 	collidingObject := uc.CheckCollidersWithArrayFirst(player, mapObjects)
 
 	if collidingObject != nil {
-		uc.handlePlayerWallCollision(player, collidingObject.(*types.Block))
+		uc.handlePlayerWallCollision(player, collidingObject.(*types.BlockEntity))
 	}
 }
 
 // createBlockFromWall создает блок из данных стены для проверки коллизий
-func (uc *CollisionUseCases) createBlockFromWall(wall types.Block) types.Block {
-	return types.Block{
-		Image:      wall.Image,
-		Data:       wall.Data,
-		Properties: wall.Properties,
+func (uc *CollisionUseCases) createBlockFromWall(wall types.BlockEntity) types.BlockEntity {
+	return types.BlockEntity{
+		ImageGetter: wall.ImageGetter,
+		Data:        wall.Data,
+		Properties:  wall.Properties,
 		WorldPosition: types.Position{
 			X: wall.WorldPosition.X * TileMinSize,
 			Y: wall.WorldPosition.Y * TileMinSize,
@@ -171,7 +171,7 @@ func (uc *CollisionUseCases) createBlockFromWall(wall types.Block) types.Block {
 }
 
 // createMapObjectsFromLevel создает массив объектов карты из уровня
-func (uc *CollisionUseCases) createMapObjectsFromLevel(level []types.Block) []IMapObject {
+func (uc *CollisionUseCases) createMapObjectsFromLevel(level []types.BlockEntity) []IMapObject {
 	var mapObjects []IMapObject
 	for _, wall := range level {
 		if wall.Data != nil {
@@ -183,7 +183,7 @@ func (uc *CollisionUseCases) createMapObjectsFromLevel(level []types.Block) []IM
 }
 
 // handlePlayerWallCollision обрабатывает коллизию игрока со стеной
-func (uc *CollisionUseCases) handlePlayerWallCollision(player *types.Tank, block *types.Block) {
+func (uc *CollisionUseCases) handlePlayerWallCollision(player *types.TankEntity, block *types.BlockEntity) {
 	blockPos := block.GetWorldPosition()
 	blockSize := block.GetSize()
 

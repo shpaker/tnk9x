@@ -1,6 +1,7 @@
 package adapters
 
 import (
+	"fmt"
 	"image/color"
 	"math"
 
@@ -13,9 +14,10 @@ import (
 
 // RendererAdapter адаптер для рендеринга игры
 type RendererAdapter struct {
-	mapUseCases    use_cases.IMapUseCases
-	playerUseCases use_cases.IPlayerUseCases
-	bulletUseCases use_cases.IBulletUseCases
+	mapUseCases       use_cases.IMapUseCases
+	playerUseCases    use_cases.IPlayerUseCases
+	bulletUseCases    use_cases.IBulletUseCases
+	tilesetRepository types.ITilesetRepository
 }
 
 // NewRendererAdapter создает новый экземпляр RendererAdapter
@@ -23,11 +25,13 @@ func NewRendererAdapter(
 	mapUseCases use_cases.IMapUseCases,
 	playerUseCases use_cases.IPlayerUseCases,
 	bulletUseCases use_cases.IBulletUseCases,
+	tilesetRepository types.ITilesetRepository,
 ) *RendererAdapter {
 	return &RendererAdapter{
-		mapUseCases:    mapUseCases,
-		playerUseCases: playerUseCases,
-		bulletUseCases: bulletUseCases,
+		mapUseCases:       mapUseCases,
+		playerUseCases:    playerUseCases,
+		bulletUseCases:    bulletUseCases,
+		tilesetRepository: tilesetRepository,
 	}
 }
 
@@ -45,17 +49,25 @@ func (r *RendererAdapter) drawMap(screen *ebiten.Image) {
 
 	// Draw blocks on the map
 	blocks := r.mapUseCases.GetBlocks()
-	for _, block := range blocks {
-		if block.Image == nil {
+	fmt.Printf("DEBUG: Found %d blocks to render\n", len(blocks))
+	for i, block := range blocks {
+		// Получаем изображение блока
+		image, err := block.GetImage(r.tilesetRepository)
+		if err != nil {
+			// Логируем ошибку, но продолжаем рендеринг других блоков
+			fmt.Printf("DEBUG: Block %d error: %v\n", i, err)
 			continue
 		}
+
+		fmt.Printf("DEBUG: Rendering block %d at position (%.2f, %.2f)\n", i, block.WorldPosition.X, block.WorldPosition.Y)
+
 		op := &ebiten.DrawImageOptions{}
 		// Предполагаем, что блоки имеют координаты X, Y в WorldPosition
 		op.GeoM.Translate(
 			MapOffset+block.WorldPosition.X*TileMinSize,
 			MapOffset+block.WorldPosition.Y*TileMinSize,
 		)
-		screen.DrawImage(block.Image, op)
+		screen.DrawImage(image, op)
 	}
 }
 

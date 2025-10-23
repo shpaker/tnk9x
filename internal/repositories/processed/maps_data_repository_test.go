@@ -6,7 +6,39 @@ import (
 	"testing"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/shpaker/gonflict/internal/types"
 )
+
+// MockTilesAdapter - мок для тестирования
+type MockTilesAdapter struct{}
+
+func (mta *MockTilesAdapter) GetTileStaticEntity(id string) (types.IImageIdGetter, error) {
+	return &MockImageIdGetter{id: id}, nil
+}
+
+func (mta *MockTilesAdapter) GetTilesetRepository() types.ITilesetRepository {
+	return &MockTilesetRepository{}
+}
+
+// MockImageIdGetter - мок для тестирования
+type MockImageIdGetter struct {
+	id string
+}
+
+func (mig *MockImageIdGetter) GetImageId() string {
+	return mig.id
+}
+
+// MockTilesetRepository - мок для тестирования
+type MockTilesetRepository struct{}
+
+func (mtr *MockTilesetRepository) GetImage(id string) (*ebiten.Image, error) {
+	return ebiten.NewImage(8, 8), nil
+}
+
+func (mtr *MockTilesetRepository) GetAnimationData(id string) (types.AnimationData, error) {
+	return types.AnimationData{}, nil
+}
 
 // MockFileRepository - простой мок для тестирования
 type MockFileRepository struct {
@@ -50,7 +82,6 @@ func (m *MockSpritesRepository) GetSprite(groupID string, spriteID string) (*ebi
 func TestGetLevel_Success(t *testing.T) {
 	// Создаем мок репозитория
 	mockFileRepo := NewMockFileRepository()
-	mockSpritesRepo := NewMockSpritesRepository()
 
 	// Создаем тестовую карту 26x26
 	levelData := []byte(`..........................
@@ -83,7 +114,8 @@ func TestGetLevel_Success(t *testing.T) {
 	mockFileRepo.AddFile("levels/1", levelData)
 
 	// Создаем сервис уровней
-	mapsService := NewMapsDataRepository(mockFileRepo, mockSpritesRepo)
+	mockTilesAdapter := &MockTilesAdapter{}
+	mapsService := NewMapsDataRepository(mockFileRepo, mockTilesAdapter)
 
 	// Вызываем функцию
 	level, err := mapsService.GetLevel(1)
@@ -101,7 +133,6 @@ func TestGetLevel_Success(t *testing.T) {
 func TestGetLevel_InvalidSize(t *testing.T) {
 	// Создаем мок репозитория
 	mockFileRepo := NewMockFileRepository()
-	mockSpritesRepo := NewMockSpritesRepository()
 
 	// Создаем карту с неправильным размером (25 строк)
 	levelData := []byte(`..........................
@@ -133,7 +164,8 @@ func TestGetLevel_InvalidSize(t *testing.T) {
 	mockFileRepo.AddFile("levels/1", levelData)
 
 	// Создаем сервис уровней
-	mapsService := NewMapsDataRepository(mockFileRepo, mockSpritesRepo)
+	mockTilesAdapter := &MockTilesAdapter{}
+	mapsService := NewMapsDataRepository(mockFileRepo, mockTilesAdapter)
 
 	// Вызываем функцию
 	_, err := mapsService.GetLevel(1)
