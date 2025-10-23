@@ -2,7 +2,7 @@ package processed
 
 import (
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/shpaker/gonflict/internal/models"
+	"github.com/shpaker/gonflict/internal/types"
 )
 
 // ISpritesRepository определяет интерфейс для работы со спрайтами
@@ -14,5 +14,5 @@ type ISpritesRepository interface {
 // IMapsDataRepository определяет интерфейс для работы с картами уровней
 type IMapsDataRepository interface {
 	// GetLevel загружает уровень по номеру и возвращает его данные
-	GetLevel(num int) ([]models.Block, error)
+	GetLevel(num int) ([]types.Block, error)
 }

@@ -1,69 +1,71 @@
-package services
+package use_cases
 
 import (
-	"github.com/shpaker/gonflict/internal/constants"
-	"github.com/shpaker/gonflict/internal/interfaces"
-	"github.com/shpaker/gonflict/internal/models"
 	"github.com/shpaker/gonflict/internal/types"
 )
 
-type CollidersService struct {
-	bulletsService *BulletsService
-	playerService  *PlayerService
-	mapService     MapService
+// CollisionUseCases реализация для операций с коллизиями
+type CollisionUseCases struct {
+	bulletUseCases IBulletUseCases
+	playerUseCases IPlayerUseCases
+	mapUseCases    IMapUseCases
 }
 
-func NewCollidersService(
-	bulletsService *BulletsService,
-	playerService *PlayerService,
-	mapService MapService,
-) *CollidersService {
-	return &CollidersService{
-		bulletsService: bulletsService,
-		playerService:  playerService,
-		mapService:     mapService,
+// NewCollisionUseCases создает новый экземпляр CollisionUseCases
+func NewCollisionUseCases(
+	bulletUseCases IBulletUseCases,
+	playerUseCases IPlayerUseCases,
+	mapUseCases IMapUseCases,
+) *CollisionUseCases {
+	return &CollisionUseCases{
+		bulletUseCases: bulletUseCases,
+		playerUseCases: playerUseCases,
+		mapUseCases:    mapUseCases,
 	}
 }
 
-func (s *CollidersService) Update() {
-	player, err := s.playerService.GetPlayer()
+// UpdateCollisions обновляет все коллизии в игре
+func (uc *CollisionUseCases) UpdateCollisions() error {
+	player, err := uc.playerUseCases.GetPlayer()
 	if err != nil {
-		return
+		return err
 	}
 
-	s.checkBulletBoundaryCollisions()
-	s.checkBulletPlayerCollisions(player)
-	s.checkBulletWallCollisions()
-	s.checkPlayerBoundaryCollisions(player)
-	s.checkPlayerWallCollisions(player)
+	uc.checkBulletBoundaryCollisions()
+	uc.checkBulletPlayerCollisions(player)
+	uc.checkBulletWallCollisions()
+	uc.checkPlayerBoundaryCollisions(player)
+	uc.checkPlayerWallCollisions(player)
+
+	return nil
 }
 
 // checkBulletBoundaryCollisions проверяет коллизии пуль с границами экрана
-func (s *CollidersService) checkBulletBoundaryCollisions() {
-	bullets := s.bulletsService.GetBullets()
+func (uc *CollisionUseCases) checkBulletBoundaryCollisions() {
+	bullets := uc.bulletUseCases.GetBullets()
 
 	for i := len(bullets) - 1; i >= 0; i-- {
 		bullet := &bullets[i]
 
 		// Удаляем пули, которые вышли за границы экрана
-		if bullet.WorldPosition.X < 0 || bullet.WorldPosition.X > constants.BattleFieldWidthHeight ||
-			bullet.WorldPosition.Y < 0 || bullet.WorldPosition.Y > constants.BattleFieldWidthHeight {
-			s.bulletsService.RemoveBullet(i)
+		if bullet.WorldPosition.X < 0 || bullet.WorldPosition.X > MapWidthHeight ||
+			bullet.WorldPosition.Y < 0 || bullet.WorldPosition.Y > MapWidthHeight {
+			uc.bulletUseCases.RemoveBullet(i)
 		}
 	}
 }
 
 // checkBulletPlayerCollisions проверяет коллизии пуль с игроком
-func (s *CollidersService) checkBulletPlayerCollisions(player *models.Tank) {
-	bullets := s.bulletsService.GetBullets()
+func (uc *CollisionUseCases) checkBulletPlayerCollisions(player *types.Tank) {
+	bullets := uc.bulletUseCases.GetBullets()
 
 	for i := len(bullets) - 1; i >= 0; i-- {
 		bullet := &bullets[i]
 
 		// Проверяем коллизию между пулей и игроком
-		if bullet.Owner != player && s.checkColliders(bullet, player) {
+		if bullet.Owner != player && uc.CheckColliders(bullet, player) {
 			// Удаляем пулю при попадании в игрока
-			s.bulletsService.RemoveBullet(i)
+			uc.bulletUseCases.RemoveBullet(i)
 			// Здесь можно добавить логику обработки попадания в игрока
 			// println("Player hit by bullet!")
 		}
@@ -71,9 +73,9 @@ func (s *CollidersService) checkBulletPlayerCollisions(player *models.Tank) {
 }
 
 // checkBulletWallCollisions проверяет коллизии пуль со стенами
-func (s *CollidersService) checkBulletWallCollisions() {
-	bullets := s.bulletsService.GetBullets()
-	level := s.mapService.GetBlocks()
+func (uc *CollisionUseCases) checkBulletWallCollisions() {
+	bullets := uc.bulletUseCases.GetBullets()
+	level := uc.mapUseCases.GetBlocks()
 
 	for i := len(bullets) - 1; i >= 0; i-- {
 		bullet := &bullets[i]
@@ -87,7 +89,7 @@ func (s *CollidersService) checkBulletWallCollisions() {
 				continue
 			}
 
-			block := s.createBlockFromWall(wall)
+			block := uc.createBlockFromWall(wall)
 
 			// Проверяем, является ли блок коллидируемым
 			if block.Properties != nil && !block.Properties.Collidable {
@@ -95,7 +97,7 @@ func (s *CollidersService) checkBulletWallCollisions() {
 			}
 
 			// Проверяем коллизию пули с блоком
-			if s.checkColliders(bullet, &block) {
+			if uc.CheckColliders(bullet, &block) {
 				// Если блок - кирпичная стена, помечаем для удаления
 				if wall.Data.Name == types.Brick {
 					blocksToRemove = append(blocksToRemove, j)
@@ -109,73 +111,71 @@ func (s *CollidersService) checkBulletWallCollisions() {
 		// Удаляем блоки в обратном порядке (чтобы индексы не сдвигались)
 		for k := len(blocksToRemove) - 1; k >= 0; k-- {
 			blockIndex := blocksToRemove[k]
-			blocks := s.mapService.GetBlocks()
+			blocks := uc.mapUseCases.GetBlocks()
 			if blockIndex < len(blocks) {
-				s.mapService.RemoveBlock(&blocks[blockIndex])
+				uc.mapUseCases.RemoveBlock(&blocks[blockIndex])
 			}
 		}
 
 		// Удаляем пулю только после проверки всех блоков
 		if bulletHit {
-			s.bulletsService.RemoveBullet(i)
+			uc.bulletUseCases.RemoveBullet(i)
 		}
 	}
 }
 
 // checkPlayerBoundaryCollisions проверяет коллизии игрока с границами экрана
-func (s *CollidersService) checkPlayerBoundaryCollisions(player *models.Tank) {
+func (uc *CollisionUseCases) checkPlayerBoundaryCollisions(player *types.Tank) {
 	if player.WorldPosition.X < 0 {
 		player.WorldPosition.X = 0
-		s.playerService.Stop(false)
+		uc.playerUseCases.StopPlayer(false)
 	}
 	if player.WorldPosition.Y < 0 {
 		player.WorldPosition.Y = 0
-		s.playerService.Stop(false)
+		uc.playerUseCases.StopPlayer(false)
 	}
-	if player.WorldPosition.X > constants.BattleFieldWidthHeight-constants.TankSpriteSize {
-		player.WorldPosition.X = constants.BattleFieldWidthHeight - constants.TankSpriteSize
-		s.playerService.Stop(false)
+	if player.WorldPosition.X > MapWidthHeight-TankSpriteSize {
+		player.WorldPosition.X = MapWidthHeight - TankSpriteSize
+		uc.playerUseCases.StopPlayer(false)
 	}
-	if player.WorldPosition.Y > constants.BattleFieldWidthHeight-constants.TankSpriteSize {
-		player.WorldPosition.Y = constants.BattleFieldWidthHeight - constants.TankSpriteSize
-		s.playerService.Stop(false)
+	if player.WorldPosition.Y > MapWidthHeight-TankSpriteSize {
+		player.WorldPosition.Y = MapWidthHeight - TankSpriteSize
+		uc.playerUseCases.StopPlayer(false)
 	}
 }
 
 // checkPlayerWallCollisions проверяет коллизии игрока со стенами
-func (s *CollidersService) checkPlayerWallCollisions(
-	player *models.Tank,
-) {
-	level := s.mapService.GetBlocks()
-	mapObjects := s.createMapObjectsFromLevel(level)
+func (uc *CollisionUseCases) checkPlayerWallCollisions(player *types.Tank) {
+	level := uc.mapUseCases.GetBlocks()
+	mapObjects := uc.createMapObjectsFromLevel(level)
 
 	// Проверяем коллизии с использованием внутренних методов
-	collidingObject := s.checkCollidersWithArrayFirst(player, mapObjects)
+	collidingObject := uc.CheckCollidersWithArrayFirst(player, mapObjects)
 
 	if collidingObject != nil {
-		s.handlePlayerWallCollision(player, collidingObject.(*models.Block))
+		uc.handlePlayerWallCollision(player, collidingObject.(*types.Block))
 	}
 }
 
 // createBlockFromWall создает блок из данных стены для проверки коллизий
-func (s *CollidersService) createBlockFromWall(wall models.Block) models.Block {
-	return models.Block{
+func (uc *CollisionUseCases) createBlockFromWall(wall types.Block) types.Block {
+	return types.Block{
 		Image:      wall.Image,
 		Data:       wall.Data,
 		Properties: wall.Properties,
 		WorldPosition: types.Position{
-			X: wall.WorldPosition.X * constants.TileMinSize,
-			Y: wall.WorldPosition.Y * constants.TileMinSize,
+			X: wall.WorldPosition.X * TileMinSize,
+			Y: wall.WorldPosition.Y * TileMinSize,
 		},
 	}
 }
 
 // createMapObjectsFromLevel создает массив объектов карты из уровня
-func (s *CollidersService) createMapObjectsFromLevel(level []models.Block) []interfaces.IMapObject {
-	var mapObjects []interfaces.IMapObject
+func (uc *CollisionUseCases) createMapObjectsFromLevel(level []types.Block) []IMapObject {
+	var mapObjects []IMapObject
 	for _, wall := range level {
 		if wall.Data != nil {
-			block := s.createBlockFromWall(wall)
+			block := uc.createBlockFromWall(wall)
 			mapObjects = append(mapObjects, &block)
 		}
 	}
@@ -183,7 +183,7 @@ func (s *CollidersService) createMapObjectsFromLevel(level []models.Block) []int
 }
 
 // handlePlayerWallCollision обрабатывает коллизию игрока со стеной
-func (s *CollidersService) handlePlayerWallCollision(player *models.Tank, block *models.Block) {
+func (uc *CollisionUseCases) handlePlayerWallCollision(player *types.Tank, block *types.Block) {
 	blockPos := block.GetWorldPosition()
 	blockSize := block.GetSize()
 
@@ -193,21 +193,21 @@ func (s *CollidersService) handlePlayerWallCollision(player *models.Tank, block 
 		player.WorldPosition.Y = blockPos.Y + float64(blockSize.Height)
 	case types.DirectionDown:
 		// низ танка упирается в верх блока
-		player.WorldPosition.Y = blockPos.Y - float64(constants.TankSpriteSize)
+		player.WorldPosition.Y = blockPos.Y - float64(TankSpriteSize)
 	case types.DirectionLeft:
 		// левая сторона танка упирается в правую сторону блока
 		player.WorldPosition.X = blockPos.X + float64(blockSize.Width)
 	case types.DirectionRight:
 		// правая сторона танка упирается в левую сторону блока
-		player.WorldPosition.X = blockPos.X - float64(constants.TankSpriteSize)
+		player.WorldPosition.X = blockPos.X - float64(TankSpriteSize)
 	}
-	s.playerService.Stop(true)
+	uc.playerUseCases.StopPlayer(true)
 }
 
-// checkColliders проверяет коллизию между двумя объектами карты
-func (s *CollidersService) checkColliders(
-	obj1 interfaces.IMapObject,
-	obj2 interfaces.IMapObject,
+// CheckColliders проверяет коллизию между двумя объектами карты
+func (uc *CollisionUseCases) CheckColliders(
+	obj1 IMapObject,
+	obj2 IMapObject,
 ) bool {
 	pos1 := obj1.GetWorldPosition()
 	size1 := obj1.GetSize()
@@ -221,15 +221,15 @@ func (s *CollidersService) checkColliders(
 		pos1.Y+float64(size1.Height) > pos2.Y
 }
 
-// checkCollidersWithArray проверяет коллизии между объектом и массивом объектов карты
-func (s *CollidersService) checkCollidersWithArray(
-	obj interfaces.IMapObject,
-	objects []interfaces.IMapObject,
-) []interfaces.IMapObject {
-	var collidingObjects []interfaces.IMapObject
+// CheckCollidersWithArray проверяет коллизии между объектом и массивом объектов карты
+func (uc *CollisionUseCases) CheckCollidersWithArray(
+	obj IMapObject,
+	objects []IMapObject,
+) []IMapObject {
+	var collidingObjects []IMapObject
 
 	for _, mapObj := range objects {
-		if s.checkColliders(obj, mapObj) {
+		if uc.CheckColliders(obj, mapObj) {
 			collidingObjects = append(collidingObjects, mapObj)
 		}
 	}
@@ -237,14 +237,14 @@ func (s *CollidersService) checkCollidersWithArray(
 	return collidingObjects
 }
 
-// checkCollidersWithArrayFirst проверяет коллизии между объектом и массивом объектов карты
+// CheckCollidersWithArrayFirst проверяет коллизии между объектом и массивом объектов карты
 // Возвращает первый коллидирующий объект или nil, если коллизий нет
-func (s *CollidersService) checkCollidersWithArrayFirst(
-	obj interfaces.IMapObject,
-	objects []interfaces.IMapObject,
-) interfaces.IMapObject {
+func (uc *CollisionUseCases) CheckCollidersWithArrayFirst(
+	obj IMapObject,
+	objects []IMapObject,
+) IMapObject {
 	for _, mapObj := range objects {
-		if s.checkColliders(obj, mapObj) {
+		if uc.CheckColliders(obj, mapObj) {
 			return mapObj
 		}
 	}

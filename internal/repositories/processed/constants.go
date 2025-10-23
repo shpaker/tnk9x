@@ -1,7 +1,12 @@
-package constants
+package processed
 
 import (
 	"github.com/shpaker/gonflict/internal/types"
+)
+
+// Константы для репозиториев
+const (
+	MapBlocksLength = 26
 )
 
 // MapCharsBlocksMapping содержит соответствие символов карты типам блоков

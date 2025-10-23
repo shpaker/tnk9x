@@ -1,40 +1,308 @@
 # Gonflict
 
-Игра-клон Battle City (Танчики) на Go с использованием Ebiten. Минимальный, но расширяемый проект для изучения игровой разработки.
+Игра-клон Battle City (Танчики) на Go с использованием Ebiten. Проект построен на принципах Clean Architecture для изучения игровой разработки.
 
-## Структура проекта
+## 🎮 Особенности
+
+- ✅ **Clean Architecture** - четкое разделение слоев (Use Cases, Adapters, Repositories)
+- ✅ **Dependency Injection** - инверсия зависимостей через интерфейсы
+- ✅ **Тестируемость** - легко тестировать бизнес-логику
+- ✅ **Расширяемость** - простое добавление новых функций
+- ✅ **Конфигурируемость** - настройка через переменные окружения
+
+## 📁 Структура проекта
 
 ```
 gonflict/
-├── cmd/                    # Точки входа приложения
-│   └── main.go            # Главный файл приложения
-├── internal/              # Внутренние пакеты (не импортируются извне)
-│   ├── app/               # Основная логика приложения
-│   ├── config/            # Конфигурация
-│   ├── constants/         # Игровые константы
-│   ├── interfaces/        # Интерфейсы
-│   ├── models/            # Игровые модели (танк, блоки, пули)
-│   ├── repositories/      # Репозитории для работы с ресурсами
-│   ├── services/          # Игровые сервисы
-│   ├── states/            # Игровые состояния
-│   ├── types/             # Типы данных
-│   └── utils/             # Утилиты (коллизии, математика)
-├── assets/                # Игровые ресурсы
-│   ├── levels/            # Уровни игры
-│   ├── sounds/            # Звуковые эффекты
-│   └── *.png, *.yml       # Спрайты и конфигурация
-├── go.mod                 # Модуль Go
-├── justfile              # Команды для сборки и разработки
-└── README.md             # Документация
+├── cmd/
+│   └── main.go                    # Точка входа приложения
+├── internal/
+│   ├── app.go                     # Главное приложение и Ebiten интеграция
+│   ├── config.go                  # Конфигурация приложения
+│   │
+│   ├── use_cases/                 # 🎯 Бизнес-логика (Use Cases Layer)
+│   │   ├── interfaces.go          # Интерфейсы use cases
+│   │   ├── constants.go           # Константы игровой логики
+│   │   ├── player_use_cases.go    # Логика игрока
+│   │   ├── bullet_use_cases.go    # Логика пуль
+│   │   ├── map_use_cases.go       # Логика карты
+│   │   └── collision_use_cases.go # Логика коллизий
+│   │
+│   ├── adapters/                  # 🔌 Адаптеры (Infrastructure Layer)
+│   │   ├── interfaces.go          # Интерфейсы адаптеров
+│   │   ├── constants.go           # Константы адаптеров
+│   │   ├── input_adapter.go       # Адаптер ввода (клавиатура)
+│   │   └── renderer_adapter.go    # Адаптер рендеринга (Ebiten)
+│   │
+│   ├── repositories/              # 💾 Репозитории (Data Layer)
+│   │   ├── repositories.go        # Централизованные реимпорты
+│   │   ├── game/                  # Игровые репозитории (in-memory)
+│   │   │   ├── interfaces.go
+│   │   │   ├── blocks_repository.go
+│   │   │   └── bullets_repository.go
+│   │   ├── processed/             # Обработанные данные
+│   │   │   ├── interfaces.go
+│   │   │   ├── constants.go
+│   │   │   ├── maps_data_repository.go
+│   │   │   └── sprites_repository.go
+│   │   └── raw/                   # Сырые данные (файлы)
+│   │       ├── interfaces.go
+│   │       └── file_repository.go
+│   │
+│   ├── states/                    # 🎭 Состояния игры
+│   │   ├── interfaces.go          # Интерфейс State
+│   │   └── game_state.go          # Игровое состояние
+│   │
+│   ├── types/                     # 📦 Типы данных
+│   │   └── types.go               # Базовые структуры (Tank, Bullet, Block)
+│   │
+│   └── utils/                     # 🛠️ Утилиты
+│       ├── utils.go               # Вспомогательные функции
+│       └── utils_test.go          # Тесты утилит
+│
+├── assets/                        # Игровые ресурсы
+│   ├── levels/                    # Уровни игры
+│   ├── sounds/                    # Звуковые эффекты
+│   ├── sprites.png                # Спрайты
+│   ├── sprites.yml                # Конфигурация спрайтов
+│   └── blocks.yml                 # Конфигурация блоков
+│
+├── go.mod                         # Go модуль
+├── go.sum                         # Зависимости
+├── justfile                       # Команды для разработки
+└── README.md                      # Документация
 ```
 
-## Быстрый старт
+## 🏗️ Архитектура
+
+Проект следует принципам **Clean Architecture**:
+
+### Слои архитектуры (High-Level)
+
+```mermaid
+graph TB
+    Entry[cmd/main.go<br/>Entry Point]
+    App[internal/app.go<br/>Application Layer<br/>Ebiten Integration]
+    States[states/<br/>Game States<br/>Orchestration]
+    
+    UseCases[use_cases/<br/>Business Logic<br/>• Player<br/>• Bullet<br/>• Map<br/>• Collision]
+    Adapters[adapters/<br/>Infrastructure<br/>• Input<br/>• Renderer]
+    
+    Repos[repositories/<br/>Data Layer<br/>• Game<br/>• Processed<br/>• Raw]
+    
+    Entry --> App
+    App --> States
+    States --> UseCases
+    States --> Adapters
+    Adapters -.-> UseCases
+    UseCases --> Repos
+    
+    style Entry fill:#e1f5ff
+    style App fill:#fff4e1
+    style States fill:#ffe1f5
+    style UseCases fill:#e1ffe1
+    style Adapters fill:#ffe1e1
+    style Repos fill:#f5e1ff
+```
+
+### Детальная архитектура компонентов
+
+```mermaid
+graph LR
+    subgraph "🎮 Presentation Layer"
+        Input[InputAdapter<br/>Keyboard]
+        Render[RendererAdapter<br/>Ebiten Drawing]
+    end
+    
+    subgraph "🎯 Use Cases Layer"
+        Player[PlayerUseCases<br/>Movement & Control]
+        Bullet[BulletUseCases<br/>Shooting Logic]
+        Map[MapUseCases<br/>Block Management]
+        Collision[CollisionUseCases<br/>Physics & Detection]
+    end
+    
+    subgraph "💾 Data Layer"
+        BlocksRepo[BlocksRepository<br/>In-Memory]
+        BulletsRepo[BulletsRepository<br/>In-Memory]
+        MapsRepo[MapsDataRepository<br/>Level Loader]
+        SpritesRepo[SpritesRepository<br/>Image Cache]
+        FileRepo[FileRepository<br/>Assets Reader]
+    end
+    
+    Input --> Player
+    Input --> Bullet
+    
+    Render --> Player
+    Render --> Bullet
+    Render --> Map
+    
+    Player --> SpritesRepo
+    Bullet --> BulletsRepo
+    Map --> BlocksRepo
+    Collision --> Player
+    Collision --> Bullet
+    Collision --> Map
+    
+    MapsRepo --> FileRepo
+    MapsRepo --> SpritesRepo
+    SpritesRepo --> FileRepo
+    
+    style Input fill:#ffcccc
+    style Render fill:#ffcccc
+    style Player fill:#ccffcc
+    style Bullet fill:#ccffcc
+    style Map fill:#ccffcc
+    style Collision fill:#ccffcc
+    style BlocksRepo fill:#ccccff
+    style BulletsRepo fill:#ccccff
+    style MapsRepo fill:#ccccff
+    style SpritesRepo fill:#ccccff
+    style FileRepo fill:#ccccff
+```
+
+### Поток данных при игре
+
+```mermaid
+sequenceDiagram
+    participant User as 👤 Игрок
+    participant Input as InputAdapter
+    participant Player as PlayerUseCases
+    participant Bullet as BulletUseCases
+    participant Collision as CollisionUseCases
+    participant Render as RendererAdapter
+    
+    User->>Input: Нажимает W
+    Input->>Player: MovePlayer(UP, dt)
+    Player->>Player: Обновить позицию
+    Player->>Collision: Проверить коллизии
+    
+    User->>Input: Нажимает Space
+    Input->>Bullet: ShootBullet(tank)
+    Bullet->>Bullet: Создать пулю
+    
+    loop Каждый кадр
+        Bullet->>Bullet: UpdateBullets(dt)
+        Collision->>Collision: UpdateCollisions()
+        Collision->>Bullet: Проверить пули→стены
+        Collision->>Player: Проверить танк→стены
+    end
+    
+    Render->>Player: GetPlayer()
+    Render->>Bullet: GetBullets()
+    Render->>User: Отрисовать кадр
+```
+
+### Dependency Flow (Clean Architecture)
+
+```mermaid
+graph TD
+    subgraph "External Layer"
+        Ebiten[Ebiten Framework]
+        Files[File System]
+    end
+    
+    subgraph "Adapters Layer"
+        InputA[Input Adapter]
+        RenderA[Renderer Adapter]
+        FileRepo[File Repository]
+    end
+    
+    subgraph "Use Cases Layer"
+        PlayerUC[Player Use Cases]
+        BulletUC[Bullet Use Cases]
+        MapUC[Map Use Cases]
+        CollisionUC[Collision Use Cases]
+    end
+    
+    subgraph "Entities Layer"
+        Tank[Tank Entity]
+        Bullet[Bullet Entity]
+        Block[Block Entity]
+    end
+    
+    Ebiten -.->|depends on| InputA
+    Ebiten -.->|depends on| RenderA
+    Files -.->|depends on| FileRepo
+    
+    InputA -->|uses| PlayerUC
+    InputA -->|uses| BulletUC
+    RenderA -->|uses| PlayerUC
+    RenderA -->|uses| BulletUC
+    RenderA -->|uses| MapUC
+    
+    PlayerUC -->|works with| Tank
+    BulletUC -->|works with| Bullet
+    MapUC -->|works with| Block
+    CollisionUC -->|works with| Tank
+    CollisionUC -->|works with| Bullet
+    CollisionUC -->|works with| Block
+    
+    style Ebiten fill:#ff9999
+    style Files fill:#ff9999
+    style InputA fill:#ffcc99
+    style RenderA fill:#ffcc99
+    style FileRepo fill:#ffcc99
+    style PlayerUC fill:#99ff99
+    style BulletUC fill:#99ff99
+    style MapUC fill:#99ff99
+    style CollisionUC fill:#99ff99
+    style Tank fill:#9999ff
+    style Bullet fill:#9999ff
+    style Block fill:#9999ff
+```
+
+### Структура репозиториев
+
+```mermaid
+graph TB
+    subgraph "Централизованный доступ"
+        ReposPkg[repositories.go<br/>Реэкспорты]
+    end
+    
+    subgraph "Game Repositories"
+        BlocksRepo[BlocksRepository<br/>In-Memory Storage]
+        BulletsRepo[BulletsRepository<br/>In-Memory Storage]
+    end
+    
+    subgraph "Processed Repositories"
+        MapsRepo[MapsDataRepository<br/>Level Parsing]
+        SpritesRepo[SpritesRepository<br/>Image Processing]
+    end
+    
+    subgraph "Raw Repositories"
+        FileRepo[FileRepository<br/>File I/O]
+    end
+    
+    ReposPkg -.->|exports| BlocksRepo
+    ReposPkg -.->|exports| BulletsRepo
+    ReposPkg -.->|exports| MapsRepo
+    ReposPkg -.->|exports| SpritesRepo
+    
+    MapsRepo --> FileRepo
+    SpritesRepo --> FileRepo
+    
+    style ReposPkg fill:#ffe6cc
+    style BlocksRepo fill:#e6f3ff
+    style BulletsRepo fill:#e6f3ff
+    style MapsRepo fill:#f0e6ff
+    style SpritesRepo fill:#f0e6ff
+    style FileRepo fill:#ffe6e6
+```
+
+### Принципы
+
+1. **Dependency Rule** - зависимости направлены внутрь (к бизнес-логике)
+2. **Interface Segregation** - интерфейсы определяются там, где используются
+3. **Dependency Inversion** - зависимость от абстракций, а не реализаций
+4. **Single Responsibility** - каждый компонент отвечает за одну задачу
+
+## 🚀 Быстрый старт
 
 ### Требования
 
 - Go 1.24.3 или выше
 - Ebiten 2.x (игровой движок)
-- Just (современная альтернатива Make) - [установка](https://github.com/casey/just#installation)
+- Just (опционально) - [установка](https://github.com/casey/just#installation)
 
 ### Установка и запуск
 
@@ -46,45 +314,33 @@ cd gonflict
 
 2. Установите зависимости:
 ```bash
-just deps
+go mod download
 ```
 
 3. Запустите приложение:
 ```bash
+# С Just
 just run
+
+# Без Just
+go run cmd/main.go
 ```
 
-Или для разработки:
+### Конфигурация через переменные окружения
+
 ```bash
-just dev
+# Настройка приложения
+export APP_NAME="My Battle City"
+export SCREEN_WIDTH=240
+export SCREEN_HEIGHT=240
+export GAME_SPEED=0.016667
+export TILE_SIZE=8
+
+# Запуск
+go run cmd/main.go
 ```
 
-## Доступные команды
-
-- `just build` - собрать приложение
-- `just run` - собрать и запустить
-- `just dev` - запустить в режиме разработки
-- `just test` - запустить тесты
-- `just test-coverage` - запустить тесты с отчетом покрытия
-- `just clean` - очистить собранные файлы
-- `just fmt` - форматировать код
-- `just lint` - запустить линтер
-- `just check` - запустить все проверки (fmt, lint, test)
-- `just ci` - полный CI pipeline
-- `just help` - показать все доступные команды
-
-## Игровая функциональность
-
-Игра представляет собой клон классической аркадной игры Battle City (Танчики):
-
-### Основные возможности
-
-- **Управление танком** - движение в 4 направлениях (WASD)
-- **Стрельба** - выстрелы пулями (Space)
-- **Коллизии** - система обнаружения столкновений с блоками
-- **Уровни** - загружаемые уровни из файлов
-- **Спрайты** - анимированные спрайты танков и блоков
-- **Звуки** - звуковые эффекты для действий
+## 🎮 Игровая функциональность
 
 ### Управление
 
@@ -93,83 +349,183 @@ just dev
 - **A** - движение влево
 - **D** - движение вправо
 - **Space** - стрельба
+- **Escape** - выход
 
 ### Игровые объекты
 
-- **Танк игрока** - управляемый танк с возможностью поворота
-- **Блоки** - различные типы препятствий (кирпич, сталь, лес, вода, лед)
-- **Пули** - снаряды для стрельбы
-- **Уровни** - игровые карты с препятствиями
+- **Танк игрока** - управляемый танк с поворотом и стрельбой
+- **Блоки**:
+  - `#` - Кирпич (разрушаемый)
+  - `@` - Сталь (неразрушаемый)
+  - `%` - Лес (прозрачный для танков)
+  - `~` - Вода (непроходимая)
+  - `=` - Лед (скользкий)
+- **Пули** - снаряды с коллизиями
+- **Уровни** - загружаемые карты 26x26
 
-## Архитектура игры
+## 🛠️ Доступные команды (Just)
 
-Проект следует принципам Clean Architecture с игровой спецификой:
+```bash
+just build            # Собрать приложение
+just run              # Собрать и запустить
+just dev              # Запустить в режиме разработки
+just test             # Запустить тесты
+just test-coverage    # Тесты с покрытием
+just clean            # Очистить собранные файлы
+just fmt              # Форматировать код
+just lint             # Запустить линтер
+just check            # Все проверки (fmt, lint, test)
+just ci               # Полный CI pipeline
+just help             # Показать все команды
+```
 
-### Основные компоненты
+## 📚 Компоненты системы
 
-- **PlayerService** - управление танком игрока, движение, поворот, стрельба
-- **BattlefieldService** - управление игровым полем и коллизиями
-- **BulletsService** - управление пулями и их физикой
-- **WindowService** - управление окном игры и рендерингом
+### Use Cases (Бизнес-логика)
 
-### Система коллизий
+- **PlayerUseCases** - движение, поворот, управление игроком
+- **BulletUseCases** - создание, обновление, удаление пуль
+- **MapUseCases** - работа с блоками карты
+- **CollisionUseCases** - проверка коллизий между объектами
 
-- **CheckColliders** - проверка коллизии между двумя объектами
-- **CheckCollidersWithArray** - проверка коллизий с массивом объектов
-- **CheckCollidersWithArrayFirst** - оптимизированная проверка первого коллидирующего объекта
+### Adapters (Инфраструктура)
 
-### Модели данных
+- **InputAdapter** - обработка ввода с клавиатуры
+- **RendererAdapter** - отрисовка игры через Ebiten
 
-- **Tank** - модель танка с позицией, направлением, скоростью
-- **Block** - модель блока с типом и свойствами коллизии
-- **Bullet** - модель пули с траекторией и уроном
-- **Level** - модель уровня с картой блоков
+### Repositories (Данные)
 
-## Разработка и расширение
+- **BlocksRepository** - хранение блоков карты (in-memory)
+- **BulletsRepository** - хранение пуль (in-memory)
+- **MapsDataRepository** - загрузка уровней из файлов
+- **SpritesRepository** - загрузка и кеширование спрайтов
+- **FileRepository** - чтение файлов из assets
 
-Этот проект создан как основа для изучения игровой разработки на Go:
+### States (Состояния)
 
-### Возможности для расширения
+- **GameState** - основное игровое состояние
+- Легко добавить: MenuState, PauseState, GameOverState
 
-1. **ИИ врагов** - добавьте `internal/ai/` для поведения компьютерных танков
-2. **Система очков** - создайте `internal/scoring/` для подсчета очков
-3. **Меню и UI** - добавьте `internal/ui/` для интерфейса игры
-4. **Сетевой режим** - создайте `internal/network/` для мультиплеера
-5. **Система достижений** - добавьте `internal/achievements/` для наград
-6. **Редактор уровней** - создайте `internal/editor/` для создания карт
+## 🧪 Тестирование
 
-### Тестирование
+```bash
+# Запустить все тесты
+go test ./...
 
-- Создавайте unit-тесты для игровой логики
-- Используйте моки для тестирования коллизий
-- Тестируйте игровые состояния и переходы
+# Тесты с покрытием
+go test -cover ./...
 
-### Производительность
+# Подробный отчет
+go test -v -coverprofile=coverage.out ./...
+go tool cover -html=coverage.out
+```
 
-- Оптимизируйте рендеринг спрайтов
-- Используйте пулы объектов для пуль и эффектов
-- Профилируйте систему коллизий при большом количестве объектов
+### Примеры тестов
 
-## CI/CD
+- `repositories/game/*_test.go` - тесты репозиториев
+- `repositories/processed/*_test.go` - тесты обработки данных
+- `repositories/raw/*_test.go` - тесты чтения файлов
+- `utils/utils_test.go` - тесты утилит
 
-Проект использует GitHub Actions для автоматической проверки кода:
+## 🔧 Расширение проекта
 
-### Автоматические проверки
+### Добавление новой функциональности
 
-- **Тесты** - запуск `just test` при каждом push и pull request
-- **Линтер** - проверка качества кода с помощью golangci-lint
-- **Форматирование** - проверка соответствия стандартам Go
+1. **Создайте Use Case** в `use_cases/`
+2. **Определите интерфейс** в `use_cases/interfaces.go`
+3. **Реализуйте логику** в отдельном файле
+4. **Добавьте тесты** `*_test.go`
+5. **Используйте в GameState**
 
-### Workflows
+### Пример: добавление врагов
 
-- `test.yml` - минимальный CI с запуском только тестов
-- `ci.yml` - полный CI с тестами, линтером и проверкой форматирования
+```go
+// use_cases/enemy_use_cases.go
+type EnemyUseCases struct {
+    enemiesRepo repositories.IEnemiesRepository
+    spritesRepo repositories.ISpritesRepository
+}
 
-### Статус
+func (uc *EnemyUseCases) SpawnEnemy() error {
+    // Логика создания врага
+}
 
-[![Tests](https://github.com/username/gonflict/workflows/Tests/badge.svg)](https://github.com/username/gonflict/actions)
-[![CI](https://github.com/username/gonflict/workflows/CI/badge.svg)](https://github.com/username/gonflict/actions)
+func (uc *EnemyUseCases) UpdateEnemies(dt float64) error {
+    // Логика обновления врагов
+}
+```
 
-## Лицензия
+### Идеи для расширения
+
+- 🤖 **ИИ врагов** - добавить вражеские танки
+- 🎯 **Система очков** - подсчет очков за уничтожение
+- 🎨 **Меню и UI** - главное меню, экран победы/поражения
+- 🌐 **Сетевой режим** - мультиплеер
+- 🏆 **Достижения** - система наград
+- 🛠️ **Редактор уровней** - создание своих карт
+- 💥 **Эффекты** - взрывы, частицы
+- 🎵 **Музыка** - фоновая музыка
+
+## 📝 Соглашения по коду
+
+### Именование файлов
+
+```
+✅ Хорошо:
+player_use_cases.go
+collision_service.go
+interfaces.go
+constants.go
+
+❌ Плохо:
+_player.go         # Не начинайте с _
+PlayerUseCases.go  # Не используйте PascalCase
+```
+
+### Структура файлов в пакете
+
+```
+package_name/
+├── interfaces.go     # Все интерфейсы (будет первым при сортировке)
+├── constants.go      # Все константы
+├── entity1.go        # Реализации
+├── entity2.go
+└── service.go
+```
+
+### Импорты
+
+```go
+// Всегда используйте централизованный repositories пакет
+import "github.com/shpaker/gonflict/internal/repositories"
+
+// raw импортируется отдельно только где необходимо
+import "github.com/shpaker/gonflict/internal/repositories/raw"
+```
+
+## 🐛 Известные ограничения
+
+- Только один игрок
+- Нет ИИ врагов
+- Нет системы уровней (только уровень 1)
+- Нет главного меню
+- Нет сохранений
+
+## 🤝 Вклад в проект
+
+1. Fork проекта
+2. Создайте feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit изменений (`git commit -m 'Add amazing feature'`)
+4. Push в branch (`git push origin feature/amazing-feature`)
+5. Откройте Pull Request
+
+## 📄 Лицензия
 
 MIT License
+
+## 📚 Полезные ссылки
+
+- [Ebiten Documentation](https://ebiten.org/)
+- [Clean Architecture](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html)
+- [Go Project Layout](https://github.com/golang-standards/project-layout)
+- [Just Command Runner](https://github.com/casey/just)

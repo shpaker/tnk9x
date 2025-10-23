@@ -6,14 +6,12 @@ import (
 )
 
 // Этот файл экспортирует интерфейсы, структуры и конструкторы из подпакетов для удобства импорта
-// (исключая raw - используйте raw.NewFileRepository() напрямую)
 //
 // Использование:
 // import "github.com/shpaker/gonflict/internal/repositories"
-// import "github.com/shpaker/gonflict/internal/repositories/raw"
 //
 // // Создание репозиториев:
-// fileRepo := raw.NewFileRepository("assets")
+// fileRepo := raw.NewFileRepository("assets")  // raw импортируется отдельно
 // spritesRepo, _ := repositories.NewSpritesRepository(fileRepo)
 // mapsRepo := repositories.NewMapsDataRepository(fileRepo, spritesRepo)
 // bulletsRepo := repositories.NewBulletsRepository()
@@ -37,7 +35,7 @@ type (
 	IBlocksRepository = game.IBlocksRepository
 )
 
-// Re-export структур репозиториев для удобства (исключая raw)
+// Re-export структур репозиториев для удобства
 type (
 	// SpritesRepository - репозиторий для работы со спрайтами
 	SpritesRepository = processed.SpritesRepository

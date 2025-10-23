@@ -1,4 +1,4 @@
-package interfaces
+package states
 
 import "github.com/hajimehoshi/ebiten/v2"
 

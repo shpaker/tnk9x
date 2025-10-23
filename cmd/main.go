@@ -7,19 +7,18 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/shpaker/gonflict/internal/app"
-	"github.com/shpaker/gonflict/internal/config"
+	"github.com/shpaker/gonflict/internal"
 )
 
 func main() {
 	// Загружаем конфигурацию
-	cfg, err := config.Load()
+	cfg, err := internal.LoadConfig()
 	if err != nil {
 		log.Fatalf("Failed to load config: %v", err)
 	}
 
 	// Создаем приложение
-	application := app.New(cfg)
+	application := internal.New(cfg)
 
 	// Создаем контекст с возможностью отмены
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)

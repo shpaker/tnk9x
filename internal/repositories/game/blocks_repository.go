@@ -3,31 +3,31 @@ package game
 import (
 	"fmt"
 
-	"github.com/shpaker/gonflict/internal/models"
+	"github.com/shpaker/gonflict/internal/types"
 )
 
 type BlocksRepository struct {
-	blocks []models.Block
+	blocks []types.Block
 }
 
 func NewBlocksRepository() *BlocksRepository {
 	return &BlocksRepository{
-		blocks: make([]models.Block, 0),
+		blocks: make([]types.Block, 0),
 	}
 }
 
 // AddBlock добавляет блок в репозиторий
-func (br *BlocksRepository) AddBlock(block models.Block) {
+func (br *BlocksRepository) AddBlock(block types.Block) {
 	br.blocks = append(br.blocks, block)
 }
 
 // GetAllBlocks возвращает все блоки
-func (br *BlocksRepository) GetAllBlocks() *[]models.Block {
+func (br *BlocksRepository) GetAllBlocks() *[]types.Block {
 	return &br.blocks
 }
 
 // RemoveBlockByPointer удаляет блок по указателю
-func (br *BlocksRepository) RemoveBlockByPointer(block *models.Block) error {
+func (br *BlocksRepository) RemoveBlockByPointer(block *types.Block) error {
 	if block == nil {
 		return fmt.Errorf("указатель на блок не может быть nil")
 	}

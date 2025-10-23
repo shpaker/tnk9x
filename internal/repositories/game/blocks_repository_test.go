@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/shpaker/gonflict/internal/models"
 	"github.com/shpaker/gonflict/internal/types"
 )
 
@@ -25,13 +24,13 @@ func TestAddAndGetBlocks(t *testing.T) {
 	repo := NewBlocksRepository()
 
 	// Создаем тестовый блок
-	block := models.Block{
+	block := types.Block{
 		Image: ebiten.NewImage(8, 8),
-		Data: &models.BlockData{
+		Data: &types.BlockData{
 			Name:     types.Brick,
 			Position: types.Position{X: 0, Y: 0},
 		},
-		Properties: &models.BlockProperties{
+		Properties: &types.BlockProperties{
 			Collidable: true,
 		},
 		WorldPosition: types.Position{X: 100, Y: 100},
@@ -49,13 +48,13 @@ func TestRemoveBlockByPointer(t *testing.T) {
 	repo := NewBlocksRepository()
 
 	// Создаем тестовый блок
-	block := models.Block{
+	block := types.Block{
 		Image: ebiten.NewImage(8, 8),
-		Data: &models.BlockData{
+		Data: &types.BlockData{
 			Name:     types.Brick,
 			Position: types.Position{X: 0, Y: 0},
 		},
-		Properties: &models.BlockProperties{
+		Properties: &types.BlockProperties{
 			Collidable: true,
 		},
 		WorldPosition: types.Position{X: 100, Y: 100},

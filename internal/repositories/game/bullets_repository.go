@@ -3,26 +3,26 @@ package game
 import (
 	"fmt"
 
-	"github.com/shpaker/gonflict/internal/models"
+	"github.com/shpaker/gonflict/internal/types"
 )
 
 type BulletsRepository struct {
-	bullets []models.Bullet
+	bullets []types.Bullet
 }
 
 func NewBulletsRepository() *BulletsRepository {
 	return &BulletsRepository{
-		bullets: make([]models.Bullet, 0),
+		bullets: make([]types.Bullet, 0),
 	}
 }
 
 // AddBullet добавляет пулю в репозиторий
-func (br *BulletsRepository) AddBullet(bullet models.Bullet) {
+func (br *BulletsRepository) AddBullet(bullet types.Bullet) {
 	br.bullets = append(br.bullets, bullet)
 }
 
 // GetAllBullets возвращает все пули
-func (br *BulletsRepository) GetAllBullets() []models.Bullet {
+func (br *BulletsRepository) GetAllBullets() []types.Bullet {
 	return br.bullets
 }
 
@@ -33,14 +33,4 @@ func (br *BulletsRepository) RemoveBullet(index int) error {
 	}
 	br.bullets = append(br.bullets[:index], br.bullets[index+1:]...)
 	return nil
-}
-
-// ClearAllBullets очищает все пули
-func (br *BulletsRepository) ClearAllBullets() {
-	br.bullets = make([]models.Bullet, 0)
-}
-
-// GetBulletsCount возвращает количество пуль
-func (br *BulletsRepository) GetBulletsCount() int {
-	return len(br.bullets)
 }

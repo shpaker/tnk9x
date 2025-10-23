@@ -1,4 +1,4 @@
-package app
+package internal
 
 import (
 	"context"
@@ -6,24 +6,19 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
-	"github.com/shpaker/gonflict/internal/config"
-	"github.com/shpaker/gonflict/internal/constants"
-	"github.com/shpaker/gonflict/internal/interfaces"
-	"github.com/shpaker/gonflict/internal/repositories/processed"
+	"github.com/shpaker/gonflict/internal/repositories"
 	"github.com/shpaker/gonflict/internal/repositories/raw"
-	services "github.com/shpaker/gonflict/internal/services"
 	"github.com/shpaker/gonflict/internal/states"
 )
 
 type App struct {
-	config  *config.Config
-	service *services.WindowService
-	interfaces.State
+	config *Config
+	states.State
 }
 
 // ebiten game interface
 func (app *App) Layout(outsideWidth, outsideHeight int) (int, int) {
-	return constants.ScreenWidth, constants.ScreenHeight
+	return app.config.ScreenWidth, app.config.ScreenHeight
 }
 
 func (app *App) Update() error {
@@ -42,14 +37,12 @@ func (app *App) Draw(screen *ebiten.Image) {
 	ebitenutil.DebugPrintAt(screen, fmt.Sprintf("TPS: %.2f,\nFPS: %.2f", ebiten.ActualTPS(), ebiten.ActualFPS()), 0, 0)
 }
 
-func New(cfg *config.Config) *App {
-	svc := services.NewWindowService()
-
+func New(cfg *Config) *App {
 	// Создаем файловый репозиторий
 	fileRepo := raw.NewFileRepository("assets")
 
 	// Создаем репозиторий спрайтов
-	spritesRepo, err := processed.NewSpritesRepository(fileRepo)
+	spritesRepo, err := repositories.NewSpritesRepository(fileRepo)
 	if err != nil {
 		// Логируем ошибку и падаем
 		fmt.Printf("Ошибка создания SpritesRepository: %v\n", err)
@@ -57,31 +50,12 @@ func New(cfg *config.Config) *App {
 	}
 
 	// Создаем репозиторий карт уровней
-	mapsRepo := processed.NewMapsDataRepository(fileRepo, spritesRepo)
+	mapsRepo := repositories.NewMapsDataRepository(fileRepo, spritesRepo)
 
-	// Создаем сервис игрока
-	playerService := services.NewPlayerService(spritesRepo)
-
-	// Создаем сервис пуль
-	bulletsService := services.NewBulletsService()
-
-	// Создаем сервис контроллера
-	controllerService := services.NewControllerService(
-		playerService,
-		bulletsService,
-		ebiten.KeyW,     // up
-		ebiten.KeyS,     // down
-		ebiten.KeyA,     // left
-		ebiten.KeyD,     // right
-		ebiten.KeySpace, // shoot
-	)
-
-	// Создаем GameState с переданными сервисами
+	// Создаем GameState с переданными репозиториями
 	gameState, err := states.NewGameState(
 		mapsRepo,
-		playerService,
-		controllerService,
-		bulletsService,
+		spritesRepo,
 	)
 	if err != nil {
 		// Логируем ошибку и падаем
@@ -90,14 +64,13 @@ func New(cfg *config.Config) *App {
 	}
 
 	return &App{
-		config:  cfg,
-		service: svc,
-		State:   gameState,
+		config: cfg,
+		State:  gameState,
 	}
 }
 
 func (app *App) Run(ctx context.Context) error {
-	ebiten.SetWindowSize(constants.ScreenWidth*3, constants.ScreenHeight*3)
+	ebiten.SetWindowSize(app.config.ScreenWidth*3, app.config.ScreenHeight*3)
 	ebiten.SetWindowTitle(app.config.AppConfig.Name)
 
 	if err := ebiten.RunGame(app); err != nil {
