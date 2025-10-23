@@ -8,6 +8,8 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/vector"
 	"github.com/shpaker/gonflict/internal/constants"
 	"github.com/shpaker/gonflict/internal/interfaces"
+	"github.com/shpaker/gonflict/internal/repositories/game"
+	"github.com/shpaker/gonflict/internal/repositories/processed"
 	"github.com/shpaker/gonflict/internal/services"
 )
 
@@ -20,14 +22,14 @@ type GameState struct {
 	rendererService            *services.RendererService
 }
 
-// NewGameState создает новое состояние игры с переданным репозиторием спрайтов
+// NewGameState создает новое состояние игры с переданным репозиторием карт
 func NewGameState(
-	levelService interfaces.ILevelsDataService,
+	mapsRepo processed.IMapsDataRepository,
 	playerOneService *services.PlayerService,
 	playerOneControllerService *services.ControllerService,
 	bulletsService *services.BulletsService,
 ) (GameState, error) {
-	level, err := levelService.GetLevel(1)
+	level, err := mapsRepo.GetLevel(1)
 	if err != nil {
 		return GameState{}, err
 	}
@@ -36,7 +38,13 @@ func NewGameState(
 		return GameState{}, errors.New("playerService is nil")
 	}
 
-	battleFieldService := services.NewMapService(level)
+	// Создаем репозиторий блоков и заполняем его данными уровня
+	blocksRepo := game.NewBlocksRepository()
+	for _, block := range level {
+		blocksRepo.AddBlock(block)
+	}
+
+	battleFieldService := services.NewMapService(blocksRepo)
 	collidersService := services.NewCollidersService(
 		bulletsService,
 		playerOneService,

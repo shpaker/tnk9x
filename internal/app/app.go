@@ -9,7 +9,8 @@ import (
 	"github.com/shpaker/gonflict/internal/config"
 	"github.com/shpaker/gonflict/internal/constants"
 	"github.com/shpaker/gonflict/internal/interfaces"
-	"github.com/shpaker/gonflict/internal/repositories"
+	"github.com/shpaker/gonflict/internal/repositories/processed"
+	"github.com/shpaker/gonflict/internal/repositories/raw"
 	services "github.com/shpaker/gonflict/internal/services"
 	"github.com/shpaker/gonflict/internal/states"
 )
@@ -44,19 +45,19 @@ func (app *App) Draw(screen *ebiten.Image) {
 func New(cfg *config.Config) *App {
 	svc := services.NewWindowService()
 
-	// Создаем репозиторий ассетов
-	assetsRepo := repositories.NewAssetsService("assets")
+	// Создаем файловый репозиторий
+	fileRepo := raw.NewFileRepository("assets")
 
 	// Создаем репозиторий спрайтов
-	spritesRepo, err := repositories.NewSpritesRepository(assetsRepo)
+	spritesRepo, err := processed.NewSpritesRepository(fileRepo)
 	if err != nil {
 		// Логируем ошибку и падаем
 		fmt.Printf("Ошибка создания SpritesRepository: %v\n", err)
 		panic(err)
 	}
 
-	// Создаем сервис уровней
-	levelsService := repositories.NewLevelsRepository(assetsRepo, spritesRepo)
+	// Создаем репозиторий карт уровней
+	mapsRepo := processed.NewMapsDataRepository(fileRepo, spritesRepo)
 
 	// Создаем сервис игрока
 	playerService := services.NewPlayerService(spritesRepo)
@@ -77,7 +78,7 @@ func New(cfg *config.Config) *App {
 
 	// Создаем GameState с переданными сервисами
 	gameState, err := states.NewGameState(
-		levelsService,
+		mapsRepo,
 		playerService,
 		controllerService,
 		bulletsService,

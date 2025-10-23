@@ -44,7 +44,8 @@ func (s *RendererService) drawBattlefield(screen *ebiten.Image) {
 	)
 
 	// Draw blocks on the battle field
-	for _, block := range s.battleFieldService.Level {
+	blocks := s.battleFieldService.GetBlocks()
+	for _, block := range blocks {
 		if block.Image == nil {
 			continue
 		}

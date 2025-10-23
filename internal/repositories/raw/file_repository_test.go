@@ -1,4 +1,4 @@
-package repositories
+package raw
 
 import (
 	"fmt"
@@ -13,8 +13,8 @@ func TestGetAssetPath(t *testing.T) {
 	baseDir := "/tmp/assets"
 	assetName := "base.json"
 
-	repo := NewAssetsService(baseDir)
-	result, err := repo.getAssetPath(assetName)
+	repo := NewFileRepository(baseDir)
+	result, err := repo.getPath(assetName)
 
 	if err != nil {
 		t.Errorf("неожиданная ошибка: %v", err)
@@ -27,7 +27,7 @@ func TestGetAssetPath(t *testing.T) {
 	}
 }
 
-func TestReadAsset(t *testing.T) {
+func TestReadFile(t *testing.T) {
 	tempDir, err := os.MkdirTemp("", "assets_test")
 	if err != nil {
 		t.Fatalf("не удалось создать временную папку: %v", err)
@@ -42,8 +42,8 @@ func TestReadAsset(t *testing.T) {
 		t.Fatalf("не удалось создать тестовый файл: %v", err)
 	}
 
-	repo := NewAssetsService(tempDir)
-	result, err := repo.ReadAsset(testFile)
+	repo := NewFileRepository(tempDir)
+	result, err := repo.ReadFile(testFile)
 
 	if err != nil {
 		t.Errorf("неожиданная ошибка: %v", err)
@@ -76,7 +76,7 @@ func TestReadImage(t *testing.T) {
 	}
 	file.Close()
 
-	repo := NewAssetsService(tempDir)
+	repo := NewFileRepository(tempDir)
 	result, err := repo.ReadImage(testFile)
 
 	if err != nil {
@@ -109,7 +109,7 @@ func TestReadConfig(t *testing.T) {
 		Value int    `yaml:"value"`
 	}
 
-	repo := NewAssetsService(tempDir)
+	repo := NewFileRepository(tempDir)
 	config, err := ReadConfig[TestConfig](repo, testFile)
 
 	if err != nil {

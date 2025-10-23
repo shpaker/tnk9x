@@ -109,7 +109,10 @@ func (s *CollidersService) checkBulletWallCollisions() {
 		// Удаляем блоки в обратном порядке (чтобы индексы не сдвигались)
 		for k := len(blocksToRemove) - 1; k >= 0; k-- {
 			blockIndex := blocksToRemove[k]
-			s.mapService.RemoveBlock(&s.mapService.Level[blockIndex])
+			blocks := s.mapService.GetBlocks()
+			if blockIndex < len(blocks) {
+				s.mapService.RemoveBlock(&blocks[blockIndex])
+			}
 		}
 
 		// Удаляем пулю только после проверки всех блоков
@@ -168,7 +171,7 @@ func (s *CollidersService) createBlockFromWall(wall models.Block) models.Block {
 }
 
 // createMapObjectsFromLevel создает массив объектов карты из уровня
-func (s *CollidersService) createMapObjectsFromLevel(level models.Level) []interfaces.IMapObject {
+func (s *CollidersService) createMapObjectsFromLevel(level []models.Block) []interfaces.IMapObject {
 	var mapObjects []interfaces.IMapObject
 	for _, wall := range level {
 		if wall.Data != nil {

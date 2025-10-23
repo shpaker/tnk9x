@@ -1,9 +1,6 @@
 package services
 
 import (
-	"math"
-
-	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/shpaker/gonflict/internal/constants"
 	"github.com/shpaker/gonflict/internal/interfaces"
 	"github.com/shpaker/gonflict/internal/models"
@@ -110,30 +107,4 @@ func (s *PlayerService) Move(dt float64) {
 func (s *PlayerService) Update(dt float64) {
 	// println(s.tank.WorldPosition.X, s.tank.WorldPosition.Y)
 	s.Move(dt)
-}
-
-func (s *PlayerService) Draw(screen *ebiten.Image) {
-	if s.tank.Image != nil {
-		// Определяем угол поворота в зависимости от направления
-		var rotationAngle float64
-		switch s.tank.Direction {
-		case types.DirectionUp:
-			rotationAngle = 0
-		case types.DirectionRight:
-			rotationAngle = math.Pi / 2
-		case types.DirectionDown:
-			rotationAngle = math.Pi
-		case types.DirectionLeft:
-			rotationAngle = 3 * math.Pi / 2
-		}
-
-		// Вычисляем позицию на экране
-		screenX := constants.BattleFieldOffset + s.tank.WorldPosition.X
-		screenY := constants.BattleFieldOffset + s.tank.WorldPosition.Y
-
-		// Используем функцию для поворота изображения вокруг центра
-		op := utils.RotateImage(s.tank.Image, rotationAngle, screenX, screenY)
-
-		screen.DrawImage(s.tank.Image, op)
-	}
 }

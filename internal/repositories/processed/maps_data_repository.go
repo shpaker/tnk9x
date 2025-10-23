@@ -1,4 +1,4 @@
-package repositories
+package processed
 
 import (
 	"fmt"
@@ -7,37 +7,37 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/shpaker/gonflict/internal/constants"
-	"github.com/shpaker/gonflict/internal/interfaces"
 	"github.com/shpaker/gonflict/internal/models"
+	"github.com/shpaker/gonflict/internal/repositories/raw"
 	"github.com/shpaker/gonflict/internal/types"
 )
 
-type LevelsRepository struct {
-	assetsRepository  interfaces.IAssetsRepository
-	spritesRepository interfaces.ISpritesRepository
+type MapsDataRepository struct {
+	fileRepo    raw.IFileRepository
+	spritesRepo ISpritesRepository
 }
 
-func NewLevelsRepository(
-	assetsRepository interfaces.IAssetsRepository,
-	spritesRepository interfaces.ISpritesRepository,
-) interfaces.ILevelsDataService {
-	return &LevelsRepository{
-		assetsRepository:  assetsRepository,
-		spritesRepository: spritesRepository,
+func NewMapsDataRepository(
+	fileRepo raw.IFileRepository,
+	spritesRepo ISpritesRepository,
+) *MapsDataRepository {
+	return &MapsDataRepository{
+		fileRepo:    fileRepo,
+		spritesRepo: spritesRepo,
 	}
 }
 
 // getBlockSprite получает спрайт для блока по его типу
-func (s *LevelsRepository) getBlockSprite(blockType types.BlockType) (*ebiten.Image, error) {
-	return s.spritesRepository.GetSprite("blocks", string(blockType))
+func (mdr *MapsDataRepository) getBlockSprite(blockType types.BlockType) (*ebiten.Image, error) {
+	return mdr.spritesRepo.GetSprite("blocks", string(blockType))
 }
 
-// readLevelFile читает файл уровня
-func (s *LevelsRepository) readLevelFile(levelNumber int) ([]string, error) {
+// readFile читает файл уровня
+func (mdr *MapsDataRepository) readFile(levelNumber int) ([]string, error) {
 	levelName := "levels/" + strconv.Itoa(levelNumber)
 
 	// Читаем текстовый файл уровня
-	data, err := s.assetsRepository.ReadAsset(levelName)
+	data, err := mdr.fileRepo.ReadFile(levelName)
 	if err != nil {
 		return nil, fmt.Errorf("не удалось прочитать уровень %d: %w", levelNumber, err)
 	}
@@ -49,7 +49,7 @@ func (s *LevelsRepository) readLevelFile(levelNumber int) ([]string, error) {
 }
 
 // createBlockFromChar создает блок из символа карты
-func (s *LevelsRepository) createBlockFromChar(charStr string, x, y int) (*models.Block, error) {
+func (mdr *MapsDataRepository) createBlockFromChar(charStr string, x, y int) (*models.Block, error) {
 	// Пропускаем пустые места
 	if charStr == "." {
 		return nil, nil
@@ -62,7 +62,7 @@ func (s *LevelsRepository) createBlockFromChar(charStr string, x, y int) (*model
 	}
 
 	// Получаем спрайт для блока
-	sprite, err := s.getBlockSprite(blockType)
+	sprite, err := mdr.getBlockSprite(blockType)
 	if err != nil {
 		return nil, fmt.Errorf("не удалось получить спрайт для блока %s: %w", blockType, err)
 	}
@@ -74,7 +74,7 @@ func (s *LevelsRepository) createBlockFromChar(charStr string, x, y int) (*model
 			Position: types.Position{X: float64(x), Y: float64(y)},
 			Name:     blockType,
 		},
-		Properties:    s.createBlockProperties(blockType),
+		Properties:    mdr.createBlockProperties(blockType),
 		WorldPosition: types.Position{X: float64(x), Y: float64(y)}, // Пока используем те же координаты
 	}
 
@@ -82,8 +82,8 @@ func (s *LevelsRepository) createBlockFromChar(charStr string, x, y int) (*model
 }
 
 // parseLevelLines парсит строки карты и создает блоки
-func (s *LevelsRepository) parseLevelLines(lines []string) (models.Level, error) {
-	var level models.Level
+func (mdr *MapsDataRepository) parseLevelLines(lines []string) ([]models.Block, error) {
+	var level []models.Block
 
 	// Проверяем количество строк (должно быть 26)
 	if len(lines) != constants.BattleFieldBlocksLength {
@@ -104,7 +104,7 @@ func (s *LevelsRepository) parseLevelLines(lines []string) (models.Level, error)
 			charStr := string(char)
 
 			// Создаем блок из символа
-			block, err := s.createBlockFromChar(charStr, x, y)
+			block, err := mdr.createBlockFromChar(charStr, x, y)
 			if err != nil {
 				return level, err
 			}
@@ -120,23 +120,23 @@ func (s *LevelsRepository) parseLevelLines(lines []string) (models.Level, error)
 }
 
 // createBlockProperties создает свойства блока на основе его типа
-func (s *LevelsRepository) createBlockProperties(blockType types.BlockType) *models.BlockProperties {
+func (mdr *MapsDataRepository) createBlockProperties(blockType types.BlockType) *models.BlockProperties {
 	return &models.BlockProperties{
 		Collidable: true,
 	}
 }
 
-func (s *LevelsRepository) GetLevel(levelNumber int) (models.Level, error) {
+func (mdr *MapsDataRepository) GetLevel(levelNumber int) ([]models.Block, error) {
 	// Читаем файл уровня
-	lines, err := s.readLevelFile(levelNumber)
+	lines, err := mdr.readFile(levelNumber)
 	if err != nil {
-		return models.Level{}, err
+		return []models.Block{}, err
 	}
 
 	// Парсим строки и создаем блоки
-	level, err := s.parseLevelLines(lines)
+	level, err := mdr.parseLevelLines(lines)
 	if err != nil {
-		return models.Level{}, err
+		return []models.Block{}, err
 	}
 
 	return level, nil

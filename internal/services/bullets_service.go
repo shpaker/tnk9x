@@ -6,16 +6,17 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/shpaker/gonflict/internal/constants"
 	"github.com/shpaker/gonflict/internal/models"
+	"github.com/shpaker/gonflict/internal/repositories/game"
 	"github.com/shpaker/gonflict/internal/types"
 )
 
 type BulletsService struct {
-	bullets []models.Bullet
+	bulletsRepo game.IBulletsRepository
 }
 
 func NewBulletsService() *BulletsService {
 	return &BulletsService{
-		bullets: make([]models.Bullet, 0),
+		bulletsRepo: game.NewBulletsRepository(),
 	}
 }
 
@@ -51,13 +52,14 @@ func (s *BulletsService) AddBullet(tank *models.Tank) {
 		Owner:     tank,
 	}
 
-	s.bullets = append(s.bullets, bullet)
+	s.bulletsRepo.AddBullet(bullet)
 }
 
 func (s *BulletsService) Update(dt float64) {
 	// Обновляем позиции всех пуль
-	for i := len(s.bullets) - 1; i >= 0; i-- {
-		bullet := &s.bullets[i]
+	bullets := s.bulletsRepo.GetAllBullets()
+	for i := len(bullets) - 1; i >= 0; i-- {
+		bullet := &bullets[i]
 
 		// Вычисляем новую позицию
 		delta := bullet.Speed * dt
@@ -74,28 +76,10 @@ func (s *BulletsService) Update(dt float64) {
 	}
 }
 
-func (s *BulletsService) Draw(screen *ebiten.Image) {
-	for _, bullet := range s.bullets {
-		if bullet.Image != nil {
-			// Вычисляем позицию на экране
-			screenX := constants.BattleFieldOffset + bullet.WorldPosition.X
-			screenY := constants.BattleFieldOffset + bullet.WorldPosition.Y
-
-			// Создаем опции для отрисовки
-			op := &ebiten.DrawImageOptions{}
-			op.GeoM.Translate(screenX, screenY)
-
-			screen.DrawImage(bullet.Image, op)
-		}
-	}
-}
-
 func (s *BulletsService) GetBullets() []models.Bullet {
-	return s.bullets
+	return s.bulletsRepo.GetAllBullets()
 }
 
 func (s *BulletsService) RemoveBullet(index int) {
-	if index >= 0 && index < len(s.bullets) {
-		s.bullets = append(s.bullets[:index], s.bullets[index+1:]...)
-	}
+	s.bulletsRepo.RemoveBullet(index)
 }
