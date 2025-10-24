@@ -3,11 +3,11 @@ size: 16
 
 images:
   base_tank_1: [0, 0]
-  base_tank_2: [0, 0]
+  base_tank_2: [1, 0]
 
 animations:
   base_tank:
     - image: base_tank_1
-      duration: 100
+      duration: 10
     - image: base_tank_2
-      duration: 100
+      duration: 10

@@ -14,10 +14,11 @@ import (
 
 // RendererAdapter адаптер для рендеринга игры
 type RendererAdapter struct {
-	mapUseCases       use_cases.IMapUseCases
-	playerUseCases    use_cases.IPlayerUseCases
-	bulletUseCases    use_cases.IBulletUseCases
-	tilesetRepository types.ITilesetRepository
+	mapUseCases             use_cases.IMapUseCases
+	playerUseCases          use_cases.IPlayerUseCases
+	bulletUseCases          use_cases.IBulletUseCases
+	tilesetRepository       types.ITilesetRepository
+	playerTilesetRepository types.ITilesetRepository
 }
 
 // NewRendererAdapter создает новый экземпляр RendererAdapter
@@ -26,12 +27,14 @@ func NewRendererAdapter(
 	playerUseCases use_cases.IPlayerUseCases,
 	bulletUseCases use_cases.IBulletUseCases,
 	tilesetRepository types.ITilesetRepository,
+	playerTilesetRepository types.ITilesetRepository,
 ) *RendererAdapter {
 	return &RendererAdapter{
-		mapUseCases:       mapUseCases,
-		playerUseCases:    playerUseCases,
-		bulletUseCases:    bulletUseCases,
-		tilesetRepository: tilesetRepository,
+		mapUseCases:             mapUseCases,
+		playerUseCases:          playerUseCases,
+		bulletUseCases:          bulletUseCases,
+		tilesetRepository:       tilesetRepository,
+		playerTilesetRepository: playerTilesetRepository,
 	}
 }
 
@@ -74,7 +77,17 @@ func (r *RendererAdapter) drawMap(screen *ebiten.Image) {
 // drawPlayerOne отрисовывает игрока
 func (r *RendererAdapter) drawPlayerOne(screen *ebiten.Image) {
 	tank, err := r.playerUseCases.GetPlayer()
-	if err != nil || tank.Image == nil {
+	if err != nil || tank.ImageGetter == nil {
+		return
+	}
+
+	// Получаем изображение танка из репозитория
+	imageId := tank.ImageGetter.GetImageId()
+	if imageId == "" {
+		return
+	}
+	image, err := r.playerTilesetRepository.GetImage(imageId)
+	if err != nil {
 		return
 	}
 
@@ -96,9 +109,9 @@ func (r *RendererAdapter) drawPlayerOne(screen *ebiten.Image) {
 	screenY := MapOffset + tank.WorldPosition.Y
 
 	// Используем функцию для поворота изображения вокруг центра
-	op := utils.RotateImage(tank.Image, rotationAngle, screenX, screenY)
+	op := utils.RotateImage(image, rotationAngle, screenX, screenY)
 
-	screen.DrawImage(tank.Image, op)
+	screen.DrawImage(image, op)
 }
 
 // drawBullets отрисовывает пули

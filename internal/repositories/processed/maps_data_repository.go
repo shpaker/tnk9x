@@ -5,13 +5,14 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/shpaker/gonflict/internal/interfaces"
 	"github.com/shpaker/gonflict/internal/repositories/raw"
 	"github.com/shpaker/gonflict/internal/types"
 )
 
 // ITilesAdapter определяет интерфейс для работы с тайлами
 type ITilesAdapter interface {
-	GetTileStaticEntity(id string) (types.IImageIdGetter, error)
+	GetTileUseCases() interfaces.ITileUseCases
 	GetTilesetRepository() types.ITilesetRepository
 }
 
@@ -68,7 +69,7 @@ func (mdr *MapsDataRepository) createBlockFromChar(charStr string, x, y int) (*t
 	}
 
 	// Создаем TileStaticEntity для блока
-	tileEntity, err := mdr.tilesAdapter.GetTileStaticEntity(string(blockType))
+	tileEntity, err := mdr.tilesAdapter.GetTileUseCases().CreateStaticTile(string(blockType))
 	if err != nil {
 		return nil, fmt.Errorf("не удалось создать tile entity для блока %s: %w", blockType, err)
 	}

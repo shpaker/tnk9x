@@ -6,18 +6,34 @@ import (
 	"testing"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/shpaker/gonflict/internal/interfaces"
 	"github.com/shpaker/gonflict/internal/types"
 )
 
 // MockTilesAdapter - мок для тестирования
 type MockTilesAdapter struct{}
 
-func (mta *MockTilesAdapter) GetTileStaticEntity(id string) (types.IImageIdGetter, error) {
-	return &MockImageIdGetter{id: id}, nil
+func (mta *MockTilesAdapter) GetTileUseCases() interfaces.ITileUseCases {
+	return &MockTileUseCases{}
 }
 
 func (mta *MockTilesAdapter) GetTilesetRepository() types.ITilesetRepository {
 	return &MockTilesetRepository{}
+}
+
+// MockTileUseCases - мок для тестирования
+type MockTileUseCases struct{}
+
+func (mtuc *MockTileUseCases) CreateStaticTile(id string) (types.IImageIdGetter, error) {
+	return &MockImageIdGetter{id: id}, nil
+}
+
+func (mtuc *MockTileUseCases) CreateAnimationTile(id string) (*types.TileAnimationEntity, error) {
+	return &types.TileAnimationEntity{}, nil
+}
+
+func (mtuc *MockTileUseCases) CreateBlockEntity(blockType string, positionX, positionY float64) (*types.BlockEntity, error) {
+	return &types.BlockEntity{}, nil
 }
 
 // MockImageIdGetter - мок для тестирования

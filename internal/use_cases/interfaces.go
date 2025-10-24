@@ -18,6 +18,7 @@ type IPlayerUseCases interface {
 	StopPlayer(byCollision bool) error
 	GetPlayer() (*types.TankEntity, error)
 	GetDirection() types.Direction
+	UpdateTankAnimation()
 }
 
 // IBulletUseCases интерфейс для операций с пулями

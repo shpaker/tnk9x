@@ -1,10 +1,8 @@
 package types
 
-import "github.com/hajimehoshi/ebiten/v2"
-
 // TankEntity представляет танк (игрока или врага)
 type TankEntity struct {
-	Image         *ebiten.Image
+	ImageGetter   IImageIdGetter
 	SpawnPosition Position
 	WorldPosition Position
 	Speed         float64
@@ -24,4 +22,12 @@ func (t *TankEntity) GetWorldPosition() Position {
 // GetScreenPosition возвращает позицию танка на экране
 func (t *TankEntity) GetScreenPosition() Position {
 	return t.WorldPosition
+}
+
+// GetImageId возвращает ID изображения танка (реализует IImageIdGetter)
+func (t *TankEntity) GetImageId() string {
+	if t.ImageGetter == nil {
+		return ""
+	}
+	return t.ImageGetter.GetImageId()
 }

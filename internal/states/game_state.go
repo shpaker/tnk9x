@@ -56,6 +56,7 @@ func NewGameState(
 		playerUseCases,
 		bulletUseCases,
 		tilesetRepo,
+		playerTilesetRepo,
 	)
 	inputAdapter := adapters.NewInputAdapter(
 		playerUseCases,
@@ -84,6 +85,7 @@ func (state GameState) Update() (State, error) {
 
 	state.inputAdapter.Update()
 	state.playerUseCases.MovePlayer(state.playerUseCases.GetDirection(), use_cases.DT)
+	state.playerUseCases.UpdateTankAnimation()
 	state.bulletUseCases.UpdateBullets(use_cases.DT)
 	state.collisionUseCases.UpdateCollisions()
 	return nil, nil
