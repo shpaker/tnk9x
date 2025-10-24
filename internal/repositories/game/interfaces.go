@@ -25,3 +25,12 @@ type IBlocksRepository interface {
 	// RemoveBlockByPointer удаляет блок по указателю
 	RemoveBlockByPointer(block *types.BlockEntity) error
 }
+
+// IAnimationsRepository определяет интерфейс для работы с анимациями
+type IAnimationsRepository interface {
+	// AddAnimation добавляет анимацию в репозиторий
+	AddAnimation(animation *types.TileAnimationEntity)
+
+	// GetAllAnimations возвращает все анимации
+	GetAllAnimations() []*types.TileAnimationEntity
+}

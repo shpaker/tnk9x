@@ -15,7 +15,7 @@ import (
 // RendererAdapter адаптер для рендеринга игры
 type RendererAdapter struct {
 	mapUseCases         use_cases.IMapUseCases
-	playerUseCases      use_cases.IPlayerUseCases
+	tankUseCases        use_cases.ITankUseCases
 	bulletUseCases      use_cases.IBulletUseCases
 	mapTilesUseCases    *use_cases.TilesUseCases
 	playerTilesUseCases *use_cases.TilesUseCases
@@ -25,7 +25,7 @@ type RendererAdapter struct {
 // NewRendererAdapter создает новый экземпляр RendererAdapter
 func NewRendererAdapter(
 	mapUseCases use_cases.IMapUseCases,
-	playerUseCases use_cases.IPlayerUseCases,
+	tankUseCases use_cases.ITankUseCases,
 	bulletUseCases use_cases.IBulletUseCases,
 	mapTilesUseCases *use_cases.TilesUseCases,
 	playerTilesUseCases *use_cases.TilesUseCases,
@@ -33,7 +33,7 @@ func NewRendererAdapter(
 ) *RendererAdapter {
 	return &RendererAdapter{
 		mapUseCases:         mapUseCases,
-		playerUseCases:      playerUseCases,
+		tankUseCases:        tankUseCases,
 		bulletUseCases:      bulletUseCases,
 		mapTilesUseCases:    mapTilesUseCases,
 		playerTilesUseCases: playerTilesUseCases,
@@ -83,24 +83,24 @@ func (r *RendererAdapter) drawMap(screen *ebiten.Image) {
 	}
 }
 
-// drawPlayerOne отрисовывает игрока
-func (r *RendererAdapter) drawPlayerOne(screen *ebiten.Image) {
-	tank, err := r.playerUseCases.GetPlayer()
-	if err != nil || tank.ImageGetter == nil {
+// drawTank отрисовывает танк
+func (r *RendererAdapter) drawTank(screen *ebiten.Image) {
+	tank, err := r.tankUseCases.GetTank()
+	if err != nil || tank.AnimationGetter == nil {
 		return
 	}
 
 	// Получаем ID изображения танка
-	imageId, err := tank.ImageGetter.GetImageId()
+	imageId, err := tank.AnimationGetter.GetImageId()
 	if err != nil {
-		log.Printf("ERROR: Player error getting image ID: %v", err)
+		log.Printf("ERROR: Tank error getting image ID: %v", err)
 		return
 	}
 
-	// Получаем изображение танка через PlayerTilesUseCases
+	// Получаем изображение танка через TankTilesUseCases
 	imageData, err := r.playerTilesUseCases.GetImage(imageId)
 	if err != nil {
-		log.Printf("ERROR: Player error loading image '%s': %v", imageId, err)
+		log.Printf("ERROR: Tank error loading image '%s': %v", imageId, err)
 		return
 	}
 
@@ -111,7 +111,7 @@ func (r *RendererAdapter) drawPlayerOne(screen *ebiten.Image) {
 	rotationAngle := getRotationAngle(tank.Direction)
 	rotatedImage, err := utils.RotateImageByAngle(image, rotationAngle)
 	if err != nil {
-		log.Printf("ERROR: Player error rotating image: %v", err)
+		log.Printf("ERROR: Tank error rotating image: %v", err)
 		return
 	}
 
@@ -191,6 +191,6 @@ func (r *RendererAdapter) drawBullets(screen *ebiten.Image) {
 // DrawAll отрисовывает все элементы игры
 func (r *RendererAdapter) DrawAll(screen *ebiten.Image) {
 	r.drawMap(screen)
-	r.drawPlayerOne(screen)
+	r.drawTank(screen)
 	r.drawBullets(screen)
 }

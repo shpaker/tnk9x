@@ -11,7 +11,7 @@ import (
 
 // InputAdapter адаптер для обработки пользовательского ввода
 type InputAdapter struct {
-	playerUseCases use_cases.IPlayerUseCases
+	tankUseCases   use_cases.ITankUseCases
 	bulletUseCases use_cases.IBulletUseCases
 	upButton       ebiten.Key
 	downButton     ebiten.Key
@@ -22,7 +22,7 @@ type InputAdapter struct {
 
 // NewInputAdapter создает новый экземпляр InputAdapter
 func NewInputAdapter(
-	playerUseCases use_cases.IPlayerUseCases,
+	tankUseCases use_cases.ITankUseCases,
 	bulletUseCases use_cases.IBulletUseCases,
 	upButton ebiten.Key,
 	downButton ebiten.Key,
@@ -31,7 +31,7 @@ func NewInputAdapter(
 	shootButton ebiten.Key,
 ) *InputAdapter {
 	return &InputAdapter{
-		playerUseCases: playerUseCases,
+		tankUseCases:   tankUseCases,
 		bulletUseCases: bulletUseCases,
 		upButton:       upButton,
 		downButton:     downButton,
@@ -52,56 +52,56 @@ func (a *InputAdapter) keyPressedEvents() {
 	// Проверяем нажатие клавиши стрельбы
 	if inpututil.IsKeyJustPressed(a.shootButton) {
 		log.Printf("DEBUG: Shoot button pressed (key: %v)", a.shootButton)
-		a.playerShoot()
+		a.tankShoot()
 	}
 
 	// Rotate the tank if the key is pressed
-	playerRotated := false
-	if ebiten.IsKeyPressed(a.upButton) && !playerRotated {
-		a.playerUseCases.RotatePlayer(types.DirectionUp)
-		playerRotated = true
+	tankRotated := false
+	if ebiten.IsKeyPressed(a.upButton) && !tankRotated {
+		a.tankUseCases.RotateTank(types.DirectionUp)
+		tankRotated = true
 	}
-	if ebiten.IsKeyPressed(a.downButton) && !playerRotated {
-		a.playerUseCases.RotatePlayer(types.DirectionDown)
-		playerRotated = true
+	if ebiten.IsKeyPressed(a.downButton) && !tankRotated {
+		a.tankUseCases.RotateTank(types.DirectionDown)
+		tankRotated = true
 	}
-	if ebiten.IsKeyPressed(a.leftButton) && !playerRotated {
-		a.playerUseCases.RotatePlayer(types.DirectionLeft)
-		playerRotated = true
+	if ebiten.IsKeyPressed(a.leftButton) && !tankRotated {
+		a.tankUseCases.RotateTank(types.DirectionLeft)
+		tankRotated = true
 	}
-	if ebiten.IsKeyPressed(a.rightButton) && !playerRotated {
-		a.playerUseCases.RotatePlayer(types.DirectionRight)
-		playerRotated = true
+	if ebiten.IsKeyPressed(a.rightButton) && !tankRotated {
+		a.tankUseCases.RotateTank(types.DirectionRight)
+		tankRotated = true
 	}
 }
 
 // keyReleasedEvents обрабатывает события отпускания клавиш
 func (a *InputAdapter) keyReleasedEvents() {
 	// Stop the tank if the key is released
-	if inpututil.IsKeyJustReleased(a.upButton) && a.playerUseCases.GetDirection() == types.DirectionUp {
-		a.playerUseCases.StopPlayer(false)
+	if inpututil.IsKeyJustReleased(a.upButton) && a.tankUseCases.GetDirection() == types.DirectionUp {
+		a.tankUseCases.StopTank(false)
 	}
-	if inpututil.IsKeyJustReleased(a.downButton) && a.playerUseCases.GetDirection() == types.DirectionDown {
-		a.playerUseCases.StopPlayer(false)
+	if inpututil.IsKeyJustReleased(a.downButton) && a.tankUseCases.GetDirection() == types.DirectionDown {
+		a.tankUseCases.StopTank(false)
 	}
-	if inpututil.IsKeyJustReleased(a.leftButton) && a.playerUseCases.GetDirection() == types.DirectionLeft {
-		a.playerUseCases.StopPlayer(false)
+	if inpututil.IsKeyJustReleased(a.leftButton) && a.tankUseCases.GetDirection() == types.DirectionLeft {
+		a.tankUseCases.StopTank(false)
 	}
-	if inpututil.IsKeyJustReleased(a.rightButton) && a.playerUseCases.GetDirection() == types.DirectionRight {
-		a.playerUseCases.StopPlayer(false)
+	if inpututil.IsKeyJustReleased(a.rightButton) && a.tankUseCases.GetDirection() == types.DirectionRight {
+		a.tankUseCases.StopTank(false)
 	}
 }
 
-// playerShoot обрабатывает стрельбу игрока
-func (a *InputAdapter) playerShoot() {
-	log.Printf("DEBUG: playerShoot called")
-	player, err := a.playerUseCases.GetPlayer()
+// tankShoot обрабатывает стрельбу танка
+func (a *InputAdapter) tankShoot() {
+	log.Printf("DEBUG: tankShoot called")
+	tank, err := a.tankUseCases.GetTank()
 	if err != nil {
-		log.Printf("ERROR: Failed to get player: %v", err)
+		log.Printf("ERROR: Failed to get tank: %v", err)
 		return
 	}
-	log.Printf("DEBUG: Got player, calling ShootBullet")
-	err = a.bulletUseCases.ShootBullet(player)
+	log.Printf("DEBUG: Got tank, calling ShootBullet")
+	err = a.bulletUseCases.ShootBullet(tank)
 	if err != nil {
 		log.Printf("ERROR: Failed to shoot bullet: %v", err)
 	}

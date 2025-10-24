@@ -13,10 +13,11 @@ import (
 )
 
 type GameState struct {
-	playerUseCases    *use_cases.PlayerUseCases
+	tankUseCases      *use_cases.TankUseCases
 	bulletUseCases    *use_cases.BulletUseCases
 	mapUseCases       *use_cases.MapUseCases
 	collisionUseCases *use_cases.CollisionUseCases
+	animationUseCases *use_cases.AnimationUseCases
 	inputAdapter      *adapters.InputAdapter
 	rendererAdapter   *adapters.RendererAdapter
 }
@@ -28,7 +29,7 @@ func NewGameState(
 	playerTilesetRepo processed.ITilesetRepository, // Репозиторий для игрока
 	bulletTilesetRepo processed.ITilesetRepository, // Репозиторий для пуль
 ) (GameState, error) {
-	level, err := mapsRepo.GetLevel(2)
+	level, err := mapsRepo.GetLevel(13)
 	if err != nil {
 		return GameState{}, err
 	}
@@ -36,6 +37,7 @@ func NewGameState(
 	// Создаем репозитории
 	blocksRepo := game.NewBlocksRepository()
 	bulletsRepo := game.NewBulletsRepository()
+	animationsRepo := game.NewAnimationsRepository()
 
 	// Заполняем репозиторий блоков данными уровня
 	for _, block := range level {
@@ -43,13 +45,14 @@ func NewGameState(
 	}
 
 	// Создаем Use Cases
-	playerUseCases := use_cases.NewPlayerUseCases(playerTilesetRepo)
+	animationUseCases := use_cases.NewAnimationUseCases(animationsRepo)
+	tankUseCases := use_cases.NewTankUseCases(playerTilesetRepo, animationUseCases)
 	bulletTilesUseCases := use_cases.NewTilesUseCases(bulletTilesetRepo)
 	bulletUseCases := use_cases.NewBulletUseCases(bulletsRepo, bulletTilesUseCases)
 	mapUseCases := use_cases.NewMapUseCases(blocksRepo)
 	collisionUseCases := use_cases.NewCollisionUseCases(
 		bulletUseCases,
-		playerUseCases,
+		tankUseCases,
 		mapUseCases,
 	)
 
@@ -61,14 +64,14 @@ func NewGameState(
 
 	rendererAdapter := adapters.NewRendererAdapter(
 		mapUseCases,
-		playerUseCases,
+		tankUseCases,
 		bulletUseCases,
 		mapTilesUseCases,
 		playerTilesUseCases,
 		bulletTilesUseCasesForRenderer,
 	)
 	inputAdapter := adapters.NewInputAdapter(
-		playerUseCases,
+		tankUseCases,
 		bulletUseCases,
 		ebiten.KeyW,     // up
 		ebiten.KeyS,     // down
@@ -78,10 +81,11 @@ func NewGameState(
 	)
 
 	return GameState{
-		playerUseCases:    playerUseCases,
+		tankUseCases:      tankUseCases,
 		bulletUseCases:    bulletUseCases,
 		mapUseCases:       mapUseCases,
 		collisionUseCases: collisionUseCases,
+		animationUseCases: animationUseCases,
 		inputAdapter:      inputAdapter,
 		rendererAdapter:   rendererAdapter,
 	}, nil
@@ -93,8 +97,8 @@ func (state GameState) Update() (State, error) {
 	}
 
 	state.inputAdapter.Update()
-	state.playerUseCases.MovePlayer(state.playerUseCases.GetDirection(), use_cases.DT)
-	state.playerUseCases.UpdateTankAnimation()
+	state.tankUseCases.MoveTank(state.tankUseCases.GetDirection(), use_cases.DT)
+	state.animationUseCases.UpdateAnimations() // Централизованное обновление всех анимаций
 	state.bulletUseCases.UpdateBullets(use_cases.DT)
 	state.collisionUseCases.UpdateCollisions()
 	return nil, nil

@@ -13,14 +13,13 @@ type IMapObject interface {
 	GetScreenPosition() types.Position
 }
 
-// IPlayerUseCases интерфейс для операций с игроком
-type IPlayerUseCases interface {
-	MovePlayer(direction types.Direction, dt float64) error
-	RotatePlayer(direction types.Direction) error
-	StopPlayer(byCollision bool) error
-	GetPlayer() (*types.TankEntity, error)
+// ITankUseCases интерфейс для операций с танком
+type ITankUseCases interface {
+	MoveTank(direction types.Direction, dt float64) error
+	RotateTank(direction types.Direction) error
+	StopTank(byCollision bool) error
+	GetTank() (*types.TankEntity, error)
 	GetDirection() types.Direction
-	UpdateTankAnimation()
 }
 
 // IBulletUseCases интерфейс для операций с пулями
@@ -51,4 +50,12 @@ type ITilesUseCases interface {
 	CreateAnimationTile(id string) (*types.TileAnimationEntity, error)
 	GetImage(id string) (image.Image, error)
 	GetTileAnimationFrames(id string) (types.AnimationData, error)
+}
+
+// IAnimationUseCases интерфейс для управления анимацией
+type IAnimationUseCases interface {
+	AddAnimation(animation *types.TileAnimationEntity)
+	UpdateAnimations()
+	StartAnimation(animation *types.TileAnimationEntity)
+	StopAnimation(animation *types.TileAnimationEntity)
 }

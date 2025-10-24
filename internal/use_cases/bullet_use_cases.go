@@ -43,11 +43,11 @@ func (uc *BulletUseCases) ShootBullet(tank *types.TankEntity) error {
 	case types.DirectionUp:
 		bulletY = tank.WorldPosition.Y - 4
 	case types.DirectionDown:
-		bulletY = tank.WorldPosition.Y + TankSpriteSize
+		bulletY = tank.WorldPosition.Y + TankSpriteSize/2
 	case types.DirectionLeft:
 		bulletX = tank.WorldPosition.X - 4
 	case types.DirectionRight:
-		bulletX = tank.WorldPosition.X + TankSpriteSize
+		bulletX = tank.WorldPosition.X + TankSpriteSize/2
 	}
 
 	bullet := types.BulletEntity{
@@ -56,7 +56,7 @@ func (uc *BulletUseCases) ShootBullet(tank *types.TankEntity) error {
 			X: bulletX,
 			Y: bulletY,
 		},
-		Speed:     200.0, // Скорость пули
+		Speed:     120.0, // Скорость пули
 		Direction: tank.Direction,
 		Owner:     tank,
 	}

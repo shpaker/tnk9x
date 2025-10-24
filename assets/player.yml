@@ -1,0 +1,18 @@
+---
+size: 16
+
+images:
+  base_tank_1: [0, 0]
+  base_tank_2: [1, 0]
+  spawner_1: [2, 0]
+  spawner_2: [3, 0]
+  spawner_3: [4, 0]
+  spawner_4: [5, 0]
+
+animations:
+  base_tank:
+    duration: 10
+    frames: [base_tank_1, base_tank_2]
+  spawner:
+    duration: 10
+    frames: [spawner_1, spawner_2, spawner_3, spawner_4]

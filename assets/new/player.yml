@@ -7,7 +7,5 @@ images:
 
 animations:
   base_tank:
-    - image: base_tank_1
-      duration: 10
-    - image: base_tank_2
-      duration: 10
+    duration: 10
+    frames: [base_tank_1, base_tank_2]

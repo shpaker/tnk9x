@@ -4,19 +4,19 @@ import "errors"
 
 // TankEntity представляет танк (игрока или врага)
 type TankEntity struct {
-	ImageGetter   IImageIdGetter
-	SpawnPosition Position
-	WorldPosition Position
-	Speed         float64
-	Direction     Direction
+	AnimationGetter IImageIdGetter
+	SpawnPosition   Position
+	WorldPosition   Position
+	Speed           float64
+	Direction       Direction
 }
 
 // GetImageId возвращает ID изображения танка (реализует IImageIdGetter)
 func (t *TankEntity) GetImageId() (string, error) {
-	if t.ImageGetter == nil {
+	if t.AnimationGetter == nil {
 		return "", errors.New("ImageGetter is nil")
 	}
-	return t.ImageGetter.GetImageId()
+	return t.AnimationGetter.GetImageId()
 }
 
 // GetScreenPosition возвращает позицию танка на экране

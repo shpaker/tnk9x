@@ -62,9 +62,17 @@ func NewTilesetDataRepository(
 		repo.imagesCache[imageID] = spriteImage
 	}
 
-	// Копируем данные анимаций
-	for animationID, animation := range config.Animations {
-		repo.animationsData[animationID] = animation
+	// Копируем данные анимаций и конвертируем в старый формат
+	for animationID, animationConfig := range config.Animations {
+		// Конвертируем новый формат в старый формат AnimationData
+		var animationFrames types.AnimationData
+		for _, frameID := range animationConfig.Frames {
+			animationFrames = append(animationFrames, types.AnimationDataFrame{
+				Image:    frameID,
+				Duration: animationConfig.Duration,
+			})
+		}
+		repo.animationsData[animationID] = animationFrames
 	}
 
 	return repo, nil

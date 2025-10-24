@@ -7,35 +7,35 @@ import (
 // CollisionUseCases реализация для операций с коллизиями
 type CollisionUseCases struct {
 	bulletUseCases IBulletUseCases
-	playerUseCases IPlayerUseCases
+	tankUseCases   ITankUseCases
 	mapUseCases    IMapUseCases
 }
 
 // NewCollisionUseCases создает новый экземпляр CollisionUseCases
 func NewCollisionUseCases(
 	bulletUseCases IBulletUseCases,
-	playerUseCases IPlayerUseCases,
+	tankUseCases ITankUseCases,
 	mapUseCases IMapUseCases,
 ) *CollisionUseCases {
 	return &CollisionUseCases{
 		bulletUseCases: bulletUseCases,
-		playerUseCases: playerUseCases,
+		tankUseCases:   tankUseCases,
 		mapUseCases:    mapUseCases,
 	}
 }
 
 // UpdateCollisions обновляет все коллизии в игре
 func (uc *CollisionUseCases) UpdateCollisions() error {
-	player, err := uc.playerUseCases.GetPlayer()
+	tank, err := uc.tankUseCases.GetTank()
 	if err != nil {
 		return err
 	}
 
 	uc.checkBulletBoundaryCollisions()
-	uc.checkBulletPlayerCollisions(player)
+	uc.checkBulletTankCollisions(tank)
 	uc.checkBulletWallCollisions()
-	uc.checkPlayerBoundaryCollisions(player)
-	uc.checkPlayerWallCollisions(player)
+	uc.checkTankBoundaryCollisions(tank)
+	uc.checkTankWallCollisions(tank)
 
 	return nil
 }
@@ -55,19 +55,19 @@ func (uc *CollisionUseCases) checkBulletBoundaryCollisions() {
 	}
 }
 
-// checkBulletPlayerCollisions проверяет коллизии пуль с игроком
-func (uc *CollisionUseCases) checkBulletPlayerCollisions(player *types.TankEntity) {
+// checkBulletTankCollisions проверяет коллизии пуль с танком
+func (uc *CollisionUseCases) checkBulletTankCollisions(tank *types.TankEntity) {
 	bullets := uc.bulletUseCases.GetBullets()
 
 	for i := len(bullets) - 1; i >= 0; i-- {
 		bullet := &bullets[i]
 
-		// Проверяем коллизию между пулей и игроком
-		if bullet.Owner != player && uc.CheckColliders(bullet, player) {
-			// Удаляем пулю при попадании в игрока
+		// Проверяем коллизию между пулей и танком
+		if bullet.Owner != tank && uc.CheckColliders(bullet, tank) {
+			// Удаляем пулю при попадании в танк
 			uc.bulletUseCases.RemoveBullet(i)
-			// Здесь можно добавить логику обработки попадания в игрока
-			// println("Player hit by bullet!")
+			// Здесь можно добавить логику обработки попадания в танк
+			// println("Tank hit by bullet!")
 		}
 	}
 }
@@ -124,36 +124,36 @@ func (uc *CollisionUseCases) checkBulletWallCollisions() {
 	}
 }
 
-// checkPlayerBoundaryCollisions проверяет коллизии игрока с границами экрана
-func (uc *CollisionUseCases) checkPlayerBoundaryCollisions(player *types.TankEntity) {
-	if player.WorldPosition.X < 0 {
-		player.WorldPosition.X = 0
-		uc.playerUseCases.StopPlayer(false)
+// checkTankBoundaryCollisions проверяет коллизии танка с границами экрана
+func (uc *CollisionUseCases) checkTankBoundaryCollisions(tank *types.TankEntity) {
+	if tank.WorldPosition.X < 0 {
+		tank.WorldPosition.X = 0
+		uc.tankUseCases.StopTank(false)
 	}
-	if player.WorldPosition.Y < 0 {
-		player.WorldPosition.Y = 0
-		uc.playerUseCases.StopPlayer(false)
+	if tank.WorldPosition.Y < 0 {
+		tank.WorldPosition.Y = 0
+		uc.tankUseCases.StopTank(false)
 	}
-	if player.WorldPosition.X > MapWidthHeight-TankSpriteSize {
-		player.WorldPosition.X = MapWidthHeight - TankSpriteSize
-		uc.playerUseCases.StopPlayer(false)
+	if tank.WorldPosition.X > MapWidthHeight-TankSpriteSize {
+		tank.WorldPosition.X = MapWidthHeight - TankSpriteSize
+		uc.tankUseCases.StopTank(false)
 	}
-	if player.WorldPosition.Y > MapWidthHeight-TankSpriteSize {
-		player.WorldPosition.Y = MapWidthHeight - TankSpriteSize
-		uc.playerUseCases.StopPlayer(false)
+	if tank.WorldPosition.Y > MapWidthHeight-TankSpriteSize {
+		tank.WorldPosition.Y = MapWidthHeight - TankSpriteSize
+		uc.tankUseCases.StopTank(false)
 	}
 }
 
-// checkPlayerWallCollisions проверяет коллизии игрока со стенами
-func (uc *CollisionUseCases) checkPlayerWallCollisions(player *types.TankEntity) {
+// checkTankWallCollisions проверяет коллизии танка со стенами
+func (uc *CollisionUseCases) checkTankWallCollisions(tank *types.TankEntity) {
 	level := uc.mapUseCases.GetBlocks()
 	mapObjects := uc.createMapObjectsFromLevel(level)
 
 	// Проверяем коллизии с использованием внутренних методов
-	collidingObject := uc.CheckCollidersWithArrayFirst(player, mapObjects)
+	collidingObject := uc.CheckCollidersWithArrayFirst(tank, mapObjects)
 
 	if collidingObject != nil {
-		uc.handlePlayerWallCollision(player, collidingObject.(*types.BlockEntity))
+		uc.handleTankWallCollision(tank, collidingObject.(*types.BlockEntity))
 	}
 }
 
@@ -182,26 +182,26 @@ func (uc *CollisionUseCases) createMapObjectsFromLevel(level []types.BlockEntity
 	return mapObjects
 }
 
-// handlePlayerWallCollision обрабатывает коллизию игрока со стеной
-func (uc *CollisionUseCases) handlePlayerWallCollision(player *types.TankEntity, block *types.BlockEntity) {
+// handleTankWallCollision обрабатывает коллизию танка со стеной
+func (uc *CollisionUseCases) handleTankWallCollision(tank *types.TankEntity, block *types.BlockEntity) {
 	blockPos := block.GetWorldPosition()
 	blockSize := block.GetSize()
 
-	switch player.Direction {
+	switch tank.Direction {
 	case types.DirectionUp:
 		// верх танка упирается в низ блока
-		player.WorldPosition.Y = blockPos.Y + float64(blockSize.Height)
+		tank.WorldPosition.Y = blockPos.Y + float64(blockSize.Height)
 	case types.DirectionDown:
 		// низ танка упирается в верх блока
-		player.WorldPosition.Y = blockPos.Y - float64(TankSpriteSize)
+		tank.WorldPosition.Y = blockPos.Y - float64(TankSpriteSize)
 	case types.DirectionLeft:
 		// левая сторона танка упирается в правую сторону блока
-		player.WorldPosition.X = blockPos.X + float64(blockSize.Width)
+		tank.WorldPosition.X = blockPos.X + float64(blockSize.Width)
 	case types.DirectionRight:
 		// правая сторона танка упирается в левую сторону блока
-		player.WorldPosition.X = blockPos.X - float64(TankSpriteSize)
+		tank.WorldPosition.X = blockPos.X - float64(TankSpriteSize)
 	}
-	uc.playerUseCases.StopPlayer(true)
+	uc.tankUseCases.StopTank(true)
 }
 
 // CheckColliders проверяет коллизию между двумя объектами карты

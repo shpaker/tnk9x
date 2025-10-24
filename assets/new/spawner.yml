@@ -1,0 +1,13 @@
+---
+size: 16
+
+images:
+  spawner_1: [0, 0]
+  spawner_2: [1, 0]
+  spawner_3: [2, 0]
+  spawner_4: [3, 0]
+
+animations:
+  spawner:
+    duration: 6
+    frames: [spawner_1, spawner_2, spawner_3, spawner_4]

@@ -44,12 +44,18 @@ type AnimationDataFrame struct {
 	Duration int    `yaml:"duration"`
 }
 
-// AnimationData представляет анимацию
+// AnimationConfig представляет конфигурацию анимации в новом формате
+type AnimationConfig struct {
+	Duration int      `yaml:"duration"`
+	Frames   []string `yaml:"frames"`
+}
+
+// AnimationData представляет анимацию (старый формат - массив кадров)
 type AnimationData []AnimationDataFrame
 
 // TilesetDataConfig представляет конфигурацию тайлсета
 type TilesetDataConfig struct {
-	Size       int                      `yaml:"size"`
-	Images     map[string][2]int        `yaml:"images"`
-	Animations map[string]AnimationData `yaml:"animations"`
+	Size       int                        `yaml:"size"`
+	Images     map[string][2]int          `yaml:"images"`
+	Animations map[string]AnimationConfig `yaml:"animations"`
 }

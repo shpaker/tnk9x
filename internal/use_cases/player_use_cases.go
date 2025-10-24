@@ -8,45 +8,58 @@ import (
 	"github.com/shpaker/gonflict/internal/utils"
 )
 
-// PlayerUseCases реализация интерфейса PlayerUseCases
-type PlayerUseCases struct {
-	tilesetRepo processed.ITilesetRepository
-	tank        types.TankEntity
+// TankUseCases реализация интерфейса TankUseCases
+type TankUseCases struct {
+	tilesetRepo       processed.ITilesetRepository
+	animationUseCases IAnimationUseCases
+	tank              types.TankEntity
+	tankAnimation     *types.TileAnimationEntity
 }
 
-// NewPlayerUseCases создает новый экземпляр PlayerUseCases
-func NewPlayerUseCases(tilesetRepo processed.ITilesetRepository) *PlayerUseCases {
-	uc := &PlayerUseCases{
-		tilesetRepo: tilesetRepo,
+// NewTankUseCases создает новый экземпляр TankUseCases
+func NewTankUseCases(
+	tilesetRepo processed.ITilesetRepository,
+	animationUseCases IAnimationUseCases,
+) *TankUseCases {
+	uc := &TankUseCases{
+		tilesetRepo:       tilesetRepo,
+		animationUseCases: animationUseCases,
 	}
 
-	// Создаем игрока при инициализации
-	tank, err := uc.makePlayer()
+	// Создаем танк при инициализации
+	tank, tankAnimation, err := uc.makeTank()
 	if err != nil {
 		panic(err)
 	}
 	uc.tank = tank
+	uc.tankAnimation = tankAnimation
 
 	return uc
 }
 
-// makePlayer создает игрока с начальными параметрами
-func (uc *PlayerUseCases) makePlayer() (types.TankEntity, error) {
+// makeTank создает танк с начальными параметрами
+func (uc *TankUseCases) makeTank() (types.TankEntity, *types.TileAnimationEntity, error) {
 	// Получаем данные анимации для танка
 	animationFrames, err := uc.tilesetRepo.GetAnimationData("base_tank")
 	if err != nil {
-		return types.TankEntity{}, err
+		return types.TankEntity{}, nil, err
 	}
 
 	// Создаем TileAnimationEntity для танка
-	imageGetter := types.NewTileAnimationEntity(animationFrames)
+	tankAnimation := types.NewTileAnimationEntity(animationFrames)
+
+	// Добавляем анимацию танка через AnimationUseCases
+	uc.animationUseCases.AddAnimation(tankAnimation)
+
+	// Анимация танка начинается остановленной
+	// uc.animationUseCases.StartAnimation(tankAnimation) - убираем автоматический запуск
 
 	// Создаем игрока с начальными параметрами
 	spawnPosition := types.Position{X: 4 * TankSpriteSize, Y: 12 * TankSpriteSize}
 
 	player := types.TankEntity{
-		ImageGetter:   imageGetter,
-		SpawnPosition: spawnPosition,
+		AnimationGetter: tankAnimation,
+		SpawnPosition:   spawnPosition,
 		WorldPosition: types.Position{
 			X: spawnPosition.X,
 			Y: spawnPosition.Y,
@@ -55,48 +68,21 @@ func (uc *PlayerUseCases) makePlayer() (types.TankEntity, error) {
 		Direction: types.DirectionUp,
 	}
 
-	return player, nil
+	return player, tankAnimation, nil
 }
 
-// GetPlayer возвращает данные игрока
-func (uc *PlayerUseCases) GetPlayer() (*types.TankEntity, error) {
+// GetTank возвращает данные танка
+func (uc *TankUseCases) GetTank() (*types.TankEntity, error) {
 	return &uc.tank, nil
 }
 
-// GetDirection возвращает текущее направление игрока
-func (uc *PlayerUseCases) GetDirection() types.Direction {
+// GetDirection возвращает текущее направление танка
+func (uc *TankUseCases) GetDirection() types.Direction {
 	return uc.tank.Direction
 }
 
-// UpdateTankAnimation обновляет анимацию танка
-func (uc *PlayerUseCases) UpdateTankAnimation() {
-	if uc.tank.ImageGetter != nil {
-		if tileAnimationEntity, ok := uc.tank.ImageGetter.(*types.TileAnimationEntity); ok {
-			tileAnimationEntity.UpdateAnimation()
-		}
-	}
-}
-
-// startTankAnimation запускает анимацию танка
-func (uc *PlayerUseCases) startTankAnimation() {
-	if uc.tank.ImageGetter != nil {
-		if tileAnimationEntity, ok := uc.tank.ImageGetter.(*types.TileAnimationEntity); ok {
-			tileAnimationEntity.StartAnimation()
-		}
-	}
-}
-
-// stopTankAnimation останавливает анимацию танка
-func (uc *PlayerUseCases) stopTankAnimation() {
-	if uc.tank.ImageGetter != nil {
-		if tileAnimationEntity, ok := uc.tank.ImageGetter.(*types.TileAnimationEntity); ok {
-			tileAnimationEntity.StopAnimation()
-		}
-	}
-}
-
-// RotatePlayer поворачивает игрока в указанном направлении
-func (uc *PlayerUseCases) RotatePlayer(direction types.Direction) error {
+// RotateTank поворачивает танк в указанном направлении
+func (uc *TankUseCases) RotateTank(direction types.Direction) error {
 	if uc.tank.Speed != 0 {
 		return errors.New("cannot rotate while moving")
 	}
@@ -107,13 +93,19 @@ func (uc *PlayerUseCases) RotatePlayer(direction types.Direction) error {
 	}
 
 	uc.tank.Direction = direction
+
+	// Запускаем анимацию при повороте
+	uc.animationUseCases.StartAnimation(uc.tankAnimation)
+
 	return nil
 }
 
-// StopPlayer останавливает игрока
-func (uc *PlayerUseCases) StopPlayer(byCollision bool) error {
+// StopTank останавливает танк
+func (uc *TankUseCases) StopTank(byCollision bool) error {
 	uc.tank.Speed = 0
-	uc.stopTankAnimation() // Останавливаем анимацию
+
+	// Останавливаем анимацию танка
+	uc.animationUseCases.StopAnimation(uc.tankAnimation)
 
 	if byCollision {
 		uc.tank.WorldPosition.X = float64(int(uc.tank.WorldPosition.X))
@@ -136,15 +128,16 @@ func (uc *PlayerUseCases) StopPlayer(byCollision bool) error {
 	return nil
 }
 
-// MovePlayer перемещает игрока в указанном направлении
-func (uc *PlayerUseCases) MovePlayer(direction types.Direction, dt float64) error {
+// MoveTank перемещает танк в указанном направлении
+func (uc *TankUseCases) MoveTank(
+	direction types.Direction,
+	dt float64,
+) error {
 	delta := uc.tank.Speed * dt
 
-	// Управляем анимацией в зависимости от скорости
-	if uc.tank.Speed > 0 {
-		uc.startTankAnimation()
-	} else {
-		uc.stopTankAnimation()
+	// Если танк движется, запускаем анимацию
+	if delta > 0 {
+		uc.animationUseCases.StartAnimation(uc.tankAnimation)
 	}
 
 	switch uc.tank.Direction {
