@@ -7,18 +7,17 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
-	"github.com/shpaker/gonflict/internal/types"
 	"github.com/shpaker/gonflict/internal/use_cases"
 )
 
 // RendererAdapter адаптер для рендеринга игры
 type RendererAdapter struct {
-	mapUseCases        use_cases.IMapUseCases
-	playerUseCases     use_cases.IPlayerUseCases
-	bulletUseCases     use_cases.IBulletUseCases
-	tilesAdapter       *TilesAdapter
-	playerTilesAdapter *TilesAdapter
-	bulletTilesAdapter *TilesAdapter
+	mapUseCases         use_cases.IMapUseCases
+	playerUseCases      use_cases.IPlayerUseCases
+	bulletUseCases      use_cases.IBulletUseCases
+	mapTilesUseCases    *use_cases.TilesUseCases
+	playerTilesUseCases *use_cases.TilesUseCases
+	bulletTilesUseCases *use_cases.TilesUseCases
 }
 
 // NewRendererAdapter создает новый экземпляр RendererAdapter
@@ -26,17 +25,17 @@ func NewRendererAdapter(
 	mapUseCases use_cases.IMapUseCases,
 	playerUseCases use_cases.IPlayerUseCases,
 	bulletUseCases use_cases.IBulletUseCases,
-	tilesAdapter *TilesAdapter,
-	playerTilesAdapter *TilesAdapter,
-	bulletTilesAdapter *TilesAdapter,
+	mapTilesUseCases *use_cases.TilesUseCases,
+	playerTilesUseCases *use_cases.TilesUseCases,
+	bulletTilesUseCases *use_cases.TilesUseCases,
 ) *RendererAdapter {
 	return &RendererAdapter{
-		mapUseCases:        mapUseCases,
-		playerUseCases:     playerUseCases,
-		bulletUseCases:     bulletUseCases,
-		tilesAdapter:       tilesAdapter,
-		playerTilesAdapter: playerTilesAdapter,
-		bulletTilesAdapter: bulletTilesAdapter,
+		mapUseCases:         mapUseCases,
+		playerUseCases:      playerUseCases,
+		bulletUseCases:      bulletUseCases,
+		mapTilesUseCases:    mapTilesUseCases,
+		playerTilesUseCases: playerTilesUseCases,
+		bulletTilesUseCases: bulletTilesUseCases,
 	}
 }
 
@@ -63,13 +62,16 @@ func (r *RendererAdapter) drawMap(screen *ebiten.Image) {
 			continue
 		}
 
-		// Получаем изображение блока через TilesAdapter
-		image, err := r.tilesAdapter.GetImage(&imageId, types.DirectionUp)
+		// Получаем изображение блока через TilesUseCases
+		imageData, err := r.mapTilesUseCases.GetImage(imageId)
 		if err != nil {
 			// Логируем ошибку, но продолжаем рендеринг других блоков
 			fmt.Printf("DEBUG: Block %d error: %v\n", i, err)
 			continue
 		}
+
+		// Конвертируем image.Image в ebiten.Image
+		image := ebiten.NewImageFromImage(imageData)
 
 		fmt.Printf("DEBUG: Rendering block %d at position (%.2f, %.2f)\n", i, block.WorldPosition.X, block.WorldPosition.Y)
 
@@ -96,11 +98,14 @@ func (r *RendererAdapter) drawPlayerOne(screen *ebiten.Image) {
 		return
 	}
 
-	// Получаем изображение танка через PlayerTilesAdapter
-	image, err := r.playerTilesAdapter.GetImage(&imageId, tank.Direction)
+	// Получаем изображение танка через PlayerTilesUseCases
+	imageData, err := r.playerTilesUseCases.GetImage(imageId)
 	if err != nil {
 		return
 	}
+
+	// Конвертируем image.Image в ebiten.Image
+	image := ebiten.NewImageFromImage(imageData)
 
 	// Вычисляем позицию на экране
 	screenX := MapOffset + tank.WorldPosition.X
@@ -127,12 +132,15 @@ func (r *RendererAdapter) drawBullets(screen *ebiten.Image) {
 				continue
 			}
 
-			// Получаем изображение пули через BulletTilesAdapter
-			image, err := r.bulletTilesAdapter.GetImage(&imageId, bullet.Direction)
+			// Получаем изображение пули через BulletTilesUseCases
+			imageData, err := r.bulletTilesUseCases.GetImage(imageId)
 			if err != nil {
 				log.Printf("ERROR: Failed to get bullet image for bullet %d: %v", i, err)
 				continue // Пропускаем пули с ошибками загрузки изображения
 			}
+
+			// Конвертируем image.Image в ebiten.Image
+			image := ebiten.NewImageFromImage(imageData)
 
 			// Вычисляем позицию на экране
 			screenX := MapOffset + bullet.WorldPosition.X

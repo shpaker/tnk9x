@@ -6,8 +6,7 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
-	"github.com/shpaker/gonflict/internal/adapters"
-	"github.com/shpaker/gonflict/internal/repositories"
+	"github.com/shpaker/gonflict/internal/repositories/processed"
 	"github.com/shpaker/gonflict/internal/repositories/raw"
 	"github.com/shpaker/gonflict/internal/states"
 )
@@ -43,43 +42,34 @@ func New(cfg *Config) *App {
 	fileRepo := raw.NewFileRepository("assets")
 
 	// Создаем tilesetRepository для работы с изображениями блоков
-	tilesetRepo, err := repositories.NewTilesetRepository(fileRepo, "blocks")
+	tilesetRepo, err := processed.NewTilesetDataRepository(fileRepo, "blocks")
 	if err != nil {
 		fmt.Printf("Ошибка создания TilesetRepository: %v\n", err)
 		panic(err)
 	}
 
 	// Создаем tilesetRepository для работы с изображениями игрока
-	playerTilesetRepo, err := repositories.NewTilesetRepository(fileRepo, "player")
+	playerTilesetRepo, err := processed.NewTilesetDataRepository(fileRepo, "player")
 	if err != nil {
 		fmt.Printf("Ошибка создания PlayerTilesetRepository: %v\n", err)
 		panic(err)
 	}
 
 	// Создаем tilesetRepository для работы с изображениями пуль
-	bulletTilesetRepo, err := repositories.NewTilesetRepository(fileRepo, "bullet")
+	bulletTilesetRepo, err := processed.NewTilesetDataRepository(fileRepo, "bullet")
 	if err != nil {
 		fmt.Printf("Ошибка создания BulletTilesetRepository: %v\n", err)
 		panic(err)
 	}
 
-	// Создаем tilesAdapter
-	tilesAdapter := adapters.NewTilesAdapter(tilesetRepo)
-
-	// Создаем tilesAdapter для игрока
-	playerTilesAdapter := adapters.NewTilesAdapter(playerTilesetRepo)
-
-	// Создаем tilesAdapter для пуль
-	bulletTilesAdapter := adapters.NewTilesAdapter(bulletTilesetRepo)
-
 	// Создаем репозиторий карт уровней
-	mapsRepo := repositories.NewMapsDataRepository(fileRepo, tilesAdapter)
+	mapsRepo := processed.NewMapsDataRepository(fileRepo, tilesetRepo)
 
 	// Создаем GameState с переданными репозиториями
 	gameState, err := states.NewGameState(
 		mapsRepo,
-		playerTilesAdapter,
-		bulletTilesAdapter,
+		playerTilesetRepo,
+		bulletTilesetRepo,
 	)
 	if err != nil {
 		// Логируем ошибку и падаем

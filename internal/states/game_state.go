@@ -7,7 +7,8 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 	"github.com/shpaker/gonflict/internal/adapters"
-	"github.com/shpaker/gonflict/internal/repositories"
+	"github.com/shpaker/gonflict/internal/repositories/game"
+	"github.com/shpaker/gonflict/internal/repositories/processed"
 	"github.com/shpaker/gonflict/internal/use_cases"
 )
 
@@ -22,9 +23,9 @@ type GameState struct {
 
 // NewGameState создает новое состояние игры с переданным репозиторием карт
 func NewGameState(
-	mapsRepo repositories.IMapsDataRepository,
-	playerTilesAdapter *adapters.TilesAdapter,
-	bulletTilesAdapter *adapters.TilesAdapter,
+	mapsRepo processed.IMapsDataRepository,
+	playerTilesetRepo processed.ITilesetRepository,
+	bulletTilesetRepo processed.ITilesetRepository,
 ) (GameState, error) {
 	level, err := mapsRepo.GetLevel(1)
 	if err != nil {
@@ -32,12 +33,8 @@ func NewGameState(
 	}
 
 	// Создаем репозитории
-	blocksRepo := repositories.NewBlocksRepository()
-	bulletsRepo := repositories.NewBulletsRepository()
-
-	// Получаем tilesAdapter из mapsRepo
-	mapsDataRepo := mapsRepo.(*repositories.MapsDataRepository)
-	tilesAdapter := mapsDataRepo.GetTilesAdapter()
+	blocksRepo := game.NewBlocksRepository()
+	bulletsRepo := game.NewBulletsRepository()
 
 	// Заполняем репозиторий блоков данными уровня
 	for _, block := range level {
@@ -45,21 +42,28 @@ func NewGameState(
 	}
 
 	// Создаем Use Cases
-	playerUseCases := use_cases.NewPlayerUseCases(playerTilesAdapter.GetTilesetRepository())
-	bulletUseCases := use_cases.NewBulletUseCases(bulletsRepo, bulletTilesAdapter.GetTileUseCases())
+	playerUseCases := use_cases.NewPlayerUseCases(playerTilesetRepo)
+	bulletTilesUseCases := use_cases.NewTilesUseCases(bulletTilesetRepo)
+	bulletUseCases := use_cases.NewBulletUseCases(bulletsRepo, bulletTilesUseCases)
 	mapUseCases := use_cases.NewMapUseCases(blocksRepo)
 	collisionUseCases := use_cases.NewCollisionUseCases(
 		bulletUseCases,
 		playerUseCases,
 		mapUseCases,
 	)
+
+	// Создаем TilesUseCases для рендерера
+	mapTilesUseCases := use_cases.NewTilesUseCases(playerTilesetRepo) // Используем playerTilesetRepo для карты
+	playerTilesUseCases := use_cases.NewTilesUseCases(playerTilesetRepo)
+	bulletTilesUseCasesForRenderer := use_cases.NewTilesUseCases(bulletTilesetRepo)
+
 	rendererAdapter := adapters.NewRendererAdapter(
 		mapUseCases,
 		playerUseCases,
 		bulletUseCases,
-		tilesAdapter.(*adapters.TilesAdapter),
-		playerTilesAdapter,
-		bulletTilesAdapter,
+		mapTilesUseCases,
+		playerTilesUseCases,
+		bulletTilesUseCasesForRenderer,
 	)
 	inputAdapter := adapters.NewInputAdapter(
 		playerUseCases,

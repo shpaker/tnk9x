@@ -1,6 +1,8 @@
 package use_cases
 
 import (
+	"image"
+
 	"github.com/shpaker/gonflict/internal/types"
 )
 
@@ -41,4 +43,12 @@ type ICollisionUseCases interface {
 	CheckColliders(obj1 IMapObject, obj2 IMapObject) bool
 	CheckCollidersWithArray(obj IMapObject, objects []IMapObject) []IMapObject
 	CheckCollidersWithArrayFirst(obj IMapObject, objects []IMapObject) IMapObject
+}
+
+// ITilesUseCases определяет интерфейс для работы с тайлами
+type ITilesUseCases interface {
+	CreateStaticTile(id string) (types.IImageIdGetter, error)
+	CreateAnimationTile(id string) (*types.TileAnimationEntity, error)
+	GetImage(id string) (image.Image, error)
+	GetTileAnimationFrames(id string) (types.AnimationData, error)
 }

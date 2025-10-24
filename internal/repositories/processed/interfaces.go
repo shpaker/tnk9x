@@ -1,14 +1,15 @@
 package processed
 
 import (
-	"github.com/hajimehoshi/ebiten/v2"
+	"image"
+
 	"github.com/shpaker/gonflict/internal/types"
 )
 
 // ITilesetRepository определяет интерфейс для работы с тайлсетами
 type ITilesetRepository interface {
 	// GetImage возвращает изображение по ID из тайлсета
-	GetImage(id string) (*ebiten.Image, error)
+	GetImage(id string) (image.Image, error)
 	// GetAnimationData возвращает данные анимации по ID
 	GetAnimationData(id string) (types.AnimationData, error)
 }

@@ -5,42 +5,29 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/shpaker/gonflict/internal/interfaces"
 	"github.com/shpaker/gonflict/internal/repositories/raw"
 	"github.com/shpaker/gonflict/internal/types"
 )
 
 // ITilesAdapter определяет интерфейс для работы с тайлами
-type ITilesAdapter interface {
-	GetTileUseCases() interfaces.ITileUseCases
-	GetTilesetRepository() ITilesetRepository
-}
 
 type MapsDataRepository struct {
-	fileRepo     raw.IFileRepository
-	tilesAdapter ITilesAdapter
+	fileRepo    raw.IFileRepository
+	tilesetRepo ITilesetRepository
 }
 
 func NewMapsDataRepository(
 	fileRepo raw.IFileRepository,
-	tilesAdapter ITilesAdapter,
+	tilesetRepo ITilesetRepository,
 ) *MapsDataRepository {
 	return &MapsDataRepository{
-		fileRepo:     fileRepo,
-		tilesAdapter: tilesAdapter,
+		fileRepo:    fileRepo,
+		tilesetRepo: tilesetRepo,
 	}
 }
 
 func (mdr *MapsDataRepository) GetFileRepo() raw.IFileRepository {
 	return mdr.fileRepo
-}
-
-func (mdr *MapsDataRepository) GetTilesetRepository() ITilesetRepository {
-	return mdr.tilesAdapter.GetTilesetRepository()
-}
-
-func (mdr *MapsDataRepository) GetTilesAdapter() ITilesAdapter {
-	return mdr.tilesAdapter
 }
 
 // readFile читает файл уровня
@@ -72,10 +59,9 @@ func (mdr *MapsDataRepository) createBlockFromChar(charStr string, x, y int) (*t
 		return nil, fmt.Errorf("неизвестный символ '%s' в позиции (%d, %d)", charStr, x+1, y+1)
 	}
 
-	// Создаем TileStaticEntity для блока
-	tileEntity, err := mdr.tilesAdapter.GetTileUseCases().CreateStaticTile(string(blockType))
-	if err != nil {
-		return nil, fmt.Errorf("не удалось создать tile entity для блока %s: %w", blockType, err)
+	// Создаем TileStaticEntity для блока напрямую
+	tileEntity := &types.TileStaticEntity{
+		ImageId: string(blockType),
 	}
 
 	// Создаем полный объект блока используя конструктор

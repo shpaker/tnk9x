@@ -3,19 +3,19 @@ package use_cases
 import (
 	"errors"
 
-	"github.com/shpaker/gonflict/internal/repositories"
+	"github.com/shpaker/gonflict/internal/repositories/processed"
 	"github.com/shpaker/gonflict/internal/types"
 	"github.com/shpaker/gonflict/internal/utils"
 )
 
 // PlayerUseCases реализация интерфейса PlayerUseCases
 type PlayerUseCases struct {
-	tilesetRepo repositories.ITilesetRepository
+	tilesetRepo processed.ITilesetRepository
 	tank        types.TankEntity
 }
 
 // NewPlayerUseCases создает новый экземпляр PlayerUseCases
-func NewPlayerUseCases(tilesetRepo repositories.ITilesetRepository) *PlayerUseCases {
+func NewPlayerUseCases(tilesetRepo processed.ITilesetRepository) *PlayerUseCases {
 	uc := &PlayerUseCases{
 		tilesetRepo: tilesetRepo,
 	}

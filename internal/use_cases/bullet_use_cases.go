@@ -3,22 +3,21 @@ package use_cases
 import (
 	"log"
 
-	"github.com/shpaker/gonflict/internal/interfaces"
-	"github.com/shpaker/gonflict/internal/repositories"
+	"github.com/shpaker/gonflict/internal/repositories/game"
 	"github.com/shpaker/gonflict/internal/types"
 )
 
 // BulletUseCases реализация интерфейса BulletUseCases
 type BulletUseCases struct {
-	bulletsRepo  repositories.IBulletsRepository
-	tileUseCases interfaces.ITileUseCases
+	bulletsRepo   game.IBulletsRepository
+	tilesUseCases ITilesUseCases
 }
 
 // NewBulletUseCases создает новый экземпляр BulletUseCases
-func NewBulletUseCases(bulletsRepo repositories.IBulletsRepository, tileUseCases interfaces.ITileUseCases) *BulletUseCases {
+func NewBulletUseCases(bulletsRepo game.IBulletsRepository, tilesUseCases ITilesUseCases) *BulletUseCases {
 	return &BulletUseCases{
-		bulletsRepo:  bulletsRepo,
-		tileUseCases: tileUseCases,
+		bulletsRepo:   bulletsRepo,
+		tilesUseCases: tilesUseCases,
 	}
 }
 
@@ -28,7 +27,7 @@ func (uc *BulletUseCases) ShootBullet(tank *types.TankEntity) error {
 		tank.WorldPosition.X, tank.WorldPosition.Y, tank.Direction)
 
 	// Создаем тайл для пули с ID "bullet"
-	bulletImageGetter, err := uc.tileUseCases.CreateStaticTile("bullet")
+	bulletImageGetter, err := uc.tilesUseCases.CreateStaticTile("bullet")
 	if err != nil {
 		log.Printf("ERROR: Failed to create bullet tile: %v", err)
 		return err

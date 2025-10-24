@@ -6,30 +6,18 @@ import (
 	"testing"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/shpaker/gonflict/internal/interfaces"
 	"github.com/shpaker/gonflict/internal/types"
 )
 
-// MockTilesAdapter - мок для тестирования
-type MockTilesAdapter struct{}
+// MockTilesetRepository - мок для тестирования
+type MockTilesetRepository struct{}
 
-func (mta *MockTilesAdapter) GetTileUseCases() interfaces.ITileUseCases {
-	return &MockTileUseCases{}
+func (mtr *MockTilesetRepository) GetImage(id string) (image.Image, error) {
+	return nil, nil
 }
 
-func (mta *MockTilesAdapter) GetTilesetRepository() ITilesetRepository {
-	return &MockTilesetRepository{}
-}
-
-// MockTileUseCases - мок для тестирования
-type MockTileUseCases struct{}
-
-func (mtuc *MockTileUseCases) CreateStaticTile(id string) (types.IImageIdGetter, error) {
-	return &MockImageIdGetter{id: id}, nil
-}
-
-func (mtuc *MockTileUseCases) CreateAnimationTile(id string) (*types.TileAnimationEntity, error) {
-	return &types.TileAnimationEntity{}, nil
+func (mtr *MockTilesetRepository) GetAnimationData(id string) (types.AnimationData, error) {
+	return types.AnimationData{}, nil
 }
 
 // MockImageIdGetter - мок для тестирования
@@ -39,17 +27,6 @@ type MockImageIdGetter struct {
 
 func (mig *MockImageIdGetter) GetImageId() (string, error) {
 	return mig.id, nil
-}
-
-// MockTilesetRepository - мок для тестирования
-type MockTilesetRepository struct{}
-
-func (mtr *MockTilesetRepository) GetImage(id string) (*ebiten.Image, error) {
-	return ebiten.NewImage(8, 8), nil
-}
-
-func (mtr *MockTilesetRepository) GetAnimationData(id string) (types.AnimationData, error) {
-	return types.AnimationData{}, nil
 }
 
 // MockFileRepository - простой мок для тестирования
@@ -126,8 +103,10 @@ func TestGetLevel_Success(t *testing.T) {
 	mockFileRepo.AddFile("levels/1", levelData)
 
 	// Создаем сервис уровней
-	mockTilesAdapter := &MockTilesAdapter{}
-	mapsService := NewMapsDataRepository(mockFileRepo, mockTilesAdapter)
+	mockTilesetRepo := &MockTilesetRepository{}
+	// Проверяем, что мок реализует интерфейс
+	var _ ITilesetRepository = mockTilesetRepo
+	mapsService := NewMapsDataRepository(mockFileRepo, mockTilesetRepo)
 
 	// Вызываем функцию
 	level, err := mapsService.GetLevel(1)
@@ -176,8 +155,10 @@ func TestGetLevel_InvalidSize(t *testing.T) {
 	mockFileRepo.AddFile("levels/1", levelData)
 
 	// Создаем сервис уровней
-	mockTilesAdapter := &MockTilesAdapter{}
-	mapsService := NewMapsDataRepository(mockFileRepo, mockTilesAdapter)
+	mockTilesetRepo := &MockTilesetRepository{}
+	// Проверяем, что мок реализует интерфейс
+	var _ ITilesetRepository = mockTilesetRepo
+	mapsService := NewMapsDataRepository(mockFileRepo, mockTilesetRepo)
 
 	// Вызываем функцию
 	_, err := mapsService.GetLevel(1)

@@ -5,7 +5,6 @@ import (
 	"image"
 	"path/filepath"
 
-	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/shpaker/gonflict/internal/repositories/raw"
 	"github.com/shpaker/gonflict/internal/types"
 	"gopkg.in/yaml.v3"
@@ -13,7 +12,7 @@ import (
 
 type TilesetDataRepository struct {
 	fileRepo       raw.IFileRepository
-	imagesCache    map[string]*ebiten.Image
+	imagesCache    map[string]image.Image
 	animationsData map[string]types.AnimationData
 }
 
@@ -38,12 +37,11 @@ func NewTilesetDataRepository(
 	if err != nil {
 		return nil, err
 	}
-	tilesetImage := ebiten.NewImageFromImage(img)
 
 	// Создаем репозиторий
 	repo := &TilesetDataRepository{
 		fileRepo:       fileRepo,
-		imagesCache:    make(map[string]*ebiten.Image),
+		imagesCache:    make(map[string]image.Image),
 		animationsData: make(map[string]types.AnimationData),
 	}
 
@@ -51,16 +49,17 @@ func NewTilesetDataRepository(
 	tileSize := config.Size
 	for imageID, coords := range config.Images {
 		// Вырезаем нужную область из тайлсета
-		spriteImage := tilesetImage.SubImage(
+		spriteImage := img.(interface {
+			SubImage(r image.Rectangle) image.Image
+		}).SubImage(
 			image.Rectangle{
 				Min: image.Point{X: coords[0] * tileSize, Y: coords[1] * tileSize},
 				Max: image.Point{X: (coords[0] + 1) * tileSize, Y: (coords[1] + 1) * tileSize},
 			},
 		)
 
-		// Создаем новое ebiten.Image и кэшируем его
-		cachedImage := ebiten.NewImageFromImage(spriteImage)
-		repo.imagesCache[imageID] = cachedImage
+		// Кэшируем изображение
+		repo.imagesCache[imageID] = spriteImage
 	}
 
 	// Копируем данные анимаций
@@ -73,7 +72,7 @@ func NewTilesetDataRepository(
 
 func (tr *TilesetDataRepository) GetImage(
 	id string,
-) (*ebiten.Image, error) {
+) (image.Image, error) {
 	// Проверяем кэш
 	if cachedImage, exists := tr.imagesCache[id]; exists {
 		return cachedImage, nil

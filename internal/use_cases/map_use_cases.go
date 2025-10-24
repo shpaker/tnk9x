@@ -1,17 +1,17 @@
 package use_cases
 
 import (
-	"github.com/shpaker/gonflict/internal/repositories"
+	"github.com/shpaker/gonflict/internal/repositories/game"
 	"github.com/shpaker/gonflict/internal/types"
 )
 
 // MapUseCases реализация интерфейса MapUseCases
 type MapUseCases struct {
-	blocksRepo repositories.IBlocksRepository
+	blocksRepo game.IBlocksRepository
 }
 
 // NewMapUseCases создает новый экземпляр MapUseCases
-func NewMapUseCases(blocksRepo repositories.IBlocksRepository) *MapUseCases {
+func NewMapUseCases(blocksRepo game.IBlocksRepository) *MapUseCases {
 	return &MapUseCases{
 		blocksRepo: blocksRepo,
 	}
