@@ -1,14 +1,6 @@
 package types
 
-// TileStaticEntity представляет статический тайл с изображением
-type TileStaticEntity struct {
-	ImageId string
-}
-
-// GetImageId возвращает ID изображения тайла
-func (tse *TileStaticEntity) GetImageId() string {
-	return tse.ImageId
-}
+import "errors"
 
 // TileAnimationEntity представляет анимированный тайл
 type TileAnimationEntity struct {
@@ -19,16 +11,16 @@ type TileAnimationEntity struct {
 }
 
 // GetImageId возвращает ID изображения текущего кадра (реализует IImageIdGetter)
-func (tae *TileAnimationEntity) GetImageId() string {
+func (tae *TileAnimationEntity) GetImageId() (string, error) {
 	if len(tae.AnimationFrames) == 0 {
-		return ""
+		return "", errors.New("no animation frames available")
 	}
 
 	if int(tae.CurrentFrame) >= len(tae.AnimationFrames) {
-		return ""
+		return "", errors.New("current frame index out of bounds")
 	}
 
-	return tae.AnimationFrames[tae.CurrentFrame].Image
+	return tae.AnimationFrames[tae.CurrentFrame].Image, nil
 }
 
 // UpdateAnimation обновляет анимацию на основе тиков

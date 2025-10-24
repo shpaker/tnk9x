@@ -13,7 +13,7 @@ import (
 // ITilesAdapter определяет интерфейс для работы с тайлами
 type ITilesAdapter interface {
 	GetTileUseCases() interfaces.ITileUseCases
-	GetTilesetRepository() types.ITilesetRepository
+	GetTilesetRepository() ITilesetRepository
 }
 
 type MapsDataRepository struct {
@@ -35,8 +35,12 @@ func (mdr *MapsDataRepository) GetFileRepo() raw.IFileRepository {
 	return mdr.fileRepo
 }
 
-func (mdr *MapsDataRepository) GetTilesetRepository() types.ITilesetRepository {
+func (mdr *MapsDataRepository) GetTilesetRepository() ITilesetRepository {
 	return mdr.tilesAdapter.GetTilesetRepository()
+}
+
+func (mdr *MapsDataRepository) GetTilesAdapter() ITilesAdapter {
+	return mdr.tilesAdapter
 }
 
 // readFile читает файл уровня
@@ -74,16 +78,8 @@ func (mdr *MapsDataRepository) createBlockFromChar(charStr string, x, y int) (*t
 		return nil, fmt.Errorf("не удалось создать tile entity для блока %s: %w", blockType, err)
 	}
 
-	// Создаем полный объект блока
-	block := &types.BlockEntity{
-		ImageGetter: tileEntity,
-		Data: &types.BlockData{
-			Position: types.Position{X: float64(x), Y: float64(y)},
-			Name:     blockType,
-		},
-		Properties:    mdr.createBlockProperties(blockType),
-		WorldPosition: types.Position{X: float64(x), Y: float64(y)}, // Пока используем те же координаты
-	}
+	// Создаем полный объект блока используя конструктор
+	block := types.NewBlockEntity(string(blockType), float64(x), float64(y), tileEntity)
 
 	return block, nil
 }

@@ -17,7 +17,7 @@ func (mta *MockTilesAdapter) GetTileUseCases() interfaces.ITileUseCases {
 	return &MockTileUseCases{}
 }
 
-func (mta *MockTilesAdapter) GetTilesetRepository() types.ITilesetRepository {
+func (mta *MockTilesAdapter) GetTilesetRepository() ITilesetRepository {
 	return &MockTilesetRepository{}
 }
 
@@ -32,17 +32,13 @@ func (mtuc *MockTileUseCases) CreateAnimationTile(id string) (*types.TileAnimati
 	return &types.TileAnimationEntity{}, nil
 }
 
-func (mtuc *MockTileUseCases) CreateBlockEntity(blockType string, positionX, positionY float64) (*types.BlockEntity, error) {
-	return &types.BlockEntity{}, nil
-}
-
 // MockImageIdGetter - мок для тестирования
 type MockImageIdGetter struct {
 	id string
 }
 
-func (mig *MockImageIdGetter) GetImageId() string {
-	return mig.id
+func (mig *MockImageIdGetter) GetImageId() (string, error) {
+	return mig.id, nil
 }
 
 // MockTilesetRepository - мок для тестирования

@@ -1,30 +1,39 @@
 package use_cases
 
 import (
-	"image/color"
+	"log"
 
-	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/shpaker/gonflict/internal/interfaces"
 	"github.com/shpaker/gonflict/internal/repositories"
 	"github.com/shpaker/gonflict/internal/types"
 )
 
 // BulletUseCases реализация интерфейса BulletUseCases
 type BulletUseCases struct {
-	bulletsRepo repositories.IBulletsRepository
+	bulletsRepo  repositories.IBulletsRepository
+	tileUseCases interfaces.ITileUseCases
 }
 
 // NewBulletUseCases создает новый экземпляр BulletUseCases
-func NewBulletUseCases(bulletsRepo repositories.IBulletsRepository) *BulletUseCases {
+func NewBulletUseCases(bulletsRepo repositories.IBulletsRepository, tileUseCases interfaces.ITileUseCases) *BulletUseCases {
 	return &BulletUseCases{
-		bulletsRepo: bulletsRepo,
+		bulletsRepo:  bulletsRepo,
+		tileUseCases: tileUseCases,
 	}
 }
 
 // ShootBullet создает новую пулю от указанного танка
 func (uc *BulletUseCases) ShootBullet(tank *types.TankEntity) error {
-	// Создаем простую пулю (квадрат 4x4 пикселя)
-	bulletImage := ebiten.NewImage(4, 4)
-	bulletImage.Fill(color.RGBA{255, 255, 0, 255}) // Желтый цвет
+	log.Printf("DEBUG: ShootBullet called for tank at position (%.2f, %.2f) direction %s",
+		tank.WorldPosition.X, tank.WorldPosition.Y, tank.Direction)
+
+	// Создаем тайл для пули с ID "bullet"
+	bulletImageGetter, err := uc.tileUseCases.CreateStaticTile("bullet")
+	if err != nil {
+		log.Printf("ERROR: Failed to create bullet tile: %v", err)
+		return err
+	}
+	log.Printf("DEBUG: Created bullet tile successfully")
 
 	// Вычисляем позицию пули в зависимости от направления танка
 	bulletX := tank.WorldPosition.X + TankSpriteSize/2 - 2
@@ -43,7 +52,7 @@ func (uc *BulletUseCases) ShootBullet(tank *types.TankEntity) error {
 	}
 
 	bullet := types.BulletEntity{
-		Image: bulletImage,
+		ImageGetter: bulletImageGetter,
 		WorldPosition: types.Position{
 			X: bulletX,
 			Y: bulletY,
@@ -53,7 +62,11 @@ func (uc *BulletUseCases) ShootBullet(tank *types.TankEntity) error {
 		Owner:     tank,
 	}
 
+	log.Printf("DEBUG: Created bullet at position (%.2f, %.2f) direction %s",
+		bullet.WorldPosition.X, bullet.WorldPosition.Y, bullet.Direction)
+
 	uc.bulletsRepo.AddBullet(bullet)
+	log.Printf("DEBUG: Bullet added to repository")
 	return nil
 }
 

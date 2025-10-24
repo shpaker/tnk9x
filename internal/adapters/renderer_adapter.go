@@ -3,22 +3,22 @@ package adapters
 import (
 	"fmt"
 	"image/color"
-	"math"
+	"log"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 	"github.com/shpaker/gonflict/internal/types"
 	"github.com/shpaker/gonflict/internal/use_cases"
-	"github.com/shpaker/gonflict/internal/utils"
 )
 
 // RendererAdapter адаптер для рендеринга игры
 type RendererAdapter struct {
-	mapUseCases             use_cases.IMapUseCases
-	playerUseCases          use_cases.IPlayerUseCases
-	bulletUseCases          use_cases.IBulletUseCases
-	tilesetRepository       types.ITilesetRepository
-	playerTilesetRepository types.ITilesetRepository
+	mapUseCases        use_cases.IMapUseCases
+	playerUseCases     use_cases.IPlayerUseCases
+	bulletUseCases     use_cases.IBulletUseCases
+	tilesAdapter       *TilesAdapter
+	playerTilesAdapter *TilesAdapter
+	bulletTilesAdapter *TilesAdapter
 }
 
 // NewRendererAdapter создает новый экземпляр RendererAdapter
@@ -26,15 +26,17 @@ func NewRendererAdapter(
 	mapUseCases use_cases.IMapUseCases,
 	playerUseCases use_cases.IPlayerUseCases,
 	bulletUseCases use_cases.IBulletUseCases,
-	tilesetRepository types.ITilesetRepository,
-	playerTilesetRepository types.ITilesetRepository,
+	tilesAdapter *TilesAdapter,
+	playerTilesAdapter *TilesAdapter,
+	bulletTilesAdapter *TilesAdapter,
 ) *RendererAdapter {
 	return &RendererAdapter{
-		mapUseCases:             mapUseCases,
-		playerUseCases:          playerUseCases,
-		bulletUseCases:          bulletUseCases,
-		tilesetRepository:       tilesetRepository,
-		playerTilesetRepository: playerTilesetRepository,
+		mapUseCases:        mapUseCases,
+		playerUseCases:     playerUseCases,
+		bulletUseCases:     bulletUseCases,
+		tilesAdapter:       tilesAdapter,
+		playerTilesAdapter: playerTilesAdapter,
+		bulletTilesAdapter: bulletTilesAdapter,
 	}
 }
 
@@ -54,8 +56,15 @@ func (r *RendererAdapter) drawMap(screen *ebiten.Image) {
 	blocks := r.mapUseCases.GetBlocks()
 	fmt.Printf("DEBUG: Found %d blocks to render\n", len(blocks))
 	for i, block := range blocks {
-		// Получаем изображение блока
-		image, err := block.GetImage(r.tilesetRepository)
+		// Получаем ID изображения блока
+		imageId, err := block.ImageGetter.GetImageId()
+		if err != nil {
+			fmt.Printf("DEBUG: Block %d error getting image ID: %v\n", i, err)
+			continue
+		}
+
+		// Получаем изображение блока через TilesAdapter
+		image, err := r.tilesAdapter.GetImage(&imageId, types.DirectionUp)
 		if err != nil {
 			// Логируем ошибку, но продолжаем рендеринг других блоков
 			fmt.Printf("DEBUG: Block %d error: %v\n", i, err)
@@ -81,35 +90,25 @@ func (r *RendererAdapter) drawPlayerOne(screen *ebiten.Image) {
 		return
 	}
 
-	// Получаем изображение танка из репозитория
-	imageId := tank.ImageGetter.GetImageId()
-	if imageId == "" {
-		return
-	}
-	image, err := r.playerTilesetRepository.GetImage(imageId)
+	// Получаем ID изображения танка
+	imageId, err := tank.ImageGetter.GetImageId()
 	if err != nil {
 		return
 	}
 
-	// Определяем угол поворота в зависимости от направления
-	var rotationAngle float64
-	switch tank.Direction {
-	case types.DirectionUp:
-		rotationAngle = 0
-	case types.DirectionRight:
-		rotationAngle = math.Pi / 2
-	case types.DirectionDown:
-		rotationAngle = math.Pi
-	case types.DirectionLeft:
-		rotationAngle = 3 * math.Pi / 2
+	// Получаем изображение танка через PlayerTilesAdapter
+	image, err := r.playerTilesAdapter.GetImage(&imageId, tank.Direction)
+	if err != nil {
+		return
 	}
 
 	// Вычисляем позицию на экране
 	screenX := MapOffset + tank.WorldPosition.X
 	screenY := MapOffset + tank.WorldPosition.Y
 
-	// Используем функцию для поворота изображения вокруг центра
-	op := utils.RotateImage(image, rotationAngle, screenX, screenY)
+	// Создаем опции для отрисовки
+	op := &ebiten.DrawImageOptions{}
+	op.GeoM.Translate(screenX, screenY)
 
 	screen.DrawImage(image, op)
 }
@@ -117,17 +116,37 @@ func (r *RendererAdapter) drawPlayerOne(screen *ebiten.Image) {
 // drawBullets отрисовывает пули
 func (r *RendererAdapter) drawBullets(screen *ebiten.Image) {
 	bullets := r.bulletUseCases.GetBullets()
-	for _, bullet := range bullets {
-		if bullet.Image != nil {
+	log.Printf("DEBUG: Rendering %d bullets", len(bullets))
+
+	for i, bullet := range bullets {
+		if bullet.ImageGetter != nil {
+			// Получаем ID изображения пули
+			imageId, err := bullet.ImageGetter.GetImageId()
+			if err != nil {
+				log.Printf("ERROR: Failed to get bullet image ID for bullet %d: %v", i, err)
+				continue
+			}
+
+			// Получаем изображение пули через BulletTilesAdapter
+			image, err := r.bulletTilesAdapter.GetImage(&imageId, bullet.Direction)
+			if err != nil {
+				log.Printf("ERROR: Failed to get bullet image for bullet %d: %v", i, err)
+				continue // Пропускаем пули с ошибками загрузки изображения
+			}
+
 			// Вычисляем позицию на экране
 			screenX := MapOffset + bullet.WorldPosition.X
 			screenY := MapOffset + bullet.WorldPosition.Y
+
+			log.Printf("DEBUG: Rendering bullet %d at position (%.2f, %.2f) direction %s", i, screenX, screenY, bullet.Direction)
 
 			// Создаем опции для отрисовки
 			op := &ebiten.DrawImageOptions{}
 			op.GeoM.Translate(screenX, screenY)
 
-			screen.DrawImage(bullet.Image, op)
+			screen.DrawImage(image, op)
+		} else {
+			log.Printf("WARNING: Bullet %d has nil ImageGetter", i)
 		}
 	}
 }

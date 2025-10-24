@@ -56,8 +56,21 @@ func New(cfg *Config) *App {
 		panic(err)
 	}
 
+	// Создаем tilesetRepository для работы с изображениями пуль
+	bulletTilesetRepo, err := repositories.NewTilesetRepository(fileRepo, "bullet")
+	if err != nil {
+		fmt.Printf("Ошибка создания BulletTilesetRepository: %v\n", err)
+		panic(err)
+	}
+
 	// Создаем tilesAdapter
 	tilesAdapter := adapters.NewTilesAdapter(tilesetRepo)
+
+	// Создаем tilesAdapter для игрока
+	playerTilesAdapter := adapters.NewTilesAdapter(playerTilesetRepo)
+
+	// Создаем tilesAdapter для пуль
+	bulletTilesAdapter := adapters.NewTilesAdapter(bulletTilesetRepo)
 
 	// Создаем репозиторий карт уровней
 	mapsRepo := repositories.NewMapsDataRepository(fileRepo, tilesAdapter)
@@ -65,7 +78,8 @@ func New(cfg *Config) *App {
 	// Создаем GameState с переданными репозиториями
 	gameState, err := states.NewGameState(
 		mapsRepo,
-		playerTilesetRepo,
+		playerTilesAdapter,
+		bulletTilesAdapter,
 	)
 	if err != nil {
 		// Логируем ошибку и падаем

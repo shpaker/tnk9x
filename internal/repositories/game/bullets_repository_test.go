@@ -3,9 +3,17 @@ package game
 import (
 	"testing"
 
-	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/shpaker/gonflict/internal/types"
 )
+
+// MockImageIdGetter для тестирования
+type MockImageIdGetter struct {
+	id string
+}
+
+func (m *MockImageIdGetter) GetImageId() (string, error) {
+	return m.id, nil
+}
 
 func TestNewBulletsRepository(t *testing.T) {
 	repo := NewBulletsRepository()
@@ -23,9 +31,9 @@ func TestNewBulletsRepository(t *testing.T) {
 func TestAddAndGetBullets(t *testing.T) {
 	repo := NewBulletsRepository()
 
-	// Создаем тестовую пулю
+	// Создаем тестовую пулю с ImageGetter
 	bullet := types.BulletEntity{
-		Image:         ebiten.NewImage(4, 4),
+		ImageGetter:   &MockImageIdGetter{id: "bullet"},
 		WorldPosition: types.Position{X: 100, Y: 100},
 		Speed:         200.0,
 		Direction:     types.DirectionUp,
@@ -37,20 +45,33 @@ func TestAddAndGetBullets(t *testing.T) {
 	if len(bullets) != 1 {
 		t.Errorf("Ожидалось 1 пуля, получено %d", len(bullets))
 	}
+
+	// Проверяем, что ImageGetter работает корректно
+	if bullets[0].ImageGetter == nil {
+		t.Error("ImageGetter не должен быть nil")
+	}
+
+	imageId, err := bullets[0].ImageGetter.GetImageId()
+	if err != nil {
+		t.Errorf("Не ожидалась ошибка: %v", err)
+	}
+	if imageId != "bullet" {
+		t.Errorf("Ожидался ID 'bullet', получен '%s'", imageId)
+	}
 }
 
 func TestRemoveBullet(t *testing.T) {
 	repo := NewBulletsRepository()
 
-	// Создаем тестовые пули
+	// Создаем тестовые пули с ImageGetter
 	bullet1 := types.BulletEntity{
-		Image:         ebiten.NewImage(4, 4),
+		ImageGetter:   &MockImageIdGetter{id: "bullet"},
 		WorldPosition: types.Position{X: 100, Y: 100},
 		Speed:         200.0,
 		Direction:     types.DirectionUp,
 	}
 	bullet2 := types.BulletEntity{
-		Image:         ebiten.NewImage(4, 4),
+		ImageGetter:   &MockImageIdGetter{id: "bullet"},
 		WorldPosition: types.Position{X: 200, Y: 200},
 		Speed:         200.0,
 		Direction:     types.DirectionDown,

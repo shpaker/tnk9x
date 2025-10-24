@@ -9,6 +9,8 @@
 - ✅ **Тестируемость** - легко тестировать бизнес-логику
 - ✅ **Расширяемость** - простое добавление новых функций
 - ✅ **Конфигурируемость** - настройка через переменные окружения
+- ✅ **Модульная архитектура** - отдельные адаптеры для разных типов ресурсов
+- ✅ **Поворот изображений** - динамический поворот спрайтов по направлению
 
 ## 📁 Структура проекта
 
@@ -26,13 +28,14 @@ gonflict/
 │   │   ├── player_use_cases.go    # Логика игрока
 │   │   ├── bullet_use_cases.go    # Логика пуль
 │   │   ├── map_use_cases.go       # Логика карты
-│   │   └── collision_use_cases.go # Логика коллизий
+│   │   ├── collision_use_cases.go # Логика коллизий
+│   │   └── tile_use_cases.go      # Логика работы с тайлами
 │   │
 │   ├── adapters/                  # 🔌 Адаптеры (Infrastructure Layer)
-│   │   ├── interfaces.go          # Интерфейсы адаптеров
 │   │   ├── constants.go           # Константы адаптеров
 │   │   ├── input_adapter.go       # Адаптер ввода (клавиатура)
-│   │   └── renderer_adapter.go    # Адаптер рендеринга (Ebiten)
+│   │   ├── renderer_adapter.go    # Адаптер рендеринга (Ebiten)
+│   │   └── tiles_adapter.go       # Адаптер для работы с тайлами
 │   │
 │   ├── repositories/              # 💾 Репозитории (Data Layer)
 │   │   ├── repositories.go        # Централизованные реимпорты
@@ -44,7 +47,7 @@ gonflict/
 │   │   │   ├── interfaces.go
 │   │   │   ├── constants.go
 │   │   │   ├── maps_data_repository.go
-│   │   │   └── sprites_repository.go
+│   │   │   └── tileset_repository.go
 │   │   └── raw/                   # Сырые данные (файлы)
 │   │       ├── interfaces.go
 │   │       └── file_repository.go
@@ -54,20 +57,30 @@ gonflict/
 │   │   └── game_state.go          # Игровое состояние
 │   │
 │   ├── types/                     # 📦 Типы данных
-│   │   └── types.go               # Базовые структуры (Tank, Bullet, Block)
+│   │   ├── types.go               # Базовые структуры и интерфейсы
+│   │   ├── tank_entity.go         # Сущность танка
+│   │   ├── bullet_entity.go       # Сущность пули
+│   │   ├── block_entity.go        # Сущность блока
+│   │   ├── tile_static_entity.go  # Статический тайл
+│   │   └── tile_animation_entity.go # Анимированный тайл
+│   │
+│   ├── interfaces/                # 🔗 Интерфейсы домена
+│   │   └── tile_interfaces.go     # Интерфейсы для работы с тайлами
 │   │
 │   └── utils/                     # 🛠️ Утилиты
 │       ├── utils.go               # Вспомогательные функции
 │       └── utils_test.go          # Тесты утилит
 │
 ├── assets/                        # Игровые ресурсы
-│   ├── levels/                    # Уровни игры
+│   ├── levels/                    # Уровни игры (1-35)
 │   ├── sounds/                    # Звуковые эффекты
 │   ├── new/                       # Новые ресурсы
 │   │   ├── blocks.png            # Изображения блоков
 │   │   ├── blocks.yml            # Конфигурация блоков
 │   │   ├── player.png            # Изображения игрока
-│   │   └── player.yml            # Конфигурация игрока
+│   │   ├── player.yml            # Конфигурация игрока
+│   │   ├── bullet.png            # Изображения пуль
+│   │   └── bullet.yml            # Конфигурация пуль
 │   └── blocks.yml                 # Конфигурация блоков
 │
 ├── go.mod                         # Go модуль
@@ -80,25 +93,73 @@ gonflict/
 
 Проект следует принципам **Clean Architecture**:
 
-### Слои архитектуры (High-Level)
+### High-Level Design (HLD)
 
 ```mermaid
 graph TB
-    Entry[cmd/main.go<br/>Entry Point]
-    App[internal/app.go<br/>Application Layer<br/>Ebiten Integration]
-    States[states/<br/>Game States<br/>Orchestration]
+    subgraph "🎮 Presentation Layer"
+        UI[User Interface<br/>• Keyboard Input<br/>• Screen Rendering<br/>• Game Window]
+    end
     
-    UseCases[use_cases/<br/>Business Logic<br/>• Player<br/>• Bullet<br/>• Map<br/>• Collision]
-    Adapters[adapters/<br/>Infrastructure<br/>• Input<br/>• Renderer]
+    subgraph "🎯 Application Layer"
+        App[Application Core<br/>• Game Loop<br/>• State Management<br/>• Event Orchestration]
+        States[Game States<br/>• GameState<br/>• MenuState<br/>• PauseState]
+    end
     
-    Repos[repositories/<br/>Data Layer<br/>• Game<br/>• Processed<br/>• Raw]
+    subgraph "🧠 Business Logic Layer"
+        PlayerUC[Player Use Cases<br/>• Movement Logic<br/>• Animation Control<br/>• Tank Physics]
+        BulletUC[Bullet Use Cases<br/>• Shooting Logic<br/>• Projectile Physics<br/>• Collision Detection]
+        MapUC[Map Use Cases<br/>• Level Loading<br/>• Block Management<br/>• Terrain Logic]
+        CollisionUC[Collision Use Cases<br/>• Physics Engine<br/>• Hit Detection<br/>• Response Handling]
+    end
     
-    Entry --> App
+    subgraph "🔌 Infrastructure Layer"
+        InputAdapter[Input Adapter<br/>• Keyboard Handler<br/>• Input Mapping<br/>• Event Translation]
+        RenderAdapter[Renderer Adapter<br/>• Ebiten Integration<br/>• Sprite Rendering<br/>• Animation Display]
+        TilesAdapter[Tiles Adapter<br/>• Asset Management<br/>• Image Processing<br/>• Rotation Logic]
+    end
+    
+    subgraph "💾 Data Layer"
+        GameRepos[Game Repositories<br/>• Blocks Storage<br/>• Bullets Storage<br/>• In-Memory Data]
+        ProcessedRepos[Processed Repositories<br/>• Maps Data<br/>• Tileset Cache<br/>• Level Parsing]
+        RawRepos[Raw Repositories<br/>• File System<br/>• Asset Loading<br/>• Configuration]
+    end
+    
+    subgraph "📦 Domain Layer"
+        Entities[Domain Entities<br/>• TankEntity<br/>• BulletEntity<br/>• BlockEntity<br/>• TileAnimationEntity]
+        Types[Domain Types<br/>• Position<br/>• Direction<br/>• Size<br/>• AnimationData]
+    end
+    
+    %% Connections
+    UI --> App
     App --> States
-    States --> UseCases
-    States --> Adapters
-    Adapters -.-> UseCases
-    UseCases --> Repos
+    States --> PlayerUC
+    States --> BulletUC
+    States --> MapUC
+    States --> CollisionUC
+    
+    PlayerUC --> Entities
+    BulletUC --> Entities
+    MapUC --> Entities
+    CollisionUC --> Entities
+    
+    InputAdapter --> PlayerUC
+    InputAdapter --> BulletUC
+    RenderAdapter --> PlayerUC
+    RenderAdapter --> BulletUC
+    RenderAdapter --> MapUC
+    TilesAdapter --> PlayerUC
+    TilesAdapter --> MapUC
+    
+    PlayerUC --> GameRepos
+    BulletUC --> GameRepos
+    MapUC --> ProcessedRepos
+    CollisionUC --> GameRepos
+    
+    ProcessedRepos --> RawRepos
+    TilesAdapter --> ProcessedRepos
+    
+    Entities --> Types
 ```
 
 ### Принципы
@@ -152,6 +213,23 @@ export TILE_SIZE=8
 go run cmd/main.go
 ```
 
+## 🔄 Ключевые изменения
+
+### Архитектурные улучшения
+
+- **Модульная система тайлов** - отдельные адаптеры для разных типов ресурсов (игрок, пули, блоки)
+- **Интерфейс ImageGetter** - унифицированный способ получения изображений для всех сущностей
+- **Поворот изображений** - динамический поворот спрайтов в зависимости от направления движения
+- **Обработка ошибок** - явная обработка ошибок при работе с изображениями
+- **Чистые утилиты** - utils пакет не зависит от доменных типов
+
+### Технические детали
+
+- **TilesAdapter** - централизованная работа с тайлами и их поворотом
+- **IImageIdGetter** - интерфейс для получения ID изображения с обработкой ошибок
+- **RotateImageByAngle** - утилита для поворота изображений на заданный угол
+- **Разделение ответственности** - RendererAdapter работает только через адаптеры, не напрямую с репозиториями
+
 ## 🎮 Игровая функциональность
 
 ### Управление
@@ -199,11 +277,13 @@ just help             # Показать все команды
 - **BulletUseCases** - создание, обновление, удаление пуль
 - **MapUseCases** - работа с блоками карты
 - **CollisionUseCases** - проверка коллизий между объектами
+- **TileUseCases** - создание статических и анимированных тайлов
 
 ### Adapters (Инфраструктура)
 
 - **InputAdapter** - обработка ввода с клавиатуры
 - **RendererAdapter** - отрисовка игры через Ebiten
+- **TilesAdapter** - работа с тайлами, поворот изображений
 
 ### Repositories (Данные)
 
@@ -212,6 +292,15 @@ just help             # Показать все команды
 - **MapsDataRepository** - загрузка уровней из файлов
 - **TilesetRepository** - загрузка и кеширование изображений из тайлсетов
 - **FileRepository** - чтение файлов из assets
+
+### Types (Доменные сущности)
+
+- **TankEntity** - сущность танка с ImageGetter
+- **BulletEntity** - сущность пули с ImageGetter
+- **BlockEntity** - сущность блока с ImageGetter
+- **TileStaticEntity** - статический тайл
+- **TileAnimationEntity** - анимированный тайл
+- **IImageIdGetter** - интерфейс для получения ID изображения
 
 ### States (Состояния)
 
@@ -319,9 +408,10 @@ import "github.com/shpaker/gonflict/internal/repositories/raw"
 
 - Только один игрок
 - Нет ИИ врагов
-- Нет системы уровней (только уровень 1)
 - Нет главного меню
 - Нет сохранений
+- Нет звуковых эффектов
+- Нет системы очков
 
 ## 🤝 Вклад в проект
 
@@ -334,6 +424,28 @@ import "github.com/shpaker/gonflict/internal/repositories/raw"
 ## 📄 Лицензия
 
 MIT License
+
+## 📝 История изменений
+
+### Последние обновления
+
+- ✅ **Рефакторинг ImageGetter** - замена прямых ссылок на изображения на интерфейс
+- ✅ **Модульная архитектура тайлов** - отдельные адаптеры для разных типов ресурсов
+- ✅ **Поворот изображений** - динамический поворот спрайтов по направлению
+- ✅ **Очистка кода** - удаление неиспользуемых импортов и функций
+- ✅ **Обработка ошибок** - явная обработка ошибок при работе с изображениями
+- ✅ **Чистые утилиты** - utils пакет не зависит от доменных типов
+
+### Планируемые улучшения
+
+- 🤖 **ИИ врагов** - добавление вражеских танков
+- 🎯 **Система очков** - подсчет очков за уничтожение
+- 🎨 **Меню и UI** - главное меню, экран победы/поражения
+- 🌐 **Сетевой режим** - мультиплеер
+- 🏆 **Достижения** - система наград
+- 🛠️ **Редактор уровней** - создание своих карт
+- 💥 **Эффекты** - взрывы, частицы
+- 🎵 **Музыка** - фоновая музыка
 
 ## 📚 Полезные ссылки
 

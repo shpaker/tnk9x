@@ -1,10 +1,10 @@
 package types
 
-import "github.com/hajimehoshi/ebiten/v2"
+import "errors"
 
 // BulletEntity представляет пулю
 type BulletEntity struct {
-	Image         *ebiten.Image
+	ImageGetter   IImageIdGetter
 	WorldPosition Position
 	Speed         float64
 	Direction     Direction
@@ -19,6 +19,14 @@ func (b *BulletEntity) GetSize() Size {
 // GetWorldPosition возвращает позицию пули в мире
 func (b *BulletEntity) GetWorldPosition() Position {
 	return b.WorldPosition
+}
+
+// GetImageId возвращает ID изображения пули (реализует IImageIdGetter)
+func (b *BulletEntity) GetImageId() (string, error) {
+	if b.ImageGetter == nil {
+		return "", errors.New("ImageGetter is nil")
+	}
+	return b.ImageGetter.GetImageId()
 }
 
 // GetScreenPosition возвращает позицию пули на экране

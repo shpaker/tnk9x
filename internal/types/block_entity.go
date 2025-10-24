@@ -1,23 +1,6 @@
 package types
 
-import (
-	"fmt"
-
-	"github.com/hajimehoshi/ebiten/v2"
-)
-
-// IImageIdGetter определяет интерфейс для получения ID изображения
-type IImageIdGetter interface {
-	GetImageId() string
-}
-
-// ITilesetRepository определяет интерфейс для работы с тайлсетами
-type ITilesetRepository interface {
-	// GetImage возвращает изображение по ID из тайлсета
-	GetImage(id string) (*ebiten.Image, error)
-	// GetAnimationData возвращает данные анимации по ID
-	GetAnimationData(id string) (AnimationData, error)
-}
+import "errors"
 
 // BlockEntity представляет блок карты
 type BlockEntity struct {
@@ -54,28 +37,29 @@ func (b *BlockEntity) GetScreenPosition() Position {
 }
 
 // GetImageId возвращает ID изображения блока
-func (b *BlockEntity) GetImageId() string {
+func (b *BlockEntity) GetImageId() (string, error) {
 	if b.ImageGetter == nil {
-		return ""
+		return "", errors.New("ImageGetter is nil")
 	}
 	return b.ImageGetter.GetImageId()
 }
 
-// GetImage возвращает изображение блока из репозитория
-func (b *BlockEntity) GetImage(repo ITilesetRepository) (*ebiten.Image, error) {
-	if b.ImageGetter == nil {
-		return nil, fmt.Errorf("no image getter available")
+// NewBlockEntity создает новый BlockEntity с указанными параметрами
+func NewBlockEntity(
+	blockType string,
+	positionX,
+	positionY float64,
+	imageGetter IImageIdGetter,
+) *BlockEntity {
+	return &BlockEntity{
+		ImageGetter: imageGetter,
+		Data: &BlockData{
+			Name:     BlockType(blockType),
+			Position: Position{X: positionX, Y: positionY},
+		},
+		Properties: &BlockProperties{
+			Collidable: true, // По умолчанию блоки коллизибельны
+		},
+		WorldPosition: Position{X: positionX, Y: positionY},
 	}
-
-	imageId := b.ImageGetter.GetImageId()
-	if imageId == "" {
-		return nil, fmt.Errorf("empty image ID")
-	}
-
-	return repo.GetImage(imageId)
-}
-
-// SetImageGetter устанавливает новый ImageGetter
-func (b *BlockEntity) SetImageGetter(imageGetter IImageIdGetter) {
-	b.ImageGetter = imageGetter
 }

@@ -1,6 +1,8 @@
 package adapters
 
 import (
+	"log"
+
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/shpaker/gonflict/internal/types"
@@ -47,6 +49,12 @@ func (a *InputAdapter) Update() {
 
 // keyPressedEvents обрабатывает события нажатия клавиш
 func (a *InputAdapter) keyPressedEvents() {
+	// Проверяем нажатие клавиши стрельбы
+	if inpututil.IsKeyJustPressed(a.shootButton) {
+		log.Printf("DEBUG: Shoot button pressed (key: %v)", a.shootButton)
+		a.playerShoot()
+	}
+
 	// Rotate the tank if the key is pressed
 	playerRotated := false
 	if ebiten.IsKeyPressed(a.upButton) && !playerRotated {
@@ -64,11 +72,6 @@ func (a *InputAdapter) keyPressedEvents() {
 	if ebiten.IsKeyPressed(a.rightButton) && !playerRotated {
 		a.playerUseCases.RotatePlayer(types.DirectionRight)
 		playerRotated = true
-	}
-
-	// Shoot if the shoot key is pressed
-	if inpututil.IsKeyJustPressed(a.shootButton) {
-		a.playerShoot()
 	}
 }
 
@@ -91,8 +94,15 @@ func (a *InputAdapter) keyReleasedEvents() {
 
 // playerShoot обрабатывает стрельбу игрока
 func (a *InputAdapter) playerShoot() {
+	log.Printf("DEBUG: playerShoot called")
 	player, err := a.playerUseCases.GetPlayer()
-	if err == nil {
-		a.bulletUseCases.ShootBullet(player)
+	if err != nil {
+		log.Printf("ERROR: Failed to get player: %v", err)
+		return
+	}
+	log.Printf("DEBUG: Got player, calling ShootBullet")
+	err = a.bulletUseCases.ShootBullet(player)
+	if err != nil {
+		log.Printf("ERROR: Failed to shoot bullet: %v", err)
 	}
 }

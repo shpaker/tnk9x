@@ -1,5 +1,10 @@
 package types
 
+// IImageIdGetter определяет интерфейс для получения ID изображения
+type IImageIdGetter interface {
+	GetImageId() (string, error)
+}
+
 type BlockType string
 type Direction string
 

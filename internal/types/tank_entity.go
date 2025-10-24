@@ -1,5 +1,7 @@
 package types
 
+import "errors"
+
 // TankEntity представляет танк (игрока или врага)
 type TankEntity struct {
 	ImageGetter   IImageIdGetter
@@ -25,9 +27,9 @@ func (t *TankEntity) GetScreenPosition() Position {
 }
 
 // GetImageId возвращает ID изображения танка (реализует IImageIdGetter)
-func (t *TankEntity) GetImageId() string {
+func (t *TankEntity) GetImageId() (string, error) {
 	if t.ImageGetter == nil {
-		return ""
+		return "", errors.New("ImageGetter is nil")
 	}
 	return t.ImageGetter.GetImageId()
 }

@@ -6,30 +6,34 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
-// RotateImage создает DrawImageOptions для поворота изображения вокруг его центра в указанной позиции
-func RotateImage(
-	image *ebiten.Image,
-	angle float64,
-	x, y float64,
-) *ebiten.DrawImageOptions {
-	op := &ebiten.DrawImageOptions{}
-
+// RotateImageByAngle поворачивает изображение на указанный угол
+func RotateImageByAngle(image *ebiten.Image, angle float64) (*ebiten.Image, error) {
 	// Получаем размеры изображения
 	bounds := image.Bounds()
-	centerX := float64(bounds.Dx()) / 2
-	centerY := float64(bounds.Dy()) / 2
+	width := bounds.Dx()
+	height := bounds.Dy()
+
+	// Создаем новое изображение с теми же размерами
+	rotatedImage := ebiten.NewImage(width, height)
+
+	// Создаем опции для поворота
+	op := &ebiten.DrawImageOptions{}
 
 	// Перемещаем центр изображения в (0,0)
+	centerX := float64(width) / 2
+	centerY := float64(height) / 2
 	op.GeoM.Translate(-centerX, -centerY)
-	// op.GeoM.Translate(0, 0)
 
 	// Поворачиваем изображение
 	op.GeoM.Rotate(angle)
 
-	// Перемещаем в нужную позицию
-	op.GeoM.Translate(x+centerX, y+centerY)
+	// Перемещаем обратно в центр
+	op.GeoM.Translate(centerX, centerY)
 
-	return op
+	// Отрисовываем повернутое изображение
+	rotatedImage.DrawImage(image, op)
+
+	return rotatedImage, nil
 }
 
 func RoundToEven(
