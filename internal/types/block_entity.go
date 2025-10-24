@@ -21,6 +21,19 @@ type BlockProperties struct {
 	Collidable bool
 }
 
+// GetImageId возвращает ID изображения блока
+func (b *BlockEntity) GetImageId() (string, error) {
+	if b.ImageGetter == nil {
+		return "", errors.New("ImageGetter is nil")
+	}
+	return b.ImageGetter.GetImageId()
+}
+
+// GetScreenPosition возвращает позицию блока на экране
+func (b *BlockEntity) GetScreenPosition() Position {
+	return b.WorldPosition
+}
+
 // GetSize возвращает размер блока
 func (b *BlockEntity) GetSize() Size {
 	return Size{Width: 8, Height: 8} // Стандартный размер блока (TileMinSize)
@@ -29,19 +42,6 @@ func (b *BlockEntity) GetSize() Size {
 // GetWorldPosition возвращает позицию блока в мире
 func (b *BlockEntity) GetWorldPosition() Position {
 	return b.WorldPosition
-}
-
-// GetScreenPosition возвращает позицию блока на экране
-func (b *BlockEntity) GetScreenPosition() Position {
-	return b.WorldPosition
-}
-
-// GetImageId возвращает ID изображения блока
-func (b *BlockEntity) GetImageId() (string, error) {
-	if b.ImageGetter == nil {
-		return "", errors.New("ImageGetter is nil")
-	}
-	return b.ImageGetter.GetImageId()
 }
 
 // NewBlockEntity создает новый BlockEntity с указанными параметрами

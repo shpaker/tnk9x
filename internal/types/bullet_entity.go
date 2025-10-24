@@ -11,16 +11,6 @@ type BulletEntity struct {
 	Owner         *TankEntity
 }
 
-// GetSize возвращает размер пули
-func (b *BulletEntity) GetSize() Size {
-	return Size{Width: 4, Height: 4}
-}
-
-// GetWorldPosition возвращает позицию пули в мире
-func (b *BulletEntity) GetWorldPosition() Position {
-	return b.WorldPosition
-}
-
 // GetImageId возвращает ID изображения пули (реализует IImageIdGetter)
 func (b *BulletEntity) GetImageId() (string, error) {
 	if b.ImageGetter == nil {
@@ -31,5 +21,15 @@ func (b *BulletEntity) GetImageId() (string, error) {
 
 // GetScreenPosition возвращает позицию пули на экране
 func (b *BulletEntity) GetScreenPosition() Position {
+	return b.WorldPosition
+}
+
+// GetSize возвращает размер пули
+func (b *BulletEntity) GetSize() Size {
+	return Size{Width: 4, Height: 4}
+}
+
+// GetWorldPosition возвращает позицию пули в мире
+func (b *BulletEntity) GetWorldPosition() Position {
 	return b.WorldPosition
 }

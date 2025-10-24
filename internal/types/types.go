@@ -5,8 +5,26 @@ type IImageIdGetter interface {
 	GetImageId() (string, error)
 }
 
+// Типы
 type BlockType string
 type Direction string
+
+// Константы направлений
+const (
+	DirectionUp    Direction = "up"
+	DirectionDown  Direction = "down"
+	DirectionLeft  Direction = "left"
+	DirectionRight Direction = "right"
+)
+
+// Константы типов блоков
+const (
+	Brick  BlockType = "brick"
+	Steel  BlockType = "steel"
+	Forest BlockType = "forest"
+	Water  BlockType = "water"
+	Ice    BlockType = "ice"
+)
 
 // Position представляет координаты в 2D пространстве
 type Position struct {
@@ -19,21 +37,6 @@ type Size struct {
 	Width  int
 	Height int
 }
-
-const (
-	DirectionUp    Direction = "up"
-	DirectionDown  Direction = "down"
-	DirectionLeft  Direction = "left"
-	DirectionRight Direction = "right"
-)
-
-const (
-	Brick  BlockType = "brick"
-	Steel  BlockType = "steel"
-	Forest BlockType = "forest"
-	Water  BlockType = "water"
-	Ice    BlockType = "ice"
-)
 
 // AnimationDataFrame представляет кадр анимации
 type AnimationDataFrame struct {

@@ -24,10 +24,11 @@ type GameState struct {
 // NewGameState создает новое состояние игры с переданным репозиторием карт
 func NewGameState(
 	mapsRepo processed.IMapsDataRepository,
-	playerTilesetRepo processed.ITilesetRepository,
-	bulletTilesetRepo processed.ITilesetRepository,
+	mapTilesetRepo processed.ITilesetRepository, // Репозиторий для блоков карты
+	playerTilesetRepo processed.ITilesetRepository, // Репозиторий для игрока
+	bulletTilesetRepo processed.ITilesetRepository, // Репозиторий для пуль
 ) (GameState, error) {
-	level, err := mapsRepo.GetLevel(1)
+	level, err := mapsRepo.GetLevel(2)
 	if err != nil {
 		return GameState{}, err
 	}
@@ -53,7 +54,8 @@ func NewGameState(
 	)
 
 	// Создаем TilesUseCases для рендерера
-	mapTilesUseCases := use_cases.NewTilesUseCases(playerTilesetRepo) // Используем playerTilesetRepo для карты
+	// Для карты используем репозиторий блоков
+	mapTilesUseCases := use_cases.NewTilesUseCases(mapTilesetRepo)
 	playerTilesUseCases := use_cases.NewTilesUseCases(playerTilesetRepo)
 	bulletTilesUseCasesForRenderer := use_cases.NewTilesUseCases(bulletTilesetRepo)
 

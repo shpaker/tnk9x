@@ -23,6 +23,18 @@ func (tae *TileAnimationEntity) GetImageId() (string, error) {
 	return tae.AnimationFrames[tae.CurrentFrame].Image, nil
 }
 
+// StartAnimation запускает анимацию
+func (tae *TileAnimationEntity) StartAnimation() {
+	tae.IsAnimating = true
+}
+
+// StopAnimation останавливает анимацию
+func (tae *TileAnimationEntity) StopAnimation() {
+	tae.IsAnimating = false
+	tae.CurrentFrame = 0 // Сбрасываем на первый кадр
+	tae.CurrentTick = 0
+}
+
 // UpdateAnimation обновляет анимацию на основе тиков
 func (tae *TileAnimationEntity) UpdateAnimation() {
 	if len(tae.AnimationFrames) == 0 || !tae.IsAnimating {
@@ -40,18 +52,6 @@ func (tae *TileAnimationEntity) UpdateAnimation() {
 			tae.CurrentTick = 0
 		}
 	}
-}
-
-// StartAnimation запускает анимацию
-func (tae *TileAnimationEntity) StartAnimation() {
-	tae.IsAnimating = true
-}
-
-// StopAnimation останавливает анимацию
-func (tae *TileAnimationEntity) StopAnimation() {
-	tae.IsAnimating = false
-	tae.CurrentFrame = 0 // Сбрасываем на первый кадр
-	tae.CurrentTick = 0
 }
 
 // NewTileAnimationEntity создает новый экземпляр TileAnimationEntity

@@ -9,8 +9,6 @@ import (
 	"github.com/shpaker/gonflict/internal/types"
 )
 
-// ITilesAdapter определяет интерфейс для работы с тайлами
-
 type MapsDataRepository struct {
 	fileRepo    raw.IFileRepository
 	tilesetRepo ITilesetRepository
@@ -24,10 +22,6 @@ func NewMapsDataRepository(
 		fileRepo:    fileRepo,
 		tilesetRepo: tilesetRepo,
 	}
-}
-
-func (mdr *MapsDataRepository) GetFileRepo() raw.IFileRepository {
-	return mdr.fileRepo
 }
 
 // readFile читает файл уровня
@@ -106,13 +100,6 @@ func (mdr *MapsDataRepository) parseLevelLines(lines []string) ([]types.BlockEnt
 	}
 
 	return level, nil
-}
-
-// createBlockProperties создает свойства блока на основе его типа
-func (mdr *MapsDataRepository) createBlockProperties(blockType types.BlockType) *types.BlockProperties {
-	return &types.BlockProperties{
-		Collidable: true,
-	}
 }
 
 func (mdr *MapsDataRepository) GetLevel(levelNumber int) ([]types.BlockEntity, error) {

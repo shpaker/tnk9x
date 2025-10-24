@@ -98,68 +98,78 @@ gonflict/
 ```mermaid
 graph TB
     subgraph "🎮 Presentation Layer"
-        UI[User Interface<br/>• Keyboard Input<br/>• Screen Rendering<br/>• Game Window]
+        App[App<br/>• Ebiten Game Loop<br/>• Window Management<br/>• Debug Info]
+        GameState[GameState<br/>• State Machine<br/>• Update/Draw Cycle]
+        InputAdapter[InputAdapter<br/>• Keyboard Input<br/>• Key Mapping<br/>• Event Translation]
+        RenderAdapter[RendererAdapter<br/>• Ebiten Rendering<br/>• Sprite Drawing<br/>• Animation Display]
     end
     
-    subgraph "🎯 Application Layer"
-        App[Application Core<br/>• Game Loop<br/>• State Management<br/>• Event Orchestration]
-        States[Game States<br/>• GameState<br/>• MenuState<br/>• PauseState]
-    end
-    
-    subgraph "🧠 Business Logic Layer"
-        PlayerUC[Player Use Cases<br/>• Movement Logic<br/>• Animation Control<br/>• Tank Physics]
-        BulletUC[Bullet Use Cases<br/>• Shooting Logic<br/>• Projectile Physics<br/>• Collision Detection]
-        MapUC[Map Use Cases<br/>• Level Loading<br/>• Block Management<br/>• Terrain Logic]
-        CollisionUC[Collision Use Cases<br/>• Physics Engine<br/>• Hit Detection<br/>• Response Handling]
-    end
-    
-    subgraph "🔌 Infrastructure Layer"
-        InputAdapter[Input Adapter<br/>• Keyboard Handler<br/>• Input Mapping<br/>• Event Translation]
-        RenderAdapter[Renderer Adapter<br/>• Ebiten Integration<br/>• Sprite Rendering<br/>• Animation Display]
-        TilesAdapter[Tiles Adapter<br/>• Asset Management<br/>• Image Processing<br/>• Rotation Logic]
-    end
-    
-    subgraph "💾 Data Layer"
-        GameRepos[Game Repositories<br/>• Blocks Storage<br/>• Bullets Storage<br/>• In-Memory Data]
-        ProcessedRepos[Processed Repositories<br/>• Maps Data<br/>• Tileset Cache<br/>• Level Parsing]
-        RawRepos[Raw Repositories<br/>• File System<br/>• Asset Loading<br/>• Configuration]
+    subgraph "🎯 Application Layer (Use Cases)"
+        PlayerUC[PlayerUseCases<br/>• Movement Logic<br/>• Tank Animation<br/>• Direction Control]
+        BulletUC[BulletUseCases<br/>• Shooting Logic<br/>• Projectile Physics<br/>• Bullet Management]
+        MapUC[MapUseCases<br/>• Block Management<br/>• Level Data<br/>• Terrain Logic]
+        CollisionUC[CollisionUseCases<br/>• Hit Detection<br/>• Physics Engine<br/>• Response Handling]
+        TilesUC[TilesUseCases<br/>• Static Tiles<br/>• Animation Tiles<br/>• Image Processing]
     end
     
     subgraph "📦 Domain Layer"
-        Entities[Domain Entities<br/>• TankEntity<br/>• BulletEntity<br/>• BlockEntity<br/>• TileAnimationEntity]
-        Types[Domain Types<br/>• Position<br/>• Direction<br/>• Size<br/>• AnimationData]
+        Entities[Domain Entities<br/>• TankEntity<br/>• BulletEntity<br/>• BlockEntity<br/>• TileAnimationEntity<br/>• TileStaticEntity]
+        Types[Domain Types<br/>• Position, Size<br/>• Direction<br/>• AnimationData<br/>• BlockType]
+        Interfaces[Domain Interfaces<br/>• IImageIdGetter<br/>• IMapObject<br/>• State]
     end
     
-    %% Connections
-    UI --> App
-    App --> States
-    States --> PlayerUC
-    States --> BulletUC
-    States --> MapUC
-    States --> CollisionUC
+    subgraph "💾 Data Layer (Repositories)"
+        GameRepos[Game Repositories<br/>• BlocksRepository<br/>• BulletsRepository<br/>• In-Memory Storage]
+        ProcessedRepos[Processed Repositories<br/>• MapsDataRepository<br/>• TilesetRepository<br/>• Data Processing]
+        RawRepos[Raw Repositories<br/>• FileRepository<br/>• Asset Loading<br/>• File System]
+    end
     
-    PlayerUC --> Entities
-    BulletUC --> Entities
-    MapUC --> Entities
-    CollisionUC --> Entities
+    subgraph "🔧 Infrastructure"
+        Config[Config<br/>• Environment Variables<br/>• Screen Settings<br/>• Game Parameters]
+        Utils[Utils<br/>• Image Rotation<br/>• Math Functions<br/>• Helper Methods]
+    end
     
+    %% Main Flow
+    App --> GameState
+    GameState --> InputAdapter
+    GameState --> RenderAdapter
+    GameState --> PlayerUC
+    GameState --> BulletUC
+    GameState --> CollisionUC
+    
+    %% Use Cases Dependencies
     InputAdapter --> PlayerUC
     InputAdapter --> BulletUC
     RenderAdapter --> PlayerUC
     RenderAdapter --> BulletUC
     RenderAdapter --> MapUC
-    TilesAdapter --> PlayerUC
-    TilesAdapter --> MapUC
+    RenderAdapter --> TilesUC
     
+    %% Domain Dependencies
+    PlayerUC --> Entities
+    BulletUC --> Entities
+    MapUC --> Entities
+    CollisionUC --> Entities
+    TilesUC --> Entities
+    Entities --> Types
+    Entities --> Interfaces
+    
+    %% Repository Dependencies
     PlayerUC --> GameRepos
     BulletUC --> GameRepos
     MapUC --> ProcessedRepos
     CollisionUC --> GameRepos
-    
+    TilesUC --> ProcessedRepos
     ProcessedRepos --> RawRepos
-    TilesAdapter --> ProcessedRepos
     
-    Entities --> Types
+    %% Configuration
+    App --> Config
+    GameState --> Config
+    
+    %% Utilities
+    TilesUC --> Utils
+    RenderAdapter --> Utils
+    
 ```
 
 ### Принципы

@@ -11,6 +11,19 @@ type TankEntity struct {
 	Direction     Direction
 }
 
+// GetImageId возвращает ID изображения танка (реализует IImageIdGetter)
+func (t *TankEntity) GetImageId() (string, error) {
+	if t.ImageGetter == nil {
+		return "", errors.New("ImageGetter is nil")
+	}
+	return t.ImageGetter.GetImageId()
+}
+
+// GetScreenPosition возвращает позицию танка на экране
+func (t *TankEntity) GetScreenPosition() Position {
+	return t.WorldPosition
+}
+
 // GetSize возвращает размер танка
 func (t *TankEntity) GetSize() Size {
 	return Size{Width: 16, Height: 16} // Стандартный размер танка
@@ -19,17 +32,4 @@ func (t *TankEntity) GetSize() Size {
 // GetWorldPosition возвращает позицию танка в мире
 func (t *TankEntity) GetWorldPosition() Position {
 	return t.WorldPosition
-}
-
-// GetScreenPosition возвращает позицию танка на экране
-func (t *TankEntity) GetScreenPosition() Position {
-	return t.WorldPosition
-}
-
-// GetImageId возвращает ID изображения танка (реализует IImageIdGetter)
-func (t *TankEntity) GetImageId() (string, error) {
-	if t.ImageGetter == nil {
-		return "", errors.New("ImageGetter is nil")
-	}
-	return t.ImageGetter.GetImageId()
 }

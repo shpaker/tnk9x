@@ -68,8 +68,9 @@ func New(cfg *Config) *App {
 	// Создаем GameState с переданными репозиториями
 	gameState, err := states.NewGameState(
 		mapsRepo,
-		playerTilesetRepo,
-		bulletTilesetRepo,
+		tilesetRepo,       // Используем tilesetRepo для блоков карты
+		playerTilesetRepo, // Используем playerTilesetRepo для игрока
+		bulletTilesetRepo, // Используем bulletTilesetRepo для пуль
 	)
 	if err != nil {
 		// Логируем ошибку и падаем

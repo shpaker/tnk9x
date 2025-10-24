@@ -5,7 +5,6 @@ import (
 	"image"
 	"testing"
 
-	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/shpaker/gonflict/internal/types"
 )
 
@@ -53,19 +52,6 @@ func (m *MockFileRepository) ReadImage(name string) (image.Image, error) {
 
 func (m *MockFileRepository) AddFile(name string, data []byte) {
 	m.files[name] = data
-}
-
-// MockSpritesRepository - простой мок для тестирования спрайтов
-type MockSpritesRepository struct{}
-
-func NewMockSpritesRepository() *MockSpritesRepository {
-	return &MockSpritesRepository{}
-}
-
-func (m *MockSpritesRepository) GetSprite(groupID string, spriteID string) (*ebiten.Image, error) {
-	// Создаем простое изображение 8x8 для тестов
-	img := ebiten.NewImage(8, 8)
-	return img, nil
 }
 
 func TestGetLevel_Success(t *testing.T) {
