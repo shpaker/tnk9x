@@ -9,6 +9,8 @@ type TankEntity struct {
 	WorldPosition   Position
 	Speed           float64
 	Direction       Direction
+	IsSpawned       bool    // Флаг спавна танка (по умолчанию false)
+	SpawnedAt       float64 // Время спавна танка
 }
 
 // GetImageId возвращает ID изображения танка (реализует IImageIdGetter)

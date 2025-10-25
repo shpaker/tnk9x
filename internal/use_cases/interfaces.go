@@ -20,6 +20,12 @@ type ITankUseCases interface {
 	StopTank(byCollision bool) error
 	GetTank() (*types.TankEntity, error)
 	GetDirection() types.Direction
+	StartSpawn()
+	UpdateSpawn(currentTime float64)
+	IsSpawning() bool
+	GetSpawnAnimation() *types.TileAnimationEntity
+	GetTankImageId() (string, error)
+	ShouldShowTank() bool
 }
 
 // IBulletUseCases интерфейс для операций с пулями

@@ -30,7 +30,7 @@ gonflict/
 ├── assets/
 │   ├── levels/
 │   ├── sounds/
-│   └── new/
+│   └── tiles/
 ├── go.mod
 ├── go.sum
 ├── justfile

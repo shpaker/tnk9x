@@ -42,23 +42,30 @@ func New(cfg *Config) *App {
 	fileRepo := raw.NewFileRepository("assets")
 
 	// Создаем tilesetRepository для работы с изображениями блоков
-	tilesetRepo, err := processed.NewTilesetDataRepository(fileRepo, "blocks")
+	tilesetRepo, err := processed.NewTilesetDataRepository(fileRepo, "tiles/blocks")
 	if err != nil {
 		fmt.Printf("Ошибка создания TilesetRepository: %v\n", err)
 		panic(err)
 	}
 
 	// Создаем tilesetRepository для работы с изображениями игрока
-	playerTilesetRepo, err := processed.NewTilesetDataRepository(fileRepo, "player")
+	playerTilesetRepo, err := processed.NewTilesetDataRepository(fileRepo, "tiles/player")
 	if err != nil {
 		fmt.Printf("Ошибка создания PlayerTilesetRepository: %v\n", err)
 		panic(err)
 	}
 
 	// Создаем tilesetRepository для работы с изображениями пуль
-	bulletTilesetRepo, err := processed.NewTilesetDataRepository(fileRepo, "bullet")
+	bulletTilesetRepo, err := processed.NewTilesetDataRepository(fileRepo, "tiles/bullet")
 	if err != nil {
 		fmt.Printf("Ошибка создания BulletTilesetRepository: %v\n", err)
+		panic(err)
+	}
+
+	// Создаем tilesetRepository для работы с анимацией спавна
+	spawnerTilesetRepo, err := processed.NewTilesetDataRepository(fileRepo, "tiles/spawner")
+	if err != nil {
+		fmt.Printf("Ошибка создания SpawnerTilesetRepository: %v\n", err)
 		panic(err)
 	}
 
@@ -68,9 +75,10 @@ func New(cfg *Config) *App {
 	// Создаем GameState с переданными репозиториями
 	gameState, err := states.NewGameState(
 		mapsRepo,
-		tilesetRepo,       // Используем tilesetRepo для блоков карты
-		playerTilesetRepo, // Используем playerTilesetRepo для игрока
-		bulletTilesetRepo, // Используем bulletTilesetRepo для пуль
+		tilesetRepo,        // Используем tilesetRepo для блоков карты
+		playerTilesetRepo,  // Используем playerTilesetRepo для игрока
+		bulletTilesetRepo,  // Используем bulletTilesetRepo для пуль
+		spawnerTilesetRepo, // Используем spawnerTilesetRepo для спавна
 	)
 	if err != nil {
 		// Логируем ошибку и падаем

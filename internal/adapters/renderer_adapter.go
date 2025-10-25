@@ -20,6 +20,7 @@ type RendererAdapter struct {
 	mapTilesUseCases    *use_cases.TilesUseCases
 	playerTilesUseCases *use_cases.TilesUseCases
 	bulletTilesUseCases *use_cases.TilesUseCases
+	spawnerTilesUseCases *use_cases.TilesUseCases
 }
 
 // NewRendererAdapter создает новый экземпляр RendererAdapter
@@ -30,6 +31,7 @@ func NewRendererAdapter(
 	mapTilesUseCases *use_cases.TilesUseCases,
 	playerTilesUseCases *use_cases.TilesUseCases,
 	bulletTilesUseCases *use_cases.TilesUseCases,
+	spawnerTilesUseCases *use_cases.TilesUseCases,
 ) *RendererAdapter {
 	return &RendererAdapter{
 		mapUseCases:         mapUseCases,
@@ -38,6 +40,7 @@ func NewRendererAdapter(
 		mapTilesUseCases:    mapTilesUseCases,
 		playerTilesUseCases: playerTilesUseCases,
 		bulletTilesUseCases: bulletTilesUseCases,
+		spawnerTilesUseCases: spawnerTilesUseCases,
 	}
 }
 
@@ -86,7 +89,18 @@ func (r *RendererAdapter) drawMap(screen *ebiten.Image) {
 // drawTank отрисовывает танк
 func (r *RendererAdapter) drawTank(screen *ebiten.Image) {
 	tank, err := r.tankUseCases.GetTank()
-	if err != nil || tank.AnimationGetter == nil {
+	if err != nil {
+		return
+	}
+
+	// Если танк в процессе спавна, отображаем анимацию спавна
+	if r.tankUseCases.IsSpawning() {
+		r.drawSpawnAnimation(screen, tank)
+		return
+	}
+
+	// Если танк не заспавнен, не отображаем его
+	if !r.tankUseCases.ShouldShowTank() {
 		return
 	}
 
@@ -124,6 +138,41 @@ func (r *RendererAdapter) drawTank(screen *ebiten.Image) {
 	op.GeoM.Translate(screenX, screenY)
 
 	screen.DrawImage(rotatedImage, op)
+}
+
+// drawSpawnAnimation отрисовывает анимацию спавна
+func (r *RendererAdapter) drawSpawnAnimation(screen *ebiten.Image, tank *types.TankEntity) {
+	spawnAnimation := r.tankUseCases.GetSpawnAnimation()
+	if spawnAnimation == nil {
+		return
+	}
+
+	// Получаем ID изображения анимации спавна
+	imageId, err := spawnAnimation.GetImageId()
+	if err != nil {
+		log.Printf("ERROR: Spawn animation error getting image ID: %v", err)
+		return
+	}
+
+	// Получаем изображение анимации спавна через SpawnerTilesUseCases
+	imageData, err := r.spawnerTilesUseCases.GetImage(imageId)
+	if err != nil {
+		log.Printf("ERROR: Spawn animation error loading image '%s': %v", imageId, err)
+		return
+	}
+
+	// Конвертируем image.Image в ebiten.Image
+	image := ebiten.NewImageFromImage(imageData)
+
+	// Вычисляем позицию на экране (в центре позиции танка)
+	screenX := use_cases.MapOffset + tank.WorldPosition.X
+	screenY := use_cases.MapOffset + tank.WorldPosition.Y
+
+	// Создаем опции для отрисовки
+	op := &ebiten.DrawImageOptions{}
+	op.GeoM.Translate(screenX, screenY)
+
+	screen.DrawImage(image, op)
 }
 
 // getRotationAngle возвращает угол поворота в радианах для указанного направления

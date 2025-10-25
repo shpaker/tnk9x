@@ -3,6 +3,7 @@ package states
 import (
 	"errors"
 	"image/color"
+	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
@@ -20,6 +21,7 @@ type GameState struct {
 	animationUseCases *use_cases.AnimationUseCases
 	inputAdapter      *adapters.InputAdapter
 	rendererAdapter   *adapters.RendererAdapter
+	startTime         time.Time // Время начала игры для отслеживания спавна
 }
 
 // NewGameState создает новое состояние игры с переданным репозиторием карт
@@ -28,6 +30,7 @@ func NewGameState(
 	mapTilesetRepo processed.ITilesetRepository, // Репозиторий для блоков карты
 	playerTilesetRepo processed.ITilesetRepository, // Репозиторий для игрока
 	bulletTilesetRepo processed.ITilesetRepository, // Репозиторий для пуль
+	spawnerTilesetRepo processed.ITilesetRepository, // Репозиторий для спавна
 ) (GameState, error) {
 	level, err := mapsRepo.GetLevel(13)
 	if err != nil {
@@ -46,7 +49,7 @@ func NewGameState(
 
 	// Создаем Use Cases
 	animationUseCases := use_cases.NewAnimationUseCases(animationsRepo)
-	tankUseCases := use_cases.NewTankUseCases(playerTilesetRepo, animationUseCases)
+	tankUseCases := use_cases.NewTankUseCases(playerTilesetRepo, spawnerTilesetRepo, animationUseCases)
 	bulletTilesUseCases := use_cases.NewTilesUseCases(bulletTilesetRepo)
 	bulletUseCases := use_cases.NewBulletUseCases(bulletsRepo, bulletTilesUseCases)
 	mapUseCases := use_cases.NewMapUseCases(blocksRepo)
@@ -61,6 +64,7 @@ func NewGameState(
 	mapTilesUseCases := use_cases.NewTilesUseCases(mapTilesetRepo)
 	playerTilesUseCases := use_cases.NewTilesUseCases(playerTilesetRepo)
 	bulletTilesUseCasesForRenderer := use_cases.NewTilesUseCases(bulletTilesetRepo)
+	spawnerTilesUseCases := use_cases.NewTilesUseCases(spawnerTilesetRepo)
 
 	rendererAdapter := adapters.NewRendererAdapter(
 		mapUseCases,
@@ -69,6 +73,7 @@ func NewGameState(
 		mapTilesUseCases,
 		playerTilesUseCases,
 		bulletTilesUseCasesForRenderer,
+		spawnerTilesUseCases,
 	)
 	inputAdapter := adapters.NewInputAdapter(
 		tankUseCases,
@@ -80,7 +85,7 @@ func NewGameState(
 		ebiten.KeySpace, // shoot
 	)
 
-	return GameState{
+	gameState := GameState{
 		tankUseCases:      tankUseCases,
 		bulletUseCases:    bulletUseCases,
 		mapUseCases:       mapUseCases,
@@ -88,13 +93,33 @@ func NewGameState(
 		animationUseCases: animationUseCases,
 		inputAdapter:      inputAdapter,
 		rendererAdapter:   rendererAdapter,
-	}, nil
+		startTime:         time.Now(),
+	}
+
+	// Запускаем спавн танка на старте
+	gameState.StartTankSpawn()
+
+	return gameState, nil
+}
+
+// StartTankSpawn запускает спавн танка
+func (state GameState) StartTankSpawn() {
+	state.tankUseCases.StartSpawn()
+}
+
+// UpdateTankSpawn обновляет процесс спавна танка
+func (state GameState) UpdateTankSpawn(currentTime float64) {
+	state.tankUseCases.UpdateSpawn(currentTime)
 }
 
 func (state GameState) Update() (State, error) {
 	if ebiten.IsKeyPressed(ebiten.KeyEscape) {
 		return nil, errors.New("exit application")
 	}
+
+	// Обновляем спавн танка
+	elapsedTime := time.Since(state.startTime).Seconds()
+	state.UpdateTankSpawn(elapsedTime)
 
 	state.inputAdapter.Update()
 	state.tankUseCases.MoveTank(state.tankUseCases.GetDirection(), use_cases.DT)

@@ -3,7 +3,6 @@ package processed
 import (
 	"fmt"
 	"image"
-	"path/filepath"
 
 	"github.com/shpaker/gonflict/internal/repositories/raw"
 	"github.com/shpaker/gonflict/internal/types"
@@ -21,7 +20,7 @@ func NewTilesetDataRepository(
 	tilesetName string,
 ) (*TilesetDataRepository, error) {
 	// Загружаем конфигурацию тайлсета
-	configData, err := fileRepo.ReadFile(filepath.Join("new", tilesetName) + ".yml")
+	configData, err := fileRepo.ReadFile(tilesetName + ".yml")
 	if err != nil {
 		return nil, err
 	}
@@ -33,7 +32,7 @@ func NewTilesetDataRepository(
 	}
 
 	// Загружаем изображение тайлсета
-	img, err := fileRepo.ReadImage(filepath.Join("new", tilesetName))
+	img, err := fileRepo.ReadImage(tilesetName)
 	if err != nil {
 		return nil, err
 	}
