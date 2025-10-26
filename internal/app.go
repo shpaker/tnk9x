@@ -18,7 +18,7 @@ type App struct {
 
 // ebiten game interface
 func (app *App) Layout(outsideWidth, outsideHeight int) (int, int) {
-	return app.config.ScreenWidth, app.config.ScreenHeight
+	return app.config.ScreenWidth(), app.config.ScreenHeight()
 }
 
 func (app *App) Update() error {
@@ -72,6 +72,11 @@ func New(cfg *Config) *App {
 	// Создаем репозиторий карт уровней
 	mapsRepo := processed.NewMapsDataRepository(fileRepo, tilesetRepo)
 
+	// Создаем игровую конфигурацию из общей конфигурации
+	gameConfig := &states.GameConfig{
+		SpawnDurationMs: cfg.SpawnDurationMs,
+	}
+
 	// Создаем GameState с переданными репозиториями
 	gameState, err := states.NewGameState(
 		mapsRepo,
@@ -79,6 +84,7 @@ func New(cfg *Config) *App {
 		playerTilesetRepo,  // Используем playerTilesetRepo для игрока
 		bulletTilesetRepo,  // Используем bulletTilesetRepo для пуль
 		spawnerTilesetRepo, // Используем spawnerTilesetRepo для спавна
+		gameConfig,         // Передаем игровую конфигурацию
 	)
 	if err != nil {
 		// Логируем ошибку и падаем
@@ -93,8 +99,8 @@ func New(cfg *Config) *App {
 }
 
 func (app *App) Run(ctx context.Context) error {
-	ebiten.SetWindowSize(app.config.ScreenWidth*3, app.config.ScreenHeight*3)
-	ebiten.SetWindowTitle(app.config.AppConfig.Name)
+	ebiten.SetWindowSize(app.config.ScreenWidth()*3, app.config.ScreenHeight()*3)
+	ebiten.SetWindowTitle(app.config.Name)
 
 	if err := ebiten.RunGame(app); err != nil {
 		return err

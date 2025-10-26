@@ -23,6 +23,7 @@ func NewGameStateUseCasesFacade(
 	playerTilesetRepo processed.ITilesetRepository,
 	bulletTilesetRepo processed.ITilesetRepository,
 	spawnerTilesetRepo processed.ITilesetRepository,
+	gameConfig *GameConfig,
 ) (*GameStateUseCasesFacade, error) {
 	// Загружаем уровень
 	level, err := mapsRepo.GetLevel(levelNumber)
@@ -42,7 +43,7 @@ func NewGameStateUseCasesFacade(
 
 	// Создаем Use Cases
 	animationUseCases := use_cases.NewAnimationUseCases(animationsRepo)
-	tankUseCases := use_cases.NewTankUseCases(playerTilesetRepo, spawnerTilesetRepo, animationUseCases)
+	tankUseCases := use_cases.NewTankUseCases(playerTilesetRepo, spawnerTilesetRepo, animationUseCases, gameConfig.SpawnDurationMs)
 	bulletTilesUseCases := use_cases.NewTilesUseCases(bulletTilesetRepo)
 	bulletUseCases := use_cases.NewBulletUseCases(bulletsRepo, bulletTilesUseCases)
 	mapUseCases := use_cases.NewMapUseCases(blocksRepo)

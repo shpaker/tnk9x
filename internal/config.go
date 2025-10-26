@@ -1,76 +1,96 @@
 package internal
 
 import (
+	"fmt"
 	"os"
-	"strconv"
+
+	"gopkg.in/yaml.v3"
 )
 
 // AppConfig содержит настройки приложения
 type AppConfig struct {
-	Name         string  `json:"name"`
-	ScreenWidth  int     `json:"screen_width"`
-	ScreenHeight int     `json:"screen_height"`
-	GameSpeed    float64 `json:"game_speed"`
-	TileSize     int     `json:"tile_size"`
+	Name string
+}
+
+// GameConfig содержит настройки игры
+type GameConfig struct {
+	SpawnDurationMs uint `yaml:"spawn_duration_ms"`
+}
+
+// ConfigSchema структура для парсинга YAML файла
+type ConfigSchema struct {
+	App  AppConfig  `yaml:"app"`
+	Game GameConfig `yaml:"game"`
 }
 
 // Config содержит конфигурацию приложения
 type Config struct {
 	AppConfig
+	GameConfig
 }
 
-// Load загружает конфигурацию из переменных окружения
-func LoadConfig() (*Config, error) {
-	// Константы для вычисления размеров экрана
+// ScreenWidth возвращает ширину экрана
+func (c *Config) ScreenWidth() int {
 	const (
 		TileMinSize           = 8
 		MapBlocksLength       = 26
 		UpDownLeftPanelLength = 2
 		RightPanelLength      = 4
-		DefaultGameSpeed      = 1.0 / 60.0
 	)
-
 	MapWidthHeight := MapBlocksLength * TileMinSize
-	ScreenWidth := MapWidthHeight + UpDownLeftPanelLength*TileMinSize + RightPanelLength*TileMinSize
-	ScreenHeight := MapWidthHeight + UpDownLeftPanelLength*TileMinSize*2
+	return MapWidthHeight + UpDownLeftPanelLength*TileMinSize + RightPanelLength*TileMinSize
+}
 
+// ScreenHeight возвращает высоту экрана
+func (c *Config) ScreenHeight() int {
+	const (
+		TileMinSize           = 8
+		MapBlocksLength       = 26
+		UpDownLeftPanelLength = 2
+	)
+	MapWidthHeight := MapBlocksLength * TileMinSize
+	return MapWidthHeight + UpDownLeftPanelLength*TileMinSize*2
+}
+
+// GameSpeed возвращает скорость игры
+func (c *Config) GameSpeed() float64 {
+	return 1.0 / 60.0
+}
+
+// TileSize возвращает размер тайла
+func (c *Config) TileSize() int {
+	return 8
+}
+
+// LoadConfig загружает конфигурацию из файла config.yml
+func LoadConfig() (*Config, error) {
+	// Определяем путь к файлу конфигурации
+	configPath := "config.yml"
+
+	// Проверяем существование файла
+	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+		return nil, fmt.Errorf("config file not found: %s", configPath)
+	}
+
+	// Читаем файл конфигурации
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read config file: %w", err)
+	}
+
+	// Парсим YAML
+	var configSchema ConfigSchema
+	if err := yaml.Unmarshal(data, &configSchema); err != nil {
+		return nil, fmt.Errorf("failed to parse config file: %w", err)
+	}
+
+	// Создаем конфигурацию
 	cfg := &Config{
-		AppConfig{
-			Name:         getEnv("APP_NAME", "gonflict"),
-			ScreenWidth:  getEnvAsInt("SCREEN_WIDTH", ScreenWidth),
-			ScreenHeight: getEnvAsInt("SCREEN_HEIGHT", ScreenHeight),
-			GameSpeed:    getEnvAsFloat64("GAME_SPEED", DefaultGameSpeed),
-			TileSize:     getEnvAsInt("TILE_SIZE", TileMinSize),
+		AppConfig: AppConfig{
+			Name: configSchema.App.Name,
 		},
+		GameConfig: configSchema.Game,
 	}
 
 	return cfg, nil
-}
-
-// getEnv получает переменную окружения или возвращает значение по умолчанию
-func getEnv(key, defaultValue string) string {
-	if value := os.Getenv(key); value != "" {
-		return value
-	}
-	return defaultValue
-}
-
-// getEnvAsInt получает переменную окружения как int или возвращает значение по умолчанию
-func getEnvAsInt(key string, defaultValue int) int {
-	if value := os.Getenv(key); value != "" {
-		if intValue, err := strconv.Atoi(value); err == nil {
-			return intValue
-		}
-	}
-	return defaultValue
-}
-
-// getEnvAsFloat64 получает переменную окружения как float64 или возвращает значение по умолчанию
-func getEnvAsFloat64(key string, defaultValue float64) float64 {
-	if value := os.Getenv(key); value != "" {
-		if floatValue, err := strconv.ParseFloat(value, 64); err == nil {
-			return floatValue
-		}
-	}
-	return defaultValue
 }

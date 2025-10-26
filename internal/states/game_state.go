@@ -10,6 +10,11 @@ import (
 	"github.com/shpaker/gonflict/internal/use_cases"
 )
 
+// GameConfig представляет конфигурацию игры (для избежания циклических импортов)
+type GameConfig struct {
+	SpawnDurationMs uint `yaml:"spawn_duration_ms"`
+}
+
 type GameState struct {
 	gameStateServices *GameStateUseCasesFacade
 	inputAdapter      *adapters.InputAdapter
@@ -24,6 +29,7 @@ func NewGameState(
 	playerTilesetRepo processed.ITilesetRepository, // Репозиторий для игрока
 	bulletTilesetRepo processed.ITilesetRepository, // Репозиторий для пуль
 	spawnerTilesetRepo processed.ITilesetRepository, // Репозиторий для спавна
+	gameConfig *GameConfig,
 ) (GameState, error) {
 	// Создаем GameStateUseCasesFacade
 	gameStateServices, err := NewGameStateUseCasesFacade(
@@ -33,6 +39,7 @@ func NewGameState(
 		playerTilesetRepo,
 		bulletTilesetRepo,
 		spawnerTilesetRepo,
+		gameConfig,
 	)
 	if err != nil {
 		return GameState{}, err

@@ -1,2 +1,6 @@
 ---
-spawn_duration_ms: 1000
+app:
+  name: "gonflict"
+
+game:
+  spawn_duration_ms: 1000

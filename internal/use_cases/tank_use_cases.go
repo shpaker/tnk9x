@@ -15,6 +15,7 @@ type TankUseCases struct {
 	tank              *types.TankEntity // Теперь указатель, может быть nil
 	tankAnimation     *types.TileAnimationEntity
 	spawnAnimation    *types.TileAnimationEntity // Анимация спавна
+	spawnDurationMs   uint                       // Длительность спавна в миллисекундах
 }
 
 // NewTankUseCases создает новый экземпляр TankUseCases
@@ -22,11 +23,13 @@ func NewTankUseCases(
 	tilesetRepo processed.ITilesetRepository,
 	spawnerTilesetRepo processed.ITilesetRepository,
 	animationUseCases IAnimationUseCases,
+	spawnDurationMs uint,
 ) *TankUseCases {
 	uc := &TankUseCases{
 		tilesetRepo:       tilesetRepo,
 		animationUseCases: animationUseCases,
 		tank:              nil, // Танк не создается при инициализации
+		spawnDurationMs:   spawnDurationMs,
 	}
 
 	// Создаем анимацию спавна
@@ -236,8 +239,8 @@ func (uc *TankUseCases) UpdateSpawn(currentTime float64) {
 		return
 	}
 
-	// Проверяем, прошло ли 2 секунды с начала спавна
-	if currentTime-uc.tank.SpawnedAt >= 2.0 {
+	// Проверяем, прошло ли достаточно времени с начала спавна (конвертируем миллисекунды в секунды)
+	if currentTime-uc.tank.SpawnedAt >= float64(uc.spawnDurationMs)/1000.0 {
 		// Завершаем спавн
 		uc.tank.IsSpawned = true
 		uc.tank.SpawnedAt = currentTime // Обновляем время завершения спавна
