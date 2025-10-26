@@ -12,8 +12,8 @@ import (
 
 // GameConfig представляет конфигурацию игры (для избежания циклических импортов)
 type GameConfig struct {
-	SpawnDurationMs uint    `yaml:"spawn_duration_ms"`
-	EnemySpawners   [][]int `yaml:"enemy_spawners"`
+	EnemySpawners  [][]int `yaml:"enemy_spawners"`
+	PlayerSpawners [][]int `yaml:"players_spawners"`
 }
 
 type GameState struct {
@@ -30,6 +30,7 @@ func NewGameState(
 	playerTilesetRepo processed.ITilesetRepository, // Репозиторий для игрока
 	bulletTilesetRepo processed.ITilesetRepository, // Репозиторий для пуль
 	spawnerTilesetRepo processed.ITilesetRepository, // Репозиторий для спавна
+	explosionTilesetRepo processed.ITilesetRepository, // Репозиторий для взрыва
 	gameConfig *GameConfig,
 ) (GameState, error) {
 	// Создаем GameStateUseCasesFacade
@@ -40,6 +41,7 @@ func NewGameState(
 		playerTilesetRepo,
 		bulletTilesetRepo,
 		spawnerTilesetRepo,
+		explosionTilesetRepo,
 		gameConfig,
 	)
 	if err != nil {
@@ -53,6 +55,7 @@ func NewGameState(
 		playerTilesetRepo,
 		bulletTilesetRepo,
 		spawnerTilesetRepo,
+		explosionTilesetRepo,
 	)
 
 	inputAdapter := createInputAdapter(gameStateServices)
@@ -88,6 +91,9 @@ func (state GameState) Update() (State, error) {
 	// Обновляем спавн врагов
 	state.gameStateServices.UpdateEnemiesSpawn(elapsedTime)
 
+	// Обновляем анимации врагов
+	state.gameStateServices.UpdateEnemiesAnimations()
+
 	// Обновляем input
 	state.inputAdapter.Update()
 
@@ -121,11 +127,13 @@ func createRendererAdapter(
 	playerTilesetRepo processed.ITilesetRepository,
 	bulletTilesetRepo processed.ITilesetRepository,
 	spawnerTilesetRepo processed.ITilesetRepository,
+	explosionTilesetRepo processed.ITilesetRepository,
 ) *adapters.RendererAdapter {
 	mapTilesUseCases := use_cases.NewTilesUseCases(mapTilesetRepo)
 	playerTilesUseCases := use_cases.NewTilesUseCases(playerTilesetRepo)
 	bulletTilesUseCases := use_cases.NewTilesUseCases(bulletTilesetRepo)
 	spawnerTilesUseCases := use_cases.NewTilesUseCases(spawnerTilesetRepo)
+	explosionTilesUseCases := use_cases.NewTilesUseCases(explosionTilesetRepo)
 
 	return adapters.NewRendererAdapter(
 		gameStateServices.MapUseCases(),
@@ -136,5 +144,6 @@ func createRendererAdapter(
 		playerTilesUseCases,
 		bulletTilesUseCases,
 		spawnerTilesUseCases,
+		explosionTilesUseCases,
 	)
 }

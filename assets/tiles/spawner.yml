@@ -11,3 +11,4 @@ animations:
   spawner:
     duration: 6
     frames: [spawner_1, spawner_2, spawner_3, spawner_4]
+    repeats: 4

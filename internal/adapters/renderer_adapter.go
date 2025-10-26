@@ -1,6 +1,7 @@
 package adapters
 
 import (
+	"image"
 	"image/color"
 	"log"
 	"math"
@@ -14,14 +15,16 @@ import (
 
 // RendererAdapter адаптер для рендеринга игры
 type RendererAdapter struct {
-	mapUseCases          use_cases.IMapUseCases
-	tankUseCases         use_cases.ITankUseCases
-	bulletUseCases       use_cases.IBulletUseCases
-	enemyUseCases        use_cases.IEnemyUseCases
-	mapTilesUseCases     *use_cases.TilesUseCases
-	playerTilesUseCases  *use_cases.TilesUseCases
-	bulletTilesUseCases  *use_cases.TilesUseCases
-	spawnerTilesUseCases *use_cases.TilesUseCases
+	mapUseCases            use_cases.IMapUseCases
+	tankUseCases           use_cases.ITankUseCases
+	bulletUseCases         use_cases.IBulletUseCases
+	enemyUseCases          use_cases.IEnemyUseCases
+	mapTilesUseCases       *use_cases.TilesUseCases
+	playerTilesUseCases    *use_cases.TilesUseCases
+	bulletTilesUseCases    *use_cases.TilesUseCases
+	spawnerTilesUseCases   *use_cases.TilesUseCases
+	explosionTilesUseCases *use_cases.TilesUseCases
+	imageCache             map[string]*ebiten.Image // Кэш ebiten.Image
 }
 
 // NewRendererAdapter создает новый экземпляр RendererAdapter
@@ -34,16 +37,19 @@ func NewRendererAdapter(
 	playerTilesUseCases *use_cases.TilesUseCases,
 	bulletTilesUseCases *use_cases.TilesUseCases,
 	spawnerTilesUseCases *use_cases.TilesUseCases,
+	explosionTilesUseCases *use_cases.TilesUseCases,
 ) *RendererAdapter {
 	return &RendererAdapter{
-		mapUseCases:          mapUseCases,
-		tankUseCases:         tankUseCases,
-		bulletUseCases:       bulletUseCases,
-		enemyUseCases:        enemyUseCases,
-		mapTilesUseCases:     mapTilesUseCases,
-		playerTilesUseCases:  playerTilesUseCases,
-		bulletTilesUseCases:  bulletTilesUseCases,
-		spawnerTilesUseCases: spawnerTilesUseCases,
+		mapUseCases:            mapUseCases,
+		tankUseCases:           tankUseCases,
+		bulletUseCases:         bulletUseCases,
+		enemyUseCases:          enemyUseCases,
+		mapTilesUseCases:       mapTilesUseCases,
+		playerTilesUseCases:    playerTilesUseCases,
+		bulletTilesUseCases:    bulletTilesUseCases,
+		spawnerTilesUseCases:   spawnerTilesUseCases,
+		explosionTilesUseCases: explosionTilesUseCases,
+		imageCache:             make(map[string]*ebiten.Image),
 	}
 }
 
@@ -143,6 +149,27 @@ func (r *RendererAdapter) drawTank(screen *ebiten.Image) {
 	screen.DrawImage(rotatedImage, op)
 }
 
+// getCachedImage возвращает закэшированное ebiten.Image или создает новое
+func (r *RendererAdapter) getCachedImage(imageId string, imageData image.Image) *ebiten.Image {
+	// Проверяем кэш
+	if cachedImage, exists := r.imageCache[imageId]; exists {
+		return cachedImage
+	}
+
+	// Проверяем размер изображения
+	if imageData.Bounds().Dx() == 0 || imageData.Bounds().Dy() == 0 {
+		log.Printf("ERROR: Image '%s' has zero size (bounds: %s)", imageId, imageData.Bounds())
+		// Возвращаем пустое изображение 1x1 вместо nil
+		ebitenImage := ebiten.NewImage(1, 1)
+		return ebitenImage
+	}
+
+	// Создаем новое изображение и кэшируем его
+	ebitenImage := ebiten.NewImageFromImage(imageData)
+	r.imageCache[imageId] = ebitenImage
+	return ebitenImage
+}
+
 // drawEnemies отрисовывает врагов
 func (r *RendererAdapter) drawEnemies(screen *ebiten.Image) {
 	enemies := r.enemyUseCases.GetEnemies()
@@ -161,26 +188,46 @@ func (r *RendererAdapter) drawEnemies(screen *ebiten.Image) {
 			continue
 		}
 
-		// Получаем изображение через TilesUseCases
-		imageData, err := r.playerTilesUseCases.GetImage(imageId)
+		// Если враг взрывается, используем explosion tileset
+		var imageData image.Image
+		if enemy.IsExploding {
+			// Получаем изображение через explosion tileset
+			imageData, err = r.explosionTilesUseCases.GetImage(imageId)
+		} else {
+			// Получаем изображение через TilesUseCases
+			imageData, err = r.playerTilesUseCases.GetImage(imageId)
+		}
+
 		if err != nil {
 			log.Printf("ERROR: Enemy error loading image '%s': %v", imageId, err)
 			continue
 		}
 
-		// Конвертируем image.Image в ebiten.Image
-		image := ebiten.NewImageFromImage(imageData)
+		// Получаем закэшированное изображение
+		image := r.getCachedImage(imageId, imageData)
 
-		// Поворачиваем изображение в зависимости от направления
-		rotatedImage := utils.RotateImage(image, enemy.Direction)
+		// Поворачиваем изображение в зависимости от направления (только если не взрывается)
+		var finalImage *ebiten.Image = image
+		if !enemy.IsExploding {
+			rotatedImage := utils.RotateImage(image, enemy.Direction)
+			finalImage = rotatedImage
+		}
 
 		op := &ebiten.DrawImageOptions{}
+
+		// Применяем offset если это анимация (например, взрыв)
+		var offsetX, offsetY float64 = 0, 0
+		if anim, ok := enemy.AnimationGetter.(*types.TileAnimationEntity); ok {
+			offsetX = anim.Offset[0]
+			offsetY = anim.Offset[1]
+		}
+
 		op.GeoM.Translate(
-			use_cases.MapOffset+enemy.WorldPosition.X,
-			use_cases.MapOffset+enemy.WorldPosition.Y,
+			use_cases.MapOffset+enemy.WorldPosition.X+offsetX,
+			use_cases.MapOffset+enemy.WorldPosition.Y+offsetY,
 		)
 
-		screen.DrawImage(rotatedImage, op)
+		screen.DrawImage(finalImage, op)
 	}
 }
 

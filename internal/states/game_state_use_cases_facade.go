@@ -24,6 +24,7 @@ func NewGameStateUseCasesFacade(
 	playerTilesetRepo processed.ITilesetRepository,
 	bulletTilesetRepo processed.ITilesetRepository,
 	spawnerTilesetRepo processed.ITilesetRepository,
+	explosionTilesetRepo processed.ITilesetRepository,
 	gameConfig *GameConfig,
 ) (*GameStateUseCasesFacade, error) {
 	// Загружаем уровень
@@ -45,11 +46,11 @@ func NewGameStateUseCasesFacade(
 
 	// Создаем Use Cases
 	animationUseCases := use_cases.NewAnimationUseCases(animationsRepo)
-	tankUseCases := use_cases.NewTankUseCases(tanksRepo, playerTilesetRepo, spawnerTilesetRepo, animationUseCases, gameConfig.SpawnDurationMs)
+	tankUseCases := use_cases.NewTankUseCases(tanksRepo, playerTilesetRepo, spawnerTilesetRepo, animationUseCases, gameConfig.PlayerSpawners)
 	bulletTilesUseCases := use_cases.NewTilesUseCases(bulletTilesetRepo)
 	bulletUseCases := use_cases.NewBulletUseCases(bulletsRepo, bulletTilesUseCases)
 	mapUseCases := use_cases.NewMapUseCases(blocksRepo)
-	enemyUseCases := use_cases.NewEnemyUseCases(tanksRepo, playerTilesetRepo, spawnerTilesetRepo, animationUseCases)
+	enemyUseCases := use_cases.NewEnemyUseCases(tanksRepo, playerTilesetRepo, spawnerTilesetRepo, explosionTilesetRepo, animationUseCases)
 	collisionUseCases := use_cases.NewCollisionUseCases(
 		bulletUseCases,
 		tankUseCases,
@@ -88,6 +89,11 @@ func (g *GameStateUseCasesFacade) UpdateTankSpawn(currentTime float64) {
 // UpdateEnemiesSpawn обновляет процесс спавна врагов
 func (g *GameStateUseCasesFacade) UpdateEnemiesSpawn(currentTime float64) {
 	g.enemyUseCases.UpdateEnemiesSpawn(currentTime)
+}
+
+// UpdateEnemiesAnimations обновляет анимации врагов
+func (g *GameStateUseCasesFacade) UpdateEnemiesAnimations() {
+	g.enemyUseCases.UpdateEnemiesAnimations()
 }
 
 // StartTankSpawn запускает спавн танка

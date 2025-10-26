@@ -10,9 +10,10 @@ import (
 )
 
 type TilesetDataRepository struct {
-	fileRepo       raw.IFileRepository
-	imagesCache    map[string]image.Image
-	animationsData map[string]types.AnimationData
+	fileRepo         raw.IFileRepository
+	imagesCache      map[string]image.Image
+	animationsData   map[string]types.AnimationData
+	animationsConfig map[string]types.AnimationConfig // Храним полную конфигурацию
 }
 
 func NewTilesetDataRepository(
@@ -39,9 +40,10 @@ func NewTilesetDataRepository(
 
 	// Создаем репозиторий
 	repo := &TilesetDataRepository{
-		fileRepo:       fileRepo,
-		imagesCache:    make(map[string]image.Image),
-		animationsData: make(map[string]types.AnimationData),
+		fileRepo:         fileRepo,
+		imagesCache:      make(map[string]image.Image),
+		animationsData:   make(map[string]types.AnimationData),
+		animationsConfig: make(map[string]types.AnimationConfig),
 	}
 
 	// Предварительно кэшируем все изображения
@@ -63,6 +65,9 @@ func NewTilesetDataRepository(
 
 	// Копируем данные анимаций и конвертируем в старый формат
 	for animationID, animationConfig := range config.Animations {
+		// Сохраняем полную конфигурацию
+		repo.animationsConfig[animationID] = animationConfig
+
 		// Конвертируем новый формат в старый формат AnimationData
 		var animationFrames types.AnimationData
 		for _, frameID := range animationConfig.Frames {
@@ -99,4 +104,13 @@ func (tr *TilesetDataRepository) GetAnimationData(
 	}
 
 	return animationData, nil
+}
+
+// GetAnimationConfig получает конфигурацию анимации
+func (tr *TilesetDataRepository) GetAnimationConfig(id string) (types.AnimationConfig, error) {
+	config, exists := tr.animationsConfig[id]
+	if !exists {
+		return types.AnimationConfig{}, fmt.Errorf("animation config '%s' not found", id)
+	}
+	return config, nil
 }

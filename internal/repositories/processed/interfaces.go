@@ -12,6 +12,8 @@ type ITilesetRepository interface {
 	GetImage(id string) (image.Image, error)
 	// GetAnimationData возвращает данные анимации по ID
 	GetAnimationData(id string) (types.AnimationData, error)
+	// GetAnimationConfig возвращает конфигурацию анимации по ID
+	GetAnimationConfig(id string) (types.AnimationConfig, error)
 }
 
 // IMapsDataRepository определяет интерфейс для работы с картами уровней

@@ -40,6 +40,7 @@ func (uc *CollisionUseCases) UpdateCollisions() error {
 	uc.checkBulletWallCollisions()
 	uc.checkTankBoundaryCollisions(tank)
 	uc.checkTankWallCollisions(tank)
+	uc.checkTankEnemyCollisions(tank)
 
 	return nil
 }
@@ -88,8 +89,13 @@ func (uc *CollisionUseCases) checkBulletEnemyCollisions() {
 		for j := len(enemies) - 1; j >= 0; j-- {
 			enemy := enemies[j]
 
-			// Если враг заспавнен и есть коллизия
-			if enemy.IsSpawned && uc.CheckColliders(bullet, enemy) {
+			// Проверяем, что пуля не принадлежит этому танку (избегаем самоуничтожения)
+			if bullet.Owner == enemy {
+				continue
+			}
+
+			// Если враг заспавнен, не взрывается и есть коллизия
+			if enemy.IsSpawned && !enemy.IsExploding && uc.CheckColliders(bullet, enemy) {
 				// Удаляем пулю
 				uc.bulletUseCases.RemoveBullet(i)
 				// Удаляем врага
@@ -279,4 +285,32 @@ func (uc *CollisionUseCases) CheckCollidersWithArrayFirst(
 		}
 	}
 	return nil
+}
+
+// checkTankEnemyCollisions проверяет коллизии танка с врагами
+func (uc *CollisionUseCases) checkTankEnemyCollisions(tank *types.TankEntity) {
+	enemies := uc.enemyUseCases.GetEnemies()
+
+	for _, enemy := range enemies {
+		// Пропускаем танк игрока (самого себя)
+		if enemy == tank {
+			continue
+		}
+
+		// Пропускаем взрывающихся врагов
+		if enemy.IsExploding {
+			continue
+		}
+
+		// Пропускаем врагов в процессе спавна
+		if !enemy.IsSpawned {
+			continue
+		}
+
+		// Проверяем коллизию танка с врагом
+		if uc.CheckColliders(tank, enemy) {
+			// Откатываем позицию танка назад при столкновении
+			uc.tankUseCases.StopTank(true)
+		}
+	}
 }

@@ -45,7 +45,4 @@ type ITanksRepository interface {
 
 	// RemoveTank удаляет танк по индексу
 	RemoveTank(index int) error
-
-	// GetTank возвращает танк по индексу
-	GetTank(index int) (*types.TankEntity, error)
 }

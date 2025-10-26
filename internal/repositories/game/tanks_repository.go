@@ -34,11 +34,3 @@ func (tr *TanksRepository) RemoveTank(index int) error {
 	tr.tanks = append(tr.tanks[:index], tr.tanks[index+1:]...)
 	return nil
 }
-
-// GetTank возвращает танк по индексу
-func (tr *TanksRepository) GetTank(index int) (*types.TankEntity, error) {
-	if index < 0 || index >= len(tr.tanks) {
-		return nil, fmt.Errorf("индекс танка %d вне диапазона [0, %d)", index, len(tr.tanks))
-	}
-	return tr.tanks[index], nil
-}

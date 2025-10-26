@@ -1,0 +1,16 @@
+---
+size: 32
+
+images:
+  explosion_1: [0, 0]
+  explosion_2: [1, 0]
+  explosion_3: [2, 0]
+  explosion_4: [3, 0]
+  explosion_5: [4, 0]
+
+animations:
+  explosion:
+    offset: [-8, -8]
+    duration: 5   # Длительность каждого кадра в тиках
+    frames: [explosion_1, explosion_2, explosion_3, explosion_4, explosion_5]
+    repeats: 1   # Проиграть один раз

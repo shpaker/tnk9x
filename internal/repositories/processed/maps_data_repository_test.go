@@ -19,6 +19,10 @@ func (mtr *MockTilesetRepository) GetAnimationData(id string) (types.AnimationDa
 	return types.AnimationData{}, nil
 }
 
+func (mtr *MockTilesetRepository) GetAnimationConfig(id string) (types.AnimationConfig, error) {
+	return types.AnimationConfig{}, nil
+}
+
 // MockImageIdGetter - мок для тестирования
 type MockImageIdGetter struct {
 	id string

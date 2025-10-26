@@ -56,8 +56,10 @@ type AnimationDataFrame struct {
 
 // AnimationConfig представляет конфигурацию анимации в новом формате
 type AnimationConfig struct {
-	Duration int      `yaml:"duration"`
-	Frames   []string `yaml:"frames"`
+	Offset   [2]float64 `yaml:"offset"`   // Смещение анимации относительно сущности [x, y]
+	Duration int        `yaml:"duration"` // Длительность кадра в тиках
+	Frames   []string   `yaml:"frames"`   // Список кадров анимации
+	Repeats  *int       `yaml:"repeats"`  // Количество повторений (nil = бесконечно, число = проиграть N раз)
 }
 
 // AnimationData представляет анимацию (старый формат - массив кадров)

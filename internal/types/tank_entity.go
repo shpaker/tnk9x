@@ -12,6 +12,7 @@ type TankEntity struct {
 	IsSpawned       bool    // Флаг спавна танка (по умолчанию false)
 	SpawnedAt       float64 // Время спавна танка
 	Altitude        Altitude
+	IsExploding     bool // Флаг взрыва танка
 }
 
 // GetImageId возвращает ID изображения танка (реализует IImageIdGetter)
@@ -39,5 +40,9 @@ func (t *TankEntity) GetWorldPosition() Position {
 
 // GetAltitude возвращает высоту танка
 func (t *TankEntity) GetAltitude() Altitude {
+	// Если танк взрывается, показываем выше всего
+	if t.IsExploding {
+		return AIR
+	}
 	return t.Altitude
 }

@@ -49,11 +49,39 @@ func (tuc *TilesUseCases) CreateStaticTile(
 
 // CreateAnimationTile создает анимированный тайл по ID анимации
 func (tuc *TilesUseCases) CreateAnimationTile(id string) (*types.TileAnimationEntity, error) {
+	// Получаем конфигурацию анимации
+	config, err := tuc.tilesRepository.GetAnimationConfig(id)
+	if err != nil {
+		return nil, fmt.Errorf("animation config '%s' not found: %w", id, err)
+	}
+
 	// Получаем данные анимации
 	animationFrames, err := tuc.tilesRepository.GetAnimationData(id)
 	if err != nil {
 		return nil, fmt.Errorf("animation '%s' not found: %w", id, err)
 	}
 
-	return types.NewTileAnimationEntity(animationFrames), nil
+	// Создаем анимацию с учетом конфигурации
+	var animation *types.TileAnimationEntity
+
+	// Проверяем, есть ли offset в конфиге
+	hasOffset := config.Offset[0] != 0 || config.Offset[1] != 0
+
+	if config.Repeats == nil {
+		// Бесконечная анимация
+		if hasOffset {
+			animation = types.NewTileAnimationEntityWithOffset(animationFrames, config.Offset)
+		} else {
+			animation = types.NewTileAnimationEntity(animationFrames)
+		}
+	} else {
+		// Анимация с ограниченным количеством повторений
+		if hasOffset {
+			animation = types.NewTileAnimationEntityWithLoopsAndOffset(animationFrames, *config.Repeats, config.Offset)
+		} else {
+			animation = types.NewTileAnimationEntityWithLoops(animationFrames, *config.Repeats)
+		}
+	}
+
+	return animation, nil
 }

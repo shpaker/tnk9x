@@ -7,25 +7,30 @@ import (
 )
 
 type EnemyUseCases struct {
-	tanksRepo          game.ITanksRepository
-	tilesetRepo        processed.ITilesetRepository
-	spawnerTilesetRepo processed.ITilesetRepository
-	animationUseCases  IAnimationUseCases
-	spawnAnimations    map[int]*types.TileAnimationEntity // Анимации спавна для каждого врага
+	tanksRepo            game.ITanksRepository
+	tilesetRepo          processed.ITilesetRepository
+	spawnerTilesetRepo   processed.ITilesetRepository
+	explosionTilesetRepo processed.ITilesetRepository
+	animationUseCases    IAnimationUseCases
+	spawnAnimations      map[int]*types.TileAnimationEntity // Анимации спавна для каждого врага
+	tankAnimations       map[int]*types.TileAnimationEntity // Анимации танков (движения) для каждого врага
 }
 
 func NewEnemyUseCases(
 	tanksRepo game.ITanksRepository,
 	tilesetRepo processed.ITilesetRepository,
 	spawnerTilesetRepo processed.ITilesetRepository,
+	explosionTilesetRepo processed.ITilesetRepository,
 	animationUseCases IAnimationUseCases,
 ) *EnemyUseCases {
 	return &EnemyUseCases{
-		tanksRepo:          tanksRepo,
-		tilesetRepo:        tilesetRepo,
-		spawnerTilesetRepo: spawnerTilesetRepo,
-		animationUseCases:  animationUseCases,
-		spawnAnimations:    make(map[int]*types.TileAnimationEntity),
+		tanksRepo:            tanksRepo,
+		tilesetRepo:          tilesetRepo,
+		spawnerTilesetRepo:   spawnerTilesetRepo,
+		explosionTilesetRepo: explosionTilesetRepo,
+		animationUseCases:    animationUseCases,
+		spawnAnimations:      make(map[int]*types.TileAnimationEntity),
+		tankAnimations:       make(map[int]*types.TileAnimationEntity),
 	}
 }
 
@@ -66,7 +71,24 @@ func (uc *EnemyUseCases) GetEnemies() []*types.TankEntity {
 
 // RemoveEnemy удаляет врага по индексу
 func (uc *EnemyUseCases) RemoveEnemy(index int) error {
-	return uc.tanksRepo.RemoveTank(index)
+	// Вместо удаления танка, запускаем анимацию взрыва
+	tanks := uc.tanksRepo.GetAllTanks()
+	if index >= 0 && index < len(tanks) {
+		enemy := tanks[index]
+		if enemy != nil && !enemy.IsExploding {
+			// Создаем анимацию взрыва
+			tilesUseCases := NewTilesUseCases(uc.explosionTilesetRepo)
+			explosionAnim, err := tilesUseCases.CreateAnimationTile("explosion")
+			if err == nil {
+				// Заменяем AnimationGetter на анимацию взрыва
+				enemy.AnimationGetter = explosionAnim
+				enemy.IsExploding = true
+				uc.animationUseCases.AddAnimation(explosionAnim)
+				uc.animationUseCases.StartAnimation(explosionAnim)
+			}
+		}
+	}
+	return nil
 }
 
 // InitEnemies создает начальное количество врагов на карте
@@ -94,27 +116,32 @@ func (uc *EnemyUseCases) InitEnemies(enemySpawners [][]int) error {
 
 // StartEnemySpawn начинает процесс спавна врага с анимацией
 func (uc *EnemyUseCases) StartEnemySpawn(position types.Position, enemyIndex int) error {
-	// Получаем данные анимации для спавна
-	animationFrames, err := uc.spawnerTilesetRepo.GetAnimationData("spawner")
+	// Создаем tilesUseCases для создания анимации с правильной конфигурацией
+	tilesUseCases := NewTilesUseCases(uc.spawnerTilesetRepo)
+
+	// Создаем анимацию спавна через TilesUseCases (будет применяться repeats: 10 из конфига)
+	spawnAnimation, err := tilesUseCases.CreateAnimationTile("spawner")
 	if err != nil {
 		return err
 	}
 
-	// Создаем анимацию спавна
-	spawnAnimation := types.NewTileAnimationEntity(animationFrames)
 	uc.animationUseCases.AddAnimation(spawnAnimation)
 	uc.animationUseCases.StartAnimation(spawnAnimation)
 	uc.spawnAnimations[enemyIndex] = spawnAnimation
 
-	// Получаем данные анимации для танка
-	tankAnimationFrames, err := uc.tilesetRepo.GetAnimationData("base_tank")
+	// Создаем анимацию танка через CreateAnimationTile (учитывает duration из конфига)
+	tankTilesUseCases := NewTilesUseCases(uc.tilesetRepo)
+	tankAnimation, err := tankTilesUseCases.CreateAnimationTile("base_tank")
 	if err != nil {
 		return err
 	}
-
-	// Создаем TileAnimationEntity для танка
-	tankAnimation := types.NewTileAnimationEntity(tankAnimationFrames)
 	uc.animationUseCases.AddAnimation(tankAnimation)
+
+	// Сохраняем ссылку на анимацию танка
+	uc.tankAnimations[enemyIndex] = tankAnimation
+
+	// Не запускаем анимацию сразу, она запустится при движении
+	// uc.animationUseCases.StartAnimation(tankAnimation)
 
 	// Создаем врага
 	enemy := &types.TankEntity{
@@ -137,25 +164,35 @@ func (uc *EnemyUseCases) UpdateEnemiesSpawn(currentTime float64) {
 	enemies := uc.tanksRepo.GetAllTanks()
 
 	for i, enemy := range enemies {
-		if enemy.IsSpawned {
+		if enemy == nil {
 			continue
 		}
 
-		// Если время спавна еще не установлено, устанавливаем его
-		if enemy.SpawnedAt == 0 {
-			enemy.SpawnedAt = currentTime
+		// Если танк взрывается, проверяем завершение анимации взрыва
+		if enemy.IsExploding {
+			// Проверяем, является ли AnimationGetter анимацией взрыва
+			if anim, ok := enemy.AnimationGetter.(*types.TileAnimationEntity); ok {
+				if anim.IsFinished() {
+					// Анимация взрыва закончилась, удаляем танк
+					uc.tanksRepo.RemoveTank(i)
+				}
+			}
+			continue
 		}
 
-		// Проверяем, прошло ли 2 секунды с начала спавна
-		if currentTime-enemy.SpawnedAt >= 2.0 {
-			// Завершаем спавн
-			enemy.IsSpawned = true
-			enemy.SpawnedAt = currentTime
-
-			// Останавливаем анимацию спавна
+		// Если танк еще не заспавнен, проверяем анимацию спавна
+		if !enemy.IsSpawned {
+			// Проверяем, завершилась ли анимация спавна
 			if spawnAnim, exists := uc.spawnAnimations[i]; exists {
-				uc.animationUseCases.StopAnimation(spawnAnim)
-				delete(uc.spawnAnimations, i)
+				if spawnAnim.IsFinished() {
+					// Завершаем спавн
+					enemy.IsSpawned = true
+					enemy.SpawnedAt = currentTime
+
+					// Останавливаем анимацию спавна
+					uc.animationUseCases.StopAnimation(spawnAnim)
+					delete(uc.spawnAnimations, i)
+				}
 			}
 		}
 	}
@@ -167,4 +204,44 @@ func (uc *EnemyUseCases) GetEnemySpawnAnimation(enemyIndex int) *types.TileAnima
 		return anim
 	}
 	return nil
+}
+
+// UpdateEnemiesAnimations обновляет анимации врагов в зависимости от их движения
+func (uc *EnemyUseCases) UpdateEnemiesAnimations() {
+	enemies := uc.tanksRepo.GetAllTanks()
+
+	for i, enemy := range enemies {
+		if enemy == nil {
+			continue
+		}
+
+		// Пропускаем взрывающихся врагов
+		if enemy.IsExploding {
+			continue
+		}
+
+		// Пропускаем врагов в процессе спавна
+		if !enemy.IsSpawned {
+			continue
+		}
+
+		// Получаем анимацию танка для этого врага
+		tankAnimation, exists := uc.tankAnimations[i]
+		if !exists {
+			continue
+		}
+
+		// Управляем анимацией в зависимости от скорости
+		if enemy.Speed > 0 {
+			// Если танк движется, запускаем анимацию
+			if !tankAnimation.IsAnimating {
+				uc.animationUseCases.StartAnimation(tankAnimation)
+			}
+		} else {
+			// Если танк стоит, останавливаем анимацию
+			if tankAnimation.IsAnimating {
+				uc.animationUseCases.StopAnimation(tankAnimation)
+			}
+		}
+	}
 }

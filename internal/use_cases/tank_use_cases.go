@@ -11,12 +11,14 @@ import (
 
 // TankUseCases реализация интерфейса TankUseCases
 type TankUseCases struct {
-	tanksRepo         game.ITanksRepository
-	tilesetRepo       processed.ITilesetRepository
-	animationUseCases IAnimationUseCases
-	spawnAnimation    *types.TileAnimationEntity // Анимация спавна
-	spawnDurationMs   uint                       // Длительность спавна в миллисекундах
-	playerTankIndex   int                        // Индекс танка игрока в репозитории (всегда 0)
+	tanksRepo          game.ITanksRepository
+	tilesetRepo        processed.ITilesetRepository
+	spawnerTilesetRepo processed.ITilesetRepository
+	animationUseCases  IAnimationUseCases
+	spawnAnimation     *types.TileAnimationEntity // Анимация спавна
+	tankAnimation      *types.TileAnimationEntity // Анимация танка (движения)
+	playerTank         *types.TankEntity          // Указатель на танк игрока
+	playerSpawners     [][]int                    // Координаты спавна игроков
 }
 
 // NewTankUseCases создает новый экземпляр TankUseCases
@@ -25,45 +27,61 @@ func NewTankUseCases(
 	tilesetRepo processed.ITilesetRepository,
 	spawnerTilesetRepo processed.ITilesetRepository,
 	animationUseCases IAnimationUseCases,
-	spawnDurationMs uint,
+	playerSpawners [][]int,
 ) *TankUseCases {
 	uc := &TankUseCases{
-		tanksRepo:         tanksRepo,
-		tilesetRepo:       tilesetRepo,
-		animationUseCases: animationUseCases,
-		spawnDurationMs:   spawnDurationMs,
-		playerTankIndex:   0, // Танк игрока всегда первый в репозитории
+		tanksRepo:          tanksRepo,
+		tilesetRepo:        tilesetRepo,
+		spawnerTilesetRepo: spawnerTilesetRepo,
+		animationUseCases:  animationUseCases,
+		playerTank:         nil, // Будет установлен при создании танка
+		playerSpawners:     playerSpawners,
 	}
-
-	// Создаем анимацию спавна
-	spawnAnimation, err := uc.makeSpawnAnimation(spawnerTilesetRepo)
-	if err != nil {
-		panic(err)
-	}
-	uc.spawnAnimation = spawnAnimation
 
 	return uc
 }
 
 // makeTank создает танк с начальными параметрами
 func (uc *TankUseCases) makeTank() (types.TankEntity, *types.TileAnimationEntity, error) {
-	// Получаем данные анимации для танка
-	animationFrames, err := uc.tilesetRepo.GetAnimationData("base_tank")
+	// Создаем tilesUseCases для создания анимации танка
+	tilesUseCases := NewTilesUseCases(uc.tilesetRepo)
+
+	// Создаем анимацию танка через CreateAnimationTile (учитывает duration из конфига)
+	tankAnimation, err := tilesUseCases.CreateAnimationTile("base_tank")
 	if err != nil {
 		return types.TankEntity{}, nil, err
 	}
 
-	// Создаем TileAnimationEntity для танка
-	tankAnimation := types.NewTileAnimationEntity(animationFrames)
-
 	// Добавляем анимацию танка через AnimationUseCases
 	uc.animationUseCases.AddAnimation(tankAnimation)
 
-	// Анимация танка начинается остановленной
-	// uc.animationUseCases.StartAnimation(tankAnimation) - убираем автоматический запуск
+	// Сохраняем ссылку на анимацию танка
+	uc.tankAnimation = tankAnimation
+
+	// Не запускаем анимацию сразу, она запустится при движении
+	// uc.animationUseCases.StartAnimation(tankAnimation)
 
 	// Создаем игрока с начальными параметрами
-	spawnPosition := types.Position{X: 4 * TankSpriteSize, Y: 12 * TankSpriteSize}
+	// Берем координаты спавна первого игрока из конфига
+	// Координаты в конфиге указаны в тайлах (8x8), танк имеет размер 16x16 (2x2 тайла)
+	var spawnPosition types.Position
+	if len(uc.playerSpawners) > 0 {
+		firstSpawner := uc.playerSpawners[0]
+		if len(firstSpawner) >= 2 {
+			// Координаты в тайлах, умножаем на размер тайла
+			// Учитываем смещение в 8 пикселей (1 тайл)
+			spawnPosition = types.Position{
+				X: float64(firstSpawner[0]) * TankSpriteSize,
+				Y: float64(firstSpawner[1]) * TankSpriteSize,
+			}
+		} else {
+			// Fallback на старую позицию, если конфиг некорректен
+			spawnPosition = types.Position{X: 12 * TankSpriteSize, Y: 24 * TankSpriteSize}
+		}
+	} else {
+		// Fallback на старую позицию, если конфиг пуст
+		spawnPosition = types.Position{X: 12 * TankSpriteSize, Y: 24 * TankSpriteSize}
+	}
 
 	player := &types.TankEntity{
 		AnimationGetter: tankAnimation,
@@ -82,19 +100,22 @@ func (uc *TankUseCases) makeTank() (types.TankEntity, *types.TileAnimationEntity
 	// Добавляем танк в репозиторий
 	uc.tanksRepo.AddTank(player)
 
+	// Сохраняем указатель на танк игрока
+	uc.playerTank = player
+
 	return *player, tankAnimation, nil
 }
 
 // makeSpawnAnimation создает анимацию спавна
 func (uc *TankUseCases) makeSpawnAnimation(spawnerTilesetRepo processed.ITilesetRepository) (*types.TileAnimationEntity, error) {
-	// Получаем данные анимации для спавна
-	animationFrames, err := spawnerTilesetRepo.GetAnimationData("spawner")
+	// Создаем tilesUseCases для создания анимации с правильной конфигурацией
+	tilesUseCases := NewTilesUseCases(spawnerTilesetRepo)
+
+	// Создаем анимацию спавна через TilesUseCases (будет применяться repeats: 10 из конфига)
+	spawnAnimation, err := tilesUseCases.CreateAnimationTile("spawner")
 	if err != nil {
 		return nil, err
 	}
-
-	// Создаем TileAnimationEntity для спавна
-	spawnAnimation := types.NewTileAnimationEntity(animationFrames)
 
 	// Добавляем анимацию спавна через AnimationUseCases
 	uc.animationUseCases.AddAnimation(spawnAnimation)
@@ -102,9 +123,12 @@ func (uc *TankUseCases) makeSpawnAnimation(spawnerTilesetRepo processed.ITileset
 	return spawnAnimation, nil
 }
 
-// GetTank возвращает данные танка
+// GetTank возвращает данные танка игрока
 func (uc *TankUseCases) GetTank() (*types.TankEntity, error) {
-	return uc.tanksRepo.GetTank(uc.playerTankIndex)
+	if uc.playerTank == nil {
+		return nil, errors.New("tank not created yet")
+	}
+	return uc.playerTank, nil
 }
 
 // GetDirection возвращает текущее направление танка
@@ -137,9 +161,10 @@ func (uc *TankUseCases) RotateTank(direction types.Direction) error {
 
 	tank.Direction = direction
 
-	// Запускаем анимацию при повороте
-	// TODO: Получить tankAnimation из танка
-	// uc.animationUseCases.StartAnimation(tankAnimation)
+	// Запускаем анимацию при повороте (и последующем движении)
+	if uc.tankAnimation != nil && !uc.tankAnimation.IsAnimating {
+		uc.animationUseCases.StartAnimation(uc.tankAnimation)
+	}
 
 	return nil
 }
@@ -157,8 +182,9 @@ func (uc *TankUseCases) StopTank(byCollision bool) error {
 	tank.Speed = 0
 
 	// Останавливаем анимацию танка
-	// TODO: Получить tankAnimation из танка
-	// uc.animationUseCases.StopAnimation(tankAnimation)
+	if uc.tankAnimation != nil {
+		uc.animationUseCases.StopAnimation(uc.tankAnimation)
+	}
 
 	if byCollision {
 		tank.WorldPosition.X = float64(int(tank.WorldPosition.X))
@@ -197,9 +223,11 @@ func (uc *TankUseCases) MoveTank(
 	delta := tank.Speed * dt
 
 	// Если танк движется, запускаем анимацию
-	if delta > 0 {
-		// TODO: Получить tankAnimation из танка
-		// uc.animationUseCases.StartAnimation(tankAnimation)
+	if delta > 0 && uc.tankAnimation != nil {
+		// Запускаем анимацию только если она не идет
+		if !uc.tankAnimation.IsAnimating {
+			uc.animationUseCases.StartAnimation(uc.tankAnimation)
+		}
 	}
 
 	switch tank.Direction {
@@ -218,34 +246,32 @@ func (uc *TankUseCases) MoveTank(
 
 // StartSpawn начинает процесс спавна танка
 func (uc *TankUseCases) StartSpawn(spawnStartTime float64) {
-	// Проверяем, есть ли уже танк в репозитории
-	tanks := uc.tanksRepo.GetAllTanks()
-	if len(tanks) > uc.playerTankIndex {
-		tank := tanks[uc.playerTankIndex]
-		if tank != nil && !tank.IsSpawned {
-			return // Уже спавнится
-		}
-		if tank != nil && tank.IsSpawned {
-			return // Уже заспавнен
-		}
+	// Проверяем, есть ли уже танк
+	if uc.playerTank != nil && !uc.playerTank.IsSpawned {
+		return // Уже спавнится
+	}
+	if uc.playerTank != nil && uc.playerTank.IsSpawned {
+		return // Уже заспавнен
 	}
 
-	// Создаем танк
+	// Создаем танк только если его еще нет
 	_, _, err := uc.makeTank()
 	if err != nil {
 		panic(err)
 	}
 	// Танк уже добавлен в репозиторий в makeTank()
+	// и playerTank уже установлен
 
-	// Получаем танк из репозитория
-	tank, err := uc.GetTank()
+	// Инициализируем состояние спавна
+	uc.playerTank.IsSpawned = false
+	uc.playerTank.SpawnedAt = spawnStartTime // Сохраняем время начала спавна
+
+	// Пересоздаем анимацию спавна для нового цикла
+	spawnAnimation, err := uc.makeSpawnAnimation(uc.spawnerTilesetRepo)
 	if err != nil {
 		panic(err)
 	}
-
-	// Инициализируем состояние спавна
-	tank.IsSpawned = false
-	tank.SpawnedAt = spawnStartTime // Сохраняем время начала спавна
+	uc.spawnAnimation = spawnAnimation
 
 	// Запускаем анимацию спавна
 	uc.animationUseCases.StartAnimation(uc.spawnAnimation)
@@ -263,13 +289,13 @@ func (uc *TankUseCases) UpdateSpawn(currentTime float64) {
 		return
 	}
 
-	// Проверяем, прошло ли достаточно времени с начала спавна (конвертируем миллисекунды в секунды)
-	if currentTime-tank.SpawnedAt >= float64(uc.spawnDurationMs)/1000.0 {
+	// Проверяем, завершилась ли анимация спавна
+	if uc.spawnAnimation != nil && uc.spawnAnimation.IsFinished() {
 		// Завершаем спавн
 		tank.IsSpawned = true
 		tank.SpawnedAt = currentTime // Обновляем время завершения спавна
 
-		// Останавливаем анимацию спавна
+		// Анимация уже остановлена (IsFinished вернет true когда циклы закончатся)
 		uc.animationUseCases.StopAnimation(uc.spawnAnimation)
 	}
 }
@@ -296,7 +322,7 @@ func (uc *TankUseCases) GetTankImageId() (string, error) {
 	}
 
 	// Во время спавна (IsSpawned == false) показываем анимацию спавна
-	if !tank.IsSpawned {
+	if !tank.IsSpawned && uc.spawnAnimation != nil {
 		return uc.spawnAnimation.GetImageId()
 	}
 
