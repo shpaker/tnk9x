@@ -45,108 +45,26 @@ gonflict/
 
 ```mermaid
 graph TB
-    subgraph "Presentation Layer (Слой представления)"
-        App[App<br/>Приложение Ebiten]
-        GameState[GameState<br/>Игровое состояние]
-        InputAdapter[InputAdapter<br/>Адаптер ввода]
-        RenderAdapter[RendererAdapter<br/>Адаптер отрисовки]
+    subgraph "Presentation Layer"
+        Adapters[Adapters<br/>Input / Render]
     end
     
-    subgraph "Application Layer (Слой приложения)"
-        GameFacade[GameStateUseCasesFacade<br/>Фасад Use Cases]
-        TankUC[TankUseCases<br/>Логика танков]
-        BulletUC[BulletUseCases<br/>Логика пуль]
-        MapUC[MapUseCases<br/>Логика карты]
-        CollisionUC[CollisionUseCases<br/>Логика коллизий]
-        AnimationUC[AnimationUseCases<br/>Логика анимаций]
-        TilesUC[TilesUseCases<br/>Логика тайлов]
+    subgraph "Application Layer"
+        UseCases[Use Cases<br/>Бизнес-логика]
     end
     
-    subgraph "Domain Layer (Доменный слой)"
-        Direction[Direction<br/>Направление]
-        Position[Position<br/>Позиция]
-        Size[Size<br/>Размер]
-        Altitude[Altitude<br/>Высота слоя]
-        TankEntity[TankEntity<br/>Сущность танка]
-        BulletEntity[BulletEntity<br/>Сущность пули]
-        BlockEntity[BlockEntity<br/>Сущность блока]
-        SpawnerEntity[SpawnerEntity<br/>Сущность спавнера]
-        TileEntity[TileEntity<br/>Сущность тайла]
+    subgraph "Domain Layer"
+        Entities[Entities<br/>Domain модели]
     end
     
-    subgraph "Infrastructure Layer (Слой инфраструктуры)"
-        GameRepos[Game Repositories<br/>In-memory хранилище]
-        ProcessedRepos[Processed Repositories<br/>Обработанные данные]
-        RawRepos[Raw Repositories<br/>Чтение файлов]
+    subgraph "Infrastructure Layer"
+        Repositories[Repositories<br/>Хранение данных]
     end
     
-    subgraph "Supporting Components"
-        Config[Config<br/>Конфигурация]
-        Utils[Utils<br/>Утилиты]
-    end
-    
-    %% Presentation -> Application
-    App -.->|композиция| GameState
-    GameState -->|использует| GameFacade
-    GameState -->|создает| InputAdapter
-    GameState -->|создает| RenderAdapter
-    
-    %% Application -> Domain
-    GameFacade -->|использует| TankUC
-    GameFacade -->|использует| BulletUC
-    GameFacade -->|использует| MapUC
-    GameFacade -->|использует| CollisionUC
-    GameFacade -->|использует| AnimationUC
-    
-    InputAdapter -->|вызывает| TankUC
-    InputAdapter -->|вызывает| BulletUC
-    RenderAdapter -->|читает данные| TankUC
-    RenderAdapter -->|читает данные| BulletUC
-    RenderAdapter -->|читает данные| MapUC
-    RenderAdapter -->|создает тайлы| TilesUC
-    
-    %% Application -> Domain (Entities)
-    TankUC -->|работает с| TankEntity
-    TankUC -->|работает с| SpawnerEntity
-    BulletUC -->|работает с| BulletEntity
-    MapUC -->|работает с| BlockEntity
-    TilesUC -->|создает| TileEntity
-    
-    %% Domain -> Types
-    TankEntity -->|использует| Direction
-    TankEntity -->|использует| Position
-    TankEntity -->|использует| Size
-    BulletEntity -->|использует| Direction
-    BulletEntity -->|использует| Position
-    BulletEntity -->|использует| Size
-    BlockEntity -->|использует| Position
-    BlockEntity -->|использует| Size
-    BlockEntity -->|использует| Altitude
-    
-    %% Application -> Infrastructure
-    TankUC -->|зависит от| GameRepos
-    BulletUC -->|зависит от| GameRepos
-    MapUC -->|зависит от| GameRepos
-    AnimationUC -->|зависит от| GameRepos
-    TilesUC -->|зависит от| ProcessedRepos
-    ProcessedRepos -->|зависит от| RawRepos
-    
-    %% Supporting components
-    App -.->|использует| Config
-    RenderAdapter -.->|использует| Utils
-    TilesUC -.->|использует| Utils
-    
-    classDef presentation fill:#e1f5ff,stroke:#01579b,stroke-width:2px
-    classDef application fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
-    classDef domain fill:#e8f5e9,stroke:#1b5e20,stroke-width:2px
-    classDef infrastructure fill:#fff3e0,stroke:#e65100,stroke-width:2px
-    classDef supporting fill:#fce4ec,stroke:#880e4f,stroke-width:2px
-    
-    class App,GameState,InputAdapter,RenderAdapter presentation
-    class GameFacade,TankUC,BulletUC,MapUC,CollisionUC,AnimationUC,TilesUC application
-    class Direction,Position,Size,Altitude,TankEntity,BulletEntity,BlockEntity,SpawnerEntity,TileEntity domain
-    class GameRepos,ProcessedRepos,RawRepos infrastructure
-    class Config,Utils supporting
+    Adapters --> UseCases
+    UseCases --> Entities
+    Repositories --> Entities
+    UseCases --> Repositories
 ```
 
 ### Принципы архитектуры
