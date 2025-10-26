@@ -38,10 +38,9 @@ func TestBlockEntity_GetImageId_NilImageGetter(t *testing.T) {
 			Name:     "test",
 			Position: Position{X: 0, Y: 0},
 		},
-		Properties: &BlockProperties{
-			Collidable: true,
-		},
+		Properties:    &BlockProperties{},
 		WorldPosition: Position{X: 0, Y: 0},
+		Altitude:      SURFACE,
 	}
 
 	// Пытаемся получить ID изображения
@@ -66,10 +65,9 @@ func TestBlockEntity_GetImageId_EmptyImageId(t *testing.T) {
 			Name:     "test",
 			Position: Position{X: 0, Y: 0},
 		},
-		Properties: &BlockProperties{
-			Collidable: true,
-		},
+		Properties:    &BlockProperties{},
 		WorldPosition: Position{X: 0, Y: 0},
+		Altitude:      SURFACE,
 	}
 
 	// Пытаемся получить ID изображения
@@ -92,10 +90,9 @@ func TestBlockEntity_GetImageId_ValidImageId(t *testing.T) {
 			Name:     "test",
 			Position: Position{X: 0, Y: 0},
 		},
-		Properties: &BlockProperties{
-			Collidable: true,
-		},
+		Properties:    &BlockProperties{},
 		WorldPosition: Position{X: 0, Y: 0},
+		Altitude:      SURFACE,
 	}
 
 	// Пытаемся получить ID изображения

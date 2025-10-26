@@ -14,12 +14,12 @@ import (
 
 // RendererAdapter адаптер для рендеринга игры
 type RendererAdapter struct {
-	mapUseCases         use_cases.IMapUseCases
-	tankUseCases        use_cases.ITankUseCases
-	bulletUseCases      use_cases.IBulletUseCases
-	mapTilesUseCases    *use_cases.TilesUseCases
-	playerTilesUseCases *use_cases.TilesUseCases
-	bulletTilesUseCases *use_cases.TilesUseCases
+	mapUseCases          use_cases.IMapUseCases
+	tankUseCases         use_cases.ITankUseCases
+	bulletUseCases       use_cases.IBulletUseCases
+	mapTilesUseCases     *use_cases.TilesUseCases
+	playerTilesUseCases  *use_cases.TilesUseCases
+	bulletTilesUseCases  *use_cases.TilesUseCases
 	spawnerTilesUseCases *use_cases.TilesUseCases
 }
 
@@ -34,12 +34,12 @@ func NewRendererAdapter(
 	spawnerTilesUseCases *use_cases.TilesUseCases,
 ) *RendererAdapter {
 	return &RendererAdapter{
-		mapUseCases:         mapUseCases,
-		tankUseCases:        tankUseCases,
-		bulletUseCases:      bulletUseCases,
-		mapTilesUseCases:    mapTilesUseCases,
-		playerTilesUseCases: playerTilesUseCases,
-		bulletTilesUseCases: bulletTilesUseCases,
+		mapUseCases:          mapUseCases,
+		tankUseCases:         tankUseCases,
+		bulletUseCases:       bulletUseCases,
+		mapTilesUseCases:     mapTilesUseCases,
+		playerTilesUseCases:  playerTilesUseCases,
+		bulletTilesUseCases:  bulletTilesUseCases,
 		spawnerTilesUseCases: spawnerTilesUseCases,
 	}
 }
@@ -239,7 +239,80 @@ func (r *RendererAdapter) drawBullets(screen *ebiten.Image) {
 
 // DrawAll отрисовывает все элементы игры
 func (r *RendererAdapter) DrawAll(screen *ebiten.Image) {
-	r.drawMap(screen)
+	// Сначала отрисовываем серый фон экрана
+	r.drawScreenBackground(screen)
+	// Затем отрисовываем черный фон карты
+	r.drawMapBackground(screen)
+	// Затем отрисовываем блоки уровня GROUND
+	r.drawBlocksByAltitude(screen, types.GROUND)
+	// Затем отрисовываем танк (если на уровне SURFACE)
 	r.drawTank(screen)
+	// Затем отрисовываем пули (если на уровне SURFACE)
 	r.drawBullets(screen)
+	// Затем отрисовываем блоки уровня SURFACE (если есть)
+	r.drawBlocksByAltitude(screen, types.SURFACE)
+	// В конце отрисовываем блоки уровня AIR (деревья)
+	r.drawBlocksByAltitude(screen, types.AIR)
+}
+
+// drawScreenBackground отрисовывает серый фон экрана
+func (r *RendererAdapter) drawScreenBackground(screen *ebiten.Image) {
+	vector.FillRect(
+		screen,
+		0,
+		0,
+		float32(screen.Bounds().Dx()),
+		float32(screen.Bounds().Dy()),
+		color.Gray{Y: 128},
+		false,
+	)
+}
+
+// drawMapBackground отрисовывает черный фон карты
+func (r *RendererAdapter) drawMapBackground(screen *ebiten.Image) {
+	vector.FillRect(
+		screen,
+		float32(use_cases.MapOffset),
+		float32(use_cases.MapOffset),
+		float32(use_cases.MapWidthHeight),
+		float32(use_cases.MapWidthHeight),
+		color.Black,
+		false,
+	)
+}
+
+// drawBlocksByAltitude отрисовывает блоки на определенном уровне высоты
+func (r *RendererAdapter) drawBlocksByAltitude(screen *ebiten.Image, altitude types.Altitude) {
+	blocks := r.mapUseCases.GetBlocks()
+	for i, block := range blocks {
+		// Пропускаем блоки других уровней
+		if block.Altitude != altitude {
+			continue
+		}
+
+		// Получаем ID изображения блока
+		imageId, err := block.ImageGetter.GetImageId()
+		if err != nil {
+			log.Printf("ERROR: Block %d error getting image ID: %v", i, err)
+			continue
+		}
+
+		// Получаем изображение блока через TilesUseCases
+		imageData, err := r.mapTilesUseCases.GetImage(imageId)
+		if err != nil {
+			log.Printf("ERROR: Block %d error loading image '%s': %v", i, imageId, err)
+			continue
+		}
+
+		// Конвертируем image.Image в ebiten.Image
+		image := ebiten.NewImageFromImage(imageData)
+
+		op := &ebiten.DrawImageOptions{}
+		// Предполагаем, что блоки имеют координаты X, Y в WorldPosition
+		op.GeoM.Translate(
+			use_cases.MapOffset+block.WorldPosition.X*use_cases.TileMinSize,
+			use_cases.MapOffset+block.WorldPosition.Y*use_cases.TileMinSize,
+		)
+		screen.DrawImage(image, op)
+	}
 }

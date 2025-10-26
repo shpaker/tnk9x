@@ -9,6 +9,7 @@ type BulletEntity struct {
 	Speed         float64
 	Direction     Direction
 	Owner         *TankEntity
+	Altitude      Altitude
 }
 
 // GetImageId возвращает ID изображения пули (реализует IImageIdGetter)
@@ -32,4 +33,9 @@ func (b *BulletEntity) GetSize() Size {
 // GetWorldPosition возвращает позицию пули в мире
 func (b *BulletEntity) GetWorldPosition() Position {
 	return b.WorldPosition
+}
+
+// GetAltitude возвращает высоту пули
+func (b *BulletEntity) GetAltitude() Altitude {
+	return b.Altitude
 }

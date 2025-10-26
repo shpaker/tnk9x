@@ -8,6 +8,7 @@ type BlockEntity struct {
 	Data          *BlockData
 	Properties    *BlockProperties
 	WorldPosition Position
+	Altitude      Altitude
 }
 
 // BlockData содержит данные блока
@@ -18,7 +19,6 @@ type BlockData struct {
 
 // BlockProperties содержит свойства блока
 type BlockProperties struct {
-	Collidable bool
 }
 
 // GetImageId возвращает ID изображения блока
@@ -44,6 +44,11 @@ func (b *BlockEntity) GetWorldPosition() Position {
 	return b.WorldPosition
 }
 
+// GetAltitude возвращает высоту блока
+func (b *BlockEntity) GetAltitude() Altitude {
+	return b.Altitude
+}
+
 // NewBlockEntity создает новый BlockEntity с указанными параметрами
 func NewBlockEntity(
 	blockType string,
@@ -51,15 +56,20 @@ func NewBlockEntity(
 	positionY float64,
 	imageGetter IImageIdGetter,
 ) *BlockEntity {
+	altitude := SURFACE // По умолчанию блоки на уровне поверхности
+	// Деревья (Forest) рисуются выше игрока
+	if blockType == string(Forest) {
+		altitude = AIR
+	}
+
 	return &BlockEntity{
 		ImageGetter: imageGetter,
 		Data: &BlockData{
 			Name:     BlockType(blockType),
 			Position: Position{X: positionX, Y: positionY},
 		},
-		Properties: &BlockProperties{
-			Collidable: true, // По умолчанию блоки коллизибельны
-		},
+		Properties:    &BlockProperties{},
 		WorldPosition: Position{X: positionX, Y: positionY},
+		Altitude:      altitude,
 	}
 }

@@ -11,6 +11,7 @@ type TankEntity struct {
 	Direction       Direction
 	IsSpawned       bool    // Флаг спавна танка (по умолчанию false)
 	SpawnedAt       float64 // Время спавна танка
+	Altitude        Altitude
 }
 
 // GetImageId возвращает ID изображения танка (реализует IImageIdGetter)
@@ -34,4 +35,9 @@ func (t *TankEntity) GetSize() Size {
 // GetWorldPosition возвращает позицию танка в мире
 func (t *TankEntity) GetWorldPosition() Position {
 	return t.WorldPosition
+}
+
+// GetAltitude возвращает высоту танка
+func (t *TankEntity) GetAltitude() Altitude {
+	return t.Altitude
 }

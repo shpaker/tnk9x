@@ -23,6 +23,12 @@ func NewBulletUseCases(bulletsRepo game.IBulletsRepository, tilesUseCases ITiles
 
 // ShootBullet создает новую пулю от указанного танка
 func (uc *BulletUseCases) ShootBullet(tank *types.TankEntity) error {
+	// Проверяем, заспавнен ли танк
+	if !tank.IsSpawned {
+		log.Printf("DEBUG: Cannot shoot - tank is not spawned yet")
+		return nil // Просто игнорируем выстрел
+	}
+
 	log.Printf("DEBUG: ShootBullet called for tank at position (%.2f, %.2f) direction %s",
 		tank.WorldPosition.X, tank.WorldPosition.Y, tank.Direction)
 
@@ -59,6 +65,7 @@ func (uc *BulletUseCases) ShootBullet(tank *types.TankEntity) error {
 		Speed:     120.0, // Скорость пули
 		Direction: tank.Direction,
 		Owner:     tank,
+		Altitude:  types.SURFACE, // Пули на уровне поверхности
 	}
 
 	log.Printf("DEBUG: Created bullet at position (%.2f, %.2f) direction %s",

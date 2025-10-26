@@ -26,6 +26,16 @@ const (
 	Ice    BlockType = "ice"
 )
 
+// Altitude представляет высоту объекта
+type Altitude int
+
+// Константы уровней высоты
+const (
+	GROUND  Altitude = 0
+	SURFACE Altitude = 1
+	AIR     Altitude = 2
+)
+
 // Position представляет координаты в 2D пространстве
 type Position struct {
 	X float64

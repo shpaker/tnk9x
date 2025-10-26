@@ -91,11 +91,6 @@ func (uc *CollisionUseCases) checkBulletWallCollisions() {
 
 			block := uc.createBlockFromWall(wall)
 
-			// Проверяем, является ли блок коллидируемым
-			if block.Properties != nil && !block.Properties.Collidable {
-				continue
-			}
-
 			// Проверяем коллизию пули с блоком
 			if uc.CheckColliders(bullet, &block) {
 				// Если блок - кирпичная стена, помечаем для удаления
@@ -167,6 +162,7 @@ func (uc *CollisionUseCases) createBlockFromWall(wall types.BlockEntity) types.B
 			X: wall.WorldPosition.X * TileMinSize,
 			Y: wall.WorldPosition.Y * TileMinSize,
 		},
+		Altitude: wall.Altitude,
 	}
 }
 
@@ -209,6 +205,11 @@ func (uc *CollisionUseCases) CheckColliders(
 	obj1 IMapObject,
 	obj2 IMapObject,
 ) bool {
+	// Проверяем, что объекты на одном уровне высоты
+	if obj1.GetAltitude() != obj2.GetAltitude() {
+		return false
+	}
+
 	pos1 := obj1.GetWorldPosition()
 	size1 := obj1.GetSize()
 	pos2 := obj2.GetWorldPosition()

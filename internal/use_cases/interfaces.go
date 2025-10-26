@@ -11,6 +11,7 @@ type IMapObject interface {
 	GetSize() types.Size
 	GetWorldPosition() types.Position
 	GetScreenPosition() types.Position
+	GetAltitude() types.Altitude
 }
 
 // ITankUseCases интерфейс для операций с танком
@@ -20,7 +21,7 @@ type ITankUseCases interface {
 	StopTank(byCollision bool) error
 	GetTank() (*types.TankEntity, error)
 	GetDirection() types.Direction
-	StartSpawn()
+	StartSpawn(spawnStartTime float64)
 	UpdateSpawn(currentTime float64)
 	IsSpawning() bool
 	GetSpawnAnimation() *types.TileAnimationEntity

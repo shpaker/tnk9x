@@ -41,6 +41,22 @@ func NewInputAdapter(
 	}
 }
 
+// CreateDefault создает InputAdapter с настройками по умолчанию
+func CreateDefaultInputAdapter(
+	tankUseCases use_cases.ITankUseCases,
+	bulletUseCases use_cases.IBulletUseCases,
+) *InputAdapter {
+	return NewInputAdapter(
+		tankUseCases,
+		bulletUseCases,
+		ebiten.KeyW,     // up
+		ebiten.KeyS,     // down
+		ebiten.KeyA,     // left
+		ebiten.KeyD,     // right
+		ebiten.KeySpace, // shoot
+	)
+}
+
 // Update обрабатывает пользовательский ввод
 func (a *InputAdapter) Update() {
 	a.keyPressedEvents()

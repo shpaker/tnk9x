@@ -15,8 +15,6 @@ type TankUseCases struct {
 	tank              *types.TankEntity // Теперь указатель, может быть nil
 	tankAnimation     *types.TileAnimationEntity
 	spawnAnimation    *types.TileAnimationEntity // Анимация спавна
-	spawnStartTime    float64                    // Время начала спавна
-	isSpawning        bool                       // Флаг процесса спавна
 }
 
 // NewTankUseCases создает новый экземпляр TankUseCases
@@ -70,8 +68,9 @@ func (uc *TankUseCases) makeTank() (types.TankEntity, *types.TileAnimationEntity
 		},
 		Speed:     0,
 		Direction: types.DirectionUp,
-		IsSpawned: false, // Танк не заспавнен по умолчанию
-		SpawnedAt: 0,     // Время спавна будет установлено позже
+		IsSpawned: false,         // Танк не заспавнен по умолчанию
+		SpawnedAt: 0,             // Время спавна будет установлено позже
+		Altitude:  types.SURFACE, // Танки на уровне поверхности
 	}
 
 	return player, tankAnimation, nil
@@ -205,9 +204,13 @@ func (uc *TankUseCases) MoveTank(
 }
 
 // StartSpawn начинает процесс спавна танка
-func (uc *TankUseCases) StartSpawn() {
-	if uc.isSpawning || (uc.tank != nil && uc.tank.IsSpawned) {
-		return // Уже спавнится или уже заспавнен
+func (uc *TankUseCases) StartSpawn(spawnStartTime float64) {
+	// Проверяем, не спавнится ли танк уже (IsSpawned == false означает процесс спавна)
+	if uc.tank != nil && !uc.tank.IsSpawned {
+		return // Уже спавнится
+	}
+	if uc.tank != nil && uc.tank.IsSpawned {
+		return // Уже заспавнен
 	}
 
 	// Создаем танк
@@ -218,10 +221,9 @@ func (uc *TankUseCases) StartSpawn() {
 	uc.tank = &tank
 	uc.tankAnimation = tankAnimation
 
-	uc.isSpawning = true
-	uc.spawnStartTime = 0 // Начинаем с 0
+	// Инициализируем состояние спавна
 	uc.tank.IsSpawned = false
-	uc.tank.SpawnedAt = 0 // Время спавна
+	uc.tank.SpawnedAt = spawnStartTime // Сохраняем время начала спавна
 
 	// Запускаем анимацию спавна
 	uc.animationUseCases.StartAnimation(uc.spawnAnimation)
@@ -229,16 +231,16 @@ func (uc *TankUseCases) StartSpawn() {
 
 // UpdateSpawn обновляет процесс спавна
 func (uc *TankUseCases) UpdateSpawn(currentTime float64) {
-	if !uc.isSpawning {
+	// Проверяем, идет ли спавн (IsSpawned == false означает процесс спавна)
+	if uc.tank == nil || uc.tank.IsSpawned {
 		return
 	}
 
-	// Проверяем, прошло ли 4 секунды
-	if currentTime-uc.spawnStartTime >= 4.0 {
+	// Проверяем, прошло ли 2 секунды с начала спавна
+	if currentTime-uc.tank.SpawnedAt >= 2.0 {
 		// Завершаем спавн
-		uc.isSpawning = false
 		uc.tank.IsSpawned = true
-		uc.tank.SpawnedAt = currentTime // Устанавливаем время спавна
+		uc.tank.SpawnedAt = currentTime // Обновляем время завершения спавна
 
 		// Останавливаем анимацию спавна
 		uc.animationUseCases.StopAnimation(uc.spawnAnimation)
@@ -247,7 +249,7 @@ func (uc *TankUseCases) UpdateSpawn(currentTime float64) {
 
 // IsSpawning возвращает true, если танк в процессе спавна
 func (uc *TankUseCases) IsSpawning() bool {
-	return uc.isSpawning
+	return uc.tank != nil && !uc.tank.IsSpawned
 }
 
 // GetSpawnAnimation возвращает анимацию спавна
@@ -261,8 +263,8 @@ func (uc *TankUseCases) GetTankImageId() (string, error) {
 		return "", errors.New("tank not created yet")
 	}
 
-	if uc.isSpawning {
-		// Во время спавна показываем анимацию спавна
+	// Во время спавна (IsSpawned == false) показываем анимацию спавна
+	if !uc.tank.IsSpawned {
 		return uc.spawnAnimation.GetImageId()
 	}
 
