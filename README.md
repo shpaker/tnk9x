@@ -41,88 +41,157 @@ gonflict/
 
 Проект следует принципам **Clean Architecture**:
 
-### High-Level Design (HLD)
+### Диаграмма слоев архитектуры
 
 ```mermaid
 graph TB
-    subgraph "Presentation Layer"
-        App[App]
-        GameState[GameState]
-        InputAdapter[InputAdapter]
-        RenderAdapter[RendererAdapter]
+    subgraph "Presentation Layer (Слой представления)"
+        App[App<br/>Приложение Ebiten]
+        GameState[GameState<br/>Игровое состояние]
+        InputAdapter[InputAdapter<br/>Адаптер ввода]
+        RenderAdapter[RendererAdapter<br/>Адаптер отрисовки]
     end
     
-    subgraph "Application Layer"
-        TankUC[TankUseCases]
-        BulletUC[BulletUseCases]
-        MapUC[MapUseCases]
-        CollisionUC[CollisionUseCases]
-        AnimationUC[AnimationUseCases]
-        TilesUC[TilesUseCases]
+    subgraph "Application Layer (Слой приложения)"
+        GameFacade[GameStateUseCasesFacade<br/>Фасад Use Cases]
+        TankUC[TankUseCases<br/>Логика танков]
+        BulletUC[BulletUseCases<br/>Логика пуль]
+        MapUC[MapUseCases<br/>Логика карты]
+        CollisionUC[CollisionUseCases<br/>Логика коллизий]
+        AnimationUC[AnimationUseCases<br/>Логика анимаций]
+        TilesUC[TilesUseCases<br/>Логика тайлов]
     end
     
-    subgraph "Domain Layer"
-        Entities[Domain Entities]
-        Types[Domain Types]
-        Interfaces[Domain Interfaces]
+    subgraph "Domain Layer (Доменный слой)"
+        Direction[Direction<br/>Направление]
+        Position[Position<br/>Позиция]
+        Size[Size<br/>Размер]
+        Altitude[Altitude<br/>Высота слоя]
+        TankEntity[TankEntity<br/>Сущность танка]
+        BulletEntity[BulletEntity<br/>Сущность пули]
+        BlockEntity[BlockEntity<br/>Сущность блока]
+        SpawnerEntity[SpawnerEntity<br/>Сущность спавнера]
+        TileEntity[TileEntity<br/>Сущность тайла]
     end
     
-    subgraph "Data Layer"
-        GameRepos[Game Repositories]
-        ProcessedRepos[Processed Repositories]
-        RawRepos[Raw Repositories]
+    subgraph "Infrastructure Layer (Слой инфраструктуры)"
+        GameRepos[Game Repositories<br/>In-memory хранилище]
+        ProcessedRepos[Processed Repositories<br/>Обработанные данные]
+        RawRepos[Raw Repositories<br/>Чтение файлов]
     end
     
-    subgraph "Infrastructure"
-        Config[Config]
-        Utils[Utils]
+    subgraph "Supporting Components"
+        Config[Config<br/>Конфигурация]
+        Utils[Utils<br/>Утилиты]
     end
     
-    App --> GameState
-    GameState --> InputAdapter
-    GameState --> RenderAdapter
-    GameState --> TankUC
-    GameState --> BulletUC
-    GameState --> CollisionUC
-    GameState --> AnimationUC
+    %% Presentation -> Application
+    App -.->|композиция| GameState
+    GameState -->|использует| GameFacade
+    GameState -->|создает| InputAdapter
+    GameState -->|создает| RenderAdapter
     
-    InputAdapter --> TankUC
-    InputAdapter --> BulletUC
-    RenderAdapter --> TankUC
-    RenderAdapter --> BulletUC
-    RenderAdapter --> MapUC
-    RenderAdapter --> TilesUC
+    %% Application -> Domain
+    GameFacade -->|использует| TankUC
+    GameFacade -->|использует| BulletUC
+    GameFacade -->|использует| MapUC
+    GameFacade -->|использует| CollisionUC
+    GameFacade -->|использует| AnimationUC
     
-    TankUC --> Entities
-    BulletUC --> Entities
-    MapUC --> Entities
-    CollisionUC --> Entities
-    TilesUC --> Entities
-    AnimationUC --> Entities
-    Entities --> Types
-    Entities --> Interfaces
+    InputAdapter -->|вызывает| TankUC
+    InputAdapter -->|вызывает| BulletUC
+    RenderAdapter -->|читает данные| TankUC
+    RenderAdapter -->|читает данные| BulletUC
+    RenderAdapter -->|читает данные| MapUC
+    RenderAdapter -->|создает тайлы| TilesUC
     
-    TankUC --> GameRepos
-    BulletUC --> GameRepos
-    MapUC --> ProcessedRepos
-    CollisionUC --> GameRepos
-    TilesUC --> ProcessedRepos
-    AnimationUC --> GameRepos
-    ProcessedRepos --> RawRepos
+    %% Application -> Domain (Entities)
+    TankUC -->|работает с| TankEntity
+    TankUC -->|работает с| SpawnerEntity
+    BulletUC -->|работает с| BulletEntity
+    MapUC -->|работает с| BlockEntity
+    TilesUC -->|создает| TileEntity
     
-    App --> Config
-    GameState --> Config
+    %% Domain -> Types
+    TankEntity -->|использует| Direction
+    TankEntity -->|использует| Position
+    TankEntity -->|использует| Size
+    BulletEntity -->|использует| Direction
+    BulletEntity -->|использует| Position
+    BulletEntity -->|использует| Size
+    BlockEntity -->|использует| Position
+    BlockEntity -->|использует| Size
+    BlockEntity -->|использует| Altitude
     
-    TilesUC --> Utils
-    RenderAdapter --> Utils
+    %% Application -> Infrastructure
+    TankUC -->|зависит от| GameRepos
+    BulletUC -->|зависит от| GameRepos
+    MapUC -->|зависит от| GameRepos
+    AnimationUC -->|зависит от| GameRepos
+    TilesUC -->|зависит от| ProcessedRepos
+    ProcessedRepos -->|зависит от| RawRepos
+    
+    %% Supporting components
+    App -.->|использует| Config
+    RenderAdapter -.->|использует| Utils
+    TilesUC -.->|использует| Utils
+    
+    classDef presentation fill:#e1f5ff,stroke:#01579b,stroke-width:2px
+    classDef application fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    classDef domain fill:#e8f5e9,stroke:#1b5e20,stroke-width:2px
+    classDef infrastructure fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    classDef supporting fill:#fce4ec,stroke:#880e4f,stroke-width:2px
+    
+    class App,GameState,InputAdapter,RenderAdapter presentation
+    class GameFacade,TankUC,BulletUC,MapUC,CollisionUC,AnimationUC,TilesUC application
+    class Direction,Position,Size,Altitude,TankEntity,BulletEntity,BlockEntity,SpawnerEntity,TileEntity domain
+    class GameRepos,ProcessedRepos,RawRepos infrastructure
+    class Config,Utils supporting
 ```
 
-### Принципы
+### Принципы архитектуры
 
-1. **Dependency Rule** - зависимости направлены внутрь (к бизнес-логике)
-2. **Interface Segregation** - интерфейсы определяются там, где используются
-3. **Dependency Inversion** - зависимость от абстракций, а не реализаций
-4. **Single Responsibility** - каждый компонент отвечает за одну задачу
+1. **Dependency Rule (Правило зависимостей)** - зависимости направлены внутрь к ядру:
+   - Presentation Layer зависит от Application Layer
+   - Application Layer зависит от Domain Layer
+   - Infrastructure Layer зависит от Domain Layer
+
+2. **Interface Segregation** - интерфейсы определяются там, где используются:
+   - Use Cases определяют свои интерфейсы в `interfaces.go`
+   - Repositories предоставляют абстракции для данных
+
+3. **Dependency Inversion** - зависимость от абстракций, а не реализаций:
+   - GameState зависит от интерфейсов Use Cases
+   - Use Cases зависят от интерфейсов Repositories
+   - Конкретные реализации незначимы для бизнес-логики
+
+4. **Single Responsibility** - каждый компонент отвечает за одну задачу:
+   - `TankUseCases` - только логика танков
+   - `BulletUseCases` - только логика пуль
+   - `InputAdapter` - только обработка ввода
+   - `RendererAdapter` - только отрисовка
+
+### Поток данных
+
+```
+[Пользователь] 
+    ↓
+[InputAdapter] → [TankUseCases / BulletUseCases]
+    ↓
+[GameStateUseCasesFacade] → [Update/Logic]
+    ↓
+[Repositories] ← [Domain Entities]
+    ↓
+[RenderAdapter] → [Экран]
+```
+
+### Структура слоев
+
+- **Presentation Layer** (синий) - взаимодействие с пользователем и внешним миром
+- **Application Layer** (фиолетовый) - бизнес-логика и правила игры
+- **Domain Layer** (зеленый) - сущности и типы игры
+- **Infrastructure Layer** (оранжевый) - хранение и загрузка данных
+- **Supporting Components** (розовый) - вспомогательные компоненты
 
 ## 🚀 Быстрый старт
 
@@ -229,42 +298,57 @@ just help             # Показать все команды
 
 ## 📚 Компоненты системы
 
-### Use Cases (Бизнес-логика)
+### Presentation Layer (Слой представления)
 
-- **TankUseCases** - движение, поворот, управление танком
-- **BulletUseCases** - создание, обновление, удаление пуль
-- **MapUseCases** - работа с блоками карты
-- **CollisionUseCases** - проверка коллизий между объектами
-- **AnimationUseCases** - управление анимациями
-- **TilesUseCases** - создание статических и анимированных тайлов
+- **App** - главное приложение Ebiten, точка входа
+- **GameState** - игровое состояние, управляет игровым процессом
+- **InputAdapter** - адаптер ввода с клавиатуры (WASD, Space)
+- **RendererAdapter** - адаптер отрисовки игры через Ebiten
 
-### Adapters (Инфраструктура)
+### Application Layer (Слой приложения)
 
-- **InputAdapter** - обработка ввода с клавиатуры
-- **RendererAdapter** - отрисовка игры через Ebiten
+- **GameStateUseCasesFacade** - фасад для оркестрации всех Use Cases
+- **TankUseCases** - бизнес-логика танков (движение, поворот, спавн)
+- **BulletUseCases** - бизнес-логика пуль (создание, обновление, удаление)
+- **MapUseCases** - бизнес-логика карты (работа с блоками)
+- **CollisionUseCases** - бизнес-логика коллизий между объектами
+- **AnimationUseCases** - бизнес-логика анимаций
+- **TilesUseCases** - бизнес-логика тайлов (статические и анимированные)
 
-### Repositories (Данные)
+### Domain Layer (Доменный слой)
 
-- **BlocksRepository** - хранение блоков карты (in-memory)
-- **BulletsRepository** - хранение пуль (in-memory)
-- **AnimationsRepository** - хранение анимаций (in-memory)
-- **MapsDataRepository** - загрузка уровней из файлов
-- **TilesetRepository** - загрузка и кеширование изображений из тайлсетов
+**Типы данных:**
+- **Direction** - направление движения (UP, DOWN, LEFT, RIGHT)
+- **Position** - позиция в мире (X, Y)
+- **Size** - размер объекта (Width, Height)
+- **Altitude** - высота слоя отрисовки
+
+**Сущности:**
+- **TankEntity** - сущность танка игрока
+- **BulletEntity** - сущность пули
+- **BlockEntity** - сущность блока карты
+- **SpawnerEntity** - сущность спавнера танка
+- **TileStaticEntity** - статический тайл для отрисовки
+- **TileAnimationEntity** - анимированный тайл
+
+### Infrastructure Layer (Слой инфраструктуры)
+
+**Game Repositories (In-memory):**
+- **BlocksRepository** - хранилище блоков карты
+- **BulletsRepository** - хранилище пуль
+- **AnimationsRepository** - хранилище активных анимаций
+
+**Processed Repositories:**
+- **MapsDataRepository** - загрузка и обработка уровней
+- **TilesetRepository** - загрузка и кеширование тайлсетов
+
+**Raw Repositories:**
 - **FileRepository** - чтение файлов из assets
 
-### Types (Доменные сущности)
+### Supporting Components (Вспомогательные компоненты)
 
-- **TankEntity** - сущность танка с ImageGetter
-- **BulletEntity** - сущность пули с ImageGetter
-- **BlockEntity** - сущность блока с ImageGetter
-- **SpawnerEntity** - сущность спавнера
-- **TileStaticEntity** - статический тайл
-- **TileAnimationEntity** - анимированный тайл
-- **IImageIdGetter** - интерфейс для получения ID изображения
-
-### States (Состояния)
-
-- **GameState** - основное игровое состояние
+- **Config** - конфигурация приложения
+- **Utils** - вспомогательные функции
 
 ## 🧪 Тестирование
 

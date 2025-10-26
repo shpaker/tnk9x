@@ -74,10 +74,8 @@ images:
 
 animations:
   base_tank:
-    - image: tank_base
-      duration: 100
-    - image: tank_base_2
-      duration: 100
+    duration: 100
+    frames: [tank_base, tank_base_2]
 `)
 }
 
@@ -86,8 +84,8 @@ func TestNewTilesetRepository_Success(t *testing.T) {
 	mockFileRepo := NewMockTilesetFileRepository()
 
 	// Добавляем тестовые файлы
-	mockFileRepo.AddFile("tiles/blocks.yml", createTestBlocksConfig())
-	mockFileRepo.AddImage("tiles/blocks", createTestImage(32, 32))
+	mockFileRepo.AddFile("blocks.yml", createTestBlocksConfig())
+	mockFileRepo.AddImage("blocks", createTestImage(32, 32))
 
 	// Создаем репозиторий
 	repo, err := NewTilesetDataRepository(mockFileRepo, "blocks")
@@ -116,7 +114,7 @@ func TestNewTilesetRepository_Success(t *testing.T) {
 func TestNewTilesetRepository_ConfigNotFound(t *testing.T) {
 	// Создаем мок репозитория без конфигурации
 	mockFileRepo := NewMockTilesetFileRepository()
-	mockFileRepo.AddImage("tiles/blocks", createTestImage(32, 32))
+	mockFileRepo.AddImage("blocks", createTestImage(32, 32))
 
 	// Создаем репозиторий
 	_, err := NewTilesetDataRepository(mockFileRepo, "blocks")
@@ -130,7 +128,7 @@ func TestNewTilesetRepository_ConfigNotFound(t *testing.T) {
 func TestNewTilesetRepository_ImageNotFound(t *testing.T) {
 	// Создаем мок репозитория без изображения
 	mockFileRepo := NewMockTilesetFileRepository()
-	mockFileRepo.AddFile("tiles/blocks.yml", createTestBlocksConfig())
+	mockFileRepo.AddFile("blocks.yml", createTestBlocksConfig())
 
 	// Создаем репозиторий
 	_, err := NewTilesetDataRepository(mockFileRepo, "blocks")
@@ -144,8 +142,8 @@ func TestNewTilesetRepository_ImageNotFound(t *testing.T) {
 func TestGetImage_Success(t *testing.T) {
 	// Создаем мок репозитория
 	mockFileRepo := NewMockTilesetFileRepository()
-	mockFileRepo.AddFile("tiles/blocks.yml", createTestBlocksConfig())
-	mockFileRepo.AddImage("tiles/blocks", createTestImage(32, 32))
+	mockFileRepo.AddFile("blocks.yml", createTestBlocksConfig())
+	mockFileRepo.AddImage("blocks", createTestImage(32, 32))
 
 	// Создаем репозиторий
 	repo, err := NewTilesetDataRepository(mockFileRepo, "blocks")
@@ -175,8 +173,8 @@ func TestGetImage_Success(t *testing.T) {
 func TestGetImage_NotFound(t *testing.T) {
 	// Создаем мок репозитория
 	mockFileRepo := NewMockTilesetFileRepository()
-	mockFileRepo.AddFile("tiles/blocks.yml", createTestBlocksConfig())
-	mockFileRepo.AddImage("tiles/blocks", createTestImage(32, 32))
+	mockFileRepo.AddFile("blocks.yml", createTestBlocksConfig())
+	mockFileRepo.AddImage("blocks", createTestImage(32, 32))
 
 	// Создаем репозиторий
 	repo, err := NewTilesetDataRepository(mockFileRepo, "blocks")
@@ -201,8 +199,8 @@ func TestGetImage_NotFound(t *testing.T) {
 func TestGetAnimationData_Success(t *testing.T) {
 	// Создаем мок репозитория
 	mockFileRepo := NewMockTilesetFileRepository()
-	mockFileRepo.AddFile("tiles/player.yml", createTestPlayerConfig())
-	mockFileRepo.AddImage("tiles/player", createTestImage(64, 32))
+	mockFileRepo.AddFile("player.yml", createTestPlayerConfig())
+	mockFileRepo.AddImage("player", createTestImage(64, 32))
 
 	// Создаем репозиторий
 	repo, err := NewTilesetDataRepository(mockFileRepo, "player")
@@ -223,6 +221,7 @@ func TestGetAnimationData_Success(t *testing.T) {
 	}
 
 	// Проверяем, что первая анимация имеет правильные данные
+	// В новом формате frames конвертируется в AnimationData
 	if animationData[0].Image != "tank_base" {
 		t.Errorf("Ожидался image 'tank_base', получен '%s'", animationData[0].Image)
 	}
@@ -230,13 +229,21 @@ func TestGetAnimationData_Success(t *testing.T) {
 	if animationData[0].Duration != 100 {
 		t.Errorf("Ожидалась длительность 100, получена %d", animationData[0].Duration)
 	}
+
+	// Проверяем второй кадр
+	if len(animationData) < 2 {
+		t.Fatal("Ожидалось 2 кадра")
+	}
+	if animationData[1].Image != "tank_base_2" {
+		t.Errorf("Ожидался image 'tank_base_2', получен '%s'", animationData[1].Image)
+	}
 }
 
 func TestGetAnimationData_NotFound(t *testing.T) {
 	// Создаем мок репозитория
 	mockFileRepo := NewMockTilesetFileRepository()
-	mockFileRepo.AddFile("tiles/player.yml", createTestPlayerConfig())
-	mockFileRepo.AddImage("tiles/player", createTestImage(64, 32))
+	mockFileRepo.AddFile("player.yml", createTestPlayerConfig())
+	mockFileRepo.AddImage("player", createTestImage(64, 32))
 
 	// Создаем репозиторий
 	repo, err := NewTilesetDataRepository(mockFileRepo, "player")
@@ -267,13 +274,15 @@ images:
   tank_base: [0, 0]
 
 animations:
-  base_tank: []
+  base_tank:
+    duration: 100
+    frames: []
 `)
 
 	// Создаем мок репозитория
 	mockFileRepo := NewMockTilesetFileRepository()
-	mockFileRepo.AddFile("tiles/player.yml", configWithEmptyFrames)
-	mockFileRepo.AddImage("tiles/player", createTestImage(32, 32))
+	mockFileRepo.AddFile("player.yml", configWithEmptyFrames)
+	mockFileRepo.AddImage("player", createTestImage(32, 32))
 
 	// Создаем репозиторий
 	repo, err := NewTilesetDataRepository(mockFileRepo, "player")
@@ -332,8 +341,8 @@ func TestTilesetRepository_Integration(t *testing.T) {
 func TestTilesetRepository_Cache(t *testing.T) {
 	// Создаем мок репозитория
 	mockFileRepo := NewMockTilesetFileRepository()
-	mockFileRepo.AddFile("tiles/blocks.yml", createTestBlocksConfig())
-	mockFileRepo.AddImage("tiles/blocks", createTestImage(32, 32))
+	mockFileRepo.AddFile("blocks.yml", createTestBlocksConfig())
+	mockFileRepo.AddImage("blocks", createTestImage(32, 32))
 
 	// Создаем репозиторий
 	repo, err := NewTilesetDataRepository(mockFileRepo, "blocks")
