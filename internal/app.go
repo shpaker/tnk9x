@@ -75,6 +75,7 @@ func New(cfg *Config) *App {
 	// Создаем игровую конфигурацию из общей конфигурации
 	gameConfig := &states.GameConfig{
 		SpawnDurationMs: cfg.SpawnDurationMs,
+		EnemySpawners:   cfg.EnemySpawners,
 	}
 
 	// Создаем GameState с переданными репозиториями

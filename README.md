@@ -67,6 +67,60 @@ graph TB
     UseCases --> Repositories
 ```
 
+### Диаграмма взаимодействия компонентов
+
+```mermaid
+graph LR
+    User[👤 Пользователь]
+    Input[InputAdapter<br/>клавиатура]
+    Facade[GameStateFacade<br/>оркестрация]
+    Tank[TankUseCases<br/>движение/снаряды]
+    Enemy[EnemyUseCases<br/>враги]
+    Bullet[BulletUseCases<br/>пули]
+    Collision[CollisionUseCases<br/>коллизии]
+    Render[RendererAdapter<br/>отрисовка]
+    TanksRepo[(TanksRepository)]
+    
+    User -->|WASD Space| Input
+    Input -->|команды| Facade
+    Facade --> Tank
+    Facade --> Enemy
+    Facade --> Bullet
+    Facade --> Collision
+    Tank --> TanksRepo
+    Enemy --> TanksRepo
+    Collision --> Tank
+    Collision --> Enemy
+    Collision --> Bullet
+    Tank --> Render
+    Enemy --> Render
+    Bullet --> Render
+    Render -->|графика| User
+```
+
+### Диаграмма игрового цикла
+
+```mermaid
+sequenceDiagram
+    participant App as Application
+    participant State as GameState
+    participant Facade as UseCasesFacade
+    participant Tank as TankUseCases
+    participant Enemy as EnemyUseCases
+    participant Render as RenderAdapter
+    
+    App->>State: Update()
+    State->>Facade: Update()
+    Facade->>Tank: MoveTank()
+    Facade->>Enemy: UpdateEnemies()
+    Facade->>Facade: UpdateCollisions()
+    State->>Render: DrawAll()
+    Render->>Render: drawMap()
+    Render->>Render: drawTanks()
+    Render->>Render: drawBullets()
+    App->>App: 60 FPS
+```
+
 ### Принципы архитектуры
 
 1. **Dependency Rule (Правило зависимостей)** - зависимости направлены внутрь к ядру:

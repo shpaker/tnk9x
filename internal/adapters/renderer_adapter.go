@@ -17,6 +17,7 @@ type RendererAdapter struct {
 	mapUseCases          use_cases.IMapUseCases
 	tankUseCases         use_cases.ITankUseCases
 	bulletUseCases       use_cases.IBulletUseCases
+	enemyUseCases        use_cases.IEnemyUseCases
 	mapTilesUseCases     *use_cases.TilesUseCases
 	playerTilesUseCases  *use_cases.TilesUseCases
 	bulletTilesUseCases  *use_cases.TilesUseCases
@@ -28,6 +29,7 @@ func NewRendererAdapter(
 	mapUseCases use_cases.IMapUseCases,
 	tankUseCases use_cases.ITankUseCases,
 	bulletUseCases use_cases.IBulletUseCases,
+	enemyUseCases use_cases.IEnemyUseCases,
 	mapTilesUseCases *use_cases.TilesUseCases,
 	playerTilesUseCases *use_cases.TilesUseCases,
 	bulletTilesUseCases *use_cases.TilesUseCases,
@@ -37,6 +39,7 @@ func NewRendererAdapter(
 		mapUseCases:          mapUseCases,
 		tankUseCases:         tankUseCases,
 		bulletUseCases:       bulletUseCases,
+		enemyUseCases:        enemyUseCases,
 		mapTilesUseCases:     mapTilesUseCases,
 		playerTilesUseCases:  playerTilesUseCases,
 		bulletTilesUseCases:  bulletTilesUseCases,
@@ -138,6 +141,80 @@ func (r *RendererAdapter) drawTank(screen *ebiten.Image) {
 	op.GeoM.Translate(screenX, screenY)
 
 	screen.DrawImage(rotatedImage, op)
+}
+
+// drawEnemies отрисовывает врагов
+func (r *RendererAdapter) drawEnemies(screen *ebiten.Image) {
+	enemies := r.enemyUseCases.GetEnemies()
+
+	for i, enemy := range enemies {
+		// Если враг в процессе спавна, отображаем анимацию спавна
+		if !enemy.IsSpawned {
+			r.drawEnemySpawnAnimation(screen, enemy, i)
+			continue
+		}
+
+		// Получаем ID изображения врага
+		imageId, err := enemy.AnimationGetter.GetImageId()
+		if err != nil {
+			log.Printf("ERROR: Enemy error getting image ID: %v", err)
+			continue
+		}
+
+		// Получаем изображение через TilesUseCases
+		imageData, err := r.playerTilesUseCases.GetImage(imageId)
+		if err != nil {
+			log.Printf("ERROR: Enemy error loading image '%s': %v", imageId, err)
+			continue
+		}
+
+		// Конвертируем image.Image в ebiten.Image
+		image := ebiten.NewImageFromImage(imageData)
+
+		// Поворачиваем изображение в зависимости от направления
+		rotatedImage := utils.RotateImage(image, enemy.Direction)
+
+		op := &ebiten.DrawImageOptions{}
+		op.GeoM.Translate(
+			use_cases.MapOffset+enemy.WorldPosition.X,
+			use_cases.MapOffset+enemy.WorldPosition.Y,
+		)
+
+		screen.DrawImage(rotatedImage, op)
+	}
+}
+
+// drawEnemySpawnAnimation отрисовывает анимацию спавна врага
+func (r *RendererAdapter) drawEnemySpawnAnimation(screen *ebiten.Image, enemy *types.TankEntity, enemyIndex int) {
+	spawnAnimation := r.enemyUseCases.GetEnemySpawnAnimation(enemyIndex)
+	if spawnAnimation == nil {
+		return
+	}
+
+	// Получаем ID изображения анимации спавна
+	imageId, err := spawnAnimation.GetImageId()
+	if err != nil {
+		log.Printf("ERROR: Enemy spawn animation error getting image ID: %v", err)
+		return
+	}
+
+	// Получаем изображение через TilesUseCases
+	imageData, err := r.spawnerTilesUseCases.GetImage(imageId)
+	if err != nil {
+		log.Printf("ERROR: Enemy spawn animation error loading image '%s': %v", imageId, err)
+		return
+	}
+
+	// Конвертируем image.Image в ebiten.Image
+	image := ebiten.NewImageFromImage(imageData)
+
+	op := &ebiten.DrawImageOptions{}
+	op.GeoM.Translate(
+		use_cases.MapOffset+enemy.WorldPosition.X,
+		use_cases.MapOffset+enemy.WorldPosition.Y,
+	)
+
+	screen.DrawImage(image, op)
 }
 
 // drawSpawnAnimation отрисовывает анимацию спавна
@@ -245,8 +322,10 @@ func (r *RendererAdapter) DrawAll(screen *ebiten.Image) {
 	r.drawMapBackground(screen)
 	// Затем отрисовываем блоки уровня GROUND
 	r.drawBlocksByAltitude(screen, types.GROUND)
-	// Затем отрисовываем танк (если на уровне SURFACE)
+	// Затем отрисовываем танк игрока (если на уровне SURFACE)
 	r.drawTank(screen)
+	// Затем отрисовываем врагов (если на уровне SURFACE)
+	r.drawEnemies(screen)
 	// Затем отрисовываем пули (если на уровне SURFACE)
 	r.drawBullets(screen)
 	// Затем отрисовываем блоки уровня SURFACE (если есть)

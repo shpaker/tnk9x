@@ -34,3 +34,18 @@ type IAnimationsRepository interface {
 	// GetAllAnimations возвращает все анимации
 	GetAllAnimations() []*types.TileAnimationEntity
 }
+
+// ITanksRepository определяет интерфейс для работы с танками
+type ITanksRepository interface {
+	// AddTank добавляет танк в репозиторий
+	AddTank(tank *types.TankEntity)
+
+	// GetAllTanks возвращает все танки
+	GetAllTanks() []*types.TankEntity
+
+	// RemoveTank удаляет танк по индексу
+	RemoveTank(index int) error
+
+	// GetTank возвращает танк по индексу
+	GetTank(index int) (*types.TankEntity, error)
+}

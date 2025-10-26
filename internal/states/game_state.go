@@ -12,7 +12,8 @@ import (
 
 // GameConfig представляет конфигурацию игры (для избежания циклических импортов)
 type GameConfig struct {
-	SpawnDurationMs uint `yaml:"spawn_duration_ms"`
+	SpawnDurationMs uint    `yaml:"spawn_duration_ms"`
+	EnemySpawners   [][]int `yaml:"enemy_spawners"`
 }
 
 type GameState struct {
@@ -84,6 +85,9 @@ func (state GameState) Update() (State, error) {
 	elapsedTime := time.Since(state.startTime).Seconds()
 	state.gameStateServices.UpdateTankSpawn(elapsedTime)
 
+	// Обновляем спавн врагов
+	state.gameStateServices.UpdateEnemiesSpawn(elapsedTime)
+
 	// Обновляем input
 	state.inputAdapter.Update()
 
@@ -127,6 +131,7 @@ func createRendererAdapter(
 		gameStateServices.MapUseCases(),
 		gameStateServices.TankUseCases(),
 		gameStateServices.BulletUseCases(),
+		gameStateServices.EnemyUseCases(),
 		mapTilesUseCases,
 		playerTilesUseCases,
 		bulletTilesUseCases,

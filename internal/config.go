@@ -14,7 +14,8 @@ type AppConfig struct {
 
 // GameConfig содержит настройки игры
 type GameConfig struct {
-	SpawnDurationMs uint `yaml:"spawn_duration_ms"`
+	SpawnDurationMs uint    `yaml:"spawn_duration_ms"`
+	EnemySpawners   [][]int `yaml:"enemy_spawners"`
 }
 
 // ConfigSchema структура для парсинга YAML файла

@@ -4,7 +4,31 @@ import (
 	"math"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/shpaker/gonflict/internal/types"
 )
+
+// RotateImage поворачивает изображение в зависимости от направления
+func RotateImage(image *ebiten.Image, direction types.Direction) *ebiten.Image {
+	var angle float64
+	switch direction {
+	case types.DirectionUp:
+		angle = 0
+	case types.DirectionRight:
+		angle = math.Pi / 2
+	case types.DirectionDown:
+		angle = math.Pi
+	case types.DirectionLeft:
+		angle = -math.Pi / 2
+	default:
+		angle = 0
+	}
+
+	rotatedImage, err := RotateImageByAngle(image, angle)
+	if err != nil {
+		return image
+	}
+	return rotatedImage
+}
 
 // RotateImageByAngle поворачивает изображение на указанный угол
 func RotateImageByAngle(image *ebiten.Image, angle float64) (*ebiten.Image, error) {

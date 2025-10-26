@@ -3,6 +3,7 @@ package use_cases
 import (
 	"errors"
 
+	"github.com/shpaker/gonflict/internal/repositories/game"
 	"github.com/shpaker/gonflict/internal/repositories/processed"
 	"github.com/shpaker/gonflict/internal/types"
 	"github.com/shpaker/gonflict/internal/utils"
@@ -10,26 +11,28 @@ import (
 
 // TankUseCases реализация интерфейса TankUseCases
 type TankUseCases struct {
+	tanksRepo         game.ITanksRepository
 	tilesetRepo       processed.ITilesetRepository
 	animationUseCases IAnimationUseCases
-	tank              *types.TankEntity // Теперь указатель, может быть nil
-	tankAnimation     *types.TileAnimationEntity
 	spawnAnimation    *types.TileAnimationEntity // Анимация спавна
 	spawnDurationMs   uint                       // Длительность спавна в миллисекундах
+	playerTankIndex   int                        // Индекс танка игрока в репозитории (всегда 0)
 }
 
 // NewTankUseCases создает новый экземпляр TankUseCases
 func NewTankUseCases(
+	tanksRepo game.ITanksRepository,
 	tilesetRepo processed.ITilesetRepository,
 	spawnerTilesetRepo processed.ITilesetRepository,
 	animationUseCases IAnimationUseCases,
 	spawnDurationMs uint,
 ) *TankUseCases {
 	uc := &TankUseCases{
+		tanksRepo:         tanksRepo,
 		tilesetRepo:       tilesetRepo,
 		animationUseCases: animationUseCases,
-		tank:              nil, // Танк не создается при инициализации
 		spawnDurationMs:   spawnDurationMs,
+		playerTankIndex:   0, // Танк игрока всегда первый в репозитории
 	}
 
 	// Создаем анимацию спавна
@@ -62,7 +65,7 @@ func (uc *TankUseCases) makeTank() (types.TankEntity, *types.TileAnimationEntity
 	// Создаем игрока с начальными параметрами
 	spawnPosition := types.Position{X: 4 * TankSpriteSize, Y: 12 * TankSpriteSize}
 
-	player := types.TankEntity{
+	player := &types.TankEntity{
 		AnimationGetter: tankAnimation,
 		SpawnPosition:   spawnPosition,
 		WorldPosition: types.Position{
@@ -76,7 +79,10 @@ func (uc *TankUseCases) makeTank() (types.TankEntity, *types.TileAnimationEntity
 		Altitude:  types.SURFACE, // Танки на уровне поверхности
 	}
 
-	return player, tankAnimation, nil
+	// Добавляем танк в репозиторий
+	uc.tanksRepo.AddTank(player)
+
+	return *player, tankAnimation, nil
 }
 
 // makeSpawnAnimation создает анимацию спавна
@@ -98,76 +104,78 @@ func (uc *TankUseCases) makeSpawnAnimation(spawnerTilesetRepo processed.ITileset
 
 // GetTank возвращает данные танка
 func (uc *TankUseCases) GetTank() (*types.TankEntity, error) {
-	if uc.tank == nil {
-		return nil, errors.New("tank not created yet")
-	}
-	return uc.tank, nil
+	return uc.tanksRepo.GetTank(uc.playerTankIndex)
 }
 
 // GetDirection возвращает текущее направление танка
 func (uc *TankUseCases) GetDirection() types.Direction {
-	if uc.tank == nil {
+	tank, err := uc.GetTank()
+	if err != nil {
 		return types.DirectionUp // Возвращаем направление по умолчанию
 	}
-	return uc.tank.Direction
+	return tank.Direction
 }
 
 // RotateTank поворачивает танк в указанном направлении
 func (uc *TankUseCases) RotateTank(direction types.Direction) error {
-	if uc.tank == nil {
-		return errors.New("tank not created yet")
+	tank, err := uc.GetTank()
+	if err != nil {
+		return err
 	}
-	if !uc.tank.IsSpawned {
+	if !tank.IsSpawned {
 		return errors.New("tank is not spawned yet")
 	}
 
-	if uc.tank.Speed != 0 {
+	if tank.Speed != 0 {
 		return errors.New("cannot rotate while moving")
 	}
 
-	uc.tank.Speed = 32.0
-	if uc.tank.Direction == direction {
+	tank.Speed = 32.0
+	if tank.Direction == direction {
 		return errors.New("already facing this direction")
 	}
 
-	uc.tank.Direction = direction
+	tank.Direction = direction
 
 	// Запускаем анимацию при повороте
-	uc.animationUseCases.StartAnimation(uc.tankAnimation)
+	// TODO: Получить tankAnimation из танка
+	// uc.animationUseCases.StartAnimation(tankAnimation)
 
 	return nil
 }
 
 // StopTank останавливает танк
 func (uc *TankUseCases) StopTank(byCollision bool) error {
-	if uc.tank == nil {
-		return errors.New("tank not created yet")
+	tank, err := uc.GetTank()
+	if err != nil {
+		return err
 	}
-	if !uc.tank.IsSpawned {
+	if !tank.IsSpawned {
 		return errors.New("tank is not spawned yet")
 	}
 
-	uc.tank.Speed = 0
+	tank.Speed = 0
 
 	// Останавливаем анимацию танка
-	uc.animationUseCases.StopAnimation(uc.tankAnimation)
+	// TODO: Получить tankAnimation из танка
+	// uc.animationUseCases.StopAnimation(tankAnimation)
 
 	if byCollision {
-		uc.tank.WorldPosition.X = float64(int(uc.tank.WorldPosition.X))
-		uc.tank.WorldPosition.Y = float64(int(uc.tank.WorldPosition.Y))
+		tank.WorldPosition.X = float64(int(tank.WorldPosition.X))
+		tank.WorldPosition.Y = float64(int(tank.WorldPosition.Y))
 		return nil
 	}
 
 	// Выравниваем позицию по сетке
-	switch uc.tank.Direction {
+	switch tank.Direction {
 	case types.DirectionUp:
-		uc.tank.WorldPosition.Y = float64(utils.RoundToEven(uc.tank.WorldPosition.Y, false))
+		tank.WorldPosition.Y = float64(utils.RoundToEven(tank.WorldPosition.Y, false))
 	case types.DirectionDown:
-		uc.tank.WorldPosition.Y = float64(utils.RoundToEven(uc.tank.WorldPosition.Y, true))
+		tank.WorldPosition.Y = float64(utils.RoundToEven(tank.WorldPosition.Y, true))
 	case types.DirectionLeft:
-		uc.tank.WorldPosition.X = float64(utils.RoundToEven(uc.tank.WorldPosition.X, false))
+		tank.WorldPosition.X = float64(utils.RoundToEven(tank.WorldPosition.X, false))
 	case types.DirectionRight:
-		uc.tank.WorldPosition.X = float64(utils.RoundToEven(uc.tank.WorldPosition.X, true))
+		tank.WorldPosition.X = float64(utils.RoundToEven(tank.WorldPosition.X, true))
 	}
 
 	return nil
@@ -178,29 +186,31 @@ func (uc *TankUseCases) MoveTank(
 	direction types.Direction,
 	dt float64,
 ) error {
-	if uc.tank == nil {
-		return errors.New("tank not created yet")
+	tank, err := uc.GetTank()
+	if err != nil {
+		return err
 	}
-	if !uc.tank.IsSpawned {
+	if !tank.IsSpawned {
 		return errors.New("tank is not spawned yet")
 	}
 
-	delta := uc.tank.Speed * dt
+	delta := tank.Speed * dt
 
 	// Если танк движется, запускаем анимацию
 	if delta > 0 {
-		uc.animationUseCases.StartAnimation(uc.tankAnimation)
+		// TODO: Получить tankAnimation из танка
+		// uc.animationUseCases.StartAnimation(tankAnimation)
 	}
 
-	switch uc.tank.Direction {
+	switch tank.Direction {
 	case types.DirectionUp:
-		uc.tank.WorldPosition.Y -= delta
+		tank.WorldPosition.Y -= delta
 	case types.DirectionDown:
-		uc.tank.WorldPosition.Y += delta
+		tank.WorldPosition.Y += delta
 	case types.DirectionLeft:
-		uc.tank.WorldPosition.X -= delta
+		tank.WorldPosition.X -= delta
 	case types.DirectionRight:
-		uc.tank.WorldPosition.X += delta
+		tank.WorldPosition.X += delta
 	}
 
 	return nil
@@ -208,25 +218,34 @@ func (uc *TankUseCases) MoveTank(
 
 // StartSpawn начинает процесс спавна танка
 func (uc *TankUseCases) StartSpawn(spawnStartTime float64) {
-	// Проверяем, не спавнится ли танк уже (IsSpawned == false означает процесс спавна)
-	if uc.tank != nil && !uc.tank.IsSpawned {
-		return // Уже спавнится
-	}
-	if uc.tank != nil && uc.tank.IsSpawned {
-		return // Уже заспавнен
+	// Проверяем, есть ли уже танк в репозитории
+	tanks := uc.tanksRepo.GetAllTanks()
+	if len(tanks) > uc.playerTankIndex {
+		tank := tanks[uc.playerTankIndex]
+		if tank != nil && !tank.IsSpawned {
+			return // Уже спавнится
+		}
+		if tank != nil && tank.IsSpawned {
+			return // Уже заспавнен
+		}
 	}
 
 	// Создаем танк
-	tank, tankAnimation, err := uc.makeTank()
+	_, _, err := uc.makeTank()
 	if err != nil {
 		panic(err)
 	}
-	uc.tank = &tank
-	uc.tankAnimation = tankAnimation
+	// Танк уже добавлен в репозиторий в makeTank()
+
+	// Получаем танк из репозитория
+	tank, err := uc.GetTank()
+	if err != nil {
+		panic(err)
+	}
 
 	// Инициализируем состояние спавна
-	uc.tank.IsSpawned = false
-	uc.tank.SpawnedAt = spawnStartTime // Сохраняем время начала спавна
+	tank.IsSpawned = false
+	tank.SpawnedAt = spawnStartTime // Сохраняем время начала спавна
 
 	// Запускаем анимацию спавна
 	uc.animationUseCases.StartAnimation(uc.spawnAnimation)
@@ -234,16 +253,21 @@ func (uc *TankUseCases) StartSpawn(spawnStartTime float64) {
 
 // UpdateSpawn обновляет процесс спавна
 func (uc *TankUseCases) UpdateSpawn(currentTime float64) {
+	tank, err := uc.GetTank()
+	if err != nil {
+		return
+	}
+
 	// Проверяем, идет ли спавн (IsSpawned == false означает процесс спавна)
-	if uc.tank == nil || uc.tank.IsSpawned {
+	if tank.IsSpawned {
 		return
 	}
 
 	// Проверяем, прошло ли достаточно времени с начала спавна (конвертируем миллисекунды в секунды)
-	if currentTime-uc.tank.SpawnedAt >= float64(uc.spawnDurationMs)/1000.0 {
+	if currentTime-tank.SpawnedAt >= float64(uc.spawnDurationMs)/1000.0 {
 		// Завершаем спавн
-		uc.tank.IsSpawned = true
-		uc.tank.SpawnedAt = currentTime // Обновляем время завершения спавна
+		tank.IsSpawned = true
+		tank.SpawnedAt = currentTime // Обновляем время завершения спавна
 
 		// Останавливаем анимацию спавна
 		uc.animationUseCases.StopAnimation(uc.spawnAnimation)
@@ -252,7 +276,11 @@ func (uc *TankUseCases) UpdateSpawn(currentTime float64) {
 
 // IsSpawning возвращает true, если танк в процессе спавна
 func (uc *TankUseCases) IsSpawning() bool {
-	return uc.tank != nil && !uc.tank.IsSpawned
+	tank, err := uc.GetTank()
+	if err != nil {
+		return false
+	}
+	return !tank.IsSpawned
 }
 
 // GetSpawnAnimation возвращает анимацию спавна
@@ -262,20 +290,25 @@ func (uc *TankUseCases) GetSpawnAnimation() *types.TileAnimationEntity {
 
 // GetTankImageId возвращает ID изображения танка с учетом состояния спавна
 func (uc *TankUseCases) GetTankImageId() (string, error) {
-	if uc.tank == nil {
+	tank, err := uc.GetTank()
+	if err != nil {
 		return "", errors.New("tank not created yet")
 	}
 
 	// Во время спавна (IsSpawned == false) показываем анимацию спавна
-	if !uc.tank.IsSpawned {
+	if !tank.IsSpawned {
 		return uc.spawnAnimation.GetImageId()
 	}
 
 	// После спавна показываем обычный танк
-	return uc.tank.GetImageId()
+	return tank.GetImageId()
 }
 
 // ShouldShowTank возвращает true, если танк должен отображаться
 func (uc *TankUseCases) ShouldShowTank() bool {
-	return uc.tank != nil && uc.tank.IsSpawned
+	tank, err := uc.GetTank()
+	if err != nil {
+		return false
+	}
+	return tank.IsSpawned
 }

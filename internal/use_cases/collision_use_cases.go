@@ -9,6 +9,7 @@ type CollisionUseCases struct {
 	bulletUseCases IBulletUseCases
 	tankUseCases   ITankUseCases
 	mapUseCases    IMapUseCases
+	enemyUseCases  IEnemyUseCases
 }
 
 // NewCollisionUseCases создает новый экземпляр CollisionUseCases
@@ -16,11 +17,13 @@ func NewCollisionUseCases(
 	bulletUseCases IBulletUseCases,
 	tankUseCases ITankUseCases,
 	mapUseCases IMapUseCases,
+	enemyUseCases IEnemyUseCases,
 ) *CollisionUseCases {
 	return &CollisionUseCases{
 		bulletUseCases: bulletUseCases,
 		tankUseCases:   tankUseCases,
 		mapUseCases:    mapUseCases,
+		enemyUseCases:  enemyUseCases,
 	}
 }
 
@@ -33,6 +36,7 @@ func (uc *CollisionUseCases) UpdateCollisions() error {
 
 	uc.checkBulletBoundaryCollisions()
 	uc.checkBulletTankCollisions(tank)
+	uc.checkBulletEnemyCollisions()
 	uc.checkBulletWallCollisions()
 	uc.checkTankBoundaryCollisions(tank)
 	uc.checkTankWallCollisions(tank)
@@ -68,6 +72,31 @@ func (uc *CollisionUseCases) checkBulletTankCollisions(tank *types.TankEntity) {
 			uc.bulletUseCases.RemoveBullet(i)
 			// Здесь можно добавить логику обработки попадания в танк
 			// println("Tank hit by bullet!")
+		}
+	}
+}
+
+// checkBulletEnemyCollisions проверяет коллизии пуль с врагами
+func (uc *CollisionUseCases) checkBulletEnemyCollisions() {
+	bullets := uc.bulletUseCases.GetBullets()
+	enemies := uc.enemyUseCases.GetEnemies()
+
+	for i := len(bullets) - 1; i >= 0; i-- {
+		bullet := &bullets[i]
+
+		// Проверяем коллизию с каждым врагом
+		for j := len(enemies) - 1; j >= 0; j-- {
+			enemy := enemies[j]
+
+			// Если враг заспавнен и есть коллизия
+			if enemy.IsSpawned && uc.CheckColliders(bullet, enemy) {
+				// Удаляем пулю
+				uc.bulletUseCases.RemoveBullet(i)
+				// Удаляем врага
+				uc.enemyUseCases.RemoveEnemy(j)
+				// Выходим из цикла врагов, так как пуля уже удалена
+				break
+			}
 		}
 	}
 }
