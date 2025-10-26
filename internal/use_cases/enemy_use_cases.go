@@ -34,36 +34,6 @@ func NewEnemyUseCases(
 	}
 }
 
-// SpawnEnemy создает нового врага в указанной позиции
-func (uc *EnemyUseCases) SpawnEnemy(position types.Position) error {
-	// Получаем данные анимации для врага
-	animationFrames, err := uc.tilesetRepo.GetAnimationData("base_tank")
-	if err != nil {
-		return err
-	}
-
-	// Создаем TileAnimationEntity для врага
-	tankAnimation := types.NewTileAnimationEntity(animationFrames)
-
-	// Добавляем анимацию врага через AnimationUseCases
-	uc.animationUseCases.AddAnimation(tankAnimation)
-
-	// Создаем врага
-	enemy := &types.TankEntity{
-		AnimationGetter: tankAnimation,
-		SpawnPosition:   position,
-		WorldPosition:   position,
-		Speed:           0,
-		Direction:       types.DirectionDown,
-		IsSpawned:       true, // Враг сразу заспавнен
-		SpawnedAt:       0,
-		Altitude:        types.SURFACE,
-	}
-
-	uc.tanksRepo.AddTank(enemy)
-	return nil
-}
-
 // GetEnemies возвращает всех врагов
 func (uc *EnemyUseCases) GetEnemies() []*types.TankEntity {
 	return uc.tanksRepo.GetAllTanks()

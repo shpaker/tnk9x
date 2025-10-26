@@ -71,7 +71,6 @@ type IAnimationUseCases interface {
 type IEnemyUseCases interface {
 	GetEnemies() []*types.TankEntity
 	RemoveEnemy(index int) error
-	SpawnEnemy(position types.Position) error
 	InitEnemies(enemySpawners [][]int) error
 	UpdateEnemiesSpawn(currentTime float64)
 	GetEnemySpawnAnimation(enemyIndex int) *types.TileAnimationEntity
