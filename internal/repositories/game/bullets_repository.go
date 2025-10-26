@@ -29,7 +29,7 @@ func (br *BulletsRepository) GetAllBullets() []types.BulletEntity {
 // RemoveBullet удаляет пулю по индексу
 func (br *BulletsRepository) RemoveBullet(index int) error {
 	if index < 0 || index >= len(br.bullets) {
-		return fmt.Errorf("индекс пули %d вне диапазона [0, %d)", index, len(br.bullets))
+		return fmt.Errorf("bullet index %d out of range [0, %d)", index, len(br.bullets))
 	}
 	br.bullets = append(br.bullets[:index], br.bullets[index+1:]...)
 	return nil

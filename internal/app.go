@@ -44,35 +44,35 @@ func New(cfg *Config) *App {
 	// Создаем tilesetRepository для работы с изображениями блоков
 	tilesetRepo, err := processed.NewTilesetDataRepository(fileRepo, "tiles/blocks")
 	if err != nil {
-		fmt.Printf("Ошибка создания TilesetRepository: %v\n", err)
+		fmt.Printf("Error creating TilesetRepository: %v\n", err)
 		panic(err)
 	}
 
 	// Создаем tilesetRepository для работы с изображениями игрока
 	playerTilesetRepo, err := processed.NewTilesetDataRepository(fileRepo, "tiles/player")
 	if err != nil {
-		fmt.Printf("Ошибка создания PlayerTilesetRepository: %v\n", err)
+		fmt.Printf("Error creating PlayerTilesetRepository: %v\n", err)
 		panic(err)
 	}
 
 	// Создаем tilesetRepository для работы с изображениями пуль
 	bulletTilesetRepo, err := processed.NewTilesetDataRepository(fileRepo, "tiles/bullet")
 	if err != nil {
-		fmt.Printf("Ошибка создания BulletTilesetRepository: %v\n", err)
+		fmt.Printf("Error creating BulletTilesetRepository: %v\n", err)
 		panic(err)
 	}
 
 	// Создаем tilesetRepository для работы с анимацией спавна
 	spawnerTilesetRepo, err := processed.NewTilesetDataRepository(fileRepo, "tiles/spawner")
 	if err != nil {
-		fmt.Printf("Ошибка создания SpawnerTilesetRepository: %v\n", err)
+		fmt.Printf("Error creating SpawnerTilesetRepository: %v\n", err)
 		panic(err)
 	}
 
 	// Создаем tilesetRepository для работы с анимацией взрыва
 	explosionTilesetRepo, err := processed.NewTilesetDataRepository(fileRepo, "tiles/explosion")
 	if err != nil {
-		fmt.Printf("Ошибка создания ExplosionTilesetRepository: %v\n", err)
+		fmt.Printf("Error creating ExplosionTilesetRepository: %v\n", err)
 		panic(err)
 	}
 
@@ -97,7 +97,7 @@ func New(cfg *Config) *App {
 	)
 	if err != nil {
 		// Логируем ошибку и падаем
-		fmt.Printf("Ошибка создания GameState: %v\n", err)
+		fmt.Printf("Error creating GameState: %v\n", err)
 		panic(err)
 	}
 

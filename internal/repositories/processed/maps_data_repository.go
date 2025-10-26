@@ -31,7 +31,7 @@ func (mdr *MapsDataRepository) readFile(levelNumber int) ([]string, error) {
 	// Читаем текстовый файл уровня
 	data, err := mdr.fileRepo.ReadFile(levelName)
 	if err != nil {
-		return nil, fmt.Errorf("не удалось прочитать уровень %d: %w", levelNumber, err)
+		return nil, fmt.Errorf("failed to read level %d: %w", levelNumber, err)
 	}
 
 	// Разбиваем на строки
@@ -50,7 +50,7 @@ func (mdr *MapsDataRepository) createBlockFromChar(charStr string, x, y int) (*t
 	// Проверяем, есть ли символ в маппинге
 	blockType, exists := MapCharsBlocksMapping[charStr]
 	if !exists {
-		return nil, fmt.Errorf("неизвестный символ '%s' в позиции (%d, %d)", charStr, x+1, y+1)
+		return nil, fmt.Errorf("unknown character '%s' at position (%d, %d)", charStr, x+1, y+1)
 	}
 
 	// Создаем TileStaticEntity для блока напрямую
@@ -70,7 +70,7 @@ func (mdr *MapsDataRepository) parseLevelLines(lines []string) ([]types.BlockEnt
 
 	// Проверяем количество строк (должно быть 26)
 	if len(lines) != MapBlocksLength {
-		return level, fmt.Errorf("неверное количество строк в уровне: ожидалось %d, получено %d", MapBlocksLength, len(lines))
+		return level, fmt.Errorf("invalid row count: expected %d, got %d", MapBlocksLength, len(lines))
 	}
 
 	// Парсим каждую строку
@@ -79,7 +79,7 @@ func (mdr *MapsDataRepository) parseLevelLines(lines []string) ([]types.BlockEnt
 
 		// Проверяем длину строки (должна быть 26)
 		if len(line) != MapBlocksLength {
-			return level, fmt.Errorf("неверная длина строки %d: ожидалось %d символов, получено %d", y+1, MapBlocksLength, len(line))
+			return level, fmt.Errorf("invalid row %d length: expected %d, got %d", y+1, MapBlocksLength, len(line))
 		}
 
 		// Парсим каждый символ в строке

@@ -14,8 +14,19 @@ type IMapObject interface {
 	GetAltitude() types.Altitude
 }
 
-// ITankUseCases интерфейс для операций с танком
-type ITankUseCases interface {
+// ITankUseCasesRef интерфейс для базовых операций с танками
+type ITankUseCasesRef interface {
+	CreateTankWithSpawn(position types.Position, direction types.Direction) (*types.TankEntity, *types.TileAnimationEntity, *types.TileAnimationEntity, error)
+	CreateTankAnimation() (*types.TileAnimationEntity, error)
+	CreateSpawnAnimation() (*types.TileAnimationEntity, error)
+	GetTank(index int) (*types.TankEntity, error)
+	GetAllTanks() []*types.TankEntity
+	RemoveTank(index int)
+	AddTank(tank *types.TankEntity)
+}
+
+// IPlayerUseCases интерфейс для операций с игроком
+type IPlayerUseCases interface {
 	MoveTank(direction types.Direction, dt float64) error
 	RotateTank(direction types.Direction) error
 	StopTank(byCollision bool) error
@@ -28,6 +39,10 @@ type ITankUseCases interface {
 	GetTankImageId() (string, error)
 	ShouldShowTank() bool
 }
+
+// ITankUseCases оставлен для обратной совместимости
+// Deprecated: используйте IPlayerUseCases
+type ITankUseCases = IPlayerUseCases
 
 // IBulletUseCases интерфейс для операций с пулями
 type IBulletUseCases interface {
@@ -70,6 +85,7 @@ type IAnimationUseCases interface {
 // IEnemyUseCases интерфейс для работы с врагами
 type IEnemyUseCases interface {
 	GetEnemies() []*types.TankEntity
+	GetEnemyRealIndex(index int) (int, error)
 	RemoveEnemy(index int) error
 	InitEnemies(enemySpawners [][]int) error
 	UpdateEnemiesSpawn(currentTime float64)

@@ -18,7 +18,7 @@ type RendererAdapter struct {
 	mapUseCases            use_cases.IMapUseCases
 	tankUseCases           use_cases.ITankUseCases
 	bulletUseCases         use_cases.IBulletUseCases
-	enemyUseCases          use_cases.IEnemyUseCases
+	enemyUseCasesList      []*use_cases.EnemyUseCases // Массив врагов
 	mapTilesUseCases       *use_cases.TilesUseCases
 	playerTilesUseCases    *use_cases.TilesUseCases
 	bulletTilesUseCases    *use_cases.TilesUseCases
@@ -32,7 +32,7 @@ func NewRendererAdapter(
 	mapUseCases use_cases.IMapUseCases,
 	tankUseCases use_cases.ITankUseCases,
 	bulletUseCases use_cases.IBulletUseCases,
-	enemyUseCases use_cases.IEnemyUseCases,
+	enemyUseCasesList []*use_cases.EnemyUseCases,
 	mapTilesUseCases *use_cases.TilesUseCases,
 	playerTilesUseCases *use_cases.TilesUseCases,
 	bulletTilesUseCases *use_cases.TilesUseCases,
@@ -43,7 +43,7 @@ func NewRendererAdapter(
 		mapUseCases:            mapUseCases,
 		tankUseCases:           tankUseCases,
 		bulletUseCases:         bulletUseCases,
-		enemyUseCases:          enemyUseCases,
+		enemyUseCasesList:      enemyUseCasesList,
 		mapTilesUseCases:       mapTilesUseCases,
 		playerTilesUseCases:    playerTilesUseCases,
 		bulletTilesUseCases:    bulletTilesUseCases,
@@ -170,11 +170,21 @@ func (r *RendererAdapter) getCachedImage(imageId string, imageData image.Image) 
 	return ebitenImage
 }
 
-// drawEnemies отрисовывает врагов
-func (r *RendererAdapter) drawEnemies(screen *ebiten.Image) {
-	enemies := r.enemyUseCases.GetEnemies()
+// drawEnemiesWithoutExplosions отрисовывает врагов без взрывов (уровень SURFACE)
+func (r *RendererAdapter) drawEnemiesWithoutExplosions(screen *ebiten.Image) {
+	for i, enemyUseCases := range r.enemyUseCasesList {
+		enemy := enemyUseCases.GetEnemy()
 
-	for i, enemy := range enemies {
+		// Пропускаем если врага нет
+		if enemy == nil {
+			continue
+		}
+
+		// Пропускаем взрывающихся врагов
+		if enemy.IsExploding {
+			continue
+		}
+
 		// Если враг в процессе спавна, отображаем анимацию спавна
 		if !enemy.IsSpawned {
 			r.drawEnemySpawnAnimation(screen, enemy, i)
@@ -188,34 +198,59 @@ func (r *RendererAdapter) drawEnemies(screen *ebiten.Image) {
 			continue
 		}
 
-		// Если враг взрывается, используем explosion tileset
-		var imageData image.Image
-		if enemy.IsExploding {
-			// Получаем изображение через explosion tileset
-			imageData, err = r.explosionTilesUseCases.GetImage(imageId)
-		} else {
-			// Получаем изображение через TilesUseCases
-			imageData, err = r.playerTilesUseCases.GetImage(imageId)
-		}
-
+		// Получаем изображение через TilesUseCases
+		imageData, err := r.playerTilesUseCases.GetImage(imageId)
 		if err != nil {
 			log.Printf("ERROR: Enemy error loading image '%s': %v", imageId, err)
 			continue
 		}
 
 		// Получаем закэшированное изображение
-		image := r.getCachedImage(imageId, imageData)
+		img := r.getCachedImage(imageId, imageData)
 
-		// Поворачиваем изображение в зависимости от направления (только если не взрывается)
-		var finalImage *ebiten.Image = image
-		if !enemy.IsExploding {
-			rotatedImage := utils.RotateImage(image, enemy.Direction)
-			finalImage = rotatedImage
+		// Поворачиваем изображение в зависимости от направления
+		rotatedImage := utils.RotateImage(img, enemy.Direction)
+
+		op := &ebiten.DrawImageOptions{}
+		op.GeoM.Translate(
+			use_cases.MapOffset+enemy.WorldPosition.X,
+			use_cases.MapOffset+enemy.WorldPosition.Y,
+		)
+
+		screen.DrawImage(rotatedImage, op)
+	}
+}
+
+// drawEnemiesExplosions отрисовывает взрывы врагов (уровень AIR)
+func (r *RendererAdapter) drawEnemiesExplosions(screen *ebiten.Image) {
+	for _, enemyUseCases := range r.enemyUseCasesList {
+		enemy := enemyUseCases.GetEnemy()
+
+		// Пропускаем если врага нет или он не взрывается
+		if enemy == nil || !enemy.IsExploding {
+			continue
 		}
+
+		// Получаем ID изображения взрыва
+		imageId, err := enemy.AnimationGetter.GetImageId()
+		if err != nil {
+			log.Printf("ERROR: Enemy explosion error getting image ID: %v", err)
+			continue
+		}
+
+		// Получаем изображение через explosion tileset
+		imageData, err := r.explosionTilesUseCases.GetImage(imageId)
+		if err != nil {
+			log.Printf("ERROR: Enemy explosion error loading image '%s': %v", imageId, err)
+			continue
+		}
+
+		// Получаем закэшированное изображение
+		img := r.getCachedImage(imageId, imageData)
 
 		op := &ebiten.DrawImageOptions{}
 
-		// Применяем offset если это анимация (например, взрыв)
+		// Применяем offset если это анимация
 		var offsetX, offsetY float64 = 0, 0
 		if anim, ok := enemy.AnimationGetter.(*types.TileAnimationEntity); ok {
 			offsetX = anim.Offset[0]
@@ -227,13 +262,17 @@ func (r *RendererAdapter) drawEnemies(screen *ebiten.Image) {
 			use_cases.MapOffset+enemy.WorldPosition.Y+offsetY,
 		)
 
-		screen.DrawImage(finalImage, op)
+		screen.DrawImage(img, op)
 	}
 }
 
 // drawEnemySpawnAnimation отрисовывает анимацию спавна врага
 func (r *RendererAdapter) drawEnemySpawnAnimation(screen *ebiten.Image, enemy *types.TankEntity, enemyIndex int) {
-	spawnAnimation := r.enemyUseCases.GetEnemySpawnAnimation(enemyIndex)
+	if enemyIndex >= len(r.enemyUseCasesList) {
+		return
+	}
+	enemyUseCases := r.enemyUseCasesList[enemyIndex]
+	spawnAnimation := enemyUseCases.GetEnemySpawnAnimation(0)
 	if spawnAnimation == nil {
 		return
 	}
@@ -371,12 +410,14 @@ func (r *RendererAdapter) DrawAll(screen *ebiten.Image) {
 	r.drawBlocksByAltitude(screen, types.GROUND)
 	// Затем отрисовываем танк игрока (если на уровне SURFACE)
 	r.drawTank(screen)
-	// Затем отрисовываем врагов (если на уровне SURFACE)
-	r.drawEnemies(screen)
+	// Затем отрисовываем врагов без взрывов (если на уровне SURFACE)
+	r.drawEnemiesWithoutExplosions(screen)
 	// Затем отрисовываем пули (если на уровне SURFACE)
 	r.drawBullets(screen)
 	// Затем отрисовываем блоки уровня SURFACE (если есть)
 	r.drawBlocksByAltitude(screen, types.SURFACE)
+	// Затем отрисовываем взрывы врагов (на уровне AIR)
+	r.drawEnemiesExplosions(screen)
 	// В конце отрисовываем блоки уровня AIR (деревья)
 	r.drawBlocksByAltitude(screen, types.AIR)
 }

@@ -139,7 +139,7 @@ func createRendererAdapter(
 		gameStateServices.MapUseCases(),
 		gameStateServices.TankUseCases(),
 		gameStateServices.BulletUseCases(),
-		gameStateServices.EnemyUseCases(),
+		gameStateServices.GetEnemyUseCasesList(),
 		mapTilesUseCases,
 		playerTilesUseCases,
 		bulletTilesUseCases,

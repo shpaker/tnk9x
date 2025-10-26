@@ -29,7 +29,7 @@ func (tr *TanksRepository) GetAllTanks() []*types.TankEntity {
 // RemoveTank удаляет танк по индексу
 func (tr *TanksRepository) RemoveTank(index int) error {
 	if index < 0 || index >= len(tr.tanks) {
-		return fmt.Errorf("индекс танка %d вне диапазона [0, %d)", index, len(tr.tanks))
+		return fmt.Errorf("tank index %d out of range [0, %d)", index, len(tr.tanks))
 	}
 	tr.tanks = append(tr.tanks[:index], tr.tanks[index+1:]...)
 	return nil

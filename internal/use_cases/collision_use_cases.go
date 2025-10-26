@@ -6,10 +6,11 @@ import (
 
 // CollisionUseCases реализация для операций с коллизиями
 type CollisionUseCases struct {
-	bulletUseCases IBulletUseCases
-	tankUseCases   ITankUseCases
-	mapUseCases    IMapUseCases
-	enemyUseCases  IEnemyUseCases
+	bulletUseCases    IBulletUseCases
+	tankUseCases      ITankUseCases
+	mapUseCases       IMapUseCases
+	enemyUseCases     IEnemyUseCases
+	enemyUseCasesList []*EnemyUseCases
 }
 
 // NewCollisionUseCases создает новый экземпляр CollisionUseCases
@@ -24,6 +25,22 @@ func NewCollisionUseCases(
 		tankUseCases:   tankUseCases,
 		mapUseCases:    mapUseCases,
 		enemyUseCases:  enemyUseCases,
+	}
+}
+
+// NewCollisionUseCasesWithEnemies создает новый экземпляр CollisionUseCases с массивом врагов
+func NewCollisionUseCasesWithEnemies(
+	bulletUseCases IBulletUseCases,
+	tankUseCases ITankUseCases,
+	mapUseCases IMapUseCases,
+	enemyUseCasesList []*EnemyUseCases,
+) *CollisionUseCases {
+	return &CollisionUseCases{
+		bulletUseCases:    bulletUseCases,
+		tankUseCases:      tankUseCases,
+		mapUseCases:       mapUseCases,
+		enemyUseCases:     nil, // Не используется для нового подхода
+		enemyUseCasesList: enemyUseCasesList,
 	}
 }
 
@@ -80,14 +97,18 @@ func (uc *CollisionUseCases) checkBulletTankCollisions(tank *types.TankEntity) {
 // checkBulletEnemyCollisions проверяет коллизии пуль с врагами
 func (uc *CollisionUseCases) checkBulletEnemyCollisions() {
 	bullets := uc.bulletUseCases.GetBullets()
-	enemies := uc.enemyUseCases.GetEnemies()
 
 	for i := len(bullets) - 1; i >= 0; i-- {
 		bullet := &bullets[i]
 
 		// Проверяем коллизию с каждым врагом
-		for j := len(enemies) - 1; j >= 0; j-- {
-			enemy := enemies[j]
+		for _, enemyUseCases := range uc.enemyUseCasesList {
+			enemy := enemyUseCases.GetEnemy()
+
+			// Пропускаем если врага нет
+			if enemy == nil {
+				continue
+			}
 
 			// Проверяем, что пуля не принадлежит этому танку (избегаем самоуничтожения)
 			if bullet.Owner == enemy {
@@ -99,7 +120,7 @@ func (uc *CollisionUseCases) checkBulletEnemyCollisions() {
 				// Удаляем пулю
 				uc.bulletUseCases.RemoveBullet(i)
 				// Удаляем врага
-				uc.enemyUseCases.RemoveEnemy(j)
+				enemyUseCases.RemoveEnemy(0)
 				// Выходим из цикла врагов, так как пуля уже удалена
 				break
 			}
@@ -289,28 +310,61 @@ func (uc *CollisionUseCases) CheckCollidersWithArrayFirst(
 
 // checkTankEnemyCollisions проверяет коллизии танка с врагами
 func (uc *CollisionUseCases) checkTankEnemyCollisions(tank *types.TankEntity) {
-	enemies := uc.enemyUseCases.GetEnemies()
+	// Если есть массив врагов, используем его
+	if len(uc.enemyUseCasesList) > 0 {
+		for _, enemyUseCases := range uc.enemyUseCasesList {
+			enemy := enemyUseCases.GetEnemy()
 
-	for _, enemy := range enemies {
-		// Пропускаем танк игрока (самого себя)
-		if enemy == tank {
-			continue
+			// Пропускаем если врага нет
+			if enemy == nil {
+				continue
+			}
+
+			// Пропускаем танк игрока (самого себя)
+			if enemy == tank {
+				continue
+			}
+
+			// Пропускаем взрывающихся врагов
+			if enemy.IsExploding {
+				continue
+			}
+
+			// Пропускаем врагов в процессе спавна
+			if !enemy.IsSpawned {
+				continue
+			}
+
+			// Проверяем коллизию танка с врагом
+			if uc.CheckColliders(tank, enemy) {
+				// Откатываем позицию танка назад при столкновении
+				uc.tankUseCases.StopTank(true)
+			}
 		}
+	} else if uc.enemyUseCases != nil {
+		// Fallback для старого метода
+		enemies := uc.enemyUseCases.GetEnemies()
+		for _, enemy := range enemies {
+			// Пропускаем танк игрока (самого себя)
+			if enemy == tank {
+				continue
+			}
 
-		// Пропускаем взрывающихся врагов
-		if enemy.IsExploding {
-			continue
-		}
+			// Пропускаем взрывающихся врагов
+			if enemy.IsExploding {
+				continue
+			}
 
-		// Пропускаем врагов в процессе спавна
-		if !enemy.IsSpawned {
-			continue
-		}
+			// Пропускаем врагов в процессе спавна
+			if !enemy.IsSpawned {
+				continue
+			}
 
-		// Проверяем коллизию танка с врагом
-		if uc.CheckColliders(tank, enemy) {
-			// Откатываем позицию танка назад при столкновении
-			uc.tankUseCases.StopTank(true)
+			// Проверяем коллизию танка с врагом
+			if uc.CheckColliders(tank, enemy) {
+				// Откатываем позицию танка назад при столкновении
+				uc.tankUseCases.StopTank(true)
+			}
 		}
 	}
 }

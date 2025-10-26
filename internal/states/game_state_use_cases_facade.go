@@ -3,17 +3,18 @@ package states
 import (
 	"github.com/shpaker/gonflict/internal/repositories/game"
 	"github.com/shpaker/gonflict/internal/repositories/processed"
+	"github.com/shpaker/gonflict/internal/types"
 	"github.com/shpaker/gonflict/internal/use_cases"
 )
 
 // GameStateUseCasesFacade - фасад для оркестрации use cases игрового состояния
 type GameStateUseCasesFacade struct {
-	tankUseCases      *use_cases.TankUseCases
+	playerUseCases    *use_cases.PlayerUseCases
 	bulletUseCases    *use_cases.BulletUseCases
 	mapUseCases       *use_cases.MapUseCases
 	collisionUseCases *use_cases.CollisionUseCases
 	animationUseCases *use_cases.AnimationUseCases
-	enemyUseCases     *use_cases.EnemyUseCases
+	enemyUseCasesList []*use_cases.EnemyUseCases // Массив врагов (до 3 штук)
 }
 
 // NewGameStateUseCasesFacade создает фасад для оркестрации use cases игрового состояния
@@ -46,36 +47,60 @@ func NewGameStateUseCasesFacade(
 
 	// Создаем Use Cases
 	animationUseCases := use_cases.NewAnimationUseCases(animationsRepo)
-	tankUseCases := use_cases.NewTankUseCases(tanksRepo, playerTilesetRepo, spawnerTilesetRepo, animationUseCases, gameConfig.PlayerSpawners)
+	tankUseCases := use_cases.NewTankUseCases(tanksRepo, playerTilesetRepo, spawnerTilesetRepo, animationUseCases)
+	playerUseCases := use_cases.NewPlayerUseCases(tankUseCases, animationUseCases, gameConfig.PlayerSpawners)
 	bulletTilesUseCases := use_cases.NewTilesUseCases(bulletTilesetRepo)
 	bulletUseCases := use_cases.NewBulletUseCases(bulletsRepo, bulletTilesUseCases)
 	mapUseCases := use_cases.NewMapUseCases(blocksRepo)
-	enemyUseCases := use_cases.NewEnemyUseCases(tanksRepo, playerTilesetRepo, spawnerTilesetRepo, explosionTilesetRepo, animationUseCases)
-	collisionUseCases := use_cases.NewCollisionUseCases(
-		bulletUseCases,
-		tankUseCases,
-		mapUseCases,
-		enemyUseCases,
-	)
 
-	// Инициализируем врагов
-	if err := enemyUseCases.InitEnemies(gameConfig.EnemySpawners); err != nil {
-		return nil, err
+	// Создаем до 3 врагов
+	enemyUseCasesList := make([]*use_cases.EnemyUseCases, 0, 3)
+	for i, spawner := range gameConfig.EnemySpawners {
+		if i >= 3 { // Максимум 3 врага
+			break
+		}
+		if len(spawner) != 2 {
+			continue
+		}
+
+		// Создаем отдельного врага
+		enemy := use_cases.NewEnemyUseCases(tankUseCases, explosionTilesetRepo, animationUseCases)
+
+		// Конвертируем координаты в пиксели
+		position := types.Position{
+			X: float64(spawner[0]) * use_cases.TankSpriteSize,
+			Y: float64(spawner[1]) * use_cases.TankSpriteSize,
+		}
+
+		// Инициализируем врага
+		if err := enemy.InitEnemy(position); err != nil {
+			return nil, err
+		}
+
+		enemyUseCasesList = append(enemyUseCasesList, enemy)
 	}
 
+	// Создаем CollisionUseCases
+	collisionUseCases := use_cases.NewCollisionUseCasesWithEnemies(
+		bulletUseCases,
+		playerUseCases,
+		mapUseCases,
+		enemyUseCasesList,
+	)
+
 	return &GameStateUseCasesFacade{
-		tankUseCases:      tankUseCases,
+		playerUseCases:    playerUseCases,
 		bulletUseCases:    bulletUseCases,
 		mapUseCases:       mapUseCases,
 		collisionUseCases: collisionUseCases,
 		animationUseCases: animationUseCases,
-		enemyUseCases:     enemyUseCases,
+		enemyUseCasesList: enemyUseCasesList,
 	}, nil
 }
 
 // Update обновляет игровое состояние
 func (g *GameStateUseCasesFacade) Update() {
-	g.tankUseCases.MoveTank(g.tankUseCases.GetDirection(), use_cases.DT)
+	g.playerUseCases.MoveTank(g.playerUseCases.GetDirection(), use_cases.DT)
 	g.animationUseCases.UpdateAnimations()
 	g.bulletUseCases.UpdateBullets(use_cases.DT)
 	g.collisionUseCases.UpdateCollisions()
@@ -83,27 +108,31 @@ func (g *GameStateUseCasesFacade) Update() {
 
 // UpdateTankSpawn обновляет процесс спавна танка
 func (g *GameStateUseCasesFacade) UpdateTankSpawn(currentTime float64) {
-	g.tankUseCases.UpdateSpawn(currentTime)
+	g.playerUseCases.UpdateSpawn(currentTime)
 }
 
 // UpdateEnemiesSpawn обновляет процесс спавна врагов
 func (g *GameStateUseCasesFacade) UpdateEnemiesSpawn(currentTime float64) {
-	g.enemyUseCases.UpdateEnemiesSpawn(currentTime)
+	for _, enemyUseCases := range g.enemyUseCasesList {
+		enemyUseCases.UpdateEnemiesSpawn(currentTime)
+	}
 }
 
 // UpdateEnemiesAnimations обновляет анимации врагов
 func (g *GameStateUseCasesFacade) UpdateEnemiesAnimations() {
-	g.enemyUseCases.UpdateEnemiesAnimations()
+	for _, enemyUseCases := range g.enemyUseCasesList {
+		enemyUseCases.UpdateEnemiesAnimations()
+	}
 }
 
 // StartTankSpawn запускает спавн танка
 func (g *GameStateUseCasesFacade) StartTankSpawn(spawnStartTime float64) {
-	g.tankUseCases.StartSpawn(spawnStartTime)
+	g.playerUseCases.StartSpawn(spawnStartTime)
 }
 
 // Getter методы для доступа к use cases
-func (g *GameStateUseCasesFacade) TankUseCases() *use_cases.TankUseCases {
-	return g.tankUseCases
+func (g *GameStateUseCasesFacade) TankUseCases() *use_cases.PlayerUseCases {
+	return g.playerUseCases
 }
 
 func (g *GameStateUseCasesFacade) BulletUseCases() *use_cases.BulletUseCases {
@@ -123,5 +152,14 @@ func (g *GameStateUseCasesFacade) AnimationUseCases() *use_cases.AnimationUseCas
 }
 
 func (g *GameStateUseCasesFacade) EnemyUseCases() *use_cases.EnemyUseCases {
-	return g.enemyUseCases
+	// Возвращаем первый враг для обратной совместимости
+	// TODO: обновить интерфейс для работы с массивом
+	if len(g.enemyUseCasesList) > 0 {
+		return g.enemyUseCasesList[0]
+	}
+	return nil
+}
+
+func (g *GameStateUseCasesFacade) GetEnemyUseCasesList() []*use_cases.EnemyUseCases {
+	return g.enemyUseCasesList
 }

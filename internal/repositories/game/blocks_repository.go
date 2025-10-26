@@ -29,7 +29,7 @@ func (br *BlocksRepository) GetAllBlocks() *[]types.BlockEntity {
 // RemoveBlockByPointer удаляет блок по указателю
 func (br *BlocksRepository) RemoveBlockByPointer(block *types.BlockEntity) error {
 	if block == nil {
-		return fmt.Errorf("указатель на блок не может быть nil")
+		return fmt.Errorf("block pointer cannot be nil")
 	}
 
 	for i := range br.blocks {
@@ -39,5 +39,5 @@ func (br *BlocksRepository) RemoveBlockByPointer(block *types.BlockEntity) error
 		}
 	}
 
-	return fmt.Errorf("блок не найден в репозитории")
+	return fmt.Errorf("block not found in repository")
 }
