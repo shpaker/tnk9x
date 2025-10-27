@@ -148,8 +148,9 @@ func (uc *PlayerUseCases) StopTank(byCollision bool) error {
 	}
 
 	if byCollision {
-		tank.WorldPosition.X = float64(int(tank.WorldPosition.X))
-		tank.WorldPosition.Y = float64(int(tank.WorldPosition.Y))
+		// Округляем координаты до ближайшего кратного 4
+		tank.WorldPosition.X = utils.RoundToNearestMultipleOf4(tank.WorldPosition.X)
+		tank.WorldPosition.Y = utils.RoundToNearestMultipleOf4(tank.WorldPosition.Y)
 		return nil
 	}
 

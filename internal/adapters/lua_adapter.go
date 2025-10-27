@@ -36,7 +36,7 @@ func (a *LuaAdapter) Close() {
 }
 
 // CallEnemyAI вызывает Lua функцию для AI врага
-func (a *LuaAdapter) CallEnemyAI(enemy *types.TankEntity, context *types.GameAIContext) (bool, int) {
+func (a *LuaAdapter) CallEnemyAI(enemy *types.TankEntity, context *types.GameAiContext) (bool, int) {
 	// Конвертируем врага в Lua таблицу
 	enemyTable := a.convertTankToLua(enemy)
 
@@ -75,7 +75,7 @@ func (a *LuaAdapter) convertTankToLua(tank *types.TankEntity) *lua.LTable {
 }
 
 // convertContextToLua конвертирует контекст в Lua таблицу
-func (a *LuaAdapter) convertContextToLua(context *types.GameAIContext) *lua.LTable {
+func (a *LuaAdapter) convertContextToLua(context *types.GameAiContext) *lua.LTable {
 	ctx := a.L.NewTable()
 
 	// Добавляем игрока если есть

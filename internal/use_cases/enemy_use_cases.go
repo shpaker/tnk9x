@@ -14,6 +14,7 @@ type EnemyUseCases struct {
 	enemyTank            *types.TankEntity          // Ссылка на танк этого врага
 	spawnAnimation       *types.TileAnimationEntity // Анимация спавна
 	tankAnimation        *types.TileAnimationEntity // Анимация танка (движения)
+	aiTickCounter        int                        // Счетчик тиков для AI этого конкретного врага
 }
 
 func NewEnemyUseCases(
@@ -190,11 +191,20 @@ func (uc *EnemyUseCases) UpdateAI() {
 		return
 	}
 
-	// Получаем решение от AI
-	decision := uc.aiUseCases.UpdateAI(uc.enemyTank)
+	// Увеличиваем счетчик тиков для этого врага
+	uc.aiTickCounter++
 
-	// Применяем решение
-	uc.aiUseCases.ApplyDecision(uc.enemyTank, decision)
+	// Проверяем, нужно ли обновлять AI
+	if uc.aiTickCounter >= uc.aiUseCases.GetUpdateInterval() {
+		// Получаем решение от AI
+		decision := uc.aiUseCases.UpdateAI(uc.enemyTank)
+
+		// Применяем решение
+		uc.aiUseCases.ApplyDecision(uc.enemyTank, decision)
+
+		// Сбрасываем счетчик
+		uc.aiTickCounter = 0
+	}
 }
 
 // MoveTank двигает танк врага

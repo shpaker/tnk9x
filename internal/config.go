@@ -14,8 +14,9 @@ type AppConfig struct {
 
 // GameConfig содержит настройки игры
 type GameConfig struct {
-	EnemySpawners  [][]int `yaml:"enemy_spawners"`
-	PlayerSpawners [][]int `yaml:"players_spawners"`
+	EnemySpawners         [][]int `yaml:"enemy_spawners"`
+	PlayerSpawners        [][]int `yaml:"players_spawners"`
+	AIUpdateIntervalTicks int     `yaml:"ai_update_interval_ticks"` // Интервал обновления AI в тиках (по умолчанию 60 тиков = 1000мс)
 }
 
 // ConfigSchema структура для парсинга YAML файла

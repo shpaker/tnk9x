@@ -58,15 +58,22 @@ func NewGameStateUseCasesFacade(
 	}
 
 	// Создаем AI контекст
-	aiContext := &types.GameAIContext{
+	blocks := mapUseCases.GetBlocks()
+	aiContext := &types.GameAiContext{
 		Player:  nil, // Будет обновляться в Update
-		Enemies: nil,
-		Bullets: nil,
-		Blocks:  mapUseCases.GetBlocks(),
+		Enemies: nil, // Будет обновляться в Update
+		Bullets: nil, // Будет обновляться в Update
+		Blocks:  blocks,
+	}
+
+	// Получаем интервал обновления AI в тиках (по умолчанию 60 тиков)
+	updateInterval := 60
+	if gameConfig.AIUpdateIntervalTicks > 0 {
+		updateInterval = gameConfig.AIUpdateIntervalTicks
 	}
 
 	// Создаем AIUseCases
-	aiUseCases := use_cases.NewAIUseCases(ai, aiContext)
+	aiUseCases := use_cases.NewAIUseCases(ai, aiContext, updateInterval)
 
 	// Создаем до 3 врагов
 	enemyUseCasesList := make([]*use_cases.EnemyUseCases, 0, 3)
@@ -115,18 +122,25 @@ func NewGameStateUseCasesFacade(
 
 // Update обновляет игровое состояние
 func (g *GameStateUseCasesFacade) Update() {
+	// Двигаем игрока
 	g.playerUseCases.MoveTank(g.playerUseCases.GetDirection(), use_cases.DT)
-	g.animationUseCases.UpdateAnimations()
-	g.bulletUseCases.UpdateBullets(use_cases.DT)
-	g.collisionUseCases.UpdateCollisions()
 
-	// Обновляем AI врагов
+	// Обновляем AI врагов и двигаем их
 	for _, enemy := range g.enemyUseCasesList {
 		if enemy != nil {
 			enemy.UpdateAI()
 			enemy.MoveTank(use_cases.DT)
 		}
 	}
+
+	// Обновляем пули
+	g.bulletUseCases.UpdateBullets(use_cases.DT)
+
+	// Проверяем коллизии ПОСЛЕ движения всех объектов
+	g.collisionUseCases.UpdateCollisions()
+
+	// Обновляем анимации
+	g.animationUseCases.UpdateAnimations()
 }
 
 // UpdateTankSpawn обновляет процесс спавна танка

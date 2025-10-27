@@ -101,105 +101,158 @@ gonflict/
 
 ```mermaid
 graph TB
-    subgraph "Presentation Layer"
-        Adapters[Adapters<br/>Input / Render]
+    subgraph P["🎨 Presentation Layer"]
+        direction LR
+        Adapters["📝 Adapters<br/>Input / Render"]
     end
     
-    subgraph "Application Layer"
-        UseCases[Use Cases<br/>Бизнес-логика]
+    subgraph A["⚙️ Application Layer"]
+        direction LR
+        UseCases["🎮 Use Cases<br/>Бизнес-логика"]
     end
     
-    subgraph "AI Layer"
-        AICases[AIUseCases<br/>AI логика]
-        LuaAI[EnemyAILua<br/>Lua AI]
-        LuaScripts[LuaAdapter<br/>enemies.lua]
+    subgraph AI["🤖 AI Layer"]
+        direction LR
+        AICases["🧠 AIUseCases<br/>AI логика"]
+        LuaAI["📜 EnemyAILua<br/>Lua AI"]
+        LuaScripts["🗂️ LuaAdapter<br/>enemies.lua"]
     end
     
-    subgraph "Domain Layer"
-        Entities[Entities<br/>Domain модели]
+    subgraph D["📦 Domain Layer"]
+        direction LR
+        Entities["🏗️ Entities<br/>Domain модели"]
     end
     
-    subgraph "Infrastructure Layer"
-        Repositories[Repositories<br/>Хранение данных]
+    subgraph I["💾 Infrastructure Layer"]
+        direction LR
+        Repositories["🗄️ Repositories<br/>Хранение данных"]
     end
     
-    Adapters --> UseCases
-    UseCases --> AICases
-    AICases --> LuaAI
-    LuaAI --> LuaScripts
-    UseCases --> Entities
-    Repositories --> Entities
-    UseCases --> Repositories
+    Adapters -->|"запросы"| UseCases
+    UseCases -->|"обновление"| AICases
+    AICases -->|"вызов"| LuaAI
+    LuaAI -->|"скрипт"| LuaScripts
+    UseCases -->|"использует"| Entities
+    Repositories -->|"предоставляет"| Entities
+    UseCases -->|"сохраняет"| Repositories
+    
+    style P fill:#e1f5ff
+    style A fill:#f3e5f5
+    style AI fill:#e0f2f1
+    style D fill:#e8f5e9
+    style I fill:#fff3e0
 ```
 
 ### Диаграмма взаимодействия компонентов
 
 ```mermaid
-graph LR
+flowchart TB
     User[👤 Пользователь]
-    Input[InputAdapter<br/>клавиатура]
-    Facade[GameStateFacade<br/>оркестрация]
-    Tank[TankUseCases<br/>движение/снаряды]
-    Enemy[EnemyUseCases<br/>враги]
-    AI[AIUseCases<br/>AI логика]
-    AILua[EnemyAILua<br/>Lua AI]
-    Lua[LuaAdapter<br/>Lua скрипты]
-    Bullet[BulletUseCases<br/>пули]
-    Collision[CollisionUseCases<br/>коллизии]
-    Render[RendererAdapter<br/>отрисовка]
-    TanksRepo[(TanksRepository)]
+    
+    subgraph "🎮 Игровой цикл"
+        Input[📥 InputAdapter<br/>клавиатура]
+        Facade[🎯 GameStateFacade<br/>оркестрация]
+        Render[🎨 RendererAdapter<br/>отрисовка]
+    end
+    
+    subgraph "⚡ Use Cases"
+        Tank[🚗 TankUseCases<br/>движение/снаряды]
+        Enemy[👾 EnemyUseCases<br/>враги]
+        Bullet[💣 BulletUseCases<br/>пули]
+        Collision[💥 CollisionUseCases<br/>коллизии]
+    end
+    
+    subgraph "🤖 AI система"
+        AI[🧠 AIUseCases<br/>AI логика]
+        AILua[📜 EnemyAILua<br/>Lua AI]
+        Lua[🗂️ LuaAdapter<br/>enemies.lua]
+    end
+    
+    TanksRepo[(💾 TanksRepository)]
     
     User -->|WASD Space| Input
     Input -->|команды| Facade
-    Facade --> Tank
-    Facade --> Enemy
-    Facade --> Bullet
-    Facade --> Collision
-    Enemy --> AI
-    AI --> AILua
-    AILua --> Lua
-    Lua -->|assets/scripts/enemies.lua| Lua
-    Tank --> TanksRepo
-    Enemy --> TanksRepo
-    Collision --> Tank
-    Collision --> Enemy
-    Collision --> Bullet
-    Tank --> Render
-    Enemy --> Render
-    Bullet --> Render
+    Facade -->|обновление| Tank
+    Facade -->|обновление| Enemy
+    Facade -->|обновление| Bullet
+    Facade -->|проверка| Collision
+    Enemy -->|запрос| AI
+    AI -->|вызов| AILua
+    AILua -->|скрипт| Lua
+    Tank <--> TanksRepo
+    Enemy <--> TanksRepo
+    Collision -->|проверяет| Tank
+    Collision -->|проверяет| Enemy
+    Collision -->|проверяет| Bullet
+    Tank -->|отрисовка| Render
+    Enemy -->|отрисовка| Render
+    Bullet -->|отрисовка| Render
     Render -->|графика| User
+    
+    style User fill:#ffebee
+    style Input fill:#e3f2fd
+    style Facade fill:#f3e5f5
+    style Render fill:#e1f5ff
+    style Tank fill:#e8f5e9
+    style Enemy fill:#fff3e0
+    style Bullet fill:#fce4ec
+    style Collision fill:#fff9c4
+    style AI fill:#e0f2f1
+    style AILua fill:#e0f2f1
+    style Lua fill:#e0f2f1
+    style TanksRepo fill:#f1f8e9
 ```
 
 ### Диаграмма игрового цикла
 
 ```mermaid
 sequenceDiagram
-    participant App as Application
-    participant State as GameState
-    participant Facade as UseCasesFacade
-    participant Tank as TankUseCases
-    participant Enemy as EnemyUseCases
-    participant AI as AIUseCases
-    participant Lua as LuaAdapter
-    participant Collision as CollisionUseCases
-    participant Render as RenderAdapter
+    participant App as 🖥️ Application
+    participant State as 🎮 GameState
+    participant Facade as 🎯 UseCasesFacade
+    participant Tank as 🚗 TankUseCases
+    participant Enemy as 👾 EnemyUseCases
+    participant AI as 🧠 AIUseCases
+    participant Lua as 📜 LuaAdapter
+    participant Collision as 💥 CollisionUseCases
+    participant Render as 🎨 RenderAdapter
     
-    App->>State: Update()
-    State->>Facade: Update()
-    Facade->>Tank: MoveTank()
-    Facade->>Enemy: UpdateAI()
-    Enemy->>AI: UpdateAI()
-    AI->>Lua: CallEnemyAI()
-    Lua-->>AI: shouldMove, direction
-    AI-->>Enemy: ApplyDecision()
-    Facade->>Enemy: MoveTank()
-    Facade->>Collision: UpdateCollisions()
-    Collision->>Enemy: checkEnemyCollisions()
-    State->>Render: DrawAll()
-    Render->>Render: drawMap()
-    Render->>Render: drawTanks()
-    Render->>Render: drawBullets()
-    App->>App: 60 FPS
+    Note over App: 🏁 Игровой цикл (60 FPS)
+    
+    App->>+State: Update()
+    State->>+Facade: Update()
+    
+    par Движение объектов
+        Facade->>Tank: MoveTank()
+    end
+    
+    par AI врагов
+        Facade->>Enemy: UpdateAI()
+        Enemy->>AI: UpdateAI()
+        AI->>Lua: CallEnemyAI()
+        Note right of Lua: 📝 Скрипт:<br/>enemies.lua
+        Lua-->>AI: shouldMove, direction
+        AI-->>Enemy: ApplyDecision()
+        Facade->>Enemy: MoveTank()
+    end
+    
+    par Коллизии
+        Facade->>Collision: UpdateCollisions()
+        Collision->>Enemy: checkEnemyCollisions()
+    end
+    
+    Facade->>-State: готово
+    State->>+Render: DrawAll()
+    
+    par Отрисовка
+        Render->>Render: drawMap()
+        Render->>Render: drawTanks()
+        Render->>Render: drawBullets()
+    end
+    
+    Render->>-App: завершено
+    State->>-App: завершено
+    Note over App: 🔄 Следующий кадр
 ```
 
 ### Конкретные примеры из кода

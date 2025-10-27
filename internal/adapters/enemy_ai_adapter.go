@@ -1,8 +1,6 @@
 package adapters
 
-import (
-	"github.com/shpaker/gonflict/internal/types"
-)
+import "github.com/shpaker/gonflict/internal/types"
 
 // EnemyAILua Lua реализация AI
 type EnemyAILua struct {
@@ -20,7 +18,7 @@ func NewEnemyAILua(scriptPath string) (*EnemyAILua, error) {
 }
 
 // Update обновляет AI для врага
-func (ai *EnemyAILua) Update(enemy *types.TankEntity, context *types.GameAIContext) types.EnemyAIDecision {
+func (ai *EnemyAILua) Update(enemy *types.TankEntity, context *types.GameAiContext) types.EnemyAIDecision {
 	// Вызываем Lua функцию через адаптер
 	shouldMove, directionInt := ai.luaAdapter.CallEnemyAI(enemy, context)
 

@@ -16,7 +16,7 @@ type IGameRepositoryFacade interface {
 	AddEnemy(enemy *types.TankEntity)
 
 	// Метод для получения контекста игры для AI
-	GetGameContext() *GameContext
+	GetGameContext() *types.GameAiContext
 }
 
 // IBulletsRepository определяет интерфейс для работы с пулями

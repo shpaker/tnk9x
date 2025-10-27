@@ -67,7 +67,7 @@ func (gr *GameRepositoryFacade) AddEnemy(enemy *types.TankEntity) {
 }
 
 // GetGameContext возвращает контекст игры для AI
-func (gr *GameRepositoryFacade) GetGameContext() *GameContext {
+func (gr *GameRepositoryFacade) GetGameContext() *types.GameAiContext {
 	// Получаем игрока
 	var player *types.TankEntity
 	if gr.tanks.HasPlayer() {
@@ -87,7 +87,7 @@ func (gr *GameRepositoryFacade) GetGameContext() *GameContext {
 		blocks = *blocksPtr
 	}
 
-	return &GameContext{
+	return &types.GameAiContext{
 		Player:  player,
 		Enemies: enemies,
 		Bullets: bullets,

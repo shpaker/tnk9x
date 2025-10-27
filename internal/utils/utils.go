@@ -99,3 +99,16 @@ func RoundToDivisible(
 	}
 	return lower
 }
+
+// RoundToNearestMultipleOf4 округляет координату до ближайшего кратного 4
+func RoundToNearestMultipleOf4(value float64) float64 {
+	rounded := math.Round(value)
+	nearestMultiple := math.Round(rounded/4) * 4
+
+	// Если разница меньше 0.5, округляем до кратного 4
+	if math.Abs(rounded-nearestMultiple) < 0.5 {
+		return nearestMultiple
+	}
+
+	return rounded
+}

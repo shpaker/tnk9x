@@ -4,16 +4,23 @@ import "github.com/shpaker/gonflict/internal/types"
 
 // AIUseCases управляет AI врагов
 type AIUseCases struct {
-	ai        IEnemyAI
-	aiContext *types.GameAIContext
+	ai             IEnemyAI
+	aiContext      *types.GameAiContext
+	updateInterval int
 }
 
 // NewAIUseCases создает новый AIUseCases
-func NewAIUseCases(ai IEnemyAI, aiContext *types.GameAIContext) *AIUseCases {
+func NewAIUseCases(ai IEnemyAI, aiContext *types.GameAiContext, updateInterval int) *AIUseCases {
 	return &AIUseCases{
-		ai:        ai,
-		aiContext: aiContext,
+		ai:             ai,
+		aiContext:      aiContext,
+		updateInterval: updateInterval,
 	}
+}
+
+// GetUpdateInterval возвращает интервал обновления AI
+func (uc *AIUseCases) GetUpdateInterval() int {
+	return uc.updateInterval
 }
 
 // UpdateAI обновляет AI для врага

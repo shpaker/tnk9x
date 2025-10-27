@@ -2,6 +2,7 @@ package use_cases
 
 import (
 	"github.com/shpaker/gonflict/internal/types"
+	"github.com/shpaker/gonflict/internal/utils"
 )
 
 // CollisionUseCases реализация для операций с коллизиями
@@ -57,9 +58,8 @@ func (uc *CollisionUseCases) UpdateCollisions() error {
 	uc.checkBulletWallCollisions()
 	uc.checkTankBoundaryCollisions(tank)
 	uc.checkTankWallCollisions(tank)
-	uc.checkTankEnemyCollisions(tank)
 
-	// Проверяем коллизии врагов
+	// Проверяем коллизии врагов (БЕЗ коллизий с игроком)
 	uc.checkEnemyCollisions()
 
 	return nil
@@ -101,6 +101,12 @@ func (uc *CollisionUseCases) checkEnemyBoundaryCollisions(enemy *types.TankEntit
 		enemy.WorldPosition.Y = MapWidthHeight - TankSpriteSize
 		enemy.Speed = 0
 	}
+
+	// Округляем координаты врага до ближайшего кратного 4
+	if enemy.Speed == 0 {
+		enemy.WorldPosition.X = utils.RoundToNearestMultipleOf4(enemy.WorldPosition.X)
+		enemy.WorldPosition.Y = utils.RoundToNearestMultipleOf4(enemy.WorldPosition.Y)
+	}
 }
 
 // checkEnemyWallCollisions проверяет коллизии врага со стенами
@@ -135,6 +141,10 @@ func (uc *CollisionUseCases) handleEnemyWallCollision(enemy *types.TankEntity, b
 
 	// Останавливаем врага
 	enemy.Speed = 0
+
+	// Округляем координаты врага до ближайшего кратного 4
+	enemy.WorldPosition.X = utils.RoundToNearestMultipleOf4(enemy.WorldPosition.X)
+	enemy.WorldPosition.Y = utils.RoundToNearestMultipleOf4(enemy.WorldPosition.Y)
 }
 
 // checkBulletBoundaryCollisions проверяет коллизии пуль с границами экрана
@@ -381,65 +391,4 @@ func (uc *CollisionUseCases) CheckCollidersWithArrayFirst(
 		}
 	}
 	return nil
-}
-
-// checkTankEnemyCollisions проверяет коллизии танка с врагами
-func (uc *CollisionUseCases) checkTankEnemyCollisions(tank *types.TankEntity) {
-	// Если есть массив врагов, используем его
-	if len(uc.enemyUseCasesList) > 0 {
-		for _, enemyUseCases := range uc.enemyUseCasesList {
-			enemy := enemyUseCases.GetEnemy()
-
-			// Пропускаем если врага нет
-			if enemy == nil {
-				continue
-			}
-
-			// Пропускаем танк игрока (самого себя)
-			if enemy == tank {
-				continue
-			}
-
-			// Пропускаем взрывающихся врагов
-			if enemy.IsExploding {
-				continue
-			}
-
-			// Пропускаем врагов в процессе спавна
-			if !enemy.IsSpawned {
-				continue
-			}
-
-			// Проверяем коллизию танка с врагом
-			if uc.CheckColliders(tank, enemy) {
-				// Откатываем позицию танка назад при столкновении
-				uc.tankUseCases.StopTank(true)
-			}
-		}
-	} else if uc.enemyUseCases != nil {
-		// Fallback для старого метода
-		enemies := uc.enemyUseCases.GetEnemies()
-		for _, enemy := range enemies {
-			// Пропускаем танк игрока (самого себя)
-			if enemy == tank {
-				continue
-			}
-
-			// Пропускаем взрывающихся врагов
-			if enemy.IsExploding {
-				continue
-			}
-
-			// Пропускаем врагов в процессе спавна
-			if !enemy.IsSpawned {
-				continue
-			}
-
-			// Проверяем коллизию танка с врагом
-			if uc.CheckColliders(tank, enemy) {
-				// Откатываем позицию танка назад при столкновении
-				uc.tankUseCases.StopTank(true)
-			}
-		}
-	}
 }
