@@ -1,6 +1,7 @@
 package states
 
 import (
+	"github.com/shpaker/gonflict/internal/adapters"
 	"github.com/shpaker/gonflict/internal/repositories/game"
 	"github.com/shpaker/gonflict/internal/repositories/processed"
 	"github.com/shpaker/gonflict/internal/types"
@@ -34,24 +35,38 @@ func NewGameStateUseCasesFacade(
 		return nil, err
 	}
 
-	// Создаем репозитории
-	blocksRepo := game.NewBlocksRepository()
-	bulletsRepo := game.NewBulletsRepository()
-	animationsRepo := game.NewAnimationsRepository()
-	tanksRepo := game.NewTanksRepository()
+	// Создаем GameRepository со всеми репозиториями
+	gameRepo := game.NewGameRepository()
 
 	// Заполняем репозиторий блоков данными уровня
 	for _, block := range level {
-		blocksRepo.AddBlock(block)
+		gameRepo.BlocksRepository().AddBlock(block)
 	}
 
 	// Создаем Use Cases
-	animationUseCases := use_cases.NewAnimationUseCases(animationsRepo)
-	tankUseCases := use_cases.NewTankUseCases(tanksRepo, playerTilesetRepo, spawnerTilesetRepo, animationUseCases)
+	animationUseCases := use_cases.NewAnimationUseCases(gameRepo.AnimationsRepository())
+	tankUseCases := use_cases.NewTankUseCases(gameRepo.TanksRepository(), playerTilesetRepo, spawnerTilesetRepo, animationUseCases)
 	playerUseCases := use_cases.NewPlayerUseCases(tankUseCases, animationUseCases, gameConfig.PlayerSpawners)
 	bulletTilesUseCases := use_cases.NewTilesUseCases(bulletTilesetRepo)
-	bulletUseCases := use_cases.NewBulletUseCases(bulletsRepo, bulletTilesUseCases)
-	mapUseCases := use_cases.NewMapUseCases(blocksRepo)
+	bulletUseCases := use_cases.NewBulletUseCases(gameRepo.BulletsRepository(), bulletTilesUseCases)
+	mapUseCases := use_cases.NewMapUseCases(gameRepo.BlocksRepository())
+
+	// Создаем AI
+	ai, err := adapters.NewEnemyAILua("assets/scripts/enemies.lua")
+	if err != nil {
+		return nil, err
+	}
+
+	// Создаем AI контекст
+	aiContext := &types.GameAIContext{
+		Player:  nil, // Будет обновляться в Update
+		Enemies: nil,
+		Bullets: nil,
+		Blocks:  mapUseCases.GetBlocks(),
+	}
+
+	// Создаем AIUseCases
+	aiUseCases := use_cases.NewAIUseCases(ai, aiContext)
 
 	// Создаем до 3 врагов
 	enemyUseCasesList := make([]*use_cases.EnemyUseCases, 0, 3)
@@ -63,8 +78,8 @@ func NewGameStateUseCasesFacade(
 			continue
 		}
 
-		// Создаем отдельного врага
-		enemy := use_cases.NewEnemyUseCases(tankUseCases, explosionTilesetRepo, animationUseCases)
+		// Создаем отдельного врага с AI
+		enemy := use_cases.NewEnemyUseCases(tankUseCases, explosionTilesetRepo, animationUseCases, aiUseCases)
 
 		// Конвертируем координаты в пиксели
 		position := types.Position{
@@ -104,6 +119,14 @@ func (g *GameStateUseCasesFacade) Update() {
 	g.animationUseCases.UpdateAnimations()
 	g.bulletUseCases.UpdateBullets(use_cases.DT)
 	g.collisionUseCases.UpdateCollisions()
+
+	// Обновляем AI врагов
+	for _, enemy := range g.enemyUseCasesList {
+		if enemy != nil {
+			enemy.UpdateAI()
+			enemy.MoveTank(use_cases.DT)
+		}
+	}
 }
 
 // UpdateTankSpawn обновляет процесс спавна танка

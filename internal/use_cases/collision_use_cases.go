@@ -59,7 +59,82 @@ func (uc *CollisionUseCases) UpdateCollisions() error {
 	uc.checkTankWallCollisions(tank)
 	uc.checkTankEnemyCollisions(tank)
 
+	// Проверяем коллизии врагов
+	uc.checkEnemyCollisions()
+
 	return nil
+}
+
+// checkEnemyCollisions проверяет коллизии врагов с границами и стенами
+func (uc *CollisionUseCases) checkEnemyCollisions() {
+	for _, enemyUseCases := range uc.enemyUseCasesList {
+		enemy := enemyUseCases.GetEnemy()
+
+		if enemy == nil || enemy.IsExploding || !enemy.IsSpawned {
+			continue
+		}
+
+		// Проверяем коллизии с границами
+		uc.checkEnemyBoundaryCollisions(enemy, enemyUseCases)
+
+		// Проверяем коллизии со стенами
+		uc.checkEnemyWallCollisions(enemy, enemyUseCases)
+	}
+}
+
+// checkEnemyBoundaryCollisions проверяет коллизии врага с границами экрана
+func (uc *CollisionUseCases) checkEnemyBoundaryCollisions(enemy *types.TankEntity, enemyUseCases *EnemyUseCases) {
+	// Откатываем позицию при выходе за границы
+	if enemy.WorldPosition.X < 0 {
+		enemy.WorldPosition.X = 0
+		enemy.Speed = 0
+	}
+	if enemy.WorldPosition.Y < 0 {
+		enemy.WorldPosition.Y = 0
+		enemy.Speed = 0
+	}
+	if enemy.WorldPosition.X > MapWidthHeight-TankSpriteSize {
+		enemy.WorldPosition.X = MapWidthHeight - TankSpriteSize
+		enemy.Speed = 0
+	}
+	if enemy.WorldPosition.Y > MapWidthHeight-TankSpriteSize {
+		enemy.WorldPosition.Y = MapWidthHeight - TankSpriteSize
+		enemy.Speed = 0
+	}
+}
+
+// checkEnemyWallCollisions проверяет коллизии врага со стенами
+func (uc *CollisionUseCases) checkEnemyWallCollisions(enemy *types.TankEntity, enemyUseCases *EnemyUseCases) {
+	level := uc.mapUseCases.GetBlocks()
+	mapObjects := uc.createMapObjectsFromLevel(level)
+
+	// Проверяем коллизии с использованием внутренних методов
+	collidingObject := uc.CheckCollidersWithArrayFirst(enemy, mapObjects)
+
+	if collidingObject != nil {
+		uc.handleEnemyWallCollision(enemy, collidingObject.(*types.BlockEntity))
+	}
+}
+
+// handleEnemyWallCollision обрабатывает коллизию врага со стеной
+func (uc *CollisionUseCases) handleEnemyWallCollision(enemy *types.TankEntity, block *types.BlockEntity) {
+	blockPos := block.GetWorldPosition()
+	blockSize := block.GetSize()
+
+	// Откатываем позицию врага в зависимости от направления
+	switch enemy.Direction {
+	case types.DirectionUp:
+		enemy.WorldPosition.Y = blockPos.Y + float64(blockSize.Height)
+	case types.DirectionDown:
+		enemy.WorldPosition.Y = blockPos.Y - float64(TankSpriteSize)
+	case types.DirectionLeft:
+		enemy.WorldPosition.X = blockPos.X + float64(blockSize.Width)
+	case types.DirectionRight:
+		enemy.WorldPosition.X = blockPos.X - float64(TankSpriteSize)
+	}
+
+	// Останавливаем врага
+	enemy.Speed = 0
 }
 
 // checkBulletBoundaryCollisions проверяет коллизии пуль с границами экрана

@@ -21,7 +21,7 @@ type ITankUseCasesRef interface {
 	CreateSpawnAnimation() (*types.TileAnimationEntity, error)
 	GetTank(index int) (*types.TankEntity, error)
 	GetAllTanks() []*types.TankEntity
-	RemoveTank(index int)
+	RemoveTank(tank *types.TankEntity) error
 	AddTank(tank *types.TankEntity)
 }
 

@@ -10,6 +10,7 @@ type EnemyUseCases struct {
 	tankUseCases         ITankUseCasesRef
 	explosionTilesetRepo processed.ITilesetRepository
 	animationUseCases    IAnimationUseCases
+	aiUseCases           *AIUseCases                // AI для врага
 	enemyTank            *types.TankEntity          // Ссылка на танк этого врага
 	spawnAnimation       *types.TileAnimationEntity // Анимация спавна
 	tankAnimation        *types.TileAnimationEntity // Анимация танка (движения)
@@ -19,11 +20,13 @@ func NewEnemyUseCases(
 	tankUseCases ITankUseCasesRef,
 	explosionTilesetRepo processed.ITilesetRepository,
 	animationUseCases IAnimationUseCases,
+	aiUseCases *AIUseCases,
 ) *EnemyUseCases {
 	return &EnemyUseCases{
 		tankUseCases:         tankUseCases,
 		explosionTilesetRepo: explosionTilesetRepo,
 		animationUseCases:    animationUseCases,
+		aiUseCases:           aiUseCases,
 		enemyTank:            nil,
 	}
 }
@@ -178,5 +181,44 @@ func (uc *EnemyUseCases) UpdateEnemiesAnimations() {
 		if uc.tankAnimation != nil && uc.tankAnimation.IsAnimating {
 			uc.animationUseCases.StopAnimation(uc.tankAnimation)
 		}
+	}
+}
+
+// UpdateAI обновляет AI врага
+func (uc *EnemyUseCases) UpdateAI() {
+	if uc.enemyTank == nil || uc.aiUseCases == nil {
+		return
+	}
+
+	// Получаем решение от AI
+	decision := uc.aiUseCases.UpdateAI(uc.enemyTank)
+
+	// Применяем решение
+	uc.aiUseCases.ApplyDecision(uc.enemyTank, decision)
+}
+
+// MoveTank двигает танк врага
+func (uc *EnemyUseCases) MoveTank(dt float64) {
+	if uc.enemyTank == nil {
+		return
+	}
+
+	// Пропускаем взрывающихся или не заспавненных врагов
+	if uc.enemyTank.IsExploding || !uc.enemyTank.IsSpawned {
+		return
+	}
+
+	// Двигаем танк
+	delta := uc.enemyTank.Speed * dt
+
+	switch uc.enemyTank.Direction {
+	case types.DirectionUp:
+		uc.enemyTank.WorldPosition.Y -= delta
+	case types.DirectionDown:
+		uc.enemyTank.WorldPosition.Y += delta
+	case types.DirectionLeft:
+		uc.enemyTank.WorldPosition.X -= delta
+	case types.DirectionRight:
+		uc.enemyTank.WorldPosition.X += delta
 	}
 }

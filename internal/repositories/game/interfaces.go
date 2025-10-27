@@ -2,6 +2,23 @@ package game
 
 import "github.com/shpaker/gonflict/internal/types"
 
+// IGameRepository определяет интерфейс для главного репозитория игры
+type IGameRepository interface {
+	BlocksRepository() IBlocksRepository
+	BulletsRepository() IBulletsRepository
+	AnimationsRepository() IAnimationsRepository
+	TanksRepository() ITanksRepository
+
+	// Вспомогательные методы для работы с танками
+	AddPlayerTank(tank *types.TankEntity)
+	GetPlayerTank() *types.TankEntity
+	GetAllEnemies() []*types.TankEntity
+	AddEnemy(enemy *types.TankEntity)
+
+	// Метод для получения контекста игры для AI
+	GetGameContext() *GameContext
+}
+
 // IBulletsRepository определяет интерфейс для работы с пулями
 type IBulletsRepository interface {
 	// AddBullet добавляет пулю в репозиторий
@@ -37,12 +54,19 @@ type IAnimationsRepository interface {
 
 // ITanksRepository определяет интерфейс для работы с танками
 type ITanksRepository interface {
-	// AddTank добавляет танк в репозиторий
+	// === Методы для работы с игроком ===
+	SetPlayer(player *types.TankEntity)
+	GetPlayer() *types.TankEntity
+	HasPlayer() bool
+	ClearPlayer()
+
+	// === Методы для работы с врагами ===
+	AddEnemy(enemy *types.TankEntity)
+	GetAllEnemies() []*types.TankEntity
+	RemoveEnemy(index int) error
+
+	// === Методы для обратной совместимости ===
 	AddTank(tank *types.TankEntity)
-
-	// GetAllTanks возвращает все танки
 	GetAllTanks() []*types.TankEntity
-
-	// RemoveTank удаляет танк по индексу
-	RemoveTank(index int) error
+	RemoveTank(tank *types.TankEntity) error
 }

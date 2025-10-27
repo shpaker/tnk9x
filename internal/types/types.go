@@ -1,5 +1,19 @@
 package types
 
+// GameAIContext контекст игры для передачи в AI
+type GameAIContext struct {
+	Player  *TankEntity
+	Enemies []*TankEntity
+	Bullets []BulletEntity
+	Blocks  []BlockEntity
+}
+
+// EnemyAIDecision решение AI для врага
+type EnemyAIDecision struct {
+	ShouldMove   bool      // Должен ли танк двигаться
+	NewDirection Direction // Новое направление движения
+}
+
 // IImageIdGetter определяет интерфейс для получения ID изображения
 type IImageIdGetter interface {
 	GetImageId() (string, error)

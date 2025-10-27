@@ -106,9 +106,9 @@ func (uc *TankUseCases) GetAllTanks() []*types.TankEntity {
 	return uc.tanksRepo.GetAllTanks()
 }
 
-// RemoveTank удаляет танк из репозитория
-func (uc *TankUseCases) RemoveTank(index int) {
-	uc.tanksRepo.RemoveTank(index)
+// RemoveTank удаляет танк из репозитория по указателю
+func (uc *TankUseCases) RemoveTank(tank *types.TankEntity) error {
+	return uc.tanksRepo.RemoveTank(tank)
 }
 
 // AddTank добавляет танк в репозиторий
