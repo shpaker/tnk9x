@@ -35,8 +35,8 @@ func NewGameStateUseCasesFacade(
 		return nil, err
 	}
 
-	// Создаем GameRepository со всеми репозиториями
-	gameRepo := game.NewGameRepository()
+	// Создаем GameRepositoryFacade со всеми репозиториями
+	gameRepo := game.NewGameRepositoryFacade()
 
 	// Заполняем репозиторий блоков данными уровня
 	for _, block := range level {

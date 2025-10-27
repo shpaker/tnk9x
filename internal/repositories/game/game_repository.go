@@ -4,17 +4,17 @@ import (
 	"github.com/shpaker/gonflict/internal/types"
 )
 
-// GameRepository - фасад, который содержит все игровые репозитории
-type GameRepository struct {
+// GameRepositoryFacade - фасад, который содержит все игровые репозитории
+type GameRepositoryFacade struct {
 	blocks     *BlocksRepository
 	bullets    *BulletsRepository
 	animations *AnimationsRepository
 	tanks      *TanksRepository
 }
 
-// NewGameRepository создает новый GameRepository со всеми репозиториями
-func NewGameRepository() *GameRepository {
-	return &GameRepository{
+// NewGameRepositoryFacade создает новый GameRepositoryFacade со всеми репозиториями
+func NewGameRepositoryFacade() *GameRepositoryFacade {
+	return &GameRepositoryFacade{
 		blocks:     NewBlocksRepository(),
 		bullets:    NewBulletsRepository(),
 		animations: NewAnimationsRepository(),
@@ -25,49 +25,49 @@ func NewGameRepository() *GameRepository {
 // === Методы для доступа к репозиториям ===
 
 // BlocksRepository возвращает репозиторий блоков
-func (gr *GameRepository) BlocksRepository() IBlocksRepository {
+func (gr *GameRepositoryFacade) BlocksRepository() IBlocksRepository {
 	return gr.blocks
 }
 
 // BulletsRepository возвращает репозиторий пуль
-func (gr *GameRepository) BulletsRepository() IBulletsRepository {
+func (gr *GameRepositoryFacade) BulletsRepository() IBulletsRepository {
 	return gr.bullets
 }
 
 // AnimationsRepository возвращает репозиторий анимаций
-func (gr *GameRepository) AnimationsRepository() IAnimationsRepository {
+func (gr *GameRepositoryFacade) AnimationsRepository() IAnimationsRepository {
 	return gr.animations
 }
 
 // TanksRepository возвращает репозиторий танков
-func (gr *GameRepository) TanksRepository() ITanksRepository {
+func (gr *GameRepositoryFacade) TanksRepository() ITanksRepository {
 	return gr.tanks
 }
 
 // === Вспомогательные методы для работы с танками ===
 
 // AddPlayerTank добавляет танк игрока
-func (gr *GameRepository) AddPlayerTank(tank *types.TankEntity) {
+func (gr *GameRepositoryFacade) AddPlayerTank(tank *types.TankEntity) {
 	gr.tanks.SetPlayer(tank)
 }
 
 // GetPlayerTank возвращает танк игрока
-func (gr *GameRepository) GetPlayerTank() *types.TankEntity {
+func (gr *GameRepositoryFacade) GetPlayerTank() *types.TankEntity {
 	return gr.tanks.GetPlayer()
 }
 
 // GetAllEnemies возвращает всех врагов
-func (gr *GameRepository) GetAllEnemies() []*types.TankEntity {
+func (gr *GameRepositoryFacade) GetAllEnemies() []*types.TankEntity {
 	return gr.tanks.GetAllEnemies()
 }
 
 // AddEnemy добавляет танк врага
-func (gr *GameRepository) AddEnemy(enemy *types.TankEntity) {
+func (gr *GameRepositoryFacade) AddEnemy(enemy *types.TankEntity) {
 	gr.tanks.AddEnemy(enemy)
 }
 
 // GetGameContext возвращает контекст игры для AI
-func (gr *GameRepository) GetGameContext() *GameContext {
+func (gr *GameRepositoryFacade) GetGameContext() *GameContext {
 	// Получаем игрока
 	var player *types.TankEntity
 	if gr.tanks.HasPlayer() {

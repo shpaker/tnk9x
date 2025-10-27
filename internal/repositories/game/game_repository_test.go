@@ -7,8 +7,8 @@ import (
 	"github.com/shpaker/gonflict/internal/types"
 )
 
-func TestNewGameRepository(t *testing.T) {
-	gameRepo := game.NewGameRepository()
+func TestNewGameRepositoryFacade(t *testing.T) {
+	gameRepo := game.NewGameRepositoryFacade()
 
 	// Проверяем, что все репозитории созданы
 	if gameRepo.BlocksRepository() == nil {
@@ -25,8 +25,8 @@ func TestNewGameRepository(t *testing.T) {
 	}
 }
 
-func TestGameRepositoryBlocks(t *testing.T) {
-	gameRepo := game.NewGameRepository()
+func TestGameRepositoryFacadeBlocks(t *testing.T) {
+	gameRepo := game.NewGameRepositoryFacade()
 
 	// Создаем блок с минимальными данными
 	block := types.BlockEntity{
@@ -55,8 +55,8 @@ func TestGameRepositoryBlocks(t *testing.T) {
 	}
 }
 
-func TestGameRepositoryBullets(t *testing.T) {
-	gameRepo := game.NewGameRepository()
+func TestGameRepositoryFacadeBullets(t *testing.T) {
+	gameRepo := game.NewGameRepositoryFacade()
 
 	// Создаем пулю с минимальными данными
 	bullet := types.BulletEntity{
@@ -82,8 +82,8 @@ func TestGameRepositoryBullets(t *testing.T) {
 	}
 }
 
-func TestGameRepositoryAnimations(t *testing.T) {
-	gameRepo := game.NewGameRepository()
+func TestGameRepositoryFacadeAnimations(t *testing.T) {
+	gameRepo := game.NewGameRepositoryFacade()
 
 	// Проверяем методы интерфейса
 	animationsRepo := gameRepo.AnimationsRepository()
@@ -92,8 +92,8 @@ func TestGameRepositoryAnimations(t *testing.T) {
 	}
 }
 
-func TestGameRepositoryTanks(t *testing.T) {
-	gameRepo := game.NewGameRepository()
+func TestGameRepositoryFacadeTanks(t *testing.T) {
+	gameRepo := game.NewGameRepositoryFacade()
 
 	// Создаем танк игрока
 	playerTank := &types.TankEntity{
@@ -135,7 +135,7 @@ func TestGameRepositoryTanks(t *testing.T) {
 }
 
 func TestGetGameContext(t *testing.T) {
-	gameRepo := game.NewGameRepository()
+	gameRepo := game.NewGameRepositoryFacade()
 
 	// Добавляем игрока
 	playerTank := &types.TankEntity{

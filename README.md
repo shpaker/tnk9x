@@ -5,10 +5,12 @@
 ## 🎮 Особенности
 
 - 🎯 **Чистая архитектура** - разделение на слои (Use Cases, Adapters, Repositories)
-- 🎮 **Танки врагов** - спавн, анимация и уничтожение пулями
+- 🤖 **ИИ врагов на Lua** - управление поведением через Lua скрипты (gopher-lua)
+- 🎮 **Танки врагов** - спавн, анимация, движение и уничтожение пулями
 - 🎨 **Гибкие анимации** - настройка через конфиг с offset и repeats
 - ⚔️ **Коллизии** - проверка столкновений между танками и объектами
 - ⚙️ **Конфигурация** - настройка через `config.yml`
+- 🎯 **Скрипты AI** - изменение поведения врагов без перекомпиляции
 
 ## 📁 Структура проекта
 
@@ -107,6 +109,12 @@ graph TB
         UseCases[Use Cases<br/>Бизнес-логика]
     end
     
+    subgraph "AI Layer"
+        AICases[AIUseCases<br/>AI логика]
+        LuaAI[EnemyAILua<br/>Lua AI]
+        LuaScripts[LuaAdapter<br/>enemies.lua]
+    end
+    
     subgraph "Domain Layer"
         Entities[Entities<br/>Domain модели]
     end
@@ -116,6 +124,9 @@ graph TB
     end
     
     Adapters --> UseCases
+    UseCases --> AICases
+    AICases --> LuaAI
+    LuaAI --> LuaScripts
     UseCases --> Entities
     Repositories --> Entities
     UseCases --> Repositories
@@ -130,6 +141,9 @@ graph LR
     Facade[GameStateFacade<br/>оркестрация]
     Tank[TankUseCases<br/>движение/снаряды]
     Enemy[EnemyUseCases<br/>враги]
+    AI[AIUseCases<br/>AI логика]
+    AILua[EnemyAILua<br/>Lua AI]
+    Lua[LuaAdapter<br/>Lua скрипты]
     Bullet[BulletUseCases<br/>пули]
     Collision[CollisionUseCases<br/>коллизии]
     Render[RendererAdapter<br/>отрисовка]
@@ -141,6 +155,10 @@ graph LR
     Facade --> Enemy
     Facade --> Bullet
     Facade --> Collision
+    Enemy --> AI
+    AI --> AILua
+    AILua --> Lua
+    Lua -->|assets/scripts/enemies.lua| Lua
     Tank --> TanksRepo
     Enemy --> TanksRepo
     Collision --> Tank
@@ -161,13 +179,22 @@ sequenceDiagram
     participant Facade as UseCasesFacade
     participant Tank as TankUseCases
     participant Enemy as EnemyUseCases
+    participant AI as AIUseCases
+    participant Lua as LuaAdapter
+    participant Collision as CollisionUseCases
     participant Render as RenderAdapter
     
     App->>State: Update()
     State->>Facade: Update()
     Facade->>Tank: MoveTank()
-    Facade->>Enemy: UpdateEnemies()
-    Facade->>Facade: UpdateCollisions()
+    Facade->>Enemy: UpdateAI()
+    Enemy->>AI: UpdateAI()
+    AI->>Lua: CallEnemyAI()
+    Lua-->>AI: shouldMove, direction
+    AI-->>Enemy: ApplyDecision()
+    Facade->>Enemy: MoveTank()
+    Facade->>Collision: UpdateCollisions()
+    Collision->>Enemy: checkEnemyCollisions()
     State->>Render: DrawAll()
     Render->>Render: drawMap()
     Render->>Render: drawTanks()
@@ -211,7 +238,9 @@ func NewFacade(blocksRepo game.IBlocksRepository) *Facade { ... }
     ↓
 [GameStateUseCasesFacade] → [Update/Logic]
     ↓
-[Repositories] ← [Domain Entities]
+[EnemyUseCases] → [AIUseCases] → [EnemyAILua] → [LuaAdapter] → [enemies.lua]
+    ↓                                        ↓
+[Repositories] ← [Domain Entities]     [GameContext]
     ↓
 [RenderAdapter] → [Экран]
 ```
@@ -220,6 +249,7 @@ func NewFacade(blocksRepo game.IBlocksRepository) *Facade { ... }
 
 - **Presentation Layer** (синий) - взаимодействие с пользователем и внешним миром
 - **Application Layer** (фиолетовый) - бизнес-логика и правила игры
+- **AI Layer** (бирюзовый) - AI логика и скрипты Lua
 - **Domain Layer** (зеленый) - сущности и типы игры
 - **Infrastructure Layer** (оранжевый) - хранение и загрузка данных
 - **Supporting Components** (розовый) - вспомогательные компоненты
@@ -291,15 +321,23 @@ game:
 ### Технические детали
 
 - **AnimationUseCases** - централизованное управление анимациями
+- **AIUseCases** - управление AI логикой врагов
+- **EnemyAILua** - адаптер для работы с Lua скриптами
+- **LuaAdapter** - конвертация данных между Go и Lua
 - **SpawnerEntity** - сущность спавнера с анимацией
 - **TankUseCases** - переименованный PlayerUseCases для лучшей семантики
 - **Новый формат YAML** - duration, repeats и offset в конфиге анимаций
+- **Lua скрипты** - `assets/scripts/enemies.lua` для управления врагами
 - **Offset для анимаций** - смещение анимации относительно сущности
 - **Duration анимаций** - интервал между кадрами в тиках
 - **Repeats** - количество повторений анимации (nil = бесконечно)
 - **Анимация только при движении** - гусеницы работают только когда танк движется
 - **Коллизии танков** - танк игрока не может проехать сквозь врагов
 - **Обратная совместимость** - существующий код анимации продолжает работать
+- **ИИ на Lua** - управление врагами через Lua скрипты (gopher-lua)
+- **AIUseCases** - централизованное управление AI логикой врагов
+- **EnemyAILua** - адаптер для вызова Lua функций из Go
+- **Тактика NES** - поведение врагов в стиле классической Battle City
 
 ## 🎮 Игровая функциональность
 
@@ -315,7 +353,8 @@ game:
 ### Игровые объекты
 
 - **Танк игрока** - управляемый танк с поворотом, стрельбой и анимацией гусениц
-- **Враги** - танки врагов с анимацией спавна, движения и взрыва
+- **Враги** - танки врагов с AI на Lua, анимацией спавна, движения и взрыва
+- **ИИ врагов** - управление через Lua скрипты (`assets/scripts/enemies.lua`)
 - **Спавнер** - анимированный объект для появления танка
 - **Анимация взрыва** - анимация уничтожения танка с поддержкой offset
 - **Блоки**:
@@ -351,6 +390,8 @@ just help             # Показать все команды
 - **GameState** - игровое состояние, управляет игровым процессом
 - **InputAdapter** - адаптер ввода с клавиатуры (WASD, Space)
 - **RendererAdapter** - адаптер отрисовки игры через Ebiten
+- **LuaAdapter** - адаптер для работы с Lua скриптами (AI врагов)
+- **EnemyAILua** - Lua реализация AI для врагов
 
 ### Application Layer (Слой приложения)
 
@@ -361,6 +402,7 @@ just help             # Показать все команды
 - **MapUseCases** - бизнес-логика карты (работа с блоками)
 - **CollisionUseCases** - бизнес-логика коллизий между объектами
 - **AnimationUseCases** - бизнес-логика анимаций
+- **AIUseCases** - бизнес-логика AI врагов
 - **TilesUseCases** - бизнес-логика тайлов (статические и анимированные)
 
 ### Domain Layer (Доменный слой)
@@ -393,6 +435,12 @@ just help             # Показать все команды
 
 **Raw Repositories:**
 - **FileRepository** - чтение файлов из assets
+
+**Game AI:**
+- **Lua скрипты** - `assets/scripts/enemies.lua` - логика поведения врагов
+- **gopher-lua** - библиотека для встраивания Lua в Go
+- **AIUseCases** - управление AI врагов
+- **EnemyAILua** - реализация AI через Lua скрипты
 
 ### Supporting Components (Вспомогательные компоненты)
 
@@ -450,7 +498,7 @@ func (tr *TanksRepository) GetTank(index int) (*types.TankEntity, error) {
 
 ### Идеи для расширения
 
-- 🤖 **ИИ врагов** - добавить поведение вражеских танков
+- 🎯 **ИИ врагов** - добавить стрельбу врагов, преследование игрока
 - 🎯 **Система очков** - подсчет очков за уничтожение
 - 🎨 **Меню и UI** - главное меню, экран победы/поражения
 - 🌐 **Сетевой режим** - мультиплеер
@@ -500,7 +548,7 @@ import "github.com/shpaker/gonflict/internal/repositories/raw"
 ## 🐛 Известные ограничения
 
 - Только один игрок
-- Враги пока статичны (нет ИИ)
+- Враги пока не стреляют (только двигаются)
 - Нет главного меню
 - Нет сохранений
 - Нет звуковых эффектов
@@ -523,6 +571,12 @@ MIT License
 
 ### Последние обновления
 
+- ✅ **ИИ врагов на Lua** - управление врагами через Lua скрипты (gopher-lua)
+- ✅ **AIUseCases** - централизованное управление AI логикой врагов
+- ✅ **EnemyAILua** - адаптер для вызова Lua функций из Go
+- ✅ **Lua скрипты** - `assets/scripts/enemies.lua` для изменения поведения без перекомпиляции
+- ✅ **Тактика NES** - поведение врагов в стиле классической Battle City
+- ✅ **Коллизии врагов** - враги останавливаются при столкновении со стенами
 - ✅ **Рефакторинг PlayerUseCases в TankUseCases** - переименование для лучшей семантики
 - ✅ **Система анимаций** - централизованное управление анимациями через AnimationUseCases
 - ✅ **Спавнер танка** - анимированный объект для появления танка игрока и врагов
@@ -538,7 +592,7 @@ MIT License
 
 ### Планируемые улучшения
 
-- 🤖 **ИИ врагов** - добавить поведение вражеских танков
+- 🎯 **Улучшение AI** - добавление стрельбы врагов, преследования игрока
 - 🎯 **Система очков** - подсчет очков за уничтожение
 - 🎨 **Меню и UI** - главное меню, экран победы/поражения
 - 🌐 **Сетевой режим** - мультиплеер
@@ -554,3 +608,5 @@ MIT License
 - [Clean Architecture](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html)
 - [Go Project Layout](https://github.com/golang-standards/project-layout)
 - [Just Command Runner](https://github.com/casey/just)
+- [gopher-lua](https://github.com/yuin/gopher-lua) - библиотека для встраивания Lua в Go
+- [Lua Documentation](https://www.lua.org/)

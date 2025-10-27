@@ -2,8 +2,8 @@ package game
 
 import "github.com/shpaker/gonflict/internal/types"
 
-// IGameRepository определяет интерфейс для главного репозитория игры
-type IGameRepository interface {
+// IGameRepositoryFacade определяет интерфейс для главного репозитория игры
+type IGameRepositoryFacade interface {
 	BlocksRepository() IBlocksRepository
 	BulletsRepository() IBulletsRepository
 	AnimationsRepository() IAnimationsRepository
