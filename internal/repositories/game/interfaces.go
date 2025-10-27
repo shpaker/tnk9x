@@ -2,18 +2,12 @@ package game
 
 import "github.com/shpaker/gonflict/internal/types"
 
-// IGameRepositoryFacade определяет интерфейс для главного репозитория игры
-type IGameRepositoryFacade interface {
+// IGameRepositoriesRegistry определяет интерфейс для реестра игровых репозиториев
+type IGameRepositoriesRegistry interface {
 	BlocksRepository() IBlocksRepository
 	BulletsRepository() IBulletsRepository
 	AnimationsRepository() IAnimationsRepository
 	TanksRepository() ITanksRepository
-
-	// Вспомогательные методы для работы с танками
-	AddPlayerTank(tank *types.TankEntity)
-	GetPlayerTank() *types.TankEntity
-	GetAllEnemies() []*types.TankEntity
-	AddEnemy(enemy *types.TankEntity)
 
 	// Метод для получения контекста игры для AI
 	GetGameContext() *types.GameAiContext

@@ -1,5 +1,6 @@
 *.zip
 dist/
+docs/
 _assets/
 
 # Binaries for programs and plugins

@@ -7,8 +7,8 @@ import (
 	"github.com/shpaker/gonflict/internal/types"
 )
 
-func TestNewGameRepositoryFacade(t *testing.T) {
-	gameRepo := game.NewGameRepositoryFacade()
+func TestNewGameRepositoriesRegistry(t *testing.T) {
+	gameRepo := game.NewGameRepositoriesRegistry()
 
 	// Проверяем, что все репозитории созданы
 	if gameRepo.BlocksRepository() == nil {
@@ -25,8 +25,8 @@ func TestNewGameRepositoryFacade(t *testing.T) {
 	}
 }
 
-func TestGameRepositoryFacadeBlocks(t *testing.T) {
-	gameRepo := game.NewGameRepositoryFacade()
+func TestGameRepositoriesRegistryBlocks(t *testing.T) {
+	gameRepo := game.NewGameRepositoriesRegistry()
 
 	// Создаем блок с минимальными данными
 	block := types.BlockEntity{
@@ -55,8 +55,8 @@ func TestGameRepositoryFacadeBlocks(t *testing.T) {
 	}
 }
 
-func TestGameRepositoryFacadeBullets(t *testing.T) {
-	gameRepo := game.NewGameRepositoryFacade()
+func TestGameRepositoriesRegistryBullets(t *testing.T) {
+	gameRepo := game.NewGameRepositoriesRegistry()
 
 	// Создаем пулю с минимальными данными
 	bullet := types.BulletEntity{
@@ -82,8 +82,8 @@ func TestGameRepositoryFacadeBullets(t *testing.T) {
 	}
 }
 
-func TestGameRepositoryFacadeAnimations(t *testing.T) {
-	gameRepo := game.NewGameRepositoryFacade()
+func TestGameRepositoriesRegistryAnimations(t *testing.T) {
+	gameRepo := game.NewGameRepositoriesRegistry()
 
 	// Проверяем методы интерфейса
 	animationsRepo := gameRepo.AnimationsRepository()
@@ -92,8 +92,8 @@ func TestGameRepositoryFacadeAnimations(t *testing.T) {
 	}
 }
 
-func TestGameRepositoryFacadeTanks(t *testing.T) {
-	gameRepo := game.NewGameRepositoryFacade()
+func TestGameRepositoriesRegistryTanks(t *testing.T) {
+	gameRepo := game.NewGameRepositoriesRegistry()
 
 	// Создаем танк игрока
 	playerTank := &types.TankEntity{
@@ -103,10 +103,10 @@ func TestGameRepositoryFacadeTanks(t *testing.T) {
 	}
 
 	// Добавляем танк игрока
-	gameRepo.AddPlayerTank(playerTank)
+	gameRepo.TanksRepository().SetPlayer(playerTank)
 
 	// Проверяем, что танк добавлен
-	player := gameRepo.GetPlayerTank()
+	player := gameRepo.TanksRepository().GetPlayer()
 	if player == nil {
 		t.Error("Player tank should not be nil")
 	}
@@ -119,10 +119,10 @@ func TestGameRepositoryFacadeTanks(t *testing.T) {
 	}
 
 	// Добавляем врага
-	gameRepo.AddEnemy(enemyTank)
+	gameRepo.TanksRepository().AddEnemy(enemyTank)
 
 	// Проверяем получение всех врагов
-	enemies := gameRepo.GetAllEnemies()
+	enemies := gameRepo.TanksRepository().GetAllEnemies()
 	if len(enemies) != 1 {
 		t.Errorf("Expected 1 enemy, got %d", len(enemies))
 	}
@@ -135,7 +135,7 @@ func TestGameRepositoryFacadeTanks(t *testing.T) {
 }
 
 func TestGetGameContext(t *testing.T) {
-	gameRepo := game.NewGameRepositoryFacade()
+	gameRepo := game.NewGameRepositoriesRegistry()
 
 	// Добавляем игрока
 	playerTank := &types.TankEntity{
@@ -143,7 +143,7 @@ func TestGetGameContext(t *testing.T) {
 		Direction:     types.DirectionUp,
 		Speed:         0,
 	}
-	gameRepo.AddPlayerTank(playerTank)
+	gameRepo.TanksRepository().SetPlayer(playerTank)
 
 	// Добавляем врага
 	enemyTank := &types.TankEntity{
@@ -151,7 +151,7 @@ func TestGetGameContext(t *testing.T) {
 		Direction:     types.DirectionDown,
 		Speed:         0,
 	}
-	gameRepo.AddEnemy(enemyTank)
+	gameRepo.TanksRepository().AddEnemy(enemyTank)
 
 	// Добавляем пулю
 	bullet := types.BulletEntity{
