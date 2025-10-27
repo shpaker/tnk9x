@@ -67,8 +67,8 @@ func (a *LuaAdapter) CallEnemyAI(enemy *types.TankEntity, context *types.GameAiC
 // convertTankToLua конвертирует танк в Lua таблицу
 func (a *LuaAdapter) convertTankToLua(tank *types.TankEntity) *lua.LTable {
 	t := a.L.NewTable()
-	t.RawSetString("x", lua.LNumber(tank.WorldPosition.X))
-	t.RawSetString("y", lua.LNumber(tank.WorldPosition.Y))
+	t.RawSetString("x", lua.LNumber(tank.Position.X))
+	t.RawSetString("y", lua.LNumber(tank.Position.Y))
 	t.RawSetString("direction", lua.LNumber(directionToInt(tank.Direction)))
 	t.RawSetString("speed", lua.LNumber(tank.Speed))
 	return t

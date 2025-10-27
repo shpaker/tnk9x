@@ -24,13 +24,13 @@ func NewBulletUseCases(bulletsRepo game.IBulletsRepository, tilesUseCases ITiles
 // ShootBullet создает новую пулю от указанного танка
 func (uc *BulletUseCases) ShootBullet(tank *types.TankEntity) error {
 	// Проверяем, заспавнен ли танк
-	if !tank.IsSpawned {
+	if tank.State == types.TankStateSpawning {
 		log.Printf("DEBUG: Cannot shoot - tank is not spawned yet")
 		return nil // Просто игнорируем выстрел
 	}
 
 	log.Printf("DEBUG: ShootBullet called for tank at position (%.2f, %.2f) direction %s",
-		tank.WorldPosition.X, tank.WorldPosition.Y, tank.Direction)
+		tank.Position.X, tank.Position.Y, tank.Direction)
 
 	// Создаем тайл для пули с ID "bullet"
 	bulletImageGetter, err := uc.tilesUseCases.CreateStaticTile("bullet")
@@ -41,24 +41,24 @@ func (uc *BulletUseCases) ShootBullet(tank *types.TankEntity) error {
 	log.Printf("DEBUG: Created bullet tile successfully")
 
 	// Вычисляем позицию пули в зависимости от направления танка
-	bulletX := tank.WorldPosition.X + TankSpriteSize/2 - 2
-	bulletY := tank.WorldPosition.Y + TankSpriteSize/2 - 2
+	bulletX := tank.Position.X + TankSpriteSize/2 - 2
+	bulletY := tank.Position.Y + TankSpriteSize/2 - 2
 
 	// Корректируем позицию в зависимости от направления
 	switch tank.Direction {
 	case types.DirectionUp:
-		bulletY = tank.WorldPosition.Y - 4
+		bulletY = tank.Position.Y - 4
 	case types.DirectionDown:
-		bulletY = tank.WorldPosition.Y + TankSpriteSize/2
+		bulletY = tank.Position.Y + TankSpriteSize/2
 	case types.DirectionLeft:
-		bulletX = tank.WorldPosition.X - 4
+		bulletX = tank.Position.X - 4
 	case types.DirectionRight:
-		bulletX = tank.WorldPosition.X + TankSpriteSize/2
+		bulletX = tank.Position.X + TankSpriteSize/2
 	}
 
 	bullet := types.BulletEntity{
 		ImageGetter: bulletImageGetter,
-		WorldPosition: types.Position{
+		Position: types.Position{
 			X: bulletX,
 			Y: bulletY,
 		},
@@ -69,7 +69,7 @@ func (uc *BulletUseCases) ShootBullet(tank *types.TankEntity) error {
 	}
 
 	log.Printf("DEBUG: Created bullet at position (%.2f, %.2f) direction %s",
-		bullet.WorldPosition.X, bullet.WorldPosition.Y, bullet.Direction)
+		bullet.Position.X, bullet.Position.Y, bullet.Direction)
 
 	uc.bulletsRepo.AddBullet(bullet)
 	log.Printf("DEBUG: Bullet added to repository")
@@ -86,13 +86,13 @@ func (uc *BulletUseCases) UpdateBullets(dt float64) error {
 		delta := bullet.Speed * dt
 		switch bullet.Direction {
 		case types.DirectionUp:
-			bullet.WorldPosition.Y -= delta
+			bullet.Position.Y -= delta
 		case types.DirectionDown:
-			bullet.WorldPosition.Y += delta
+			bullet.Position.Y += delta
 		case types.DirectionLeft:
-			bullet.WorldPosition.X -= delta
+			bullet.Position.X -= delta
 		case types.DirectionRight:
-			bullet.WorldPosition.X += delta
+			bullet.Position.X += delta
 		}
 	}
 	return nil

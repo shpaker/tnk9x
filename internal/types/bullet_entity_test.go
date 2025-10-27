@@ -71,22 +71,22 @@ func TestBulletEntity_GetSize(t *testing.T) {
 	}
 }
 
-func TestBulletEntity_GetWorldPosition(t *testing.T) {
+func TestBulletEntity_GetPosition(t *testing.T) {
 	expectedPos := Position{X: 100, Y: 200}
 	bullet := &BulletEntity{
-		WorldPosition: expectedPos,
+		Position: expectedPos,
 	}
 
-	result := bullet.GetWorldPosition()
+	result := bullet.GetPosition()
 	if result != expectedPos {
-		t.Errorf("GetWorldPosition() = %v, want %v", result, expectedPos)
+		t.Errorf("GetPosition() = %v, want %v", result, expectedPos)
 	}
 }
 
 func TestBulletEntity_GetScreenPosition(t *testing.T) {
 	expectedPos := Position{X: 100, Y: 200}
 	bullet := &BulletEntity{
-		WorldPosition: expectedPos,
+		Position: expectedPos,
 	}
 
 	result := bullet.GetScreenPosition()

@@ -30,7 +30,7 @@ func (uc *AIUseCases) UpdateAI(enemy *types.TankEntity) types.EnemyAIDecision {
 	}
 
 	// Пропускаем взрывающихся или не заспавненных врагов
-	if enemy.IsExploding || !enemy.IsSpawned {
+	if enemy.State == types.TankStateExploding || enemy.State == types.TankStateSpawning {
 		return types.EnemyAIDecision{ShouldMove: false}
 	}
 

@@ -8,7 +8,8 @@ import (
 // CollisionUseCases реализация для операций с коллизиями
 type CollisionUseCases struct {
 	bulletUseCases    IBulletUseCases
-	tankUseCases      ITankUseCases
+	tankUseCases      IPlayerUseCases  // Используется для GetTank
+	tankUseCasesRef   ITankUseCasesRef // Используется для вызова методов управления танком
 	mapUseCases       IMapUseCases
 	enemyUseCases     IEnemyUseCases
 	enemyUseCasesList []*EnemyUseCases
@@ -17,7 +18,7 @@ type CollisionUseCases struct {
 // NewCollisionUseCases создает новый экземпляр CollisionUseCases
 func NewCollisionUseCases(
 	bulletUseCases IBulletUseCases,
-	tankUseCases ITankUseCases,
+	tankUseCases IPlayerUseCases,
 	mapUseCases IMapUseCases,
 	enemyUseCases IEnemyUseCases,
 ) *CollisionUseCases {
@@ -32,13 +33,15 @@ func NewCollisionUseCases(
 // NewCollisionUseCasesWithEnemies создает новый экземпляр CollisionUseCases с массивом врагов
 func NewCollisionUseCasesWithEnemies(
 	bulletUseCases IBulletUseCases,
-	tankUseCases ITankUseCases,
+	tankUseCases IPlayerUseCases,
+	tankUseCasesRef ITankUseCasesRef,
 	mapUseCases IMapUseCases,
 	enemyUseCasesList []*EnemyUseCases,
 ) *CollisionUseCases {
 	return &CollisionUseCases{
 		bulletUseCases:    bulletUseCases,
 		tankUseCases:      tankUseCases,
+		tankUseCasesRef:   tankUseCasesRef,
 		mapUseCases:       mapUseCases,
 		enemyUseCases:     nil, // Не используется для нового подхода
 		enemyUseCasesList: enemyUseCasesList,
@@ -70,7 +73,7 @@ func (uc *CollisionUseCases) checkEnemyCollisions() {
 	for _, enemyUseCases := range uc.enemyUseCasesList {
 		enemy := enemyUseCases.GetEnemy()
 
-		if enemy == nil || enemy.IsExploding || !enemy.IsSpawned {
+		if enemy == nil || enemy.State == types.TankStateExploding || enemy.State == types.TankStateSpawning {
 			continue
 		}
 
@@ -85,27 +88,27 @@ func (uc *CollisionUseCases) checkEnemyCollisions() {
 // checkEnemyBoundaryCollisions проверяет коллизии врага с границами экрана
 func (uc *CollisionUseCases) checkEnemyBoundaryCollisions(enemy *types.TankEntity, enemyUseCases *EnemyUseCases) {
 	// Откатываем позицию при выходе за границы
-	if enemy.WorldPosition.X < 0 {
-		enemy.WorldPosition.X = 0
+	if enemy.Position.X < 0 {
+		enemy.Position.X = 0
 		enemy.Speed = 0
 	}
-	if enemy.WorldPosition.Y < 0 {
-		enemy.WorldPosition.Y = 0
+	if enemy.Position.Y < 0 {
+		enemy.Position.Y = 0
 		enemy.Speed = 0
 	}
-	if enemy.WorldPosition.X > MapWidthHeight-TankSpriteSize {
-		enemy.WorldPosition.X = MapWidthHeight - TankSpriteSize
+	if enemy.Position.X > MapWidthHeight-TankSpriteSize {
+		enemy.Position.X = MapWidthHeight - TankSpriteSize
 		enemy.Speed = 0
 	}
-	if enemy.WorldPosition.Y > MapWidthHeight-TankSpriteSize {
-		enemy.WorldPosition.Y = MapWidthHeight - TankSpriteSize
+	if enemy.Position.Y > MapWidthHeight-TankSpriteSize {
+		enemy.Position.Y = MapWidthHeight - TankSpriteSize
 		enemy.Speed = 0
 	}
 
 	// Округляем координаты врага до ближайшего кратного 4
 	if enemy.Speed == 0 {
-		enemy.WorldPosition.X = utils.RoundToNearestMultipleOf4(enemy.WorldPosition.X)
-		enemy.WorldPosition.Y = utils.RoundToNearestMultipleOf4(enemy.WorldPosition.Y)
+		enemy.Position.X = utils.RoundToNearestMultipleOf4(enemy.Position.X)
+		enemy.Position.Y = utils.RoundToNearestMultipleOf4(enemy.Position.Y)
 	}
 }
 
@@ -124,27 +127,27 @@ func (uc *CollisionUseCases) checkEnemyWallCollisions(enemy *types.TankEntity, e
 
 // handleEnemyWallCollision обрабатывает коллизию врага со стеной
 func (uc *CollisionUseCases) handleEnemyWallCollision(enemy *types.TankEntity, block *types.BlockEntity) {
-	blockPos := block.GetWorldPosition()
+	blockPos := block.GetPosition()
 	blockSize := block.GetSize()
 
 	// Откатываем позицию врага в зависимости от направления
 	switch enemy.Direction {
 	case types.DirectionUp:
-		enemy.WorldPosition.Y = blockPos.Y + float64(blockSize.Height)
+		enemy.Position.Y = blockPos.Y + float64(blockSize.Height)
 	case types.DirectionDown:
-		enemy.WorldPosition.Y = blockPos.Y - float64(TankSpriteSize)
+		enemy.Position.Y = blockPos.Y - float64(TankSpriteSize)
 	case types.DirectionLeft:
-		enemy.WorldPosition.X = blockPos.X + float64(blockSize.Width)
+		enemy.Position.X = blockPos.X + float64(blockSize.Width)
 	case types.DirectionRight:
-		enemy.WorldPosition.X = blockPos.X - float64(TankSpriteSize)
+		enemy.Position.X = blockPos.X - float64(TankSpriteSize)
 	}
 
 	// Останавливаем врага
 	enemy.Speed = 0
 
 	// Округляем координаты врага до ближайшего кратного 4
-	enemy.WorldPosition.X = utils.RoundToNearestMultipleOf4(enemy.WorldPosition.X)
-	enemy.WorldPosition.Y = utils.RoundToNearestMultipleOf4(enemy.WorldPosition.Y)
+	enemy.Position.X = utils.RoundToNearestMultipleOf4(enemy.Position.X)
+	enemy.Position.Y = utils.RoundToNearestMultipleOf4(enemy.Position.Y)
 }
 
 // checkBulletBoundaryCollisions проверяет коллизии пуль с границами экрана
@@ -155,8 +158,8 @@ func (uc *CollisionUseCases) checkBulletBoundaryCollisions() {
 		bullet := &bullets[i]
 
 		// Удаляем пули, которые вышли за границы экрана
-		if bullet.WorldPosition.X < 0 || bullet.WorldPosition.X > MapWidthHeight ||
-			bullet.WorldPosition.Y < 0 || bullet.WorldPosition.Y > MapWidthHeight {
+		if bullet.Position.X < 0 || bullet.Position.X > MapWidthHeight ||
+			bullet.Position.Y < 0 || bullet.Position.Y > MapWidthHeight {
 			uc.bulletUseCases.RemoveBullet(i)
 		}
 	}
@@ -201,11 +204,11 @@ func (uc *CollisionUseCases) checkBulletEnemyCollisions() {
 			}
 
 			// Если враг заспавнен, не взрывается и есть коллизия
-			if enemy.IsSpawned && !enemy.IsExploding && uc.CheckColliders(bullet, enemy) {
+			if enemy.State != types.TankStateSpawning && enemy.State != types.TankStateExploding && uc.CheckColliders(bullet, enemy) {
 				// Удаляем пулю
 				uc.bulletUseCases.RemoveBullet(i)
 				// Удаляем врага
-				enemyUseCases.RemoveEnemy(0)
+				enemyUseCases.RemoveEnemyByRef(enemy)
 				// Выходим из цикла врагов, так как пуля уже удалена
 				break
 			}
@@ -262,21 +265,21 @@ func (uc *CollisionUseCases) checkBulletWallCollisions() {
 
 // checkTankBoundaryCollisions проверяет коллизии танка с границами экрана
 func (uc *CollisionUseCases) checkTankBoundaryCollisions(tank *types.TankEntity) {
-	if tank.WorldPosition.X < 0 {
-		tank.WorldPosition.X = 0
-		uc.tankUseCases.StopTank(false)
+	if tank.Position.X < 0 {
+		tank.Position.X = 0
+		uc.tankUseCasesRef.StopTank(tank, false)
 	}
-	if tank.WorldPosition.Y < 0 {
-		tank.WorldPosition.Y = 0
-		uc.tankUseCases.StopTank(false)
+	if tank.Position.Y < 0 {
+		tank.Position.Y = 0
+		uc.tankUseCasesRef.StopTank(tank, false)
 	}
-	if tank.WorldPosition.X > MapWidthHeight-TankSpriteSize {
-		tank.WorldPosition.X = MapWidthHeight - TankSpriteSize
-		uc.tankUseCases.StopTank(false)
+	if tank.Position.X > MapWidthHeight-TankSpriteSize {
+		tank.Position.X = MapWidthHeight - TankSpriteSize
+		uc.tankUseCasesRef.StopTank(tank, false)
 	}
-	if tank.WorldPosition.Y > MapWidthHeight-TankSpriteSize {
-		tank.WorldPosition.Y = MapWidthHeight - TankSpriteSize
-		uc.tankUseCases.StopTank(false)
+	if tank.Position.Y > MapWidthHeight-TankSpriteSize {
+		tank.Position.Y = MapWidthHeight - TankSpriteSize
+		uc.tankUseCasesRef.StopTank(tank, false)
 	}
 }
 
@@ -299,9 +302,9 @@ func (uc *CollisionUseCases) createBlockFromWall(wall types.BlockEntity) types.B
 		ImageGetter: wall.ImageGetter,
 		Data:        wall.Data,
 		Properties:  wall.Properties,
-		WorldPosition: types.Position{
-			X: wall.WorldPosition.X * TileMinSize,
-			Y: wall.WorldPosition.Y * TileMinSize,
+		Position: types.Position{
+			X: wall.Position.X * TileMinSize,
+			Y: wall.Position.Y * TileMinSize,
 		},
 		Altitude: wall.Altitude,
 	}
@@ -321,24 +324,24 @@ func (uc *CollisionUseCases) createMapObjectsFromLevel(level []types.BlockEntity
 
 // handleTankWallCollision обрабатывает коллизию танка со стеной
 func (uc *CollisionUseCases) handleTankWallCollision(tank *types.TankEntity, block *types.BlockEntity) {
-	blockPos := block.GetWorldPosition()
+	blockPos := block.GetPosition()
 	blockSize := block.GetSize()
 
 	switch tank.Direction {
 	case types.DirectionUp:
 		// верх танка упирается в низ блока
-		tank.WorldPosition.Y = blockPos.Y + float64(blockSize.Height)
+		tank.Position.Y = blockPos.Y + float64(blockSize.Height)
 	case types.DirectionDown:
 		// низ танка упирается в верх блока
-		tank.WorldPosition.Y = blockPos.Y - float64(TankSpriteSize)
+		tank.Position.Y = blockPos.Y - float64(TankSpriteSize)
 	case types.DirectionLeft:
 		// левая сторона танка упирается в правую сторону блока
-		tank.WorldPosition.X = blockPos.X + float64(blockSize.Width)
+		tank.Position.X = blockPos.X + float64(blockSize.Width)
 	case types.DirectionRight:
 		// правая сторона танка упирается в левую сторону блока
-		tank.WorldPosition.X = blockPos.X - float64(TankSpriteSize)
+		tank.Position.X = blockPos.X - float64(TankSpriteSize)
 	}
-	uc.tankUseCases.StopTank(true)
+	uc.tankUseCasesRef.StopTank(tank, true)
 }
 
 // CheckColliders проверяет коллизию между двумя объектами карты
@@ -351,9 +354,9 @@ func (uc *CollisionUseCases) CheckColliders(
 		return false
 	}
 
-	pos1 := obj1.GetWorldPosition()
+	pos1 := obj1.GetPosition()
 	size1 := obj1.GetSize()
-	pos2 := obj2.GetWorldPosition()
+	pos2 := obj2.GetPosition()
 	size2 := obj2.GetSize()
 
 	// Проверяем пересечение прямоугольников

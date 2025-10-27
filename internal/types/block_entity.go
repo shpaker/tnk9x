@@ -4,11 +4,11 @@ import "errors"
 
 // BlockEntity представляет блок карты
 type BlockEntity struct {
-	ImageGetter   IImageIdGetter
-	Data          *BlockData
-	Properties    *BlockProperties
-	WorldPosition Position
-	Altitude      Altitude
+	ImageGetter IImageIdGetter
+	Data        *BlockData
+	Properties  *BlockProperties
+	Position    Position
+	Altitude    Altitude
 }
 
 // BlockData содержит данные блока
@@ -31,7 +31,7 @@ func (b *BlockEntity) GetImageId() (string, error) {
 
 // GetScreenPosition возвращает позицию блока на экране
 func (b *BlockEntity) GetScreenPosition() Position {
-	return b.WorldPosition
+	return b.Position
 }
 
 // GetSize возвращает размер блока
@@ -39,9 +39,9 @@ func (b *BlockEntity) GetSize() Size {
 	return Size{Width: 8, Height: 8} // Стандартный размер блока (TileMinSize)
 }
 
-// GetWorldPosition возвращает позицию блока в мире
-func (b *BlockEntity) GetWorldPosition() Position {
-	return b.WorldPosition
+// GetPosition возвращает позицию блока в мире
+func (b *BlockEntity) GetPosition() Position {
+	return b.Position
 }
 
 // GetAltitude возвращает высоту блока
@@ -68,8 +68,8 @@ func NewBlockEntity(
 			Name:     BlockType(blockType),
 			Position: Position{X: positionX, Y: positionY},
 		},
-		Properties:    &BlockProperties{},
-		WorldPosition: Position{X: positionX, Y: positionY},
-		Altitude:      altitude,
+		Properties: &BlockProperties{},
+		Position:   Position{X: positionX, Y: positionY},
+		Altitude:   altitude,
 	}
 }

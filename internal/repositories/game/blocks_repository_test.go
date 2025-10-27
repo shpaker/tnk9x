@@ -30,7 +30,7 @@ func TestAddAndGetBlocks(t *testing.T) {
 			Position: types.Position{X: 0, Y: 0},
 		},
 		Properties:    &types.BlockProperties{},
-		WorldPosition: types.Position{X: 100, Y: 100},
+		Position: types.Position{X: 100, Y: 100},
 		Altitude:      types.SURFACE,
 	}
 
@@ -53,7 +53,7 @@ func TestRemoveBlockByPointer(t *testing.T) {
 			Position: types.Position{X: 0, Y: 0},
 		},
 		Properties:    &types.BlockProperties{},
-		WorldPosition: types.Position{X: 100, Y: 100},
+		Position: types.Position{X: 100, Y: 100},
 		Altitude:      types.SURFACE,
 	}
 

@@ -6,6 +6,7 @@ import (
 	"github.com/shpaker/gonflict/internal/repositories/game"
 	"github.com/shpaker/gonflict/internal/repositories/processed"
 	"github.com/shpaker/gonflict/internal/types"
+	"github.com/shpaker/gonflict/internal/utils"
 )
 
 // TankUseCases предоставляет базовые операции для работы с танками
@@ -56,10 +57,10 @@ func (uc *TankUseCases) CreateTankWithSpawn(
 	tank := &types.TankEntity{
 		AnimationGetter: tankAnimation,
 		SpawnPosition:   position,
-		WorldPosition:   position,
+		Position:        position,
 		Speed:           0,
 		Direction:       direction,
-		IsSpawned:       false, // Танк не заспавнен
+		State:           types.TankStateSpawning, // Танк спавнится
 		SpawnedAt:       0,
 		Altitude:        types.SURFACE,
 	}
@@ -68,17 +69,6 @@ func (uc *TankUseCases) CreateTankWithSpawn(
 	uc.tanksRepo.AddTank(tank)
 
 	return tank, spawnAnimation, tankAnimation, nil
-}
-
-// CreateTankAnimation создает анимацию танка
-func (uc *TankUseCases) CreateTankAnimation() (*types.TileAnimationEntity, error) {
-	tankTilesUseCases := NewTilesUseCases(uc.tilesetRepo)
-	tankAnimation, err := tankTilesUseCases.CreateAnimationTile("base_tank")
-	if err != nil {
-		return nil, err
-	}
-	uc.animationUseCases.AddAnimation(tankAnimation)
-	return tankAnimation, nil
 }
 
 // CreateSpawnAnimation создает анимацию спавна
@@ -92,26 +82,82 @@ func (uc *TankUseCases) CreateSpawnAnimation() (*types.TileAnimationEntity, erro
 	return spawnAnimation, nil
 }
 
-// GetTank возвращает танк по индексу
-func (uc *TankUseCases) GetTank(index int) (*types.TankEntity, error) {
-	tanks := uc.tanksRepo.GetAllTanks()
-	if index < 0 || index >= len(tanks) {
-		return nil, errors.New("tank index out of range")
+// RotateTank поворачивает танк в указанном направлении
+func (uc *TankUseCases) RotateTank(tank *types.TankEntity, direction types.Direction) error {
+	if tank == nil {
+		return errors.New("tank is nil")
 	}
-	return tanks[index], nil
+	if tank.State == types.TankStateSpawning {
+		return errors.New("tank is not spawned yet")
+	}
+
+	if tank.Speed != 0 {
+		return errors.New("cannot rotate while moving")
+	}
+
+	tank.Speed = 32.0
+	if tank.Direction == direction {
+		return nil
+	}
+
+	tank.Direction = direction
+	return nil
 }
 
-// GetAllTanks возвращает всех танков
-func (uc *TankUseCases) GetAllTanks() []*types.TankEntity {
-	return uc.tanksRepo.GetAllTanks()
+// StopTank останавливает танк
+func (uc *TankUseCases) StopTank(tank *types.TankEntity, byCollision bool) error {
+	if tank == nil {
+		return errors.New("tank is nil")
+	}
+	if tank.State == types.TankStateSpawning {
+		return errors.New("tank is not spawned yet")
+	}
+
+	tank.Speed = 0
+
+	if byCollision {
+		// Округляем координаты до ближайшего кратного 4
+		tank.Position.X = utils.RoundToNearestMultipleOf4(tank.Position.X)
+		tank.Position.Y = utils.RoundToNearestMultipleOf4(tank.Position.Y)
+		return nil
+	}
+
+	// Выравниваем позицию по сетке
+	switch tank.Direction {
+	case types.DirectionUp:
+		tank.Position.Y = float64(utils.RoundToEven(tank.Position.Y, false))
+	case types.DirectionDown:
+		tank.Position.Y = float64(utils.RoundToEven(tank.Position.Y, true))
+	case types.DirectionLeft:
+		tank.Position.X = float64(utils.RoundToEven(tank.Position.X, false))
+	case types.DirectionRight:
+		tank.Position.X = float64(utils.RoundToEven(tank.Position.X, true))
+	}
+
+	return nil
 }
 
-// RemoveTank удаляет танк из репозитория по указателю
-func (uc *TankUseCases) RemoveTank(tank *types.TankEntity) error {
-	return uc.tanksRepo.RemoveTank(tank)
-}
+// MoveTank перемещает танк в указанном направлении
+func (uc *TankUseCases) MoveTank(tank *types.TankEntity, direction types.Direction, dt float64) error {
+	if tank == nil {
+		return errors.New("tank is nil")
+	}
+	if tank.State == types.TankStateSpawning {
+		return errors.New("tank is not spawned yet")
+	}
 
-// AddTank добавляет танк в репозиторий
-func (uc *TankUseCases) AddTank(tank *types.TankEntity) {
-	uc.tanksRepo.AddTank(tank)
+	delta := tank.Speed * dt
+
+	switch tank.Direction {
+	case types.DirectionUp:
+		tank.Position.Y -= delta
+	case types.DirectionDown:
+		tank.Position.Y += delta
+	case types.DirectionLeft:
+		tank.Position.X -= delta
+	case types.DirectionRight:
+		tank.Position.X += delta
+	}
+
+	return nil
 }

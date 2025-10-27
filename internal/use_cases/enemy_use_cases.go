@@ -10,24 +10,19 @@ type EnemyUseCases struct {
 	tankUseCases         ITankUseCasesRef
 	explosionTilesetRepo processed.ITilesetRepository
 	animationUseCases    IAnimationUseCases
-	aiUseCases           *AIUseCases                // AI для врага
 	enemyTank            *types.TankEntity          // Ссылка на танк этого врага
 	spawnAnimation       *types.TileAnimationEntity // Анимация спавна
-	tankAnimation        *types.TileAnimationEntity // Анимация танка (движения)
-	aiTickCounter        int                        // Счетчик тиков для AI этого конкретного врага
 }
 
 func NewEnemyUseCases(
 	tankUseCases ITankUseCasesRef,
 	explosionTilesetRepo processed.ITilesetRepository,
 	animationUseCases IAnimationUseCases,
-	aiUseCases *AIUseCases,
 ) *EnemyUseCases {
 	return &EnemyUseCases{
 		tankUseCases:         tankUseCases,
 		explosionTilesetRepo: explosionTilesetRepo,
 		animationUseCases:    animationUseCases,
-		aiUseCases:           aiUseCases,
 		enemyTank:            nil,
 	}
 }
@@ -45,10 +40,10 @@ func (uc *EnemyUseCases) GetEnemies() []*types.TankEntity {
 	return []*types.TankEntity{uc.enemyTank}
 }
 
-// RemoveEnemy удаляет врага (запускает анимацию взрыва)
-func (uc *EnemyUseCases) RemoveEnemy(index int) error {
-	if uc.enemyTank == nil || uc.enemyTank.IsExploding {
-		return nil
+// RemoveEnemyByRef удаляет врага по ссылке (запускает анимацию взрыва)
+func (uc *EnemyUseCases) RemoveEnemyByRef(enemy *types.TankEntity) {
+	if enemy == nil || enemy != uc.enemyTank || enemy.State == types.TankStateExploding {
+		return
 	}
 
 	// Создаем анимацию взрыва
@@ -56,17 +51,11 @@ func (uc *EnemyUseCases) RemoveEnemy(index int) error {
 	explosionAnim, err := tilesUseCases.CreateAnimationTile("explosion")
 	if err == nil {
 		// Заменяем AnimationGetter на анимацию взрыва
-		uc.enemyTank.AnimationGetter = explosionAnim
-		uc.enemyTank.IsExploding = true
+		enemy.AnimationGetter = explosionAnim
+		enemy.State = types.TankStateExploding
 		uc.animationUseCases.AddAnimation(explosionAnim)
 		uc.animationUseCases.StartAnimation(explosionAnim)
 	}
-	return nil
-}
-
-// InitEnemy создает этого врага на указанной позиции
-func (uc *EnemyUseCases) InitEnemy(position types.Position) error {
-	return uc.StartEnemySpawn(position)
 }
 
 // GetEnemyRealIndex возвращает 0 (так как у нас один враг)
@@ -74,7 +63,7 @@ func (uc *EnemyUseCases) GetEnemyRealIndex(index int) (int, error) {
 	return 0, nil
 }
 
-// InitEnemies вызывает InitEnemy для обратной совместимости
+// InitEnemies вызывает StartEnemySpawn для обратной совместимости
 func (uc *EnemyUseCases) InitEnemies(enemySpawners [][]int) error {
 	if len(enemySpawners) == 0 {
 		return nil
@@ -90,13 +79,13 @@ func (uc *EnemyUseCases) InitEnemies(enemySpawners [][]int) error {
 		Y: float64(spawner[1]) * TankSpriteSize,
 	}
 
-	return uc.InitEnemy(position)
+	return uc.StartEnemySpawn(position)
 }
 
 // StartEnemySpawn начинает процесс спавна врага с анимацией
 func (uc *EnemyUseCases) StartEnemySpawn(position types.Position) error {
 	// Создаем танк через базовый use case
-	enemy, spawnAnimation, tankAnimation, err := uc.tankUseCases.CreateTankWithSpawn(
+	enemy, spawnAnimation, _, err := uc.tankUseCases.CreateTankWithSpawn(
 		position,
 		types.DirectionDown,
 	)
@@ -107,9 +96,8 @@ func (uc *EnemyUseCases) StartEnemySpawn(position types.Position) error {
 	// Сохраняем ссылку на танк
 	uc.enemyTank = enemy
 
-	// Сохраняем ссылки на анимации
+	// Сохраняем ссылку на анимацию спавна
 	uc.spawnAnimation = spawnAnimation
-	uc.tankAnimation = tankAnimation
 
 	// Запускаем анимацию спавна
 	uc.animationUseCases.StartAnimation(spawnAnimation)
@@ -124,7 +112,7 @@ func (uc *EnemyUseCases) UpdateEnemiesSpawn(currentTime float64) {
 	}
 
 	// Если танк взрывается, проверяем завершение анимации взрыва
-	if uc.enemyTank.IsExploding {
+	if uc.enemyTank.State == types.TankStateExploding {
 		// Проверяем, является ли AnimationGetter анимацией взрыва
 		if anim, ok := uc.enemyTank.AnimationGetter.(*types.TileAnimationEntity); ok {
 			if anim.IsFinished() {
@@ -136,11 +124,11 @@ func (uc *EnemyUseCases) UpdateEnemiesSpawn(currentTime float64) {
 	}
 
 	// Если танк еще не заспавнен, проверяем анимацию спавна
-	if !uc.enemyTank.IsSpawned {
+	if uc.enemyTank.State == types.TankStateSpawning {
 		// Проверяем, завершилась ли анимация спавна
 		if uc.spawnAnimation != nil && uc.spawnAnimation.IsFinished() {
 			// Завершаем спавн
-			uc.enemyTank.IsSpawned = true
+			uc.enemyTank.State = types.TankStateMoving
 			uc.enemyTank.SpawnedAt = currentTime
 
 			// Останавливаем анимацию спавна
@@ -150,11 +138,6 @@ func (uc *EnemyUseCases) UpdateEnemiesSpawn(currentTime float64) {
 	}
 }
 
-// GetEnemySpawnAnimation возвращает анимацию спавна для врага
-func (uc *EnemyUseCases) GetEnemySpawnAnimation(enemyIndex int) *types.TileAnimationEntity {
-	return uc.spawnAnimation
-}
-
 // UpdateEnemiesAnimations обновляет анимации врага в зависимости от его движения
 func (uc *EnemyUseCases) UpdateEnemiesAnimations() {
 	if uc.enemyTank == nil {
@@ -162,73 +145,36 @@ func (uc *EnemyUseCases) UpdateEnemiesAnimations() {
 	}
 
 	// Пропускаем взрывающихся врагов
-	if uc.enemyTank.IsExploding {
+	if uc.enemyTank.State == types.TankStateExploding {
 		return
 	}
 
 	// Пропускаем врагов в процессе спавна
-	if !uc.enemyTank.IsSpawned {
+	if uc.enemyTank.State == types.TankStateSpawning {
+		return
+	}
+
+	// Получаем текущую анимацию из AnimationGetter
+	animGetter := uc.enemyTank.AnimationGetter
+	if animGetter == nil {
+		return
+	}
+
+	anim, ok := animGetter.(*types.TileAnimationEntity)
+	if !ok {
 		return
 	}
 
 	// Управляем анимацией в зависимости от скорости
 	if uc.enemyTank.Speed > 0 {
 		// Если танк движется, запускаем анимацию
-		if uc.tankAnimation != nil && !uc.tankAnimation.IsAnimating {
-			uc.animationUseCases.StartAnimation(uc.tankAnimation)
+		if !anim.IsAnimating {
+			uc.animationUseCases.StartAnimation(anim)
 		}
 	} else {
 		// Если танк стоит, останавливаем анимацию
-		if uc.tankAnimation != nil && uc.tankAnimation.IsAnimating {
-			uc.animationUseCases.StopAnimation(uc.tankAnimation)
+		if anim.IsAnimating {
+			uc.animationUseCases.StopAnimation(anim)
 		}
-	}
-}
-
-// UpdateAI обновляет AI врага
-func (uc *EnemyUseCases) UpdateAI() {
-	if uc.enemyTank == nil || uc.aiUseCases == nil {
-		return
-	}
-
-	// Увеличиваем счетчик тиков для этого врага
-	uc.aiTickCounter++
-
-	// Проверяем, нужно ли обновлять AI
-	if uc.aiTickCounter >= uc.aiUseCases.GetUpdateInterval() {
-		// Получаем решение от AI
-		decision := uc.aiUseCases.UpdateAI(uc.enemyTank)
-
-		// Применяем решение
-		uc.aiUseCases.ApplyDecision(uc.enemyTank, decision)
-
-		// Сбрасываем счетчик
-		uc.aiTickCounter = 0
-	}
-}
-
-// MoveTank двигает танк врага
-func (uc *EnemyUseCases) MoveTank(dt float64) {
-	if uc.enemyTank == nil {
-		return
-	}
-
-	// Пропускаем взрывающихся или не заспавненных врагов
-	if uc.enemyTank.IsExploding || !uc.enemyTank.IsSpawned {
-		return
-	}
-
-	// Двигаем танк
-	delta := uc.enemyTank.Speed * dt
-
-	switch uc.enemyTank.Direction {
-	case types.DirectionUp:
-		uc.enemyTank.WorldPosition.Y -= delta
-	case types.DirectionDown:
-		uc.enemyTank.WorldPosition.Y += delta
-	case types.DirectionLeft:
-		uc.enemyTank.WorldPosition.X -= delta
-	case types.DirectionRight:
-		uc.enemyTank.WorldPosition.X += delta
 	}
 }

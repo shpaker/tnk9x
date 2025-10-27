@@ -16,7 +16,7 @@ import (
 // RendererAdapter адаптер для рендеринга игры
 type RendererAdapter struct {
 	mapUseCases            use_cases.IMapUseCases
-	tankUseCases           use_cases.ITankUseCases
+	tankUseCases           use_cases.IPlayerUseCases
 	bulletUseCases         use_cases.IBulletUseCases
 	enemyUseCasesList      []*use_cases.EnemyUseCases // Массив врагов
 	mapTilesUseCases       *use_cases.TilesUseCases
@@ -30,7 +30,7 @@ type RendererAdapter struct {
 // NewRendererAdapter создает новый экземпляр RendererAdapter
 func NewRendererAdapter(
 	mapUseCases use_cases.IMapUseCases,
-	tankUseCases use_cases.ITankUseCases,
+	tankUseCases use_cases.IPlayerUseCases,
 	bulletUseCases use_cases.IBulletUseCases,
 	enemyUseCasesList []*use_cases.EnemyUseCases,
 	mapTilesUseCases *use_cases.TilesUseCases,
@@ -86,10 +86,10 @@ func (r *RendererAdapter) drawMap(screen *ebiten.Image) {
 		image := ebiten.NewImageFromImage(imageData)
 
 		op := &ebiten.DrawImageOptions{}
-		// Предполагаем, что блоки имеют координаты X, Y в WorldPosition
+		// Предполагаем, что блоки имеют координаты X, Y в Position
 		op.GeoM.Translate(
-			use_cases.MapOffset+block.WorldPosition.X*use_cases.TileMinSize,
-			use_cases.MapOffset+block.WorldPosition.Y*use_cases.TileMinSize,
+			use_cases.MapOffset+block.Position.X*use_cases.TileMinSize,
+			use_cases.MapOffset+block.Position.Y*use_cases.TileMinSize,
 		)
 		screen.DrawImage(image, op)
 	}
@@ -103,13 +103,8 @@ func (r *RendererAdapter) drawTank(screen *ebiten.Image) {
 	}
 
 	// Если танк в процессе спавна, отображаем анимацию спавна
-	if r.tankUseCases.IsSpawning() {
+	if tank.State == types.TankStateSpawning {
 		r.drawSpawnAnimation(screen, tank)
-		return
-	}
-
-	// Если танк не заспавнен, не отображаем его
-	if !r.tankUseCases.ShouldShowTank() {
 		return
 	}
 
@@ -139,8 +134,8 @@ func (r *RendererAdapter) drawTank(screen *ebiten.Image) {
 	}
 
 	// Вычисляем позицию на экране
-	screenX := use_cases.MapOffset + tank.WorldPosition.X
-	screenY := use_cases.MapOffset + tank.WorldPosition.Y
+	screenX := use_cases.MapOffset + tank.Position.X
+	screenY := use_cases.MapOffset + tank.Position.Y
 
 	// Создаем опции для отрисовки
 	op := &ebiten.DrawImageOptions{}
@@ -181,12 +176,12 @@ func (r *RendererAdapter) drawEnemiesWithoutExplosions(screen *ebiten.Image) {
 		}
 
 		// Пропускаем взрывающихся врагов
-		if enemy.IsExploding {
+		if enemy.State == types.TankStateExploding {
 			continue
 		}
 
 		// Если враг в процессе спавна, отображаем анимацию спавна
-		if !enemy.IsSpawned {
+		if enemy.State == types.TankStateSpawning {
 			r.drawEnemySpawnAnimation(screen, enemy, i)
 			continue
 		}
@@ -213,8 +208,8 @@ func (r *RendererAdapter) drawEnemiesWithoutExplosions(screen *ebiten.Image) {
 
 		op := &ebiten.DrawImageOptions{}
 		op.GeoM.Translate(
-			use_cases.MapOffset+enemy.WorldPosition.X,
-			use_cases.MapOffset+enemy.WorldPosition.Y,
+			use_cases.MapOffset+enemy.Position.X,
+			use_cases.MapOffset+enemy.Position.Y,
 		)
 
 		screen.DrawImage(rotatedImage, op)
@@ -227,7 +222,7 @@ func (r *RendererAdapter) drawEnemiesExplosions(screen *ebiten.Image) {
 		enemy := enemyUseCases.GetEnemy()
 
 		// Пропускаем если врага нет или он не взрывается
-		if enemy == nil || !enemy.IsExploding {
+		if enemy == nil || enemy.State != types.TankStateExploding {
 			continue
 		}
 
@@ -258,8 +253,8 @@ func (r *RendererAdapter) drawEnemiesExplosions(screen *ebiten.Image) {
 		}
 
 		op.GeoM.Translate(
-			use_cases.MapOffset+enemy.WorldPosition.X+offsetX,
-			use_cases.MapOffset+enemy.WorldPosition.Y+offsetY,
+			use_cases.MapOffset+enemy.Position.X+offsetX,
+			use_cases.MapOffset+enemy.Position.Y+offsetY,
 		)
 
 		screen.DrawImage(img, op)
@@ -268,11 +263,8 @@ func (r *RendererAdapter) drawEnemiesExplosions(screen *ebiten.Image) {
 
 // drawEnemySpawnAnimation отрисовывает анимацию спавна врага
 func (r *RendererAdapter) drawEnemySpawnAnimation(screen *ebiten.Image, enemy *types.TankEntity, enemyIndex int) {
-	if enemyIndex >= len(r.enemyUseCasesList) {
-		return
-	}
-	enemyUseCases := r.enemyUseCasesList[enemyIndex]
-	spawnAnimation := enemyUseCases.GetEnemySpawnAnimation(0)
+	// Получаем анимацию спавна напрямую из AnimationGetter танка
+	spawnAnimation := enemy.AnimationGetter
 	if spawnAnimation == nil {
 		return
 	}
@@ -296,8 +288,8 @@ func (r *RendererAdapter) drawEnemySpawnAnimation(screen *ebiten.Image, enemy *t
 
 	op := &ebiten.DrawImageOptions{}
 	op.GeoM.Translate(
-		use_cases.MapOffset+enemy.WorldPosition.X,
-		use_cases.MapOffset+enemy.WorldPosition.Y,
+		use_cases.MapOffset+enemy.Position.X,
+		use_cases.MapOffset+enemy.Position.Y,
 	)
 
 	screen.DrawImage(image, op)
@@ -328,8 +320,8 @@ func (r *RendererAdapter) drawSpawnAnimation(screen *ebiten.Image, tank *types.T
 	image := ebiten.NewImageFromImage(imageData)
 
 	// Вычисляем позицию на экране (в центре позиции танка)
-	screenX := use_cases.MapOffset + tank.WorldPosition.X
-	screenY := use_cases.MapOffset + tank.WorldPosition.Y
+	screenX := use_cases.MapOffset + tank.Position.X
+	screenY := use_cases.MapOffset + tank.Position.Y
 
 	// Создаем опции для отрисовки
 	op := &ebiten.DrawImageOptions{}
@@ -386,8 +378,8 @@ func (r *RendererAdapter) drawBullets(screen *ebiten.Image) {
 			}
 
 			// Вычисляем позицию на экране
-			screenX := use_cases.MapOffset + bullet.WorldPosition.X
-			screenY := use_cases.MapOffset + bullet.WorldPosition.Y
+			screenX := use_cases.MapOffset + bullet.Position.X
+			screenY := use_cases.MapOffset + bullet.Position.Y
 
 			// Создаем опции для отрисовки
 			op := &ebiten.DrawImageOptions{}
@@ -475,10 +467,10 @@ func (r *RendererAdapter) drawBlocksByAltitude(screen *ebiten.Image, altitude ty
 		image := ebiten.NewImageFromImage(imageData)
 
 		op := &ebiten.DrawImageOptions{}
-		// Предполагаем, что блоки имеют координаты X, Y в WorldPosition
+		// Предполагаем, что блоки имеют координаты X, Y в Position
 		op.GeoM.Translate(
-			use_cases.MapOffset+block.WorldPosition.X*use_cases.TileMinSize,
-			use_cases.MapOffset+block.WorldPosition.Y*use_cases.TileMinSize,
+			use_cases.MapOffset+block.Position.X*use_cases.TileMinSize,
+			use_cases.MapOffset+block.Position.Y*use_cases.TileMinSize,
 		)
 		screen.DrawImage(image, op)
 	}

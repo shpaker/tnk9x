@@ -34,7 +34,7 @@ func TestAddAndGetBullets(t *testing.T) {
 	// Создаем тестовую пулю с ImageGetter
 	bullet := types.BulletEntity{
 		ImageGetter:   &MockImageIdGetter{id: "bullet"},
-		WorldPosition: types.Position{X: 100, Y: 100},
+		Position: types.Position{X: 100, Y: 100},
 		Speed:         200.0,
 		Direction:     types.DirectionUp,
 	}
@@ -66,13 +66,13 @@ func TestRemoveBullet(t *testing.T) {
 	// Создаем тестовые пули с ImageGetter
 	bullet1 := types.BulletEntity{
 		ImageGetter:   &MockImageIdGetter{id: "bullet"},
-		WorldPosition: types.Position{X: 100, Y: 100},
+		Position: types.Position{X: 100, Y: 100},
 		Speed:         200.0,
 		Direction:     types.DirectionUp,
 	}
 	bullet2 := types.BulletEntity{
 		ImageGetter:   &MockImageIdGetter{id: "bullet"},
-		WorldPosition: types.Position{X: 200, Y: 200},
+		Position: types.Position{X: 200, Y: 200},
 		Speed:         200.0,
 		Direction:     types.DirectionDown,
 	}

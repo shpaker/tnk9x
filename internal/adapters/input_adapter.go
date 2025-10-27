@@ -9,107 +9,105 @@ import (
 	"github.com/shpaker/gonflict/internal/use_cases"
 )
 
-// InputAdapter адаптер для обработки пользовательского ввода
-type InputAdapter struct {
-	tankUseCases   use_cases.ITankUseCases
-	bulletUseCases use_cases.IBulletUseCases
-	upButton       ebiten.Key
-	downButton     ebiten.Key
-	leftButton     ebiten.Key
-	rightButton    ebiten.Key
-	shootButton    ebiten.Key
+// KeyboardInputAdapter адаптер для обработки пользовательского ввода с клавиатуры
+type KeyboardInputAdapter struct {
+	tankUseCases    use_cases.IPlayerUseCases  // Для получения танка
+	tankUseCasesRef use_cases.ITankUseCasesRef // Для управления танком
+	bulletUseCases  use_cases.IBulletUseCases
+	upButton        ebiten.Key
+	downButton      ebiten.Key
+	leftButton      ebiten.Key
+	rightButton     ebiten.Key
+	shootButton     ebiten.Key
 }
 
-// NewInputAdapter создает новый экземпляр InputAdapter
-func NewInputAdapter(
-	tankUseCases use_cases.ITankUseCases,
+// NewKeyboardInputAdapter создает новый экземпляр KeyboardInputAdapter
+func NewKeyboardInputAdapter(
+	tankUseCases use_cases.IPlayerUseCases,
+	tankUseCasesRef use_cases.ITankUseCasesRef,
 	bulletUseCases use_cases.IBulletUseCases,
 	upButton ebiten.Key,
 	downButton ebiten.Key,
 	leftButton ebiten.Key,
 	rightButton ebiten.Key,
 	shootButton ebiten.Key,
-) *InputAdapter {
-	return &InputAdapter{
-		tankUseCases:   tankUseCases,
-		bulletUseCases: bulletUseCases,
-		upButton:       upButton,
-		downButton:     downButton,
-		leftButton:     leftButton,
-		rightButton:    rightButton,
-		shootButton:    shootButton,
+) *KeyboardInputAdapter {
+	return &KeyboardInputAdapter{
+		tankUseCases:    tankUseCases,
+		tankUseCasesRef: tankUseCasesRef,
+		bulletUseCases:  bulletUseCases,
+		upButton:        upButton,
+		downButton:      downButton,
+		leftButton:      leftButton,
+		rightButton:     rightButton,
+		shootButton:     shootButton,
 	}
 }
 
-// CreateDefault создает InputAdapter с настройками по умолчанию
-func CreateDefaultInputAdapter(
-	tankUseCases use_cases.ITankUseCases,
-	bulletUseCases use_cases.IBulletUseCases,
-) *InputAdapter {
-	return NewInputAdapter(
-		tankUseCases,
-		bulletUseCases,
-		ebiten.KeyW,     // up
-		ebiten.KeyS,     // down
-		ebiten.KeyA,     // left
-		ebiten.KeyD,     // right
-		ebiten.KeySpace, // shoot
-	)
-}
-
 // Update обрабатывает пользовательский ввод
-func (a *InputAdapter) Update() {
+func (a *KeyboardInputAdapter) Update() {
 	a.keyPressedEvents()
 	a.keyReleasedEvents()
 }
 
 // keyPressedEvents обрабатывает события нажатия клавиш
-func (a *InputAdapter) keyPressedEvents() {
+func (a *KeyboardInputAdapter) keyPressedEvents() {
 	// Проверяем нажатие клавиши стрельбы
 	if inpututil.IsKeyJustPressed(a.shootButton) {
 		log.Printf("DEBUG: Shoot button pressed (key: %v)", a.shootButton)
 		a.tankShoot()
 	}
 
+	// Получаем танк
+	tank, err := a.tankUseCases.GetTank()
+	if err != nil {
+		return
+	}
+
 	// Rotate the tank if the key is pressed
 	tankRotated := false
 	if ebiten.IsKeyPressed(a.upButton) && !tankRotated {
-		a.tankUseCases.RotateTank(types.DirectionUp)
+		a.tankUseCasesRef.RotateTank(tank, types.DirectionUp)
 		tankRotated = true
 	}
 	if ebiten.IsKeyPressed(a.downButton) && !tankRotated {
-		a.tankUseCases.RotateTank(types.DirectionDown)
+		a.tankUseCasesRef.RotateTank(tank, types.DirectionDown)
 		tankRotated = true
 	}
 	if ebiten.IsKeyPressed(a.leftButton) && !tankRotated {
-		a.tankUseCases.RotateTank(types.DirectionLeft)
+		a.tankUseCasesRef.RotateTank(tank, types.DirectionLeft)
 		tankRotated = true
 	}
 	if ebiten.IsKeyPressed(a.rightButton) && !tankRotated {
-		a.tankUseCases.RotateTank(types.DirectionRight)
+		a.tankUseCasesRef.RotateTank(tank, types.DirectionRight)
 		tankRotated = true
 	}
 }
 
 // keyReleasedEvents обрабатывает события отпускания клавиш
-func (a *InputAdapter) keyReleasedEvents() {
+func (a *KeyboardInputAdapter) keyReleasedEvents() {
 	// Stop the tank if the key is released
-	if inpututil.IsKeyJustReleased(a.upButton) && a.tankUseCases.GetDirection() == types.DirectionUp {
-		a.tankUseCases.StopTank(false)
+	tank, err := a.tankUseCases.GetTank()
+	if err != nil {
+		return
 	}
-	if inpututil.IsKeyJustReleased(a.downButton) && a.tankUseCases.GetDirection() == types.DirectionDown {
-		a.tankUseCases.StopTank(false)
+
+	if inpututil.IsKeyJustReleased(a.upButton) && tank.Direction == types.DirectionUp {
+		a.tankUseCasesRef.StopTank(tank, false)
 	}
-	if inpututil.IsKeyJustReleased(a.leftButton) && a.tankUseCases.GetDirection() == types.DirectionLeft {
-		a.tankUseCases.StopTank(false)
+	if inpututil.IsKeyJustReleased(a.downButton) && tank.Direction == types.DirectionDown {
+		a.tankUseCasesRef.StopTank(tank, false)
 	}
-	if inpututil.IsKeyJustReleased(a.rightButton) && a.tankUseCases.GetDirection() == types.DirectionRight {
-		a.tankUseCases.StopTank(false)
+	if inpututil.IsKeyJustReleased(a.leftButton) && tank.Direction == types.DirectionLeft {
+		a.tankUseCasesRef.StopTank(tank, false)
+	}
+	if inpututil.IsKeyJustReleased(a.rightButton) && tank.Direction == types.DirectionRight {
+		a.tankUseCasesRef.StopTank(tank, false)
 	}
 }
 
 // tankShoot обрабатывает стрельбу танка
-func (a *InputAdapter) tankShoot() {
+func (a *KeyboardInputAdapter) tankShoot() {
 	log.Printf("DEBUG: tankShoot called")
 	tank, err := a.tankUseCases.GetTank()
 	if err != nil {

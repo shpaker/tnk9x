@@ -39,7 +39,7 @@ func TestBlockEntity_GetImageId_NilImageGetter(t *testing.T) {
 			Position: Position{X: 0, Y: 0},
 		},
 		Properties:    &BlockProperties{},
-		WorldPosition: Position{X: 0, Y: 0},
+		Position: Position{X: 0, Y: 0},
 		Altitude:      SURFACE,
 	}
 
@@ -66,7 +66,7 @@ func TestBlockEntity_GetImageId_EmptyImageId(t *testing.T) {
 			Position: Position{X: 0, Y: 0},
 		},
 		Properties:    &BlockProperties{},
-		WorldPosition: Position{X: 0, Y: 0},
+		Position: Position{X: 0, Y: 0},
 		Altitude:      SURFACE,
 	}
 
@@ -91,7 +91,7 @@ func TestBlockEntity_GetImageId_ValidImageId(t *testing.T) {
 			Position: Position{X: 0, Y: 0},
 		},
 		Properties:    &BlockProperties{},
-		WorldPosition: Position{X: 0, Y: 0},
+		Position: Position{X: 0, Y: 0},
 		Altitude:      SURFACE,
 	}
 

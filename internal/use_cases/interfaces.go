@@ -9,7 +9,7 @@ import (
 // IMapObject определяет интерфейс для объектов карты
 type IMapObject interface {
 	GetSize() types.Size
-	GetWorldPosition() types.Position
+	GetPosition() types.Position
 	GetScreenPosition() types.Position
 	GetAltitude() types.Altitude
 }
@@ -17,32 +17,20 @@ type IMapObject interface {
 // ITankUseCasesRef интерфейс для базовых операций с танками
 type ITankUseCasesRef interface {
 	CreateTankWithSpawn(position types.Position, direction types.Direction) (*types.TankEntity, *types.TileAnimationEntity, *types.TileAnimationEntity, error)
-	CreateTankAnimation() (*types.TileAnimationEntity, error)
 	CreateSpawnAnimation() (*types.TileAnimationEntity, error)
-	GetTank(index int) (*types.TankEntity, error)
-	GetAllTanks() []*types.TankEntity
-	RemoveTank(tank *types.TankEntity) error
-	AddTank(tank *types.TankEntity)
+	RotateTank(tank *types.TankEntity, direction types.Direction) error
+	StopTank(tank *types.TankEntity, byCollision bool) error
+	MoveTank(tank *types.TankEntity, direction types.Direction, dt float64) error
 }
 
 // IPlayerUseCases интерфейс для операций с игроком
 type IPlayerUseCases interface {
-	MoveTank(direction types.Direction, dt float64) error
-	RotateTank(direction types.Direction) error
-	StopTank(byCollision bool) error
 	GetTank() (*types.TankEntity, error)
-	GetDirection() types.Direction
 	StartSpawn(spawnStartTime float64)
 	UpdateSpawn(currentTime float64)
-	IsSpawning() bool
 	GetSpawnAnimation() *types.TileAnimationEntity
 	GetTankImageId() (string, error)
-	ShouldShowTank() bool
 }
-
-// ITankUseCases оставлен для обратной совместимости
-// Deprecated: используйте IPlayerUseCases
-type ITankUseCases = IPlayerUseCases
 
 // IBulletUseCases интерфейс для операций с пулями
 type IBulletUseCases interface {
@@ -86,8 +74,6 @@ type IAnimationUseCases interface {
 type IEnemyUseCases interface {
 	GetEnemies() []*types.TankEntity
 	GetEnemyRealIndex(index int) (int, error)
-	RemoveEnemy(index int) error
 	InitEnemies(enemySpawners [][]int) error
 	UpdateEnemiesSpawn(currentTime float64)
-	GetEnemySpawnAnimation(enemyIndex int) *types.TileAnimationEntity
 }

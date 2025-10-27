@@ -19,7 +19,7 @@ type GameConfig struct {
 
 type GameState struct {
 	gameStateServices *GameStateUseCasesFacade
-	inputAdapter      *adapters.InputAdapter
+	inputAdapter      *adapters.KeyboardInputAdapter
 	rendererAdapter   *adapters.RendererAdapter
 	startTime         time.Time // Время начала игры для отслеживания спавна
 }
@@ -109,9 +109,10 @@ func (state GameState) Draw(screen *ebiten.Image) {
 }
 
 // createInputAdapter создает адаптер ввода
-func createInputAdapter(gameStateServices *GameStateUseCasesFacade) *adapters.InputAdapter {
-	return adapters.NewInputAdapter(
+func createInputAdapter(gameStateServices *GameStateUseCasesFacade) *adapters.KeyboardInputAdapter {
+	return adapters.NewKeyboardInputAdapter(
 		gameStateServices.TankUseCases(),
+		gameStateServices.TankUseCasesRef(),
 		gameStateServices.BulletUseCases(),
 		ebiten.KeyW,     // up
 		ebiten.KeyS,     // down
