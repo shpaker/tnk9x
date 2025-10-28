@@ -126,18 +126,47 @@ graph TB
     end
     
     subgraph I["💾 Infrastructure Layer"]
-        direction LR
-        Repositories["🗄️ Repositories<br/>Хранение данных"]
-        LuaScripts["🗂️ Scripts<br/>enemies.lua"]
+        direction TB
+        subgraph IR["📂 Raw Repositories"]
+            FileRepo["📁 FileRepository"]
+        end
+        
+        subgraph IP["🔧 Processed Repositories"]
+            MapsRepo["🗺️ MapsDataRepository"]
+            TilesetRepo["🎨 TilesetRepository"]
+            TilesetReg["📋 TilesetRepositoryRegistry"]
+            ScriptsRepo["📜 ScriptsRepository"]
+        end
+        
+        subgraph IG["🎮 Game Repositories"]
+            TanksRepo["🚗 TanksRepository"]
+            BlocksRepo["🧱 BlocksRepository"]
+            BulletsRepo["💣 BulletsRepository"]
+            AnimationsRepo["✨ AnimationsRepository"]
+        end
     end
     
     InputAdapters -->|"команды"| UseCases
     UseCases -->|"обновление"| AICases
     AICases -->|"вызов"| InputAdapters
-    InputAdapters -->|"скрипт"| LuaScripts
+    InputAdapters -->|"скрипт"| ScriptsRepo
     UseCases -->|"использует"| Entities
-    Repositories -->|"предоставляет"| Entities
-    UseCases -->|"сохраняет"| Repositories
+    
+    UseCases -->|"требует"| TanksRepo
+    UseCases -->|"требует"| BlocksRepo
+    UseCases -->|"требует"| BulletsRepo
+    UseCases -->|"требует"| AnimationsRepo
+    
+    TilesetReg -->|"предоставляет"| UseCases
+    MapsRepo -->|"загружает уровни"| UseCases
+    
+    TilesetRepo -->|"использует"| FileRepo
+    MapsRepo -->|"использует"| FileRepo
+    ScriptsRepo -->|"читает"| FileRepo
+    
+    UseCases -->|"создает"| IG
+    IG -->|"хранит"| Entities
+    
     UseCases -->|"отрисовка"| RenderAdapter
 ```
 
