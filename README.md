@@ -110,19 +110,14 @@ gonflict/
 graph TB
     subgraph P["🎨 Presentation Layer"]
         direction LR
-        Adapters["📝 Adapters<br/>Input / Render"]
+        InputAdapters["📝 Input Adapters<br/>Keyboard / AI"]
+        RenderAdapter["🎨 Render Adapter"]
     end
     
     subgraph A["⚙️ Application Layer"]
         direction LR
         UseCases["🎮 Use Cases<br/>Бизнес-логика"]
-    end
-    
-    subgraph AI["🤖 AI Layer"]
-        direction LR
         AICases["🧠 AIUseCases<br/>AI логика"]
-        AiInput["📜 AiInputAdapter<br/>Lua AI"]
-        LuaScripts["🗂️ Scripts<br/>enemies.lua"]
     end
     
     subgraph D["📦 Domain Layer"]
@@ -133,15 +128,17 @@ graph TB
     subgraph I["💾 Infrastructure Layer"]
         direction LR
         Repositories["🗄️ Repositories<br/>Хранение данных"]
+        LuaScripts["🗂️ Scripts<br/>enemies.lua"]
     end
     
-    Adapters -->|"запросы"| UseCases
+    InputAdapters -->|"команды"| UseCases
     UseCases -->|"обновление"| AICases
-    AICases -->|"вызов"| AiInput
-    AiInput -->|"скрипт"| LuaScripts
+    AICases -->|"вызов"| InputAdapters
+    InputAdapters -->|"скрипт"| LuaScripts
     UseCases -->|"использует"| Entities
     Repositories -->|"предоставляет"| Entities
     UseCases -->|"сохраняет"| Repositories
+    UseCases -->|"отрисовка"| RenderAdapter
 ```
 
 ### Диаграмма взаимодействия компонентов
@@ -151,7 +148,8 @@ flowchart TB
     User[👤 Пользователь]
     
     subgraph "🎮 Игровой цикл"
-        Input[📥 InputAdapter<br/>клавиатура]
+        KeyboardInput[📥 KeyboardInputAdapter<br/>клавиатура]
+        AiInput[🤖 AiInputAdapter<br/>Lua AI]
         Facade[🎯 GameStateFacade<br/>оркестрация]
         Render[🎨 RendererAdapter<br/>отрисовка]
     end
@@ -161,25 +159,24 @@ flowchart TB
         Enemy[👾 EnemyUseCases<br/>враги]
         Bullet[💣 BulletUseCases<br/>пули]
         Collision[💥 CollisionUseCases<br/>коллизии]
-    end
-    
-    subgraph "🤖 AI система"
         AI[🧠 AIUseCases<br/>AI логика]
-        AiInput[📜 AiInputAdapter<br/>Lua AI]
-        Lua[🗂️ Scripts<br/>enemies.lua]
     end
     
-    TanksRepo[(💾 TanksRepository)]
+    subgraph "💾 Infrastructure"
+        Lua[🗂️ Scripts<br/>enemies.lua]
+        TanksRepo[(💾 TanksRepository)]
+    end
     
-    User -->|WASD Space| Input
-    Input -->|команды| Facade
+    User -->|WASD Space| KeyboardInput
+    KeyboardInput -->|команды| Facade
+    AI -->|вызов| AiInput
+    AiInput -->|скрипт| Lua
+    AiInput -->|обновление| Enemy
     Facade -->|обновление| Tank
     Facade -->|обновление| Enemy
     Facade -->|обновление| Bullet
+    Facade -->|обновление| AI
     Facade -->|проверка| Collision
-    Enemy -->|запрос| AI
-    AI -->|вызов| AiInput
-    AiInput -->|скрипт| Lua
     Tank <--> TanksRepo
     Enemy <--> TanksRepo
     Collision -->|проверяет| Tank
@@ -288,12 +285,11 @@ func NewFacade(blocksRepo game.IBlocksRepository) *Facade { ... }
 
 ### Структура слоев
 
-- **Presentation Layer** - взаимодействие с пользователем и внешним миром
-- **Application Layer** - бизнес-логика и правила игры
-- **AI Layer** - AI логика и скрипты Lua
-- **Domain Layer** - сущности и типы игры
-- **Infrastructure Layer** - хранение и загрузка данных
-- **Supporting Components** - вспомогательные компоненты
+- **Presentation Layer** - взаимодействие с пользователем и внешним миром (Input Adapters, Render Adapter)
+- **Application Layer** - бизнес-логика и правила игры (Use Cases)
+- **Domain Layer** - сущности и типы игры (Entities)
+- **Infrastructure Layer** - хранение данных и ресурсы (Repositories, Lua Scripts)
+- **Supporting Components** - вспомогательные компоненты (Config, Utils)
 
 ## 🚀 Быстрый старт
 
