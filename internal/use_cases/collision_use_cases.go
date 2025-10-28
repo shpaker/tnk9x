@@ -51,7 +51,7 @@ func (uc *CollisionUseCases) UpdateCollisions() error {
 // checkEnemyCollisions проверяет коллизии врагов с границами и стенами
 func (uc *CollisionUseCases) checkEnemyCollisions() {
 	for _, enemy := range uc.enemyTanks {
-		if enemy == nil || enemy.State == types.TankStateExploding || enemy.State == types.TankStateSpawning || enemy.State == types.TankStateExploded {
+		if enemy == nil || !enemy.IsActive() {
 			continue
 		}
 
@@ -179,8 +179,8 @@ func (uc *CollisionUseCases) checkBulletEnemyCollisions() {
 				continue
 			}
 
-			// Если враг заспавнен, не взрывается и есть коллизия
-			if enemy.State != types.TankStateSpawning && enemy.State != types.TankStateExploding && enemy.State != types.TankStateExploded && uc.CheckColliders(bullet, enemy) {
+			// Если враг активен и есть коллизия
+			if enemy.IsActive() && uc.CheckColliders(bullet, enemy) {
 				// Удаляем пулю
 				uc.bulletUseCases.RemoveBullet(i)
 				// Удаляем врага

@@ -10,16 +10,18 @@ import (
 
 // AiInputAdapter адаптер для работы с AI через Lua скрипты
 type AiInputAdapter struct {
-	tankUseCases use_cases.ITankUseCasesRef
-	aiUseCases   *use_cases.AIUseCases
-	tickCounter  int
-	L            *lua.LState
+	tankUseCases   use_cases.ITankUseCasesRef
+	aiContext      *types.GameAiContext
+	updateInterval int
+	tickCounter    int
+	L              *lua.LState
 }
 
 // NewAiInputAdapter создает новый AI адаптер
 func NewAiInputAdapter(
 	tankUseCases use_cases.ITankUseCasesRef,
-	aiUseCases *use_cases.AIUseCases,
+	aiContext *types.GameAiContext,
+	updateInterval int,
 	script string,
 ) (*AiInputAdapter, error) {
 	L := lua.NewState()
@@ -34,71 +36,53 @@ func NewAiInputAdapter(
 	}
 
 	return &AiInputAdapter{
-		tankUseCases: tankUseCases,
-		aiUseCases:   aiUseCases,
-		tickCounter:  0,
-		L:            L,
+		tankUseCases:   tankUseCases,
+		aiContext:      aiContext,
+		updateInterval: updateInterval,
+		tickCounter:    0,
+		L:              L,
 	}, nil
 }
 
 // Update обновляет AI логику для танка
 func (a *AiInputAdapter) Update() {
-	// Получаем танк через use cases
-	tank := a.tankUseCases.GetTank()
-	if tank == nil {
+	// Пропускаем неактивных врагов
+	if !a.tankUseCases.IsActive() {
 		return
 	}
 
-	// Пропускаем взрывающихся или не заспавненных врагов
-	if tank.State == types.TankStateExploding || tank.State == types.TankStateSpawning {
-		return
-	}
+	// Проверяем, нужно ли обновлять AI
+	if a.tickCounter == 0 {
+		// Если есть Lua, используем его напрямую
+		if a.L != nil && a.aiContext != nil {
+			shouldMove, directionInt := a.CallEnemyAI(a.aiContext)
+			if shouldMove {
+				decision := types.EnemyAIDecision{
+					Direction: types.Direction(directionInt),
+				}
+				// Применяем решение
+				a.applyDecision(decision)
+			}
+		}
 
+	}
 	// Увеличиваем счетчик тиков
 	a.tickCounter++
 
-	// Проверяем, нужно ли обновлять AI
-	if a.tickCounter >= a.aiUseCases.GetUpdateInterval() {
-		// Если есть Lua, используем его напрямую
-		if a.L != nil && a.aiUseCases.GetAIContext() != nil {
-			shouldMove, directionInt := a.CallEnemyAI(a.aiUseCases.GetAIContext())
-			decision := types.EnemyAIDecision{
-				ShouldMove:   shouldMove,
-				NewDirection: IntToDirection(directionInt),
-			}
-			// Применяем решение
-			a.aiUseCases.ApplyDecision(tank, decision)
-		}
-
-		// Сбрасываем счетчик
+	if a.tickCounter >= a.updateInterval {
 		a.tickCounter = 0
 	}
 
 	// Двигаем танк
-	a.moveTank()
-}
-
-// moveTank двигает танк в его текущем направлении
-func (a *AiInputAdapter) moveTank() {
-	// Получаем танк через use cases
-	tank := a.tankUseCases.GetTank()
-	if tank == nil {
-		return
-	}
-
-	// Пропускаем взрывающихся или не заспавненных врагов
-	if tank.State == types.TankStateExploding || tank.State == types.TankStateSpawning {
-		return
-	}
-
-	// Двигаем танк через TankUseCases
-	if err := a.tankUseCases.MoveTank(tank.Direction, use_cases.DT); err != nil {
-		log.Printf("ERROR: Failed to move AI tank: %v", err)
+	if err := a.tankUseCases.Update(use_cases.DT); err != nil {
+		log.Printf("ERROR: Failed to update AI tank: %v", err)
 	}
 }
 
 // CallEnemyAI вызывает Lua функцию для AI врага
-func (a *AiInputAdapter) CallEnemyAI(context *types.GameAiContext) (bool, int) {
+func (a *AiInputAdapter) CallEnemyAI(
+	context *types.GameAiContext,
+) (bool, int) {
 	if a.L == nil {
 		return false, 0
 	}
@@ -136,18 +120,32 @@ func (a *AiInputAdapter) CallEnemyAI(context *types.GameAiContext) (bool, int) {
 	return shouldMove, directionInt
 }
 
+// ApplyDecision применяет решение AI к танку
+func (a *AiInputAdapter) applyDecision(
+	decision types.EnemyAIDecision,
+) {
+	if a.tankUseCases.IsStopped() {
+		a.tankUseCases.Rotate(decision.Direction)
+		a.tankUseCases.Move()
+	}
+}
+
 // convertTankToLua конвертирует танк в Lua таблицу
-func (a *AiInputAdapter) convertTankToLua(tank *types.TankEntity) *lua.LTable {
+func (a *AiInputAdapter) convertTankToLua(
+	tank *types.TankEntity,
+) *lua.LTable {
 	t := a.L.NewTable()
 	t.RawSetString("x", lua.LNumber(tank.Position.X))
 	t.RawSetString("y", lua.LNumber(tank.Position.Y))
-	t.RawSetString("direction", lua.LNumber(DirectionToInt(tank.Direction)))
+	t.RawSetString("direction", lua.LNumber(int(tank.Direction)))
 	t.RawSetString("speed", lua.LNumber(tank.Speed))
 	return t
 }
 
 // convertContextToLua конвертирует контекст в Lua таблицу
-func (a *AiInputAdapter) convertContextToLua(context *types.GameAiContext) *lua.LTable {
+func (a *AiInputAdapter) convertContextToLua(
+	context *types.GameAiContext,
+) *lua.LTable {
 	ctx := a.L.NewTable()
 
 	// Добавляем игрока если есть
@@ -156,36 +154,4 @@ func (a *AiInputAdapter) convertContextToLua(context *types.GameAiContext) *lua.
 	}
 
 	return ctx
-}
-
-// DirectionToInt конвертирует направление в число
-func DirectionToInt(d types.Direction) int {
-	switch d {
-	case types.DirectionUp:
-		return 0
-	case types.DirectionDown:
-		return 1
-	case types.DirectionLeft:
-		return 2
-	case types.DirectionRight:
-		return 3
-	default:
-		return 0
-	}
-}
-
-// IntToDirection конвертирует число в направление
-func IntToDirection(i int) types.Direction {
-	switch i {
-	case 0:
-		return types.DirectionUp
-	case 1:
-		return types.DirectionDown
-	case 2:
-		return types.DirectionLeft
-	case 3:
-		return types.DirectionRight
-	default:
-		return types.DirectionUp
-	}
 }

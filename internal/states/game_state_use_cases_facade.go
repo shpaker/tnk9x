@@ -18,7 +18,7 @@ type GameStateUseCasesFacade struct {
 	enemyTanks             []*types.TankEntity            // Массив танков врагов для обратной совместимости
 	enemyInputAdapters     []input_adapters.IInputAdapter // AI input адаптеры для врагов
 	tilesUseCasesWithAnims *use_cases.TilesUseCases       // Общий tilesUseCases для всех анимаций
-	aiUseCases             *use_cases.AIUseCases          // AI use cases для обновления контекста
+	aiContext              *types.GameAiContext           // AI контекст для всех адаптеров
 }
 
 // NewGameStateUseCasesFacade создает фасад для оркестрации use cases игрового состояния
@@ -82,9 +82,6 @@ func NewGameStateUseCasesFacade(
 		updateInterval = gameConfig.AIUpdateIntervalTicks
 	}
 
-	// Создаем AIUseCases с заглушкой (будем использовать Lua напрямую в AiInputAdapter)
-	aiUseCases := use_cases.NewAIUseCases(nil, aiContext, updateInterval)
-
 	// Загружаем скрипт AI для врагов один раз
 	enemyScript, err := scriptsRepo.GetScript("enemies")
 	if err != nil {
@@ -126,7 +123,7 @@ func NewGameStateUseCasesFacade(
 		enemyUseCasesList = append(enemyUseCasesList, enemyTankUseCases)
 
 		// Создаем AI input адаптер для этого врага с поддержкой Lua
-		aiInputAdapter, err := input_adapters.NewAiInputAdapter(enemyTankUseCases, aiUseCases, enemyScript)
+		aiInputAdapter, err := input_adapters.NewAiInputAdapter(enemyTankUseCases, aiContext, updateInterval, enemyScript)
 		if err != nil {
 			return nil, err
 		}
@@ -150,22 +147,24 @@ func NewGameStateUseCasesFacade(
 		enemyTanks:             enemyTanks,
 		enemyInputAdapters:     enemyInputAdapters,
 		tilesUseCasesWithAnims: tilesUseCasesWithAnimations,
-		aiUseCases:             aiUseCases,
+		aiContext:              aiContext,
 	}, nil
 }
 
 // Update обновляет игровое состояние
 func (g *GameStateUseCasesFacade) Update() {
-	// Двигаем игрока
+	// Обновляем игрока
 	tank := g.playerUseCases.GetTank()
 	if tank != nil {
-		g.playerUseCases.MoveTank(tank.Direction, use_cases.DT)
+		g.playerUseCases.Update(use_cases.DT)
 	}
 
 	// Обновляем контекст AI с данными об игроке, врагах и пулях
-	if g.aiUseCases != nil {
+	if g.aiContext != nil {
 		bullets := g.bulletUseCases.GetBullets()
-		g.aiUseCases.UpdateAIContext(tank, g.enemyTanks, bullets)
+		g.aiContext.Player = tank
+		g.aiContext.Enemies = g.enemyTanks
+		g.aiContext.Bullets = bullets
 	}
 
 	// Обновляем AI input адаптеры врагов (они сами управляют движением)
@@ -241,8 +240,4 @@ func (g *GameStateUseCasesFacade) CollisionUseCases() *use_cases.CollisionUseCas
 
 func (g *GameStateUseCasesFacade) GetEnemyTanks() []*types.TankEntity {
 	return g.enemyTanks
-}
-
-func (g *GameStateUseCasesFacade) AIUseCases() *use_cases.AIUseCases {
-	return g.aiUseCases
 }

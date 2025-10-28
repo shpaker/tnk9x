@@ -2,8 +2,7 @@ package types
 
 // EnemyAIDecision решение AI для врага
 type EnemyAIDecision struct {
-	ShouldMove   bool      // Должен ли танк двигаться
-	NewDirection Direction // Новое направление движения
+	Direction Direction // Направление движения
 }
 
 // GameAiContext представляет контекст игры для AI
@@ -21,14 +20,14 @@ type IImageIdGetter interface {
 
 // Типы
 type BlockType string
-type Direction string
+type Direction int
 
 // Константы направлений
 const (
-	DirectionUp    Direction = "up"
-	DirectionDown  Direction = "down"
-	DirectionLeft  Direction = "left"
-	DirectionRight Direction = "right"
+	DirectionUp    Direction = 0
+	DirectionDown  Direction = 1
+	DirectionLeft  Direction = 2
+	DirectionRight Direction = 3
 )
 
 // Константы типов блоков

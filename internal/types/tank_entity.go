@@ -55,3 +55,10 @@ func (t *TankEntity) GetAltitude() Altitude {
 	}
 	return t.Altitude
 }
+
+// IsActive возвращает true если танк активен (не спавнится, не взрывается и не взорвался)
+func (t *TankEntity) IsActive() bool {
+	return t.State != TankStateSpawning &&
+		t.State != TankStateExploding &&
+		t.State != TankStateExploded
+}

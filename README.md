@@ -78,31 +78,28 @@ gonflict/
 
 ### Где можно улучшить?
 
-1. **Инициализация репозиториев в Facade** (строка 35 в `game_state_use_cases_facade.go`):
+1. **Зависимость от константы DT**:
    ```go
-   gameRepo := game.NewGameRepositoriesRegistry()  // Создание конкретных классов
-   ```
-   **Проблема**: Создание конкретных классов внутри фасада  
-   **Решение**: Внедрять готовые репозитории через конструктор
-
-2. **Зависимость от константы DT**:
-   ```go
-   g.tankUseCases.MoveTank(g.tankUseCases.GetDirection(), use_cases.DT)
+   a.tankUseCases.Update(use_cases.DT)
    ```
    **Проблема**: Глобальные константы усложняют тестирование  
    **Решение**: Передавать `dt` извне (например, от GameState)
 
-3. **GameState создает Use Cases** (строки 37-46 в `game_state.go`):
+2. **GameState создает Use Cases** (строки 37-46 в `game_state.go`):
    ```go
    gameStateServices, err := NewGameStateUseCasesFacade(...)
    ```
    **Проблема**: Знание об уровне (константа `13`) и репозиториях  
    **Решение**: Внедрять `GameStateUseCasesFacade` через конструктор App
 
-4. **Дублирование GameConfig**:
+3. **Дублирование GameConfig**:
    - Определен в `internal/config.go` (для загрузки) и `internal/states/game_state.go` (для использования)
    - Причина: циклический импорт `internal/app.go` → `states` → `internal`
    - Временное решение, требующее рефакторинга структуры пакетов
+
+4. **Direction как string vs int**:
+   - Был string для удобства в Lua, теперь int для производительности
+   - Преимущество: прямое преобразование без конвертации
 
 ### Диаграмма слоев архитектуры
 
@@ -110,64 +107,62 @@ gonflict/
 graph TB
     subgraph P["🎨 Presentation Layer"]
         direction LR
-        InputAdapters["📝 Input Adapters<br/>Keyboard / AI"]
-        RenderAdapter["🎨 Render Adapter"]
+        KeyboardInput["⌨️ KeyboardInputAdapter<br/>клавиатура"]
+        AIInput["🤖 AiInputAdapter<br/>Lua AI"]
+        RenderAdapter["🎨 RenderAdapter<br/>отрисовка"]
     end
     
     subgraph A["⚙️ Application Layer"]
         direction LR
-        UseCases["🎮 Use Cases<br/>Бизнес-логика"]
-        AICases["🧠 AIUseCases<br/>AI логика"]
+        TankUC["🚗 TankUseCases<br/>движение, поворот"]
+        EnemyUC["👾 EnemyUseCases<br/>враги"]
+        BulletUC["💣 BulletUseCases<br/>пули"]
+        CollisionUC["💥 CollisionUseCases<br/>столкновения"]
+        TilesUC["🎨 TilesUseCases<br/>тайлы и анимации"]
+        MapUC["🗺️ MapUseCases<br/>карта"]
     end
     
     subgraph D["📦 Domain Layer"]
         direction LR
-        Entities["🏗️ Entities<br/>Domain модели"]
+        Entities["🏗️ TankEntity<br/>BulletEntity<br/>BlockEntity<br/>TileEntity"]
+        Types["🔢 Direction (int)<br/>Position, Size<br/>Altitude"]
     end
     
     subgraph I["💾 Infrastructure Layer"]
         direction TB
-        subgraph Raw["📂 Raw Repositories"]
-            FileRepo["📁 FileRepository"]
+        subgraph Raw["📂 Raw<br/>FileRepository"]
         end
         
-        subgraph Processed["🔧 Processed Repositories"]
-            MapsRepo["🗺️ MapsDataRepository"]
-            TilesetRepo["🎨 TilesetRepository"]
-            TilesetReg["📋 TilesetRepositoryRegistry"]
-            ScriptsRepo["📜 ScriptsRepository"]
+        subgraph Processed["🔧 Processed<br/>MapsData<br/>TilesetRegistry<br/>Scripts"]
         end
         
-        subgraph Game["🎮 Game Repositories"]
-            TanksRepo["🚗 TanksRepository"]
-            BlocksRepo["🧱 BlocksRepository"]
-            BulletsRepo["💣 BulletsRepository"]
-            AnimationsRepo["✨ AnimationsRepository"]
+        subgraph Game["🎮 Game<br/>Tanks<br/>Blocks<br/>Bullets<br/>Animations"]
+        end
+        
+        subgraph AI["📜 AI Scripts<br/>enemies.lua"]
         end
     end
     
-    InputAdapters -->|"команды"| UseCases
-    UseCases -->|"обновление"| AICases
-    AICases -->|"вызов"| InputAdapters
-    InputAdapters -->|"скрипт"| ScriptsRepo
-    UseCases -->|"использует"| Entities
+    KeyboardInput -->|"Rotate/Move"| TankUC
+    AIInput -->|"AI команды"| EnemyUC
+    AIInput -.->|"загружает"| AI
     
-    UseCases -->|"требует"| TanksRepo
-    UseCases -->|"требует"| BlocksRepo
-    UseCases -->|"требует"| BulletsRepo
-    UseCases -->|"требует"| AnimationsRepo
+    TankUC -->|"GetTank/IsActive"| Entities
+    EnemyUC -->|"GetTank/Update"| Entities
+    BulletUC --> Entities
+    CollisionUC -->|"проверяет"| TankUC
+    CollisionUC -->|"проверяет"| EnemyUC
     
-    TilesetReg -->|"предоставляет"| UseCases
-    MapsRepo -->|"загружает уровни"| UseCases
+    TankUC -->|"использует"| Game
+    EnemyUC --> Game
+    BulletUC --> Game
+    TilesUC -->|"анимации"| Game
     
-    TilesetRepo -->|"использует"| FileRepo
-    MapsRepo -->|"использует"| FileRepo
-    ScriptsRepo -->|"читает"| FileRepo
+    Processed --> Raw
+    Game -.-> Entities
     
-    UseCases -->|"создает"| Game
-    Game -->|"хранит"| Entities
-    
-    UseCases -->|"отрисовка"| RenderAdapter
+    A -->|"отрисовка"| RenderAdapter
+    RenderAdapter -->|"экран"| P
 ```
 
 ### Диаграмма взаимодействия компонентов
@@ -176,45 +171,54 @@ graph TB
 flowchart TB
     User[👤 Пользователь]
     
-    subgraph "🎮 Игровой цикл"
-        KeyboardInput[📥 KeyboardInputAdapter<br/>клавиатура]
-        AiInput[🤖 AiInputAdapter<br/>Lua AI]
-        Facade[🎯 GameStateFacade<br/>оркестрация]
-        Render[🎨 RendererAdapter<br/>отрисовка]
+    subgraph "🎮 Presentation Layer"
+        Keyboard[⌨️ KeyboardInputAdapter<br/>WASD/Space]
+        AI[🤖 AiInputAdapter<br/>Lua управление]
+        Render[🎨 RendererAdapter<br/>Ebiten]
     end
     
-    subgraph "⚡ Use Cases"
-        Tank[🚗 TankUseCases<br/>движение/снаряды]
-        Enemy[👾 EnemyUseCases<br/>враги]
-        Bullet[💣 BulletUseCases<br/>пули]
-        Collision[💥 CollisionUseCases<br/>коллизии]
-        AI[🧠 AIUseCases<br/>AI логика]
+    subgraph "⚡ Application Layer"
+        TankUC[🚗 TankUseCases<br/>Rotate/Move/Update<br/>IsActive/IsStopped]
+        EnemyUC[👾 EnemyUseCases<br/>Update/StartSpawn]
+        BulletUC[💣 BulletUseCases]
+        CollisionUC[💥 CollisionUseCases]
+        TilesUC[🎨 TilesUseCases]
+    end
+    
+    subgraph "📦 Domain Layer"
+        Entities[🏗️ TankEntity<br/>Direction: int<br/>IsActive method]
     end
     
     subgraph "💾 Infrastructure"
-        Lua[🗂️ Scripts<br/>enemies.lua]
-        TanksRepo[(💾 TanksRepository)]
+        GameRepo[(🎮 GameRepositories<br/>Tanks/Blocks/Bullets)]
+        Processed[🔧 Processed<br/>Registry/Scripts]
+        LuaScript[📜 enemies.lua]
     end
     
-    User -->|WASD Space| KeyboardInput
-    KeyboardInput -->|команды| Facade
-    AI -->|вызов| AiInput
-    AiInput -->|скрипт| Lua
-    AiInput -->|обновление| Enemy
-    Facade -->|обновление| Tank
-    Facade -->|обновление| Enemy
-    Facade -->|обновление| Bullet
-    Facade -->|обновление| AI
-    Facade -->|проверка| Collision
-    Tank <--> TanksRepo
-    Enemy <--> TanksRepo
-    Collision -->|проверяет| Tank
-    Collision -->|проверяет| Enemy
-    Collision -->|проверяет| Bullet
-    Tank -->|отрисовка| Render
-    Enemy -->|отрисовка| Render
-    Bullet -->|отрисовка| Render
-    Render -->|графика| User
+    User -->|input| Keyboard
+    Keyboard -->|Rotate/Move| TankUC
+    TankUC -->|Update| TankUC
+    
+    AI -->|AI решение| EnemyUC
+    EnemyUC -->|GetTank| GameRepo
+    EnemyUC <-->|"Context"| AI
+    
+    TankUC -->|IsActive| Entities
+    EnemyUC -->|GetTank| Entities
+    
+    CollisionUC -->|"check"| TankUC
+    CollisionUC -->|"check"| EnemyUC
+    CollisionUC -->|"check"| BulletUC
+    
+    GameRepo -.->|"stores"| Entities
+    Processed -->|"provides tilesets"| TilesUC
+    AI -.->|"reads"| LuaScript
+    Processed -.->|"loads"| LuaScript
+    
+    TankUC -->|render| Render
+    EnemyUC -->|render| Render
+    BulletUC -->|render| Render
+    Render -->|graphics| User
 ```
 
 ### Диаграмма игрового цикла
@@ -237,17 +241,17 @@ sequenceDiagram
     State->>+Facade: Update()
     
     par Движение объектов
-        Facade->>Tank: MoveTank()
+        Facade->>Tank: Update()
     end
     
     par AI врагов
         Facade->>Enemy: UpdateAI()
-        Enemy->>AI: UpdateAI()
-        AI->>AiInput: CallEnemyAI()
-        Note right of AiInput: 📝 Скрипт:<br/>enemies.lua
-        AiInput-->>AI: shouldMove, direction
-        AI-->>Enemy: ApplyDecision()
-        Facade->>Enemy: MoveTank()
+        Enemy->>AiInput: CallEnemyAI()
+        Note right of AiInput: 📝 Скрипт:<br/>enemies.lua<br/>Direction: int
+        AiInput-->>Enemy: shouldMove, direction
+        Enemy->>Enemy: Rotate(direction)
+        Enemy->>Enemy: Move()
+        Facade->>Enemy: Update()
     end
     
     par Коллизии
@@ -289,11 +293,16 @@ type CollisionUseCases struct {
 
 **Области для улучшения:**
 ```go
-// ❌ Создание конкретных классов в фасаде
-blocksRepo := game.NewBlocksRepository()
+// ✅ Direction как int - прямое преобразование
+Direction: types.Direction(directionInt)  // Без конвертации
 
-// ✅ Лучше: внедрять через конструктор
-func NewFacade(blocksRepo game.IBlocksRepository) *Facade { ... }
+// ✅ IsActive() вместо множественных проверок
+if !tank.IsActive() { ... }  // Вместо:
+if tank.State == Spawning || tank.State == Exploding { ... }
+
+// ✅ Разделение Rotate и Move
+Rotate(direction)  // Устанавливает направление
+Move()             // Запускает движение (устанавливает скорость)
 ```
 
 ### Поток данных
@@ -465,25 +474,31 @@ just help             # Показать все команды
 ### Application Layer (Слой приложения)
 
 - **GameStateUseCasesFacade** - фасад для оркестрации всех Use Cases
-- **TankUseCases** - бизнес-логика танков игрока (движение, поворот, спавн)
+- **TankUseCases** - бизнес-логика танков (игрок/враги):
+  - `Rotate(direction)` - поворот в направлении
+  - `Move()` - запуск движения (устанавливает скорость)
+  - `Update(dt)` - обновление позиции
+  - `IsActive()` - проверка активности
+  - `IsStopped()` - проверка остановки
 - **EnemyUseCases** - бизнес-логика врагов (спавн, анимация, уничтожение)
 - **BulletUseCases** - бизнес-логика пуль (создание, обновление, удаление)
 - **MapUseCases** - бизнес-логика карты (работа с блоками)
 - **CollisionUseCases** - бизнес-логика коллизий между объектами
-- **AnimationUseCases** - бизнес-логика анимаций
-- **AIUseCases** - бизнес-логика AI врагов
 - **TilesUseCases** - бизнес-логика тайлов (статические и анимированные)
 
 ### Domain Layer (Доменный слой)
 
 **Типы данных:**
-- **Direction** - направление движения (UP, DOWN, LEFT, RIGHT)
+- **Direction** (int) - направление движения (0=Up, 1=Down, 2=Left, 3=Right)
 - **Position** - позиция в мире (X, Y)
 - **Size** - размер объекта (Width, Height)
 - **Altitude** - высота слоя отрисовки
 
 **Сущности:**
-- **TankEntity** - сущность танка игрока
+- **TankEntity** - сущность танка (игрок/враг)
+  - `IsActive()` - проверка активности танка
+  - `Speed` - скорость движения
+  - `Direction` (int) - текущее направление
 - **BulletEntity** - сущность пули
 - **BlockEntity** - сущность блока карты
 - **SpawnerEntity** - сущность спавнера танка
@@ -510,8 +525,10 @@ just help             # Показать все команды
 **Game AI:**
 - **Lua скрипты** - `assets/scripts/enemies.lua` - логика поведения врагов
 - **gopher-lua** - библиотека для встраивания Lua в Go
-- **AIUseCases** - управление AI врагов
-- **AiInputAdapter** - AI адаптер для управления через Lua скрипты (принимает скрипт как строку)
+- **AiInputAdapter** - AI адаптер для управления через Lua скрипты:
+  - Принимает скрипт как строку (без файловой системы)
+  - Конвертирует Direction (int) напрямую без дополнительных методов
+  - Вызывает `ApplyDecision()` для применения AI решения
 - **ScriptsRepository** - загрузка Lua скриптов из файлов без кэширования
 
 ### Supporting Components (Вспомогательные компоненты)
@@ -643,18 +660,21 @@ MIT License
 
 ### Последние обновления
 
+- ✅ **Direction как int** - направление теперь числовой тип (0=Up, 1=Down, 2=Left, 3=Right) для производительности и простоты
+- ✅ **IsActive() и IsStopped()** - добавлены методы для проверки состояния танка
+- ✅ **Разделение Rotate и Move** - `Rotate(direction)` устанавливает направление, `Move()` запускает движение
+- ✅ **Переименование MoveTank в Update** - метод обновления позиции танка
+- ✅ **Удалены методы конвертации** - не нужны т.к. Direction уже int, прямое преобразование
 - ✅ **TilesetRepositoryRegistry** - реестр всех тайлсетов для упрощения управления
 - ✅ **ScriptsRepository** - загрузка Lua скриптов из файлов
 - ✅ **AiInputAdapter** - принимает скрипт как строку вместо пути к файлу
 - ✅ **Упрощение API** - уменьшение количества параметров конструкторов
 - ✅ **ИИ врагов на Lua** - управление врагами через Lua скрипты (gopher-lua)
-- ✅ **AIUseCases** - централизованное управление AI логикой врагов
 - ✅ **IInputAdapter** - единый интерфейс для всех адаптеров ввода
 - ✅ **Lua скрипты** - `assets/scripts/enemies.lua` для изменения поведения без перекомпиляции
 - ✅ **Тактика NES** - поведение врагов в стиле классической Battle City
 - ✅ **Коллизии врагов** - враги останавливаются при столкновении со стенами
-- ✅ **Рефакторинг PlayerUseCases в TankUseCases** - переименование для лучшей семантики
-- ✅ **Система анимаций** - централизованное управление анимациями через AnimationUseCases
+- ✅ **Система анимаций** - централизованное управление анимациями
 - ✅ **Спавнер танка** - анимированный объект для появления танка игрока и врагов
 - ✅ **Новый формат анимаций** - компактный YAML формат с duration, repeats и offset
 - ✅ **Clean Architecture** - четкое разделение слоев и зависимостей

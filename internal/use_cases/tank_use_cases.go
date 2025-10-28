@@ -62,23 +62,29 @@ func (uc *TankUseCases) StartSpawn() error {
 	return nil
 }
 
-// RotateTank поворачивает танк в указанном направлении
-func (uc *TankUseCases) RotateTank(
-	direction types.Direction) error {
-	if uc.tank.State == types.TankStateSpawning || uc.tank.State == types.TankStateExploding || uc.tank.State == types.TankStateExploded {
-		return errors.New("tank is not spawned yet")
+// Rotate поворачивает танк в указанном направлении
+func (uc *TankUseCases) Rotate(
+	direction types.Direction,
+) error {
+	if !uc.tank.IsActive() {
+		return errors.New("tank is not active")
 	}
 
 	if uc.tank.Speed != 0 {
 		return errors.New("cannot rotate while moving")
 	}
 
-	uc.tank.Speed = 32.0
-	if uc.tank.Direction == direction {
-		return nil
+	uc.tank.Direction = direction
+	return nil
+}
+
+// Move запускает движение танка (устанавливает скорость)
+func (uc *TankUseCases) Move() error {
+	if !uc.tank.IsActive() {
+		return errors.New("tank is not active")
 	}
 
-	uc.tank.Direction = direction
+	uc.tank.Speed = 32.0
 	return nil
 }
 
@@ -86,8 +92,8 @@ func (uc *TankUseCases) RotateTank(
 func (uc *TankUseCases) StopTank(
 	byCollision bool,
 ) error {
-	if uc.tank.State == types.TankStateSpawning || uc.tank.State == types.TankStateExploding || uc.tank.State == types.TankStateExploded {
-		return errors.New("tank is not spawned yet")
+	if !uc.tank.IsActive() {
+		return errors.New("tank is not active")
 	}
 
 	uc.tank.Speed = 0
@@ -114,13 +120,12 @@ func (uc *TankUseCases) StopTank(
 	return nil
 }
 
-// MoveTank перемещает танк в указанном направлении
-func (uc *TankUseCases) MoveTank(
-	direction types.Direction,
+// Update обновляет состояние танка (движение)
+func (uc *TankUseCases) Update(
 	dt float64,
 ) error {
-	if uc.tank.State == types.TankStateSpawning || uc.tank.State == types.TankStateExploding || uc.tank.State == types.TankStateExploded {
-		return errors.New("tank is not spawned yet")
+	if !uc.tank.IsActive() {
+		return errors.New("tank is not active")
 	}
 
 	delta := uc.tank.Speed * dt
@@ -165,6 +170,16 @@ func (uc *TankUseCases) StartExplosion(
 // GetTank возвращает танк
 func (uc *TankUseCases) GetTank() *types.TankEntity {
 	return &uc.tank
+}
+
+// IsActive возвращает true если танк активен
+func (uc *TankUseCases) IsActive() bool {
+	return uc.tank.IsActive()
+}
+
+// IsStopped возвращает true если танк остановлен
+func (uc *TankUseCases) IsStopped() bool {
+	return uc.tank.Speed == 0
 }
 
 // IsSpawnFinished проверяет и обновляет процесс спавна танка

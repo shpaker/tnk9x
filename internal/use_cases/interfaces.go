@@ -18,10 +18,13 @@ type IMapObject interface {
 type ITankUseCasesRef interface {
 	StartSpawn() error
 	GetTank() *types.TankEntity
-	RotateTank(direction types.Direction) error
+	Rotate(direction types.Direction) error
+	Move() error
 	StopTank(byCollision bool) error
-	MoveTank(direction types.Direction, dt float64) error
+	Update(dt float64) error
 	StartExplosion(tank *types.TankEntity) error
+	IsActive() bool
+	IsStopped() bool
 }
 
 // IPlayerUseCases интерфейс для операций с игроком

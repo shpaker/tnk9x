@@ -64,19 +64,23 @@ func (a *KeyboardInputAdapter) keyPressedEvents() {
 	// Rotate the tank if the key is pressed
 	tankRotated := false
 	if ebiten.IsKeyPressed(a.upButton) && !tankRotated {
-		a.tankUseCases.RotateTank(types.DirectionUp)
+		a.tankUseCases.Rotate(types.DirectionUp)
+		a.tankUseCases.Move()
 		tankRotated = true
 	}
 	if ebiten.IsKeyPressed(a.downButton) && !tankRotated {
-		a.tankUseCases.RotateTank(types.DirectionDown)
+		a.tankUseCases.Rotate(types.DirectionDown)
+		a.tankUseCases.Move()
 		tankRotated = true
 	}
 	if ebiten.IsKeyPressed(a.leftButton) && !tankRotated {
-		a.tankUseCases.RotateTank(types.DirectionLeft)
+		a.tankUseCases.Rotate(types.DirectionLeft)
+		a.tankUseCases.Move()
 		tankRotated = true
 	}
 	if ebiten.IsKeyPressed(a.rightButton) && !tankRotated {
-		a.tankUseCases.RotateTank(types.DirectionRight)
+		a.tankUseCases.Rotate(types.DirectionRight)
+		a.tankUseCases.Move()
 		tankRotated = true
 	}
 }
