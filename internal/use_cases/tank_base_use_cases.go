@@ -210,24 +210,34 @@ func (uc *TankUseCases) UpdateAnimations() {
 
 // UpdatePlayerSpawn обновляет процесс спавна игрока
 func (uc *TankUseCases) UpdatePlayerSpawn(currentTime float64) {
-	if uc.playerTank == nil {
+	uc.UpdateTankSpawn(uc.playerTank, currentTime)
+}
+
+// UpdateEnemySpawn обновляет процесс спавна врага
+func (uc *TankUseCases) UpdateEnemySpawn(currentTime float64) {
+	uc.UpdateTankSpawn(uc.enemyTank, currentTime)
+}
+
+// UpdateTankSpawn обновляет процесс спавна танка (для игрока или врага)
+func (uc *TankUseCases) UpdateTankSpawn(tank *types.TankEntity, currentTime float64) {
+	if tank == nil {
 		return
 	}
 
 	// Если танк еще не заспавнен, проверяем анимацию спавна
-	if uc.playerTank.State == types.TankStateSpawning {
-		if anim, ok := uc.playerTank.AnimationGetter.(*types.TileAnimationEntity); ok {
+	if tank.State == types.TankStateSpawning {
+		if anim, ok := tank.AnimationGetter.(*types.TileAnimationEntity); ok {
 			if anim.IsFinished() {
 				// Завершаем спавн - устанавливаем анимацию танка
 				tankTilesUseCases := NewTilesUseCases(uc.tilesUseCases.tilesRepository)
 				tankAnimation, err := tankTilesUseCases.CreateAnimationTile("base_tank")
 				if err == nil {
-					uc.playerTank.AnimationGetter = tankAnimation
+					tank.AnimationGetter = tankAnimation
 					uc.tilesUseCases.AddAnimation(tankAnimation)
 				}
 
-				uc.playerTank.State = types.TankStateStopped
-				uc.playerTank.SpawnedAt = currentTime
+				tank.State = types.TankStateStopped
+				tank.SpawnedAt = currentTime
 			}
 		}
 	}

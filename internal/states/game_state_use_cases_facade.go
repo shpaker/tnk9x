@@ -10,13 +10,14 @@ import (
 
 // GameStateUseCasesFacade - фасад для оркестрации use cases игрового состояния
 type GameStateUseCasesFacade struct {
-	playerUseCases    *use_cases.TankUseCases
-	bulletUseCases    *use_cases.BulletUseCases
-	mapUseCases       *use_cases.MapUseCases
-	collisionUseCases *use_cases.CollisionUseCases
-	enemyUseCases     []*use_cases.TankUseCases
-	enemyTanks        []*types.TankEntity      // Массив танков врагов для обратной совместимости
-	enemyControllers  []*adapters.AIController // AI контроллеры для врагов
+	playerUseCases         *use_cases.TankUseCases
+	bulletUseCases         *use_cases.BulletUseCases
+	mapUseCases            *use_cases.MapUseCases
+	collisionUseCases      *use_cases.CollisionUseCases
+	enemyUseCases          []*use_cases.TankUseCases
+	enemyTanks             []*types.TankEntity      // Массив танков врагов для обратной совместимости
+	enemyControllers       []*adapters.AIController // AI контроллеры для врагов
+	tilesUseCasesWithAnims *use_cases.TilesUseCases // Общий tilesUseCases для всех анимаций
 }
 
 // NewGameStateUseCasesFacade создает фасад для оркестрации use cases игрового состояния
@@ -138,13 +139,14 @@ func NewGameStateUseCasesFacade(
 	)
 
 	return &GameStateUseCasesFacade{
-		playerUseCases:    playerUseCases,
-		bulletUseCases:    bulletUseCases,
-		mapUseCases:       mapUseCases,
-		collisionUseCases: collisionUseCases,
-		enemyUseCases:     enemyUseCasesList,
-		enemyTanks:        enemyTanks,
-		enemyControllers:  enemyControllers,
+		playerUseCases:         playerUseCases,
+		bulletUseCases:         bulletUseCases,
+		mapUseCases:            mapUseCases,
+		collisionUseCases:      collisionUseCases,
+		enemyUseCases:          enemyUseCasesList,
+		enemyTanks:             enemyTanks,
+		enemyControllers:       enemyControllers,
+		tilesUseCasesWithAnims: tilesUseCasesWithAnimations,
 	}, nil
 }
 
@@ -181,43 +183,16 @@ func (g *GameStateUseCasesFacade) UpdateTankSpawn(currentTime float64) {
 // UpdateEnemiesSpawn обновляет процесс спавна врагов
 func (g *GameStateUseCasesFacade) UpdateEnemiesSpawn(currentTime float64) {
 	for _, enemyUseCases := range g.enemyUseCases {
-		if enemyUseCases == nil {
-			continue
-		}
-
-		enemyTank := enemyUseCases.GetEnemyTank()
-		if enemyTank == nil {
-			continue
-		}
-
-		// Если танк взрывается, проверяем завершение анимации взрыва
-		if enemyTank.State == types.TankStateExploding {
-			if anim, ok := enemyTank.AnimationGetter.(*types.TileAnimationEntity); ok {
-				if anim.IsFinished() {
-					// Анимация взрыва завершена, удаляем танк
-					// TODO: добавить удаление из массива
-				}
-			}
-			continue
-		}
-
-		// Если танк еще не заспавнен, проверяем завершение анимации спавна
-		if enemyTank.State == types.TankStateSpawning {
-			if anim, ok := enemyTank.AnimationGetter.(*types.TileAnimationEntity); ok {
-				if anim.IsFinished() {
-					// Завершаем спавн - теперь танк готов к движению
-					enemyTank.State = types.TankStateMoving
-					enemyTank.SpawnedAt = currentTime
-				}
-			}
-		}
+		enemyUseCases.UpdateEnemySpawn(currentTime)
 	}
 }
 
 // UpdateEnemiesAnimations обновляет анимации врагов
 // Теперь анимации управляются через TilesUseCases
 func (g *GameStateUseCasesFacade) UpdateEnemiesAnimations() {
-	// Анимации врагов теперь обновляются автоматически через g.tilesUseCasesWithAnimations.UpdateAnimations()
+	if g.tilesUseCasesWithAnims != nil {
+		g.tilesUseCasesWithAnims.UpdateAnimations()
+	}
 }
 
 // StartTankSpawn запускает спавн танка игрока
