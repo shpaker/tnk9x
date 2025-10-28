@@ -4,13 +4,17 @@ import (
 	"fmt"
 	"image"
 
+	"github.com/shpaker/gonflict/internal/repositories/game"
 	"github.com/shpaker/gonflict/internal/repositories/processed"
 	"github.com/shpaker/gonflict/internal/types"
 )
 
-// TilesUseCases содержит бизнес-логику для работы с тайлами
+// TilesUseCases содержит бизнес-логику для работы с тайлами и анимациями
 type TilesUseCases struct {
-	tilesRepository processed.ITilesetRepository
+	tilesRepository      processed.ITilesetRepository
+	animationsRepo       game.IAnimationsRepository
+	spawnerTilesetRepo   processed.ITilesetRepository
+	explosionTilesetRepo processed.ITilesetRepository
 }
 
 // NewTilesUseCases создает новый экземпляр TilesUseCases
@@ -19,6 +23,21 @@ func NewTilesUseCases(
 ) *TilesUseCases {
 	return &TilesUseCases{
 		tilesRepository: tilesRepository,
+	}
+}
+
+// NewTilesUseCasesWithAnimations создает новый экземпляр TilesUseCases с поддержкой анимаций
+func NewTilesUseCasesWithAnimations(
+	tilesRepository processed.ITilesetRepository,
+	animationsRepo game.IAnimationsRepository,
+	spawnerTilesetRepo processed.ITilesetRepository,
+	explosionTilesetRepo processed.ITilesetRepository,
+) *TilesUseCases {
+	return &TilesUseCases{
+		tilesRepository:      tilesRepository,
+		animationsRepo:       animationsRepo,
+		spawnerTilesetRepo:   spawnerTilesetRepo,
+		explosionTilesetRepo: explosionTilesetRepo,
 	}
 }
 
@@ -84,4 +103,71 @@ func (tuc *TilesUseCases) CreateAnimationTile(id string) (*types.TileAnimationEn
 	}
 
 	return animation, nil
+}
+
+// === Методы для работы с анимациями из AnimationUseCases ===
+
+// AddAnimation добавляет анимацию в репозиторий
+func (tuc *TilesUseCases) AddAnimation(animation *types.TileAnimationEntity) {
+	if tuc.animationsRepo == nil {
+		return
+	}
+	tuc.animationsRepo.AddAnimation(animation)
+}
+
+// UpdateAnimations обновляет все анимации в репозитории
+func (tuc *TilesUseCases) UpdateAnimations() {
+	if tuc.animationsRepo == nil {
+		return
+	}
+	animations := tuc.animationsRepo.GetAllAnimations()
+	for _, animation := range animations {
+		if animation != nil {
+			animation.UpdateAnimation()
+		}
+	}
+}
+
+// StartAnimation запускает анимацию объекта
+func (tuc *TilesUseCases) StartAnimation(animation *types.TileAnimationEntity) {
+	if animation == nil {
+		return
+	}
+	animation.StartAnimation()
+}
+
+// StopAnimation останавливает анимацию объекта
+func (tuc *TilesUseCases) StopAnimation(animation *types.TileAnimationEntity) {
+	if animation == nil {
+		return
+	}
+	animation.StopAnimation()
+}
+
+// CreateSpawnAnimation создает анимацию спавна
+func (tuc *TilesUseCases) CreateSpawnAnimation() (*types.TileAnimationEntity, error) {
+	if tuc.spawnerTilesetRepo == nil {
+		return nil, fmt.Errorf("spawner tileset repository not initialized")
+	}
+	tilesUseCases := NewTilesUseCases(tuc.spawnerTilesetRepo)
+	spawnAnimation, err := tilesUseCases.CreateAnimationTile("spawner")
+	if err != nil {
+		return nil, err
+	}
+	tuc.AddAnimation(spawnAnimation)
+	return spawnAnimation, nil
+}
+
+// CreateExplosionAnimation создает анимацию взрыва
+func (tuc *TilesUseCases) CreateExplosionAnimation() (*types.TileAnimationEntity, error) {
+	if tuc.explosionTilesetRepo == nil {
+		return nil, fmt.Errorf("explosion tileset repository not initialized")
+	}
+	tilesUseCases := NewTilesUseCases(tuc.explosionTilesetRepo)
+	explosionAnimation, err := tilesUseCases.CreateAnimationTile("explosion")
+	if err != nil {
+		return nil, err
+	}
+	tuc.AddAnimation(explosionAnimation)
+	return explosionAnimation, nil
 }

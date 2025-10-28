@@ -1,4 +1,5 @@
 *.zip
+*.bak*
 dist/
 docs/
 _assets/

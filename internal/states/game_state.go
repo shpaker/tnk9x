@@ -12,9 +12,9 @@ import (
 
 // GameConfig представляет конфигурацию игры (для избежания циклических импортов)
 type GameConfig struct {
-	EnemySpawners         [][]int `yaml:"enemy_spawners"`
-	PlayerSpawners        [][]int `yaml:"players_spawners"`
-	AIUpdateIntervalTicks int     `yaml:"ai_update_interval_ticks"` // Интервал обновления AI в тиках
+	EnemySpawners         [][2]int `yaml:"enemy_spawners"`
+	PlayerSpawners        [][2]int `yaml:"players_spawners"`
+	AIUpdateIntervalTicks int      `yaml:"ai_update_interval_ticks"` // Интервал обновления AI в тиках
 }
 
 type GameState struct {
@@ -141,7 +141,7 @@ func createRendererAdapter(
 		gameStateServices.MapUseCases(),
 		gameStateServices.TankUseCases(),
 		gameStateServices.BulletUseCases(),
-		gameStateServices.GetEnemyUseCasesList(),
+		gameStateServices.GetEnemyTanks(),
 		mapTilesUseCases,
 		playerTilesUseCases,
 		bulletTilesUseCases,

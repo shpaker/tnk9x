@@ -7,50 +7,32 @@ import (
 
 // CollisionUseCases реализация для операций с коллизиями
 type CollisionUseCases struct {
-	bulletUseCases    IBulletUseCases
-	tankUseCases      IPlayerUseCases  // Используется для GetTank
-	tankUseCasesRef   ITankUseCasesRef // Используется для вызова методов управления танком
-	mapUseCases       IMapUseCases
-	enemyUseCases     IEnemyUseCases
-	enemyUseCasesList []*EnemyUseCases
-}
-
-// NewCollisionUseCases создает новый экземпляр CollisionUseCases
-func NewCollisionUseCases(
-	bulletUseCases IBulletUseCases,
-	tankUseCases IPlayerUseCases,
-	mapUseCases IMapUseCases,
-	enemyUseCases IEnemyUseCases,
-) *CollisionUseCases {
-	return &CollisionUseCases{
-		bulletUseCases: bulletUseCases,
-		tankUseCases:   tankUseCases,
-		mapUseCases:    mapUseCases,
-		enemyUseCases:  enemyUseCases,
-	}
+	bulletUseCases  IBulletUseCases
+	tankUseCases    ITankUseCasesRef // Используется для GetPlayerTank
+	tankUseCasesRef ITankUseCasesRef // Используется для вызова методов управления танком
+	mapUseCases     IMapUseCases
+	enemyTanks      []*types.TankEntity
 }
 
 // NewCollisionUseCasesWithEnemies создает новый экземпляр CollisionUseCases с массивом врагов
 func NewCollisionUseCasesWithEnemies(
 	bulletUseCases IBulletUseCases,
-	tankUseCases IPlayerUseCases,
-	tankUseCasesRef ITankUseCasesRef,
+	tankUseCases ITankUseCasesRef,
 	mapUseCases IMapUseCases,
-	enemyUseCasesList []*EnemyUseCases,
+	enemyTanks []*types.TankEntity,
 ) *CollisionUseCases {
 	return &CollisionUseCases{
-		bulletUseCases:    bulletUseCases,
-		tankUseCases:      tankUseCases,
-		tankUseCasesRef:   tankUseCasesRef,
-		mapUseCases:       mapUseCases,
-		enemyUseCases:     nil, // Не используется для нового подхода
-		enemyUseCasesList: enemyUseCasesList,
+		bulletUseCases:  bulletUseCases,
+		tankUseCases:    tankUseCases,
+		tankUseCasesRef: tankUseCases,
+		mapUseCases:     mapUseCases,
+		enemyTanks:      enemyTanks,
 	}
 }
 
 // UpdateCollisions обновляет все коллизии в игре
 func (uc *CollisionUseCases) UpdateCollisions() error {
-	tank, err := uc.tankUseCases.GetTank()
+	tank, err := uc.tankUseCases.GetPlayerTank()
 	if err != nil {
 		return err
 	}
@@ -70,23 +52,21 @@ func (uc *CollisionUseCases) UpdateCollisions() error {
 
 // checkEnemyCollisions проверяет коллизии врагов с границами и стенами
 func (uc *CollisionUseCases) checkEnemyCollisions() {
-	for _, enemyUseCases := range uc.enemyUseCasesList {
-		enemy := enemyUseCases.GetEnemy()
-
+	for _, enemy := range uc.enemyTanks {
 		if enemy == nil || enemy.State == types.TankStateExploding || enemy.State == types.TankStateSpawning {
 			continue
 		}
 
 		// Проверяем коллизии с границами
-		uc.checkEnemyBoundaryCollisions(enemy, enemyUseCases)
+		uc.checkEnemyBoundaryCollisions(enemy)
 
 		// Проверяем коллизии со стенами
-		uc.checkEnemyWallCollisions(enemy, enemyUseCases)
+		uc.checkEnemyWallCollisions(enemy)
 	}
 }
 
 // checkEnemyBoundaryCollisions проверяет коллизии врага с границами экрана
-func (uc *CollisionUseCases) checkEnemyBoundaryCollisions(enemy *types.TankEntity, enemyUseCases *EnemyUseCases) {
+func (uc *CollisionUseCases) checkEnemyBoundaryCollisions(enemy *types.TankEntity) {
 	// Откатываем позицию при выходе за границы
 	if enemy.Position.X < 0 {
 		enemy.Position.X = 0
@@ -113,7 +93,7 @@ func (uc *CollisionUseCases) checkEnemyBoundaryCollisions(enemy *types.TankEntit
 }
 
 // checkEnemyWallCollisions проверяет коллизии врага со стенами
-func (uc *CollisionUseCases) checkEnemyWallCollisions(enemy *types.TankEntity, enemyUseCases *EnemyUseCases) {
+func (uc *CollisionUseCases) checkEnemyWallCollisions(enemy *types.TankEntity) {
 	level := uc.mapUseCases.GetBlocks()
 	mapObjects := uc.createMapObjectsFromLevel(level)
 
@@ -190,9 +170,7 @@ func (uc *CollisionUseCases) checkBulletEnemyCollisions() {
 		bullet := &bullets[i]
 
 		// Проверяем коллизию с каждым врагом
-		for _, enemyUseCases := range uc.enemyUseCasesList {
-			enemy := enemyUseCases.GetEnemy()
-
+		for _, enemy := range uc.enemyTanks {
 			// Пропускаем если врага нет
 			if enemy == nil {
 				continue
@@ -208,7 +186,8 @@ func (uc *CollisionUseCases) checkBulletEnemyCollisions() {
 				// Удаляем пулю
 				uc.bulletUseCases.RemoveBullet(i)
 				// Удаляем врага
-				enemyUseCases.RemoveEnemyByRef(enemy)
+				// Запускаем анимацию взрыва через TankUseCases
+				uc.tankUseCasesRef.SetExplosionAnimation(enemy)
 				// Выходим из цикла врагов, так как пуля уже удалена
 				break
 			}

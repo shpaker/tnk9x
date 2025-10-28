@@ -16,9 +16,9 @@ import (
 // RendererAdapter адаптер для рендеринга игры
 type RendererAdapter struct {
 	mapUseCases            use_cases.IMapUseCases
-	tankUseCases           use_cases.IPlayerUseCases
+	tankUseCases           use_cases.ITankUseCasesRef
 	bulletUseCases         use_cases.IBulletUseCases
-	enemyUseCasesList      []*use_cases.EnemyUseCases // Массив врагов
+	enemyTanks             []*types.TankEntity // Массив врагов
 	mapTilesUseCases       *use_cases.TilesUseCases
 	playerTilesUseCases    *use_cases.TilesUseCases
 	bulletTilesUseCases    *use_cases.TilesUseCases
@@ -30,9 +30,9 @@ type RendererAdapter struct {
 // NewRendererAdapter создает новый экземпляр RendererAdapter
 func NewRendererAdapter(
 	mapUseCases use_cases.IMapUseCases,
-	tankUseCases use_cases.IPlayerUseCases,
+	tankUseCases use_cases.ITankUseCasesRef,
 	bulletUseCases use_cases.IBulletUseCases,
-	enemyUseCasesList []*use_cases.EnemyUseCases,
+	enemyTanks []*types.TankEntity,
 	mapTilesUseCases *use_cases.TilesUseCases,
 	playerTilesUseCases *use_cases.TilesUseCases,
 	bulletTilesUseCases *use_cases.TilesUseCases,
@@ -43,7 +43,7 @@ func NewRendererAdapter(
 		mapUseCases:            mapUseCases,
 		tankUseCases:           tankUseCases,
 		bulletUseCases:         bulletUseCases,
-		enemyUseCasesList:      enemyUseCasesList,
+		enemyTanks:             enemyTanks,
 		mapTilesUseCases:       mapTilesUseCases,
 		playerTilesUseCases:    playerTilesUseCases,
 		bulletTilesUseCases:    bulletTilesUseCases,
@@ -97,7 +97,7 @@ func (r *RendererAdapter) drawMap(screen *ebiten.Image) {
 
 // drawTank отрисовывает танк
 func (r *RendererAdapter) drawTank(screen *ebiten.Image) {
-	tank, err := r.tankUseCases.GetTank()
+	tank, err := r.tankUseCases.GetPlayerTank()
 	if err != nil {
 		return
 	}
@@ -167,9 +167,7 @@ func (r *RendererAdapter) getCachedImage(imageId string, imageData image.Image) 
 
 // drawEnemiesWithoutExplosions отрисовывает врагов без взрывов (уровень SURFACE)
 func (r *RendererAdapter) drawEnemiesWithoutExplosions(screen *ebiten.Image) {
-	for i, enemyUseCases := range r.enemyUseCasesList {
-		enemy := enemyUseCases.GetEnemy()
-
+	for i, enemy := range r.enemyTanks {
 		// Пропускаем если врага нет
 		if enemy == nil {
 			continue
@@ -218,9 +216,7 @@ func (r *RendererAdapter) drawEnemiesWithoutExplosions(screen *ebiten.Image) {
 
 // drawEnemiesExplosions отрисовывает взрывы врагов (уровень AIR)
 func (r *RendererAdapter) drawEnemiesExplosions(screen *ebiten.Image) {
-	for _, enemyUseCases := range r.enemyUseCasesList {
-		enemy := enemyUseCases.GetEnemy()
-
+	for _, enemy := range r.enemyTanks {
 		// Пропускаем если врага нет или он не взрывается
 		if enemy == nil || enemy.State != types.TankStateExploding {
 			continue
@@ -297,7 +293,8 @@ func (r *RendererAdapter) drawEnemySpawnAnimation(screen *ebiten.Image, enemy *t
 
 // drawSpawnAnimation отрисовывает анимацию спавна
 func (r *RendererAdapter) drawSpawnAnimation(screen *ebiten.Image, tank *types.TankEntity) {
-	spawnAnimation := r.tankUseCases.GetSpawnAnimation()
+	// Получаем анимацию спавна напрямую из AnimationGetter танка
+	spawnAnimation := tank.AnimationGetter
 	if spawnAnimation == nil {
 		return
 	}

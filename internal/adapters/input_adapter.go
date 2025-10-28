@@ -11,8 +11,8 @@ import (
 
 // KeyboardInputAdapter адаптер для обработки пользовательского ввода с клавиатуры
 type KeyboardInputAdapter struct {
-	tankUseCases    use_cases.IPlayerUseCases  // Для получения танка
-	tankUseCasesRef use_cases.ITankUseCasesRef // Для управления танком
+	tankUseCases    use_cases.ITankUseCasesRef // Для работы с танком
+	tankUseCasesRef use_cases.ITankUseCasesRef // Для управления танком (дубликат для совместимости)
 	bulletUseCases  use_cases.IBulletUseCases
 	upButton        ebiten.Key
 	downButton      ebiten.Key
@@ -23,7 +23,7 @@ type KeyboardInputAdapter struct {
 
 // NewKeyboardInputAdapter создает новый экземпляр KeyboardInputAdapter
 func NewKeyboardInputAdapter(
-	tankUseCases use_cases.IPlayerUseCases,
+	tankUseCases use_cases.ITankUseCasesRef,
 	tankUseCasesRef use_cases.ITankUseCasesRef,
 	bulletUseCases use_cases.IBulletUseCases,
 	upButton ebiten.Key,
@@ -59,7 +59,7 @@ func (a *KeyboardInputAdapter) keyPressedEvents() {
 	}
 
 	// Получаем танк
-	tank, err := a.tankUseCases.GetTank()
+	tank, err := a.tankUseCases.GetPlayerTank()
 	if err != nil {
 		return
 	}
@@ -87,7 +87,7 @@ func (a *KeyboardInputAdapter) keyPressedEvents() {
 // keyReleasedEvents обрабатывает события отпускания клавиш
 func (a *KeyboardInputAdapter) keyReleasedEvents() {
 	// Stop the tank if the key is released
-	tank, err := a.tankUseCases.GetTank()
+	tank, err := a.tankUseCases.GetPlayerTank()
 	if err != nil {
 		return
 	}
@@ -109,7 +109,7 @@ func (a *KeyboardInputAdapter) keyReleasedEvents() {
 // tankShoot обрабатывает стрельбу танка
 func (a *KeyboardInputAdapter) tankShoot() {
 	log.Printf("DEBUG: tankShoot called")
-	tank, err := a.tankUseCases.GetTank()
+	tank, err := a.tankUseCases.GetPlayerTank()
 	if err != nil {
 		log.Printf("ERROR: Failed to get tank: %v", err)
 		return

@@ -16,19 +16,18 @@ type IMapObject interface {
 
 // ITankUseCasesRef интерфейс для базовых операций с танками
 type ITankUseCasesRef interface {
-	CreateTankWithSpawn(position types.Position, direction types.Direction) (*types.TankEntity, *types.TileAnimationEntity, *types.TileAnimationEntity, error)
-	CreateSpawnAnimation() (*types.TileAnimationEntity, error)
+	StartTankSpawn(position types.Position) (*types.TankEntity, *types.TileAnimationEntity, error)
+	GetPlayerTank() (*types.TankEntity, error)
 	RotateTank(tank *types.TankEntity, direction types.Direction) error
 	StopTank(tank *types.TankEntity, byCollision bool) error
 	MoveTank(tank *types.TankEntity, direction types.Direction, dt float64) error
+	SetExplosionAnimation(tank *types.TankEntity) error
 }
 
 // IPlayerUseCases интерфейс для операций с игроком
 type IPlayerUseCases interface {
 	GetTank() (*types.TankEntity, error)
-	StartSpawn(spawnStartTime float64)
 	UpdateSpawn(currentTime float64)
-	GetSpawnAnimation() *types.TileAnimationEntity
 	GetTankImageId() (string, error)
 }
 
@@ -54,26 +53,16 @@ type ICollisionUseCases interface {
 	CheckCollidersWithArrayFirst(obj IMapObject, objects []IMapObject) IMapObject
 }
 
-// ITilesUseCases определяет интерфейс для работы с тайлами
+// ITilesUseCases определяет интерфейс для работы с тайлами и анимациями
 type ITilesUseCases interface {
 	CreateStaticTile(id string) (types.IImageIdGetter, error)
 	CreateAnimationTile(id string) (*types.TileAnimationEntity, error)
 	GetImage(id string) (image.Image, error)
 	GetTileAnimationFrames(id string) (types.AnimationData, error)
-}
-
-// IAnimationUseCases интерфейс для управления анимацией
-type IAnimationUseCases interface {
 	AddAnimation(animation *types.TileAnimationEntity)
 	UpdateAnimations()
 	StartAnimation(animation *types.TileAnimationEntity)
 	StopAnimation(animation *types.TileAnimationEntity)
-}
-
-// IEnemyUseCases интерфейс для работы с врагами
-type IEnemyUseCases interface {
-	GetEnemies() []*types.TankEntity
-	GetEnemyRealIndex(index int) (int, error)
-	InitEnemies(enemySpawners [][]int) error
-	UpdateEnemiesSpawn(currentTime float64)
+	CreateSpawnAnimation() (*types.TileAnimationEntity, error)
+	CreateExplosionAnimation() (*types.TileAnimationEntity, error)
 }

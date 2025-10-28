@@ -4,63 +4,63 @@ import (
 	"errors"
 
 	"github.com/shpaker/gonflict/internal/repositories/game"
-	"github.com/shpaker/gonflict/internal/repositories/processed"
 	"github.com/shpaker/gonflict/internal/types"
 	"github.com/shpaker/gonflict/internal/utils"
 )
 
 // TankUseCases предоставляет базовые операции для работы с танками
 type TankUseCases struct {
-	tanksRepo          game.ITanksRepository
-	tilesetRepo        processed.ITilesetRepository
-	spawnerTilesetRepo processed.ITilesetRepository
-	animationUseCases  IAnimationUseCases
+	tanksRepo     game.ITanksRepository
+	tilesUseCases *TilesUseCases    // Для всех анимаций (спавн, взрыв, танк)
+	playerSpawner types.Position    // Координаты спавна игрока
+	playerTank    *types.TankEntity // Указатель на танк игрока
+	enemyTank     *types.TankEntity // Указатель на танк врага (если используется для врага)
+	direction     types.Direction   // Направление танка по умолчанию
 }
 
 // NewTankUseCases создает новый экземпляр TankUseCases
 func NewTankUseCases(
 	tanksRepo game.ITanksRepository,
-	tilesetRepo processed.ITilesetRepository,
-	spawnerTilesetRepo processed.ITilesetRepository,
-	animationUseCases IAnimationUseCases,
+	tilesUseCases *TilesUseCases,
+	playerSpawner types.Position,
 ) *TankUseCases {
 	return &TankUseCases{
-		tanksRepo:          tanksRepo,
-		tilesetRepo:        tilesetRepo,
-		spawnerTilesetRepo: spawnerTilesetRepo,
-		animationUseCases:  animationUseCases,
+		tanksRepo:     tanksRepo,
+		tilesUseCases: tilesUseCases,
+		playerSpawner: playerSpawner,
+		playerTank:    nil,
+		enemyTank:     nil,
+		direction:     types.DirectionUp, // Направление по умолчанию
 	}
 }
 
-// CreateTankWithSpawn создает танк с анимацией спавна
-func (uc *TankUseCases) CreateTankWithSpawn(
+// StartTankSpawn создает танк и запускает процесс спавна с анимацией
+// Возвращает созданный танк и анимацию спавна
+func (uc *TankUseCases) StartTankSpawn(
 	position types.Position,
-	direction types.Direction,
-) (*types.TankEntity, *types.TileAnimationEntity, *types.TileAnimationEntity, error) {
+) (*types.TankEntity, *types.TileAnimationEntity, error) {
 	// Создаем анимацию спавна
-	spawnTilesUseCases := NewTilesUseCases(uc.spawnerTilesetRepo)
-	spawnAnimation, err := spawnTilesUseCases.CreateAnimationTile("spawner")
+	spawnAnimation, err := uc.tilesUseCases.CreateSpawnAnimation()
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
-	uc.animationUseCases.AddAnimation(spawnAnimation)
 
 	// Создаем анимацию танка
-	tankTilesUseCases := NewTilesUseCases(uc.tilesetRepo)
+	// Создаем временный TilesUseCases для работы с анимацией танка
+	tankTilesUseCases := NewTilesUseCases(uc.tilesUseCases.tilesRepository)
 	tankAnimation, err := tankTilesUseCases.CreateAnimationTile("base_tank")
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
-	uc.animationUseCases.AddAnimation(tankAnimation)
+	uc.tilesUseCases.AddAnimation(tankAnimation)
 
 	// Создаем танк
 	tank := &types.TankEntity{
-		AnimationGetter: tankAnimation,
-		SpawnPosition:   position,
+		AnimationGetter: spawnAnimation, // Сначала устанавливаем анимацию спавна
 		Position:        position,
 		Speed:           0,
-		Direction:       direction,
-		State:           types.TankStateSpawning, // Танк спавнится
+		Direction:       uc.direction,
+		State:           types.TankStateSpawning,
 		SpawnedAt:       0,
 		Altitude:        types.SURFACE,
 	}
@@ -68,18 +68,10 @@ func (uc *TankUseCases) CreateTankWithSpawn(
 	// Добавляем танк в репозиторий
 	uc.tanksRepo.AddTank(tank)
 
-	return tank, spawnAnimation, tankAnimation, nil
-}
+	// Запускаем анимацию спавна
+	uc.tilesUseCases.StartAnimation(spawnAnimation)
 
-// CreateSpawnAnimation создает анимацию спавна
-func (uc *TankUseCases) CreateSpawnAnimation() (*types.TileAnimationEntity, error) {
-	spawnTilesUseCases := NewTilesUseCases(uc.spawnerTilesetRepo)
-	spawnAnimation, err := spawnTilesUseCases.CreateAnimationTile("spawner")
-	if err != nil {
-		return nil, err
-	}
-	uc.animationUseCases.AddAnimation(spawnAnimation)
-	return spawnAnimation, nil
+	return tank, spawnAnimation, nil
 }
 
 // RotateTank поворачивает танк в указанном направлении
@@ -160,4 +152,83 @@ func (uc *TankUseCases) MoveTank(tank *types.TankEntity, direction types.Directi
 	}
 
 	return nil
+}
+
+// SetExplosionAnimation устанавливает и запускает анимацию взрыва для танка
+func (uc *TankUseCases) SetExplosionAnimation(tank *types.TankEntity) error {
+	if tank == nil {
+		return errors.New("tank is nil")
+	}
+
+	explosionAnim, err := uc.tilesUseCases.CreateExplosionAnimation()
+	if err != nil {
+		return err
+	}
+
+	// Устанавливаем анимацию взрыва танку
+	tank.AnimationGetter = explosionAnim
+	tank.State = types.TankStateExploding
+
+	// Запускаем анимацию
+	uc.tilesUseCases.StartAnimation(explosionAnim)
+
+	return nil
+}
+
+// GetPlayerTank возвращает танк игрока
+func (uc *TankUseCases) GetPlayerTank() (*types.TankEntity, error) {
+	if uc.playerTank == nil {
+		return nil, errors.New("tank not created yet")
+	}
+	return uc.playerTank, nil
+}
+
+// SetPlayerTank устанавливает танк игрока
+func (uc *TankUseCases) SetPlayerTank(tank *types.TankEntity) {
+	uc.playerTank = tank
+}
+
+// GetPlayerSpawner возвращает координаты спавна игрока
+func (uc *TankUseCases) GetPlayerSpawner() types.Position {
+	return uc.playerSpawner
+}
+
+// GetEnemyTank возвращает танк врага
+func (uc *TankUseCases) GetEnemyTank() *types.TankEntity {
+	return uc.enemyTank
+}
+
+// SetEnemyTank устанавливает танк врага
+func (uc *TankUseCases) SetEnemyTank(tank *types.TankEntity) {
+	uc.enemyTank = tank
+}
+
+// UpdateAnimations обновляет все анимации
+func (uc *TankUseCases) UpdateAnimations() {
+	uc.tilesUseCases.UpdateAnimations()
+}
+
+// UpdatePlayerSpawn обновляет процесс спавна игрока
+func (uc *TankUseCases) UpdatePlayerSpawn(currentTime float64) {
+	if uc.playerTank == nil {
+		return
+	}
+
+	// Если танк еще не заспавнен, проверяем анимацию спавна
+	if uc.playerTank.State == types.TankStateSpawning {
+		if anim, ok := uc.playerTank.AnimationGetter.(*types.TileAnimationEntity); ok {
+			if anim.IsFinished() {
+				// Завершаем спавн - устанавливаем анимацию танка
+				tankTilesUseCases := NewTilesUseCases(uc.tilesUseCases.tilesRepository)
+				tankAnimation, err := tankTilesUseCases.CreateAnimationTile("base_tank")
+				if err == nil {
+					uc.playerTank.AnimationGetter = tankAnimation
+					uc.tilesUseCases.AddAnimation(tankAnimation)
+				}
+
+				uc.playerTank.State = types.TankStateStopped
+				uc.playerTank.SpawnedAt = currentTime
+			}
+		}
+	}
 }

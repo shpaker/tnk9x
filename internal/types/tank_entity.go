@@ -15,7 +15,6 @@ const (
 // TankEntity представляет танк (игрока или врага)
 type TankEntity struct {
 	AnimationGetter IImageIdGetter
-	SpawnPosition   Position
 	Position        Position
 	Speed           float64
 	Direction       Direction
