@@ -1,7 +1,7 @@
 package states
 
 import (
-	"github.com/shpaker/gonflict/internal/adapters"
+	"github.com/shpaker/gonflict/internal/adapters/input_adapters"
 	"github.com/shpaker/gonflict/internal/repositories/game"
 	"github.com/shpaker/gonflict/internal/repositories/processed"
 	"github.com/shpaker/gonflict/internal/types"
@@ -15,15 +15,16 @@ type GameStateUseCasesFacade struct {
 	mapUseCases            *use_cases.MapUseCases
 	collisionUseCases      *use_cases.CollisionUseCases
 	enemyUseCases          []*use_cases.TankUseCases
-	enemyTanks             []*types.TankEntity      // Массив танков врагов для обратной совместимости
-	enemyInputAdapters     []adapters.IInputAdapter // AI input адаптеры для врагов
-	tilesUseCasesWithAnims *use_cases.TilesUseCases // Общий tilesUseCases для всех анимаций
-	aiUseCases             *use_cases.AIUseCases    // AI use cases для обновления контекста
+	enemyTanks             []*types.TankEntity            // Массив танков врагов для обратной совместимости
+	enemyInputAdapters     []input_adapters.IInputAdapter // AI input адаптеры для врагов
+	tilesUseCasesWithAnims *use_cases.TilesUseCases       // Общий tilesUseCases для всех анимаций
+	aiUseCases             *use_cases.AIUseCases          // AI use cases для обновления контекста
 }
 
 // NewGameStateUseCasesFacade создает фасад для оркестрации use cases игрового состояния
 func NewGameStateUseCasesFacade(
 	mapsRepo processed.IMapsDataRepository,
+	scriptsRepo processed.IScriptsRepository,
 	levelNumber int,
 	mapTilesetRepo processed.ITilesetRepository,
 	playerTilesetRepo processed.ITilesetRepository,
@@ -84,9 +85,15 @@ func NewGameStateUseCasesFacade(
 	// Создаем AIUseCases с заглушкой (будем использовать Lua напрямую в AiInputAdapter)
 	aiUseCases := use_cases.NewAIUseCases(nil, aiContext, updateInterval)
 
+	// Загружаем скрипт AI для врагов один раз
+	enemyScript, err := scriptsRepo.GetScript("enemies")
+	if err != nil {
+		return nil, err
+	}
+
 	// Создаем до 3 врагов
 	enemyUseCasesList := make([]*use_cases.TankUseCases, 0, 3)
-	enemyInputAdapters := make([]adapters.IInputAdapter, 0, 3)
+	enemyInputAdapters := make([]input_adapters.IInputAdapter, 0, 3)
 	enemyTanks := make([]*types.TankEntity, 0, 3)
 
 	for i, spawner := range gameConfig.EnemySpawners {
@@ -114,15 +121,12 @@ func NewGameStateUseCasesFacade(
 
 		// Получаем танк врага
 		enemyTank := enemyTankUseCases.GetTank()
-		if err != nil {
-			return nil, err
-		}
 
 		enemyTanks = append(enemyTanks, enemyTank)
 		enemyUseCasesList = append(enemyUseCasesList, enemyTankUseCases)
 
 		// Создаем AI input адаптер для этого врага с поддержкой Lua
-		aiInputAdapter, err := adapters.NewAiInputAdapter(enemyTankUseCases, aiUseCases, "assets/scripts/enemies.lua")
+		aiInputAdapter, err := input_adapters.NewAiInputAdapter(enemyTankUseCases, aiUseCases, enemyScript)
 		if err != nil {
 			return nil, err
 		}
@@ -215,9 +219,6 @@ func (g *GameStateUseCasesFacade) StartTankSpawn(spawnStartTime float64) {
 
 	// Устанавливаем время спавна
 	tank := g.playerUseCases.GetTank()
-	if err != nil {
-		panic(err)
-	}
 	tank.SpawnedAt = spawnStartTime
 }
 

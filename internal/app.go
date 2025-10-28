@@ -41,43 +41,18 @@ func New(cfg *Config) *App {
 	// Создаем файловый репозиторий
 	fileRepo := raw.NewFileRepository("assets")
 
-	// Создаем tilesetRepository для работы с изображениями блоков
-	tilesetRepo, err := processed.NewTilesetDataRepository(fileRepo, "tiles/blocks")
+	// Создаем реестр всех тайлсетов
+	tilesetRegistry, err := processed.NewTilesetRepositoryRegistry(fileRepo)
 	if err != nil {
-		fmt.Printf("Error creating TilesetRepository: %v\n", err)
+		fmt.Printf("Error creating TilesetRepositoryRegistry: %v\n", err)
 		panic(err)
 	}
 
-	// Создаем tilesetRepository для работы с изображениями игрока
-	playerTilesetRepo, err := processed.NewTilesetDataRepository(fileRepo, "tiles/player")
-	if err != nil {
-		fmt.Printf("Error creating PlayerTilesetRepository: %v\n", err)
-		panic(err)
-	}
-
-	// Создаем tilesetRepository для работы с изображениями пуль
-	bulletTilesetRepo, err := processed.NewTilesetDataRepository(fileRepo, "tiles/bullet")
-	if err != nil {
-		fmt.Printf("Error creating BulletTilesetRepository: %v\n", err)
-		panic(err)
-	}
-
-	// Создаем tilesetRepository для работы с анимацией спавна
-	spawnerTilesetRepo, err := processed.NewTilesetDataRepository(fileRepo, "tiles/spawner")
-	if err != nil {
-		fmt.Printf("Error creating SpawnerTilesetRepository: %v\n", err)
-		panic(err)
-	}
-
-	// Создаем tilesetRepository для работы с анимацией взрыва
-	explosionTilesetRepo, err := processed.NewTilesetDataRepository(fileRepo, "tiles/explosion")
-	if err != nil {
-		fmt.Printf("Error creating ExplosionTilesetRepository: %v\n", err)
-		panic(err)
-	}
+	// Создаем репозиторий скриптов
+	scriptsRepo := processed.NewScriptsRepository(fileRepo)
 
 	// Создаем репозиторий карт уровней
-	mapsRepo := processed.NewMapsDataRepository(fileRepo, tilesetRepo)
+	mapsRepo := processed.NewMapsDataRepository(fileRepo, tilesetRegistry.Blocks())
 
 	// Создаем игровую конфигурацию из общей конфигурации
 	gameConfig := &states.GameConfig{
@@ -85,15 +60,12 @@ func New(cfg *Config) *App {
 		PlayerSpawners: cfg.PlayerSpawners,
 	}
 
-	// Создаем GameState с переданными репозиториями
+	// Создаем GameState с переданным реестром
 	gameState, err := states.NewGameState(
 		mapsRepo,
-		tilesetRepo,          // Используем tilesetRepo для блоков карты
-		playerTilesetRepo,    // Используем playerTilesetRepo для игрока
-		bulletTilesetRepo,    // Используем bulletTilesetRepo для пуль
-		spawnerTilesetRepo,   // Используем spawnerTilesetRepo для спавна
-		explosionTilesetRepo, // Используем explosionTilesetRepo для взрыва
-		gameConfig,           // Передаем игровую конфигурацию
+		scriptsRepo,
+		tilesetRegistry,
+		gameConfig,
 	)
 	if err != nil {
 		// Логируем ошибку и падаем

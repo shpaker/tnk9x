@@ -1,4 +1,4 @@
-package adapters
+package input_adapters
 
 import (
 	"log"

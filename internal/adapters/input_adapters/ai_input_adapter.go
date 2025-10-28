@@ -1,4 +1,4 @@
-package adapters
+package input_adapters
 
 import (
 	"log"
@@ -20,15 +20,15 @@ type AiInputAdapter struct {
 func NewAiInputAdapter(
 	tankUseCases use_cases.ITankUseCasesRef,
 	aiUseCases *use_cases.AIUseCases,
-	scriptPath string,
+	script string,
 ) (*AiInputAdapter, error) {
 	L := lua.NewState()
 
 	// Инициализируем генератор случайных чисел
 	L.DoString("math.randomseed(os.time())")
 
-	// Загружаем скрипт
-	if err := L.DoFile(scriptPath); err != nil {
+	// Загружаем скрипт из строки
+	if err := L.DoString(script); err != nil {
 		L.Close()
 		return nil, err
 	}

@@ -6,6 +6,7 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/shpaker/gonflict/internal/adapters"
+	"github.com/shpaker/gonflict/internal/adapters/input_adapters"
 	"github.com/shpaker/gonflict/internal/repositories/processed"
 	"github.com/shpaker/gonflict/internal/use_cases"
 )
@@ -19,30 +20,28 @@ type GameConfig struct {
 
 type GameState struct {
 	gameStateServices *GameStateUseCasesFacade
-	inputAdapter      adapters.IInputAdapter
+	inputAdapter      input_adapters.IInputAdapter
 	rendererAdapter   *adapters.RendererAdapter
 	startTime         time.Time // Время начала игры для отслеживания спавна
 }
 
-// NewGameState создает новое состояние игры с переданным репозиторием карт
+// NewGameState создает новое состояние игры с переданным реестром тайлсетов
 func NewGameState(
 	mapsRepo processed.IMapsDataRepository,
-	mapTilesetRepo processed.ITilesetRepository, // Репозиторий для блоков карты
-	playerTilesetRepo processed.ITilesetRepository, // Репозиторий для игрока
-	bulletTilesetRepo processed.ITilesetRepository, // Репозиторий для пуль
-	spawnerTilesetRepo processed.ITilesetRepository, // Репозиторий для спавна
-	explosionTilesetRepo processed.ITilesetRepository, // Репозиторий для взрыва
+	scriptsRepo processed.IScriptsRepository,
+	tilesetRegistry processed.ITilesetRepositoryRegistry,
 	gameConfig *GameConfig,
 ) (GameState, error) {
 	// Создаем GameStateUseCasesFacade
 	gameStateServices, err := NewGameStateUseCasesFacade(
 		mapsRepo,
+		scriptsRepo,
 		13, // Номер уровня
-		mapTilesetRepo,
-		playerTilesetRepo,
-		bulletTilesetRepo,
-		spawnerTilesetRepo,
-		explosionTilesetRepo,
+		tilesetRegistry.Blocks(),
+		tilesetRegistry.Player(),
+		tilesetRegistry.Bullet(),
+		tilesetRegistry.Spawner(),
+		tilesetRegistry.Explosion(),
 		gameConfig,
 	)
 	if err != nil {
@@ -52,15 +51,19 @@ func NewGameState(
 	// Создаем адаптеры
 	rendererAdapter := createRendererAdapter(
 		gameStateServices,
-		mapTilesetRepo,
-		playerTilesetRepo,
-		bulletTilesetRepo,
-		spawnerTilesetRepo,
-		explosionTilesetRepo,
+		tilesetRegistry,
 	)
 
 	// Используем клавиатурный адаптер
-	inputAdapter := createInputAdapter(gameStateServices)
+	inputAdapter := input_adapters.NewKeyboardInputAdapter(
+		gameStateServices.TankUseCases(),
+		gameStateServices.BulletUseCases(),
+		ebiten.KeyW,     // up
+		ebiten.KeyS,     // down
+		ebiten.KeyA,     // left
+		ebiten.KeyD,     // right
+		ebiten.KeySpace, // shoot
+	)
 
 	gameState := GameState{
 		gameStateServices: gameStateServices,
@@ -109,33 +112,16 @@ func (state GameState) Draw(screen *ebiten.Image) {
 	state.rendererAdapter.DrawAll(screen)
 }
 
-// createInputAdapter создает адаптер ввода
-func createInputAdapter(gameStateServices *GameStateUseCasesFacade) adapters.IInputAdapter {
-	return adapters.NewKeyboardInputAdapter(
-		gameStateServices.TankUseCases(),
-		gameStateServices.BulletUseCases(),
-		ebiten.KeyW,     // up
-		ebiten.KeyS,     // down
-		ebiten.KeyA,     // left
-		ebiten.KeyD,     // right
-		ebiten.KeySpace, // shoot
-	)
-}
-
 // createRendererAdapter создает адаптер рендерера
 func createRendererAdapter(
 	gameStateServices *GameStateUseCasesFacade,
-	mapTilesetRepo processed.ITilesetRepository,
-	playerTilesetRepo processed.ITilesetRepository,
-	bulletTilesetRepo processed.ITilesetRepository,
-	spawnerTilesetRepo processed.ITilesetRepository,
-	explosionTilesetRepo processed.ITilesetRepository,
+	tilesetRegistry processed.ITilesetRepositoryRegistry,
 ) *adapters.RendererAdapter {
-	mapTilesUseCases := use_cases.NewTilesUseCases(mapTilesetRepo)
-	playerTilesUseCases := use_cases.NewTilesUseCases(playerTilesetRepo)
-	bulletTilesUseCases := use_cases.NewTilesUseCases(bulletTilesetRepo)
-	spawnerTilesUseCases := use_cases.NewTilesUseCases(spawnerTilesetRepo)
-	explosionTilesUseCases := use_cases.NewTilesUseCases(explosionTilesetRepo)
+	mapTilesUseCases := use_cases.NewTilesUseCases(tilesetRegistry.Blocks())
+	playerTilesUseCases := use_cases.NewTilesUseCases(tilesetRegistry.Player())
+	bulletTilesUseCases := use_cases.NewTilesUseCases(tilesetRegistry.Bullet())
+	spawnerTilesUseCases := use_cases.NewTilesUseCases(tilesetRegistry.Spawner())
+	explosionTilesUseCases := use_cases.NewTilesUseCases(tilesetRegistry.Explosion())
 
 	return adapters.NewRendererAdapter(
 		gameStateServices.MapUseCases(),
