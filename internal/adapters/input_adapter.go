@@ -59,27 +59,27 @@ func (a *KeyboardInputAdapter) keyPressedEvents() {
 	}
 
 	// Получаем танк
-	tank, err := a.tankUseCases.GetPlayerTank()
-	if err != nil {
+	tank := a.tankUseCases.GetTank()
+	if tank == nil {
 		return
 	}
 
 	// Rotate the tank if the key is pressed
 	tankRotated := false
 	if ebiten.IsKeyPressed(a.upButton) && !tankRotated {
-		a.tankUseCasesRef.RotateTank(tank, types.DirectionUp)
+		a.tankUseCasesRef.RotateTank(types.DirectionUp)
 		tankRotated = true
 	}
 	if ebiten.IsKeyPressed(a.downButton) && !tankRotated {
-		a.tankUseCasesRef.RotateTank(tank, types.DirectionDown)
+		a.tankUseCasesRef.RotateTank(types.DirectionDown)
 		tankRotated = true
 	}
 	if ebiten.IsKeyPressed(a.leftButton) && !tankRotated {
-		a.tankUseCasesRef.RotateTank(tank, types.DirectionLeft)
+		a.tankUseCasesRef.RotateTank(types.DirectionLeft)
 		tankRotated = true
 	}
 	if ebiten.IsKeyPressed(a.rightButton) && !tankRotated {
-		a.tankUseCasesRef.RotateTank(tank, types.DirectionRight)
+		a.tankUseCasesRef.RotateTank(types.DirectionRight)
 		tankRotated = true
 	}
 }
@@ -87,35 +87,35 @@ func (a *KeyboardInputAdapter) keyPressedEvents() {
 // keyReleasedEvents обрабатывает события отпускания клавиш
 func (a *KeyboardInputAdapter) keyReleasedEvents() {
 	// Stop the tank if the key is released
-	tank, err := a.tankUseCases.GetPlayerTank()
-	if err != nil {
+	tank := a.tankUseCases.GetTank()
+	if tank == nil {
 		return
 	}
 
 	if inpututil.IsKeyJustReleased(a.upButton) && tank.Direction == types.DirectionUp {
-		a.tankUseCasesRef.StopTank(tank, false)
+		a.tankUseCasesRef.StopTank(false)
 	}
 	if inpututil.IsKeyJustReleased(a.downButton) && tank.Direction == types.DirectionDown {
-		a.tankUseCasesRef.StopTank(tank, false)
+		a.tankUseCasesRef.StopTank(false)
 	}
 	if inpututil.IsKeyJustReleased(a.leftButton) && tank.Direction == types.DirectionLeft {
-		a.tankUseCasesRef.StopTank(tank, false)
+		a.tankUseCasesRef.StopTank(false)
 	}
 	if inpututil.IsKeyJustReleased(a.rightButton) && tank.Direction == types.DirectionRight {
-		a.tankUseCasesRef.StopTank(tank, false)
+		a.tankUseCasesRef.StopTank(false)
 	}
 }
 
 // tankShoot обрабатывает стрельбу танка
 func (a *KeyboardInputAdapter) tankShoot() {
 	log.Printf("DEBUG: tankShoot called")
-	tank, err := a.tankUseCases.GetPlayerTank()
-	if err != nil {
-		log.Printf("ERROR: Failed to get tank: %v", err)
+	tank := a.tankUseCases.GetTank()
+	if tank == nil {
+		log.Printf("ERROR: Failed to get tank: tank is nil")
 		return
 	}
 	log.Printf("DEBUG: Got tank, calling ShootBullet")
-	err = a.bulletUseCases.ShootBullet(tank)
+	err := a.bulletUseCases.ShootBullet(tank)
 	if err != nil {
 		log.Printf("ERROR: Failed to shoot bullet: %v", err)
 	}

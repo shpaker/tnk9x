@@ -97,8 +97,13 @@ func (r *RendererAdapter) drawMap(screen *ebiten.Image) {
 
 // drawTank отрисовывает танк
 func (r *RendererAdapter) drawTank(screen *ebiten.Image) {
-	tank, err := r.tankUseCases.GetPlayerTank()
-	if err != nil {
+	tank := r.tankUseCases.GetTank()
+	if tank == nil {
+		return
+	}
+
+	// Пропускаем отрисовку взорванного танка
+	if tank.State == types.TankStateExploded {
 		return
 	}
 
@@ -173,8 +178,8 @@ func (r *RendererAdapter) drawEnemiesWithoutExplosions(screen *ebiten.Image) {
 			continue
 		}
 
-		// Пропускаем взрывающихся врагов
-		if enemy.State == types.TankStateExploding {
+		// Пропускаем взрывающихся и взорванных врагов
+		if enemy.State == types.TankStateExploding || enemy.State == types.TankStateExploded {
 			continue
 		}
 

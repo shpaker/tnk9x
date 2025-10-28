@@ -72,7 +72,7 @@ func (ai *AIController) moveTank() {
 	}
 
 	// Двигаем танк через TankUseCases
-	if err := ai.TankUseCases.MoveTank(ai.enemy, ai.enemy.Direction, use_cases.DT); err != nil {
+	if err := ai.TankUseCases.MoveTank(ai.enemy.Direction, use_cases.DT); err != nil {
 		log.Printf("ERROR: Failed to move AI tank: %v", err)
 	}
 }
@@ -82,7 +82,7 @@ func (ai *AIController) RotateTank(direction types.Direction) {
 	if ai.enemy == nil {
 		return
 	}
-	if err := ai.TankUseCases.RotateTank(ai.enemy, direction); err != nil {
+	if err := ai.TankUseCases.RotateTank(direction); err != nil {
 		log.Printf("ERROR: Failed to rotate AI tank: %v", err)
 	}
 }
@@ -92,7 +92,7 @@ func (ai *AIController) StopTank() {
 	if ai.enemy == nil {
 		return
 	}
-	if err := ai.TankUseCases.StopTank(ai.enemy, false); err != nil {
+	if err := ai.TankUseCases.StopTank(false); err != nil {
 		log.Printf("ERROR: Failed to stop AI tank: %v", err)
 	}
 }

@@ -10,6 +10,7 @@ const (
 	TankStateMoving                     // Танк движется
 	TankStateStopped                    // Танк остановлен
 	TankStateExploding                  // Танк взрывается
+	TankStateExploded                   // Танк взорвался
 )
 
 // TankEntity представляет танк (игрока или врага)

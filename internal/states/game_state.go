@@ -92,14 +92,14 @@ func (state GameState) Update() (State, error) {
 	// Обновляем спавн врагов
 	state.gameStateServices.UpdateEnemiesSpawn(elapsedTime)
 
-	// Обновляем анимации врагов
-	state.gameStateServices.UpdateEnemiesAnimations()
-
 	// Обновляем input
 	state.inputAdapter.Update()
 
 	// Обновляем игровое состояние
 	state.gameStateServices.Update()
+
+	// Обновляем все анимации
+	state.gameStateServices.UpdateAnimations()
 
 	return nil, nil
 }

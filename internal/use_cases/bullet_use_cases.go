@@ -24,7 +24,7 @@ func NewBulletUseCases(bulletsRepo game.IBulletsRepository, tilesUseCases ITiles
 // ShootBullet создает новую пулю от указанного танка
 func (uc *BulletUseCases) ShootBullet(tank *types.TankEntity) error {
 	// Проверяем, заспавнен ли танк
-	if tank.State == types.TankStateSpawning {
+	if tank.State == types.TankStateSpawning || tank.State == types.TankStateExploding || tank.State == types.TankStateExploded {
 		log.Printf("DEBUG: Cannot shoot - tank is not spawned yet")
 		return nil // Просто игнорируем выстрел
 	}

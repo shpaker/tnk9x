@@ -16,17 +16,17 @@ type IMapObject interface {
 
 // ITankUseCasesRef интерфейс для базовых операций с танками
 type ITankUseCasesRef interface {
-	StartTankSpawn(position types.Position) (*types.TankEntity, *types.TileAnimationEntity, error)
-	GetPlayerTank() (*types.TankEntity, error)
-	RotateTank(tank *types.TankEntity, direction types.Direction) error
-	StopTank(tank *types.TankEntity, byCollision bool) error
-	MoveTank(tank *types.TankEntity, direction types.Direction, dt float64) error
-	SetExplosionAnimation(tank *types.TankEntity) error
+	StartSpawn() error
+	GetTank() *types.TankEntity
+	RotateTank(direction types.Direction) error
+	StopTank(byCollision bool) error
+	MoveTank(direction types.Direction, dt float64) error
+	StartExplosion(tank *types.TankEntity) error
 }
 
 // IPlayerUseCases интерфейс для операций с игроком
 type IPlayerUseCases interface {
-	GetTank() (*types.TankEntity, error)
+	GetTank() *types.TankEntity
 	UpdateSpawn(currentTime float64)
 	GetTankImageId() (string, error)
 }

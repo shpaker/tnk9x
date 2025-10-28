@@ -60,7 +60,7 @@ func NewGameStateUseCasesFacade(
 		playerSpawner = types.Position{X: 12 * use_cases.TankSpriteSize, Y: 24 * use_cases.TankSpriteSize}
 	}
 
-	playerUseCases := use_cases.NewTankUseCases(gameRepo.TanksRepository(), tilesUseCasesWithAnimations, playerSpawner)
+	playerUseCases := use_cases.NewTankUseCases(gameRepo.TanksRepository(), tilesUseCasesWithAnimations, playerSpawner, types.DirectionUp)
 	bulletTilesUseCases := use_cases.NewTilesUseCases(bulletTilesetRepo)
 	bulletUseCases := use_cases.NewBulletUseCases(gameRepo.BulletsRepository(), bulletTilesUseCases)
 	mapUseCases := use_cases.NewMapUseCases(gameRepo.BlocksRepository())
@@ -109,19 +109,20 @@ func NewGameStateUseCasesFacade(
 		}
 
 		// Создаем отдельный TankUseCases для этого врага
-		enemyTankUseCases := use_cases.NewTankUseCases(gameRepo.TanksRepository(), tilesUseCasesWithAnimations, position)
+		enemyTankUseCases := use_cases.NewTankUseCases(gameRepo.TanksRepository(), tilesUseCasesWithAnimations, position, types.DirectionDown)
 
 		// Создаем танк врага
-		enemyTank, _, err := enemyTankUseCases.StartTankSpawn(position)
+		err := enemyTankUseCases.StartSpawn()
 		if err != nil {
 			return nil, err
 		}
 
-		// Устанавливаем направление врага вниз
-		enemyTank.Direction = types.DirectionDown
+		// Получаем танк врага
+		enemyTank := enemyTankUseCases.GetTank()
+		if err != nil {
+			return nil, err
+		}
 
-		// Сохраняем танк в TankUseCases
-		enemyTankUseCases.SetEnemyTank(enemyTank)
 		enemyTanks = append(enemyTanks, enemyTank)
 		enemyUseCasesList = append(enemyUseCasesList, enemyTankUseCases)
 
@@ -153,9 +154,9 @@ func NewGameStateUseCasesFacade(
 // Update обновляет игровое состояние
 func (g *GameStateUseCasesFacade) Update() {
 	// Двигаем игрока
-	tank, _ := g.playerUseCases.GetPlayerTank()
+	tank := g.playerUseCases.GetTank()
 	if tank != nil {
-		g.playerUseCases.MoveTank(tank, tank.Direction, use_cases.DT)
+		g.playerUseCases.MoveTank(tank.Direction, use_cases.DT)
 	}
 
 	// Обновляем AI контроллеры врагов (они сами управляют движением)
@@ -170,47 +171,49 @@ func (g *GameStateUseCasesFacade) Update() {
 
 	// Проверяем коллизии ПОСЛЕ движения всех объектов
 	g.collisionUseCases.UpdateCollisions()
-
-	// Обновляем анимации
-	g.playerUseCases.UpdateAnimations()
 }
 
-// UpdateTankSpawn обновляет процесс спавна танка
-func (g *GameStateUseCasesFacade) UpdateTankSpawn(currentTime float64) {
-	g.playerUseCases.UpdatePlayerSpawn(currentTime)
-}
-
-// UpdateEnemiesSpawn обновляет процесс спавна врагов
-func (g *GameStateUseCasesFacade) UpdateEnemiesSpawn(currentTime float64) {
-	for _, enemyUseCases := range g.enemyUseCases {
-		enemyUseCases.UpdateEnemySpawn(currentTime)
-	}
-}
-
-// UpdateEnemiesAnimations обновляет анимации врагов
-// Теперь анимации управляются через TilesUseCases
-func (g *GameStateUseCasesFacade) UpdateEnemiesAnimations() {
+// UpdateAnimations обновляет все анимации из репозитория
+func (g *GameStateUseCasesFacade) UpdateAnimations() {
 	if g.tilesUseCasesWithAnims != nil {
 		g.tilesUseCasesWithAnims.UpdateAnimations()
 	}
 }
 
+// UpdateTankSpawn обновляет процесс спавна танка
+func (g *GameStateUseCasesFacade) UpdateTankSpawn(currentTime float64) {
+	g.playerUseCases.IsSpawnFinished(currentTime)
+	g.playerUseCases.IsExplosionFinished()
+}
+
+// UpdateEnemiesSpawn обновляет процесс спавна врагов
+func (g *GameStateUseCasesFacade) UpdateEnemiesSpawn(currentTime float64) {
+	for _, enemyUseCases := range g.enemyUseCases {
+		enemyUseCases.IsSpawnFinished(currentTime)
+		enemyUseCases.IsExplosionFinished()
+	}
+}
+
+// UpdateEnemiesAnimations обновляет анимации врагов
+// Устаревший метод, используйте UpdateAnimations()
+func (g *GameStateUseCasesFacade) UpdateEnemiesAnimations() {
+	g.UpdateAnimations()
+}
+
 // StartTankSpawn запускает спавн танка игрока
 func (g *GameStateUseCasesFacade) StartTankSpawn(spawnStartTime float64) {
-	// Получаем позицию спавна из конфига
-	spawnPosition := g.playerUseCases.GetPlayerSpawner()
-
 	// Создаем танк игрока через TankUseCases
-	player, _, err := g.playerUseCases.StartTankSpawn(
-		spawnPosition,
-	)
+	err := g.playerUseCases.StartSpawn()
 	if err != nil {
 		panic(err)
 	}
 
-	// Сохраняем ссылку на танк
-	g.playerUseCases.SetPlayerTank(player)
-	player.SpawnedAt = spawnStartTime
+	// Устанавливаем время спавна
+	tank := g.playerUseCases.GetTank()
+	if err != nil {
+		panic(err)
+	}
+	tank.SpawnedAt = spawnStartTime
 }
 
 // Getter методы для доступа к use cases
