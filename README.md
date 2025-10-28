@@ -127,18 +127,18 @@ graph TB
     
     subgraph I["💾 Infrastructure Layer"]
         direction TB
-        subgraph IR["📂 Raw Repositories"]
+        subgraph Raw["📂 Raw Repositories"]
             FileRepo["📁 FileRepository"]
         end
         
-        subgraph IP["🔧 Processed Repositories"]
+        subgraph Processed["🔧 Processed Repositories"]
             MapsRepo["🗺️ MapsDataRepository"]
             TilesetRepo["🎨 TilesetRepository"]
             TilesetReg["📋 TilesetRepositoryRegistry"]
             ScriptsRepo["📜 ScriptsRepository"]
         end
         
-        subgraph IG["🎮 Game Repositories"]
+        subgraph Game["🎮 Game Repositories"]
             TanksRepo["🚗 TanksRepository"]
             BlocksRepo["🧱 BlocksRepository"]
             BulletsRepo["💣 BulletsRepository"]
@@ -164,8 +164,8 @@ graph TB
     MapsRepo -->|"использует"| FileRepo
     ScriptsRepo -->|"читает"| FileRepo
     
-    UseCases -->|"создает"| IG
-    IG -->|"хранит"| Entities
+    UseCases -->|"создает"| Game
+    Game -->|"хранит"| Entities
     
     UseCases -->|"отрисовка"| RenderAdapter
 ```
