@@ -11,20 +11,18 @@ import (
 
 // KeyboardInputAdapter адаптер для обработки пользовательского ввода с клавиатуры
 type KeyboardInputAdapter struct {
-	tankUseCases    use_cases.ITankUseCasesRef // Для работы с танком
-	tankUseCasesRef use_cases.ITankUseCasesRef // Для управления танком (дубликат для совместимости)
-	bulletUseCases  use_cases.IBulletUseCases
-	upButton        ebiten.Key
-	downButton      ebiten.Key
-	leftButton      ebiten.Key
-	rightButton     ebiten.Key
-	shootButton     ebiten.Key
+	tankUseCases   use_cases.ITankUseCasesRef
+	bulletUseCases use_cases.IBulletUseCases
+	upButton       ebiten.Key
+	downButton     ebiten.Key
+	leftButton     ebiten.Key
+	rightButton    ebiten.Key
+	shootButton    ebiten.Key
 }
 
 // NewKeyboardInputAdapter создает новый экземпляр KeyboardInputAdapter
 func NewKeyboardInputAdapter(
 	tankUseCases use_cases.ITankUseCasesRef,
-	tankUseCasesRef use_cases.ITankUseCasesRef,
 	bulletUseCases use_cases.IBulletUseCases,
 	upButton ebiten.Key,
 	downButton ebiten.Key,
@@ -33,14 +31,13 @@ func NewKeyboardInputAdapter(
 	shootButton ebiten.Key,
 ) *KeyboardInputAdapter {
 	return &KeyboardInputAdapter{
-		tankUseCases:    tankUseCases,
-		tankUseCasesRef: tankUseCasesRef,
-		bulletUseCases:  bulletUseCases,
-		upButton:        upButton,
-		downButton:      downButton,
-		leftButton:      leftButton,
-		rightButton:     rightButton,
-		shootButton:     shootButton,
+		tankUseCases:   tankUseCases,
+		bulletUseCases: bulletUseCases,
+		upButton:       upButton,
+		downButton:     downButton,
+		leftButton:     leftButton,
+		rightButton:    rightButton,
+		shootButton:    shootButton,
 	}
 }
 
@@ -67,19 +64,19 @@ func (a *KeyboardInputAdapter) keyPressedEvents() {
 	// Rotate the tank if the key is pressed
 	tankRotated := false
 	if ebiten.IsKeyPressed(a.upButton) && !tankRotated {
-		a.tankUseCasesRef.RotateTank(types.DirectionUp)
+		a.tankUseCases.RotateTank(types.DirectionUp)
 		tankRotated = true
 	}
 	if ebiten.IsKeyPressed(a.downButton) && !tankRotated {
-		a.tankUseCasesRef.RotateTank(types.DirectionDown)
+		a.tankUseCases.RotateTank(types.DirectionDown)
 		tankRotated = true
 	}
 	if ebiten.IsKeyPressed(a.leftButton) && !tankRotated {
-		a.tankUseCasesRef.RotateTank(types.DirectionLeft)
+		a.tankUseCases.RotateTank(types.DirectionLeft)
 		tankRotated = true
 	}
 	if ebiten.IsKeyPressed(a.rightButton) && !tankRotated {
-		a.tankUseCasesRef.RotateTank(types.DirectionRight)
+		a.tankUseCases.RotateTank(types.DirectionRight)
 		tankRotated = true
 	}
 }
@@ -93,16 +90,16 @@ func (a *KeyboardInputAdapter) keyReleasedEvents() {
 	}
 
 	if inpututil.IsKeyJustReleased(a.upButton) && tank.Direction == types.DirectionUp {
-		a.tankUseCasesRef.StopTank(false)
+		a.tankUseCases.StopTank(false)
 	}
 	if inpututil.IsKeyJustReleased(a.downButton) && tank.Direction == types.DirectionDown {
-		a.tankUseCasesRef.StopTank(false)
+		a.tankUseCases.StopTank(false)
 	}
 	if inpututil.IsKeyJustReleased(a.leftButton) && tank.Direction == types.DirectionLeft {
-		a.tankUseCasesRef.StopTank(false)
+		a.tankUseCases.StopTank(false)
 	}
 	if inpututil.IsKeyJustReleased(a.rightButton) && tank.Direction == types.DirectionRight {
-		a.tankUseCasesRef.StopTank(false)
+		a.tankUseCases.StopTank(false)
 	}
 }
 

@@ -7,11 +7,10 @@ import (
 
 // CollisionUseCases реализация для операций с коллизиями
 type CollisionUseCases struct {
-	bulletUseCases  IBulletUseCases
-	tankUseCases    ITankUseCasesRef // Используется для GetPlayerTank
-	tankUseCasesRef ITankUseCasesRef // Используется для вызова методов управления танком
-	mapUseCases     IMapUseCases
-	enemyTanks      []*types.TankEntity
+	bulletUseCases IBulletUseCases
+	tankUseCases   ITankUseCasesRef
+	mapUseCases    IMapUseCases
+	enemyTanks     []*types.TankEntity
 }
 
 // NewCollisionUseCasesWithEnemies создает новый экземпляр CollisionUseCases с массивом врагов
@@ -22,11 +21,10 @@ func NewCollisionUseCasesWithEnemies(
 	enemyTanks []*types.TankEntity,
 ) *CollisionUseCases {
 	return &CollisionUseCases{
-		bulletUseCases:  bulletUseCases,
-		tankUseCases:    tankUseCases,
-		tankUseCasesRef: tankUseCases,
-		mapUseCases:     mapUseCases,
-		enemyTanks:      enemyTanks,
+		bulletUseCases: bulletUseCases,
+		tankUseCases:   tankUseCases,
+		mapUseCases:    mapUseCases,
+		enemyTanks:     enemyTanks,
 	}
 }
 
@@ -187,7 +185,7 @@ func (uc *CollisionUseCases) checkBulletEnemyCollisions() {
 				uc.bulletUseCases.RemoveBullet(i)
 				// Удаляем врага
 				// Запускаем анимацию взрыва через TankUseCases
-				uc.tankUseCasesRef.StartExplosion(enemy)
+				uc.tankUseCases.StartExplosion(enemy)
 				// Выходим из цикла врагов, так как пуля уже удалена
 				break
 			}
@@ -246,19 +244,19 @@ func (uc *CollisionUseCases) checkBulletWallCollisions() {
 func (uc *CollisionUseCases) checkTankBoundaryCollisions(tank *types.TankEntity) {
 	if tank.Position.X < 0 {
 		tank.Position.X = 0
-		uc.tankUseCasesRef.StopTank(false)
+		uc.tankUseCases.StopTank(false)
 	}
 	if tank.Position.Y < 0 {
 		tank.Position.Y = 0
-		uc.tankUseCasesRef.StopTank(false)
+		uc.tankUseCases.StopTank(false)
 	}
 	if tank.Position.X > MapWidthHeight-TankSpriteSize {
 		tank.Position.X = MapWidthHeight - TankSpriteSize
-		uc.tankUseCasesRef.StopTank(false)
+		uc.tankUseCases.StopTank(false)
 	}
 	if tank.Position.Y > MapWidthHeight-TankSpriteSize {
 		tank.Position.Y = MapWidthHeight - TankSpriteSize
-		uc.tankUseCasesRef.StopTank(false)
+		uc.tankUseCases.StopTank(false)
 	}
 }
 
@@ -320,7 +318,7 @@ func (uc *CollisionUseCases) handleTankWallCollision(tank *types.TankEntity, blo
 		// правая сторона танка упирается в левую сторону блока
 		tank.Position.X = blockPos.X - float64(TankSpriteSize)
 	}
-	uc.tankUseCasesRef.StopTank(true)
+	uc.tankUseCases.StopTank(true)
 }
 
 // CheckColliders проверяет коллизию между двумя объектами карты

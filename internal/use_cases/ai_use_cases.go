@@ -23,6 +23,20 @@ func (uc *AIUseCases) GetUpdateInterval() int {
 	return uc.updateInterval
 }
 
+// GetAIContext возвращает контекст AI
+func (uc *AIUseCases) GetAIContext() *types.GameAiContext {
+	return uc.aiContext
+}
+
+// UpdateAIContext обновляет контекст AI с информацией об игроке, врагах и пулях
+func (uc *AIUseCases) UpdateAIContext(player *types.TankEntity, enemies []*types.TankEntity, bullets []types.BulletEntity) {
+	if uc.aiContext != nil {
+		uc.aiContext.Player = player
+		uc.aiContext.Enemies = enemies
+		uc.aiContext.Bullets = bullets
+	}
+}
+
 // UpdateAI обновляет AI для врага
 func (uc *AIUseCases) UpdateAI(enemy *types.TankEntity) types.EnemyAIDecision {
 	if enemy == nil || uc.ai == nil {

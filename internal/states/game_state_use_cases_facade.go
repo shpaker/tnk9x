@@ -16,8 +16,9 @@ type GameStateUseCasesFacade struct {
 	collisionUseCases      *use_cases.CollisionUseCases
 	enemyUseCases          []*use_cases.TankUseCases
 	enemyTanks             []*types.TankEntity      // Массив танков врагов для обратной совместимости
-	enemyControllers       []*adapters.AIController // AI контроллеры для врагов
+	enemyInputAdapters     []adapters.IInputAdapter // AI input адаптеры для врагов
 	tilesUseCasesWithAnims *use_cases.TilesUseCases // Общий tilesUseCases для всех анимаций
+	aiUseCases             *use_cases.AIUseCases    // AI use cases для обновления контекста
 }
 
 // NewGameStateUseCasesFacade создает фасад для оркестрации use cases игрового состояния
@@ -65,12 +66,6 @@ func NewGameStateUseCasesFacade(
 	bulletUseCases := use_cases.NewBulletUseCases(gameRepo.BulletsRepository(), bulletTilesUseCases)
 	mapUseCases := use_cases.NewMapUseCases(gameRepo.BlocksRepository())
 
-	// Создаем AI
-	ai, err := adapters.NewEnemyAILua("assets/scripts/enemies.lua")
-	if err != nil {
-		return nil, err
-	}
-
 	// Создаем AI контекст
 	blocks := mapUseCases.GetBlocks()
 	aiContext := &types.GameAiContext{
@@ -86,12 +81,12 @@ func NewGameStateUseCasesFacade(
 		updateInterval = gameConfig.AIUpdateIntervalTicks
 	}
 
-	// Создаем AIUseCases
-	aiUseCases := use_cases.NewAIUseCases(ai, aiContext, updateInterval)
+	// Создаем AIUseCases с заглушкой (будем использовать Lua напрямую в AiInputAdapter)
+	aiUseCases := use_cases.NewAIUseCases(nil, aiContext, updateInterval)
 
 	// Создаем до 3 врагов
 	enemyUseCasesList := make([]*use_cases.TankUseCases, 0, 3)
-	enemyControllers := make([]*adapters.AIController, 0, 3)
+	enemyInputAdapters := make([]adapters.IInputAdapter, 0, 3)
 	enemyTanks := make([]*types.TankEntity, 0, 3)
 
 	for i, spawner := range gameConfig.EnemySpawners {
@@ -126,9 +121,12 @@ func NewGameStateUseCasesFacade(
 		enemyTanks = append(enemyTanks, enemyTank)
 		enemyUseCasesList = append(enemyUseCasesList, enemyTankUseCases)
 
-		// Создаем AI контроллер для этого врага
-		aiController := adapters.NewAIController(enemyTankUseCases, bulletUseCases, aiUseCases, enemyTank)
-		enemyControllers = append(enemyControllers, aiController)
+		// Создаем AI input адаптер для этого врага с поддержкой Lua
+		aiInputAdapter, err := adapters.NewAiInputAdapter(enemyTankUseCases, aiUseCases, "assets/scripts/enemies.lua")
+		if err != nil {
+			return nil, err
+		}
+		enemyInputAdapters = append(enemyInputAdapters, aiInputAdapter)
 	}
 
 	// Создаем CollisionUseCases
@@ -146,8 +144,9 @@ func NewGameStateUseCasesFacade(
 		collisionUseCases:      collisionUseCases,
 		enemyUseCases:          enemyUseCasesList,
 		enemyTanks:             enemyTanks,
-		enemyControllers:       enemyControllers,
+		enemyInputAdapters:     enemyInputAdapters,
 		tilesUseCasesWithAnims: tilesUseCasesWithAnimations,
+		aiUseCases:             aiUseCases,
 	}, nil
 }
 
@@ -159,10 +158,16 @@ func (g *GameStateUseCasesFacade) Update() {
 		g.playerUseCases.MoveTank(tank.Direction, use_cases.DT)
 	}
 
-	// Обновляем AI контроллеры врагов (они сами управляют движением)
-	for _, aiController := range g.enemyControllers {
-		if aiController != nil {
-			aiController.Update()
+	// Обновляем контекст AI с данными об игроке, врагах и пулях
+	if g.aiUseCases != nil {
+		bullets := g.bulletUseCases.GetBullets()
+		g.aiUseCases.UpdateAIContext(tank, g.enemyTanks, bullets)
+	}
+
+	// Обновляем AI input адаптеры врагов (они сами управляют движением)
+	for _, adapter := range g.enemyInputAdapters {
+		if adapter != nil {
+			adapter.Update()
 		}
 	}
 
@@ -233,16 +238,10 @@ func (g *GameStateUseCasesFacade) CollisionUseCases() *use_cases.CollisionUseCas
 	return g.collisionUseCases
 }
 
-func (g *GameStateUseCasesFacade) AnimationUseCases() *use_cases.TilesUseCases {
-	// Возвращаем tilesUseCases через публичный метод
-	// TODO: добавить геттер в TankUseCases для tilesUseCases
-	return nil // Временно возвращаем nil, так как tilesUseCases теперь private
-}
-
 func (g *GameStateUseCasesFacade) GetEnemyTanks() []*types.TankEntity {
 	return g.enemyTanks
 }
 
-func (g *GameStateUseCasesFacade) TankUseCasesRef() *use_cases.TankUseCases {
-	return g.playerUseCases
+func (g *GameStateUseCasesFacade) AIUseCases() *use_cases.AIUseCases {
+	return g.aiUseCases
 }

@@ -121,8 +121,8 @@ graph TB
     subgraph AI["🤖 AI Layer"]
         direction LR
         AICases["🧠 AIUseCases<br/>AI логика"]
-        LuaAI["📜 EnemyAILua<br/>Lua AI"]
-        LuaScripts["🗂️ LuaAdapter<br/>enemies.lua"]
+        AiInput["📜 AiInputAdapter<br/>Lua AI"]
+        LuaScripts["🗂️ Scripts<br/>enemies.lua"]
     end
     
     subgraph D["📦 Domain Layer"]
@@ -137,17 +137,11 @@ graph TB
     
     Adapters -->|"запросы"| UseCases
     UseCases -->|"обновление"| AICases
-    AICases -->|"вызов"| LuaAI
-    LuaAI -->|"скрипт"| LuaScripts
+    AICases -->|"вызов"| AiInput
+    AiInput -->|"скрипт"| LuaScripts
     UseCases -->|"использует"| Entities
     Repositories -->|"предоставляет"| Entities
     UseCases -->|"сохраняет"| Repositories
-    
-    style P fill:#e1f5ff
-    style A fill:#f3e5f5
-    style AI fill:#e0f2f1
-    style D fill:#e8f5e9
-    style I fill:#fff3e0
 ```
 
 ### Диаграмма взаимодействия компонентов
@@ -171,8 +165,8 @@ flowchart TB
     
     subgraph "🤖 AI система"
         AI[🧠 AIUseCases<br/>AI логика]
-        AILua[📜 EnemyAILua<br/>Lua AI]
-        Lua[🗂️ LuaAdapter<br/>enemies.lua]
+        AiInput[📜 AiInputAdapter<br/>Lua AI]
+        Lua[🗂️ Scripts<br/>enemies.lua]
     end
     
     TanksRepo[(💾 TanksRepository)]
@@ -184,8 +178,8 @@ flowchart TB
     Facade -->|обновление| Bullet
     Facade -->|проверка| Collision
     Enemy -->|запрос| AI
-    AI -->|вызов| AILua
-    AILua -->|скрипт| Lua
+    AI -->|вызов| AiInput
+    AiInput -->|скрипт| Lua
     Tank <--> TanksRepo
     Enemy <--> TanksRepo
     Collision -->|проверяет| Tank
@@ -195,19 +189,6 @@ flowchart TB
     Enemy -->|отрисовка| Render
     Bullet -->|отрисовка| Render
     Render -->|графика| User
-    
-    style User fill:#ffebee
-    style Input fill:#e3f2fd
-    style Facade fill:#f3e5f5
-    style Render fill:#e1f5ff
-    style Tank fill:#e8f5e9
-    style Enemy fill:#fff3e0
-    style Bullet fill:#fce4ec
-    style Collision fill:#fff9c4
-    style AI fill:#e0f2f1
-    style AILua fill:#e0f2f1
-    style Lua fill:#e0f2f1
-    style TanksRepo fill:#f1f8e9
 ```
 
 ### Диаграмма игрового цикла
@@ -220,7 +201,7 @@ sequenceDiagram
     participant Tank as 🚗 TankUseCases
     participant Enemy as 👾 EnemyUseCases
     participant AI as 🧠 AIUseCases
-    participant Lua as 📜 LuaAdapter
+    participant AiInput as 📜 AiInputAdapter
     participant Collision as 💥 CollisionUseCases
     participant Render as 🎨 RenderAdapter
     
@@ -236,9 +217,9 @@ sequenceDiagram
     par AI врагов
         Facade->>Enemy: UpdateAI()
         Enemy->>AI: UpdateAI()
-        AI->>Lua: CallEnemyAI()
-        Note right of Lua: 📝 Скрипт:<br/>enemies.lua
-        Lua-->>AI: shouldMove, direction
+        AI->>AiInput: CallEnemyAI()
+        Note right of AiInput: 📝 Скрипт:<br/>enemies.lua
+        AiInput-->>AI: shouldMove, direction
         AI-->>Enemy: ApplyDecision()
         Facade->>Enemy: MoveTank()
     end
@@ -298,7 +279,7 @@ func NewFacade(blocksRepo game.IBlocksRepository) *Facade { ... }
     ↓
 [GameStateUseCasesFacade] → [Update/Logic]
     ↓
-[EnemyUseCases] → [AIUseCases] → [EnemyAILua] → [LuaAdapter] → [enemies.lua]
+[EnemyUseCases] → [AIUseCases] → [AiInputAdapter] → [enemies.lua]
     ↓                                        ↓
 [Repositories] ← [Domain Entities]     [GameContext]
     ↓
@@ -307,12 +288,12 @@ func NewFacade(blocksRepo game.IBlocksRepository) *Facade { ... }
 
 ### Структура слоев
 
-- **Presentation Layer** (синий) - взаимодействие с пользователем и внешним миром
-- **Application Layer** (фиолетовый) - бизнес-логика и правила игры
-- **AI Layer** (бирюзовый) - AI логика и скрипты Lua
-- **Domain Layer** (зеленый) - сущности и типы игры
-- **Infrastructure Layer** (оранжевый) - хранение и загрузка данных
-- **Supporting Components** (розовый) - вспомогательные компоненты
+- **Presentation Layer** - взаимодействие с пользователем и внешним миром
+- **Application Layer** - бизнес-логика и правила игры
+- **AI Layer** - AI логика и скрипты Lua
+- **Domain Layer** - сущности и типы игры
+- **Infrastructure Layer** - хранение и загрузка данных
+- **Supporting Components** - вспомогательные компоненты
 
 ## 🚀 Быстрый старт
 
@@ -382,7 +363,7 @@ game:
 
 - **AnimationUseCases** - централизованное управление анимациями
 - **AIUseCases** - управление AI логикой врагов
-- **EnemyAILua** - адаптер для работы с Lua скриптами
+- **AiInputAdapter** - AI адаптер для управления через Lua скрипты
 - **LuaAdapter** - конвертация данных между Go и Lua
 - **SpawnerEntity** - сущность спавнера с анимацией
 - **TankUseCases** - переименованный PlayerUseCases для лучшей семантики
@@ -396,7 +377,7 @@ game:
 - **Обратная совместимость** - существующий код анимации продолжает работать
 - **ИИ на Lua** - управление врагами через Lua скрипты (gopher-lua)
 - **AIUseCases** - централизованное управление AI логикой врагов
-- **EnemyAILua** - адаптер для вызова Lua функций из Go
+- **AiInputAdapter** - AI адаптер для управления через Lua скрипты
 - **Тактика NES** - поведение врагов в стиле классической Battle City
 
 ## 🎮 Игровая функциональность
@@ -448,10 +429,10 @@ just help             # Показать все команды
 
 - **App** - главное приложение Ebiten, точка входа
 - **GameState** - игровое состояние, управляет игровым процессом
-- **InputAdapter** - адаптер ввода с клавиатуры (WASD, Space)
+- **KeyboardInputAdapter** - адаптер ввода с клавиатуры (WASD, Space)
+- **AiInputAdapter** - AI адаптер для управления врагами через Lua скрипты
+- **IInputAdapter** - интерфейс для всех адаптеров ввода
 - **RendererAdapter** - адаптер отрисовки игры через Ebiten
-- **LuaAdapter** - адаптер для работы с Lua скриптами (AI врагов)
-- **EnemyAILua** - Lua реализация AI для врагов
 
 ### Application Layer (Слой приложения)
 
@@ -500,7 +481,7 @@ just help             # Показать все команды
 - **Lua скрипты** - `assets/scripts/enemies.lua` - логика поведения врагов
 - **gopher-lua** - библиотека для встраивания Lua в Go
 - **AIUseCases** - управление AI врагов
-- **EnemyAILua** - реализация AI через Lua скрипты
+- **AiInputAdapter** - AI адаптер для управления через Lua скрипты
 
 ### Supporting Components (Вспомогательные компоненты)
 
@@ -633,7 +614,8 @@ MIT License
 
 - ✅ **ИИ врагов на Lua** - управление врагами через Lua скрипты (gopher-lua)
 - ✅ **AIUseCases** - централизованное управление AI логикой врагов
-- ✅ **EnemyAILua** - адаптер для вызова Lua функций из Go
+- ✅ **AiInputAdapter** - AI адаптер для управления через Lua скрипты
+- ✅ **IInputAdapter** - единый интерфейс для всех адаптеров ввода
 - ✅ **Lua скрипты** - `assets/scripts/enemies.lua` для изменения поведения без перекомпиляции
 - ✅ **Тактика NES** - поведение врагов в стиле классической Battle City
 - ✅ **Коллизии врагов** - враги останавливаются при столкновении со стенами
