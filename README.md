@@ -106,63 +106,72 @@ gonflict/
 ```mermaid
 graph TB
     subgraph P["🎨 Presentation Layer"]
-        direction LR
-        KeyboardInput["⌨️ KeyboardInputAdapter<br/>клавиатура"]
-        AIInput["🤖 AiInputAdapter<br/>Lua AI"]
-        RenderAdapter["🎨 RenderAdapter<br/>отрисовка"]
+        Keyboard["⌨️ KeyboardInputAdapter"]
+        AI["🤖 AiInputAdapter<br/>script: string<br/>Lua gopher"]
+        Render["🎨 RendererAdapter<br/>Ebiten"]
     end
     
     subgraph A["⚙️ Application Layer"]
-        direction LR
-        TankUC["🚗 TankUseCases<br/>движение, поворот"]
-        EnemyUC["👾 EnemyUseCases<br/>враги"]
-        BulletUC["💣 BulletUseCases<br/>пули"]
-        CollisionUC["💥 CollisionUseCases<br/>столкновения"]
-        TilesUC["🎨 TilesUseCases<br/>тайлы и анимации"]
-        MapUC["🗺️ MapUseCases<br/>карта"]
+        Facade["🎯 GameStateFacade<br/>оркестрация"]
+        TankUC["🚗 TankUseCases<br/>Rotate/Move<br/>Update/IsActive/IsStopped"]
+        EnemyUC["👾 EnemyUseCases"]
+        BulletUC["💣 BulletUseCases<br/>Shoot/Update"]
+        CollisionUC["💥 CollisionUseCases<br/>проверки коллизий"]
+        TilesUC["🎨 TilesUseCases<br/>статичные/анимации"]
+        MapUC["🗺️ MapUseCases<br/>блоки карты"]
     end
     
     subgraph D["📦 Domain Layer"]
-        direction LR
-        Entities["🏗️ TankEntity<br/>BulletEntity<br/>BlockEntity<br/>TileEntity"]
-        Types["🔢 Direction (int)<br/>Position, Size<br/>Altitude"]
+        Entities["🏗️ Entity Types<br/>TankEntity IsActive<br/>BulletEntity<br/>BlockEntity<br/>TileEntity"]
+        DomainTypes["🔢 Types<br/>Direction: int<br/>Position<br/>Size<br/>Altitude<br/>EnemyAIDecision"]
     end
     
     subgraph I["💾 Infrastructure Layer"]
-        direction TB
-        subgraph Raw["📂 Raw<br/>FileRepository"]
-        end
+        RawRepo["📂 FileRepository<br/>чтение файлов"]
         
-        subgraph Processed["🔧 Processed<br/>MapsData<br/>TilesetRegistry<br/>Scripts"]
-        end
+        ProcessedRepo["🔧 Processed Repositories<br/>MapsDataRepository<br/>TilesetRepository<br/>TilesetRegistry<br/>ScriptsRepository"]
         
-        subgraph Game["🎮 Game<br/>Tanks<br/>Blocks<br/>Bullets<br/>Animations"]
-        end
+        GameRepo["🎮 Game Repositories<br/>TanksRepository<br/>BlocksRepository<br/>BulletsRepository<br/>AnimationsRepository"]
         
-        subgraph AI["📜 AI Scripts<br/>enemies.lua"]
-        end
+        LuaScript["📜 enemies.lua<br/>Direction возвращает int"]
     end
     
-    KeyboardInput -->|"Rotate/Move"| TankUC
-    AIInput -->|"AI команды"| EnemyUC
-    AIInput -.->|"загружает"| AI
+    Keyboard -.->|"Update()"| TankUC
+    Keyboard -.->|"Rotate(Direction)<br/>Move()"| TankUC
+    Keyboard -.->|"ShootBullet(tank)"| BulletUC
     
-    TankUC -->|"GetTank/IsActive"| Entities
-    EnemyUC -->|"GetTank/Update"| Entities
-    BulletUC --> Entities
-    CollisionUC -->|"проверяет"| TankUC
-    CollisionUC -->|"проверяет"| EnemyUC
+    AI -.->|"Update()<br/>IsActive()"| TankUC
+    AI -.->|"CallEnemyAI()<br/>applyDecision()"| TankUC
     
-    TankUC -->|"использует"| Game
-    EnemyUC --> Game
-    BulletUC --> Game
-    TilesUC -->|"анимации"| Game
+    Facade -.->|"Update()"| TankUC
+    Facade -.->|"Update()"| EnemyUC
+    Facade -.->|"UpdateBullets()"| BulletUC
+    Facade -.->|"UpdateCollisions()"| CollisionUC
+    Facade -.->|"UpdateAnimations()"| TilesUC
     
-    Processed --> Raw
-    Game -.-> Entities
+    TankUC -->|"GetTank()<br/>IsActive()<br/>IsStopped()"| Entities
+    EnemyUC -->|"GetTank()<br/>Update()"| Entities
+    BulletUC -->|"ShootBullet()<br/>GetBullets()"| Entities
     
-    A -->|"отрисовка"| RenderAdapter
-    RenderAdapter -->|"экран"| P
+    CollisionUC -->|"checkEnemyCollisions()"| TankUC
+    CollisionUC -->|"checkBulletCollisions()"| BulletUC
+    
+    TankUC -.->|"использует"| GameRepo
+    EnemyUC -.->|"использует"| GameRepo
+    BulletUC -.->|"использует"| GameRepo
+    TilesUC -.->|"использует"| GameRepo
+    MapUC -.->|"использует"| GameRepo
+    
+    Facade -.->|"CreateAnimation<br/>StartAnimation"| TilesUC
+    
+    TilesUC -.->|"читает"| ProcessedRepo
+    AI -.->|"DoString(script)"| LuaScript
+    ProcessedRepo -.->|"загружает"| RawRepo
+    
+    Entities -.->|"хранит"| GameRepo
+    
+    Facade -.->|"DrawAll()"| Render
+    Render -.->|"graphics"| P
 ```
 
 ### Диаграмма взаимодействия компонентов
@@ -171,54 +180,71 @@ graph TB
 flowchart TB
     User[👤 Пользователь]
     
-    subgraph "🎮 Presentation Layer"
-        Keyboard[⌨️ KeyboardInputAdapter<br/>WASD/Space]
-        AI[🤖 AiInputAdapter<br/>Lua управление]
-        Render[🎨 RendererAdapter<br/>Ebiten]
+    subgraph "🎮 Presentation"
+        Keyboard[⌨️ KeyboardInput<br/>WASD/Space]
+        AI[🤖 AiInput<br/>Rotate/Move<br/>Update]
+        Render[🎨 Renderer]
     end
     
-    subgraph "⚡ Application Layer"
-        TankUC[🚗 TankUseCases<br/>Rotate/Move/Update<br/>IsActive/IsStopped]
-        EnemyUC[👾 EnemyUseCases<br/>Update/StartSpawn]
+    subgraph "⚡ Application"
+        Facade[🎯 Facade<br/>Update цикл]
+        TankUC[🚗 TankUseCases]
+        EnemyUC[👾 EnemyUseCases]
         BulletUC[💣 BulletUseCases]
         CollisionUC[💥 CollisionUseCases]
         TilesUC[🎨 TilesUseCases]
+        MapUC[🗺️ MapUseCases]
     end
     
-    subgraph "📦 Domain Layer"
-        Entities[🏗️ TankEntity<br/>Direction: int<br/>IsActive method]
+    subgraph "📦 Domain"
+        TankEnt[🏗️ TankEntity<br/>IsActive Speed<br/>Direction: int]
+        BulletEnt[🏗️ BulletEntity]
+        BlockEnt[🏗️ BlockEntity]
+        TileEnt[🏗️ TileEntity]
     end
     
     subgraph "💾 Infrastructure"
-        GameRepo[(🎮 GameRepositories<br/>Tanks/Blocks/Bullets)]
-        Processed[🔧 Processed<br/>Registry/Scripts]
-        LuaScript[📜 enemies.lua]
+        GameRepos[(🎮 Repositories<br/>Tanks/Blocks<br/>Bullets/Animations)]
+        ProcRepos[🔧 Processed<br/>Maps/Tilesets<br/>Scripts]
+        Lua[📜 enemies.lua]
     end
     
-    User -->|input| Keyboard
-    Keyboard -->|Rotate/Move| TankUC
-    TankUC -->|Update| TankUC
+    User -->|"input"| Keyboard
+    Keyboard -->|"Rotate/Move<br/>ShootBullet"| TankUC
+    Keyboard -->|"ShootBullet"| BulletUC
     
-    AI -->|AI решение| EnemyUC
-    EnemyUC -->|GetTank| GameRepo
-    EnemyUC <-->|"Context"| AI
+    AI -->|"Rotate/Move<br/>Update"| TankUC
+    AI -->|"CallEnemyAI<br/>Direction: int"| TankUC
     
-    TankUC -->|IsActive| Entities
-    EnemyUC -->|GetTank| Entities
+    Facade -->|"Update()"| TankUC
+    Facade -->|"Update()"| EnemyUC
+    Facade -->|"UpdateBullets()"| BulletUC
+    Facade -->|"UpdateCollisions()"| CollisionUC
+    Facade -->|"DrawAll()"| Render
     
-    CollisionUC -->|"check"| TankUC
-    CollisionUC -->|"check"| EnemyUC
-    CollisionUC -->|"check"| BulletUC
+    TankUC -->|"GetTank<br/>IsActive<br/>IsStopped"| TankEnt
+    EnemyUC -->|"GetTank<br/>Update"| TankEnt
+    BulletUC -->|"ShootBullet<br/>UpdateBullets"| BulletEnt
     
-    GameRepo -.->|"stores"| Entities
-    Processed -->|"provides tilesets"| TilesUC
-    AI -.->|"reads"| LuaScript
-    Processed -.->|"loads"| LuaScript
+    CollisionUC -->|"проверяет<br/>checkEnemyCollisions"| TankUC
+    CollisionUC -->|"проверяет"| BulletUC
+    CollisionUC -->|"проверяет"| EnemyUC
     
-    TankUC -->|render| Render
-    EnemyUC -->|render| Render
-    BulletUC -->|render| Render
-    Render -->|graphics| User
+    TankUC -.->|"AddTank<br/>GetTank"| GameRepos
+    EnemyUC -.->|"AddTank"| GameRepos
+    BulletUC -.->|"AddBullet<br/>RemoveBullet"| GameRepos
+    TilesUC -.->|"AddAnimation<br/>StartAnimation"| GameRepos
+    MapUC -.->|"GetBlocks<br/>RemoveBlock"| GameRepos
+    
+    TilesUC -.->|"CreateAnimation<br/>GetImage"| ProcRepos
+    AI -.->|"DoString(script)"| Lua
+    ProcRepos -.->|"loads"| Lua
+    
+    GameRepos -.->|"stores"| TankEnt
+    GameRepos -.->|"stores"| BulletEnt
+    GameRepos -.->|"stores"| BlockEnt
+    
+    Render -->|"graphics"| User
 ```
 
 ### Диаграмма игрового цикла
@@ -227,49 +253,68 @@ flowchart TB
 sequenceDiagram
     participant App as 🖥️ Application
     participant State as 🎮 GameState
-    participant Facade as 🎯 UseCasesFacade
+    participant Facade as 🎯 Facade
     participant Tank as 🚗 TankUseCases
     participant Enemy as 👾 EnemyUseCases
-    participant AI as 🧠 AIUseCases
-    participant AiInput as 📜 AiInputAdapter
+    participant AI as 🤖 AiInputAdapter
     participant Collision as 💥 CollisionUseCases
-    participant Render as 🎨 RenderAdapter
+    participant Bullet as 💣 BulletUseCases
+    participant Render as 🎨 Renderer
     
     Note over App: 🏁 Игровой цикл (60 FPS)
     
     App->>+State: Update()
     State->>+Facade: Update()
     
-    par Движение объектов
-        Facade->>Tank: Update()
+    par Обновление Use Cases
+        Facade->>+Tank: Update(dt)
+        Tank->>Tank: IsActive() проверка
+        Tank->>Tank: обновление Position
+        Tank-->>Facade: готово
+        
+        Facade->>+Bullet: UpdateBullets(dt)
+        Bullet->>Bullet: обновление всех пуль
+        Bullet-->>Facade: готово
     end
     
     par AI врагов
-        Facade->>Enemy: UpdateAI()
-        Enemy->>AiInput: CallEnemyAI()
-        Note right of AiInput: 📝 Скрипт:<br/>enemies.lua<br/>Direction: int
-        AiInput-->>Enemy: shouldMove, direction
-        Enemy->>Enemy: Rotate(direction)
-        Enemy->>Enemy: Move()
-        Facade->>Enemy: Update()
+        Facade->>+Enemy: UpdateAI()
+        Enemy->>+AI: Update()
+        
+        AI->>AI: IsActive() проверка
+        AI->>AI: CallEnemyAI(context)
+        Note right of AI: Lua: updateEnemyAI<br/>возвращает (bool, int)
+        AI->>Tank: Rotate(Direction: int)
+        AI->>Tank: Move()
+        AI->>Tank: Update(dt)
+        AI-->>Enemy: готово
+        Enemy-->>Facade: готово
     end
     
     par Коллизии
-        Facade->>Collision: UpdateCollisions()
-        Collision->>Enemy: checkEnemyCollisions()
+        Facade->>+Collision: UpdateCollisions()
+        Collision->>Collision: checkEnemyCollisions()
+        Collision->>Collision: checkBulletCollisions()
+        Collision->>Collision: checkTankCollisions()
+        Collision-->>Facade: готово
     end
     
-    Facade->>-State: готово
+    par Анимации
+        Facade->>Facade: UpdateAnimations()
+    end
+    
+    Facade-->>State: готово
     State->>+Render: DrawAll()
     
     par Отрисовка
         Render->>Render: drawMap()
         Render->>Render: drawTanks()
         Render->>Render: drawBullets()
+        Render->>Render: drawAnimations()
     end
     
-    Render->>-App: завершено
-    State->>-App: завершено
+    Render-->>App: завершено
+    State-->>App: завершено
     Note over App: 🔄 Следующий кадр
 ```
 
