@@ -1,8 +1,6 @@
 package use_cases
 
 import (
-	"log"
-
 	"github.com/shpaker/gonflict/internal/interfaces"
 	"github.com/shpaker/gonflict/internal/types"
 )
@@ -28,24 +26,14 @@ func NewBulletUseCases(
 func (uc *BulletUseCases) ShootBullet(tank *types.TankEntity) error {
 	// Проверяем, активен ли танк
 	if !tank.IsActive() {
-		log.Printf("DEBUG: Cannot shoot - tank is not active")
 		return nil // Просто игнорируем выстрел
 	}
-
-	log.Printf(
-		"DEBUG: ShootBullet called for tank at position (%.2f, %.2f) direction %d",
-		tank.Position.X,
-		tank.Position.Y,
-		tank.Direction,
-	)
 
 	// Создаем тайл для пули с ID "bullet"
 	bulletImageGetter, err := uc.tilesUseCases.CreateStaticTile("bullet")
 	if err != nil {
-		log.Printf("ERROR: Failed to create bullet tile: %v", err)
 		return err
 	}
-	log.Printf("DEBUG: Created bullet tile successfully")
 
 	// Вычисляем позицию пули в зависимости от направления танка
 	bulletX := tank.Position.X + TankSpriteSize/2 - 2
@@ -75,11 +63,7 @@ func (uc *BulletUseCases) ShootBullet(tank *types.TankEntity) error {
 		Altitude:  types.SURFACE, // Пули на уровне поверхности
 	}
 
-	log.Printf("DEBUG: Created bullet at position (%.2f, %.2f) direction %d",
-		bullet.Position.X, bullet.Position.Y, bullet.Direction)
-
 	uc.bulletsRepo.AddBullet(bullet)
-	log.Printf("DEBUG: Bullet added to repository")
 	return nil
 }
 

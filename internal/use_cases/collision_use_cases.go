@@ -8,10 +8,12 @@ import (
 // CollisionUseCases реализация для операций с коллизиями
 type CollisionUseCases struct {
 	bulletUseCases           interfaces.IBulletUseCases
-	tankUseCases             interfaces.ITankUseCasesRef
+	tankActions              interfaces.ITankActionsUseCases // Для остановки танка при коллизиях
 	mapUseCases              interfaces.IMapUseCases
+	playerTank               *types.TankEntity
 	enemyTanks               []*types.TankEntity
-	enemyUseCases            []interfaces.ITankUseCasesRef // Use cases для врагов
+	enemyUseCases            []interfaces.ITankCommonUseCases    // Use cases для врагов
+	enemyLifecycles          []interfaces.ITankLifecycleUseCases // Для Explode врагов
 	boundaryCollisionService interfaces.IBoundaryCollisionService
 	wallCollisionService     interfaces.IWallCollisionService
 	bulletCollisionService   interfaces.IBulletCollisionService
@@ -20,20 +22,24 @@ type CollisionUseCases struct {
 // NewCollisionUseCasesWithEnemies создает новый экземпляр CollisionUseCases с массивом врагов
 func NewCollisionUseCasesWithEnemies(
 	bulletUseCases interfaces.IBulletUseCases,
-	tankUseCases interfaces.ITankUseCasesRef,
+	playerTank *types.TankEntity,
+	tankActions interfaces.ITankActionsUseCases,
 	mapUseCases interfaces.IMapUseCases,
 	enemyTanks []*types.TankEntity,
-	enemyUseCases []interfaces.ITankUseCasesRef,
+	enemyUseCases []interfaces.ITankCommonUseCases,
+	enemyLifecycles []interfaces.ITankLifecycleUseCases,
 	boundaryCollisionService interfaces.IBoundaryCollisionService,
 	wallCollisionService interfaces.IWallCollisionService,
 	bulletCollisionService interfaces.IBulletCollisionService,
 ) *CollisionUseCases {
 	uc := &CollisionUseCases{
 		bulletUseCases:           bulletUseCases,
-		tankUseCases:             tankUseCases,
+		playerTank:               playerTank,
+		tankActions:              tankActions,
 		mapUseCases:              mapUseCases,
 		enemyTanks:               enemyTanks,
 		enemyUseCases:            enemyUseCases,
+		enemyLifecycles:          enemyLifecycles,
 		boundaryCollisionService: boundaryCollisionService,
 		wallCollisionService:     wallCollisionService,
 		bulletCollisionService:   bulletCollisionService,
@@ -44,17 +50,16 @@ func NewCollisionUseCasesWithEnemies(
 
 // UpdateCollisions обновляет все коллизии в игре
 func (uc *CollisionUseCases) UpdateCollisions() error {
-	tank := uc.tankUseCases.GetTank()
-	if tank == nil {
+	if uc.playerTank == nil {
 		return nil
 	}
 
 	uc.checkBulletBoundaryCollisions()
-	uc.checkBulletTankCollisions(tank)
+	uc.checkBulletTankCollisions(uc.playerTank)
 	uc.checkBulletEnemyCollisions()
 	uc.checkBulletWallCollisions()
-	uc.checkTankBoundaryCollisions(tank)
-	uc.checkTankWallCollisions(tank)
+	uc.checkTankBoundaryCollisions(uc.playerTank)
+	uc.checkTankWallCollisions(uc.playerTank)
 
 	// Проверяем коллизии врагов (БЕЗ коллизий с игроком)
 	uc.checkEnemyCollisions()
@@ -126,11 +131,14 @@ func (uc *CollisionUseCases) checkBulletEnemyCollisions() {
 	for _, i := range bulletIndicesToRemove {
 		uc.bulletUseCases.RemoveBullet(i)
 
-		// Запускаем анимацию взрыва для врага через его Use Cases
+		// Запускаем анимацию взрыва для врага через его Lifecycle Use Cases
 		if enemyIndex, exists := enemyIndicesToExplode[i]; exists {
-			if enemyIndex < len(uc.enemyUseCases) &&
-				uc.enemyUseCases[enemyIndex] != nil {
-				uc.enemyUseCases[enemyIndex].StartExplosion()
+			if enemyIndex < len(uc.enemyLifecycles) &&
+				enemyIndex < len(uc.enemyTanks) &&
+				uc.enemyLifecycles[enemyIndex] != nil {
+				uc.enemyLifecycles[enemyIndex].Explode(
+					uc.enemyTanks[enemyIndex],
+				)
 			}
 		}
 	}
@@ -166,7 +174,7 @@ func (uc *CollisionUseCases) checkTankBoundaryCollisions(
 	tank *types.TankEntity,
 ) {
 	if uc.boundaryCollisionService.CheckTankBoundaryCollisions(tank, false) {
-		uc.tankUseCases.Stop(false)
+		uc.tankActions.Stop(tank, false)
 	}
 }
 
@@ -180,7 +188,7 @@ func (uc *CollisionUseCases) checkTankWallCollisions(tank *types.TankEntity) {
 
 	if collidingBlock != nil {
 		uc.wallCollisionService.HandleTankWallCollision(tank, collidingBlock)
-		uc.tankUseCases.Stop(true)
+		uc.tankActions.Stop(tank, true)
 	}
 }
 

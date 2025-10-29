@@ -1,8 +1,6 @@
 package services
 
 import (
-	"log"
-
 	"github.com/shpaker/gonflict/internal/types"
 )
 
@@ -31,28 +29,11 @@ func (s *TankBrakingService) HandleBrakingState(
 
 	// Проверка: если координата больше кратного 4 на 0.5, возвращаем на 0.5 назад
 	if s.checkAndHandleHalfStepBack(tank, ctx) {
-		log.Printf(
-			"DEBUG: Tank braking - half step back (%.2f, %.2f) target=%.2f",
-			tank.Position.X,
-			tank.Position.Y,
-			ctx.targetMultipleOf4,
-		)
 		return nil
 	}
 
 	// Двигаемся к целевому кратному 4
 	s.moveTowardsTarget(tank, ctx, dt)
-
-	log.Printf(
-		"DEBUG: Tank braking position (%.2f, %.2f) target=%.2f currentCoord=%.2f state=%d direction=%d speed=%.2f",
-		tank.Position.X,
-		tank.Position.Y,
-		ctx.targetMultipleOf4,
-		*ctx.currentCoord,
-		tank.State,
-		tank.Direction,
-		tank.Speed,
-	)
 
 	return nil
 }
@@ -195,24 +176,27 @@ func (s *TankBrakingService) completeBraking(tank *types.TankEntity) {
 func (s *TankBrakingService) finishBraking(tank *types.TankEntity) {
 	// Если есть новое направление, меняем направление и начинаем движение
 	if tank.NextDirection != nil {
-		oldDir := tank.Direction
 		tank.Direction = *tank.NextDirection
 		tank.NextDirection = nil
 		tank.State = types.TankStateMoving
 		tank.Speed = 32.0
-		log.Printf(
-			"DEBUG: Tank finished braking, rotated %d->%d position (%.2f, %.2f) state=Moving",
-			oldDir,
-			tank.Direction,
-			tank.Position.X,
-			tank.Position.Y,
-		)
 	} else {
 		// Иначе просто останавливаемся
 		tank.State = types.TankStateStopped
 		tank.NextDirection = nil
-		log.Printf("DEBUG: Tank finished braking, stopped at position (%.2f, %.2f) state=Stopped",
-			tank.Position.X, tank.Position.Y)
+	}
+}
+
+// HandleRotateWhileBraking обрабатывает поворот танка в состоянии Braking
+func (s *TankBrakingService) HandleRotateWhileBraking(
+	tank *types.TankEntity,
+	direction types.Direction,
+) {
+	if direction == tank.Direction {
+		tank.NextDirection = nil
+	} else {
+		directionCopy := direction
+		tank.NextDirection = &directionCopy
 	}
 }
 

@@ -151,10 +151,11 @@ func New(cfg *Config) *App {
 	// Создаем RendererAdapter
 	rendererAdapter := adapters.NewRendererAdapter(
 		gameStateServices.MapUseCases(),
-		gameStateServices.TankUseCases(),
+		gameStateServices.GetPlayerTank(),
+		gameStateServices.PlayerRenderUseCases(),
 		gameStateServices.BulletUseCases(),
 		gameStateServices.GetEnemyTanks(),
-		gameStateServices.GetEnemyUseCases(),
+		gameStateServices.GetEnemyRenderUseCases(),
 		mapTilesUseCases,
 		playerTilesUseCases,
 		bulletTilesUseCases,
@@ -162,9 +163,17 @@ func New(cfg *Config) *App {
 		explosionTilesUseCases,
 	)
 
+	// Создаем TankActionsUseCases для инпут-адаптера
+	playerTankActions := use_cases.NewTankActionsUseCases(
+		tankBrakingService,
+		coordinateService,
+		gameStateServices.BulletUseCases(),
+	)
+
 	// Создаем InputAdapter
 	inputAdapter := input_adapters.NewKeyboardInputAdapter(
-		gameStateServices.TankUseCases(),
+		playerTankActions,
+		gameStateServices.GetPlayerTank(),
 		ebiten.KeyW,     // up
 		ebiten.KeyS,     // down
 		ebiten.KeyA,     // left

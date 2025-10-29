@@ -11,15 +11,20 @@ import (
 
 // GameStateUseCasesFacade - фасад для оркестрации use cases игрового состояния
 type GameStateUseCasesFacade struct {
-	playerUseCases         *use_cases.TankUseCases
+	playerUseCases         interfaces.ITankCommonUseCases
+	playerRenderUseCases   interfaces.ITankRenderUseCases    // Для графики игрока
+	playerLifecycle        interfaces.ITankLifecycleUseCases // Для Spawn/Explode игрока
+	playerTank             *types.TankEntity                 // Танк игрока для передачи в адаптеры
 	bulletUseCases         *use_cases.BulletUseCases
 	mapUseCases            *use_cases.MapUseCases
 	collisionUseCases      *use_cases.CollisionUseCases
-	enemyUseCases          []*use_cases.TankUseCases
-	enemyTanks             []*types.TankEntity        // Массив танков врагов для обратной совместимости
-	enemyInputAdapters     []interfaces.IInputAdapter // AI input адаптеры для врагов
-	tilesUseCasesWithAnims *use_cases.TilesUseCases   // Общий tilesUseCases для всех анимаций
-	aiContext              *types.GameAiContext       // AI контекст для всех адаптеров
+	enemyUseCases          []interfaces.ITankCommonUseCases
+	enemyRenderUseCases    []interfaces.ITankRenderUseCases    // Для графики врагов
+	enemyLifecycles        []interfaces.ITankLifecycleUseCases // Для Spawn/Explode врагов
+	enemyTanksEntities     []*types.TankEntity                 // Массив танков врагов для обратной совместимости
+	enemyInputAdapters     []interfaces.IInputAdapter          // AI input адаптеры для врагов
+	tilesUseCasesWithAnims *use_cases.TilesUseCases            // Общий tilesUseCases для всех анимаций
+	aiContext              *types.GameAiContext                // AI контекст для всех адаптеров
 }
 
 // NewGameStateUseCasesFacade создает фасад для оркестрации use cases игрового состояния
@@ -98,16 +103,39 @@ func NewGameStateUseCasesFacade(
 		bulletTilesUseCases,
 	)
 
-	// Создаем use case с внедренными сервисами
-	playerUseCases := use_cases.NewTankUseCases(
-		gameRepo.TanksRepository(),
+	// Создаем танк игрока
+	playerTank := &types.TankEntity{
+		Position:  playerSpawner,
+		Speed:     0,
+		Direction: types.DirectionUp,
+		State:     types.TankStateSpawning,
+		Altitude:  types.SURFACE,
+	}
+	gameRepo.TanksRepository().AddTank(playerTank)
+
+	// Создаем TankRenderUseCases для игрока
+	playerRenderUseCases := use_cases.NewTankRenderUseCases()
+
+	// Создаем TankLifecycleUseCases для игрока
+	playerLifecycle := use_cases.NewTankLifecycleUseCases(
+		tilesUseCasesWithAnimations,
+		playerRenderUseCases,
+	)
+
+	playerUseCases := use_cases.NewTankCommonUseCases(
 		bulletUseCases,
 		tilesUseCasesWithAnimations,
-		playerSpawner,
-		types.DirectionUp,
 		tankBrakingService,
 		coordinateService,
 	)
+
+	// Создаем TankActionsUseCases для игрока (для Stop в коллизиях)
+	playerTankActions := use_cases.NewTankActionsUseCases(
+		tankBrakingService,
+		coordinateService,
+		bulletUseCases,
+	)
+
 	mapUseCases := use_cases.NewMapUseCases(gameRepo.BlocksRepository())
 
 	// Создаем AI контекст
@@ -132,9 +160,11 @@ func NewGameStateUseCasesFacade(
 	}
 
 	// Создаем до 3 врагов
-	enemyUseCasesList := make([]*use_cases.TankUseCases, 0, 3)
+	enemyUseCasesList := make([]interfaces.ITankCommonUseCases, 0, 3)
+	enemyRenderUseCasesList := make([]interfaces.ITankRenderUseCases, 0, 3)
+	enemyLifecyclesList := make([]interfaces.ITankLifecycleUseCases, 0, 3)
 	enemyInputAdapters := make([]interfaces.IInputAdapter, 0, 3)
-	enemyTanks := make([]*types.TankEntity, 0, 3)
+	enemyTanksEntities := make([]*types.TankEntity, 0, 3)
 
 	for i, spawner := range gameConfig.EnemySpawners {
 		if i >= 3 { // Максимум 3 врага
@@ -150,32 +180,57 @@ func NewGameStateUseCasesFacade(
 			Y: float64(spawner[1]) * use_cases.TankSpriteSize,
 		}
 
-		// Создаем TankUseCases для врага с внедренными сервисами
-		enemyTankUseCases := use_cases.NewTankUseCases(
-			gameRepo.TanksRepository(),
+		// Создаем танк врага
+		enemyTank := &types.TankEntity{
+			Position:  position,
+			Speed:     0,
+			Direction: types.DirectionDown,
+			State:     types.TankStateSpawning,
+			Altitude:  types.SURFACE,
+		}
+		gameRepo.TanksRepository().AddTank(enemyTank)
+
+		// Создаем TankRenderUseCases для врага
+		enemyRenderUseCases := use_cases.NewTankRenderUseCases()
+
+		// Создаем TankLifecycleUseCases для врага
+		enemyLifecycle := use_cases.NewTankLifecycleUseCases(
+			tilesUseCasesWithAnimations,
+			enemyRenderUseCases,
+		)
+
+		enemyUseCases := use_cases.NewTankCommonUseCases(
 			bulletUseCases,
 			tilesUseCasesWithAnimations,
-			position,
-			types.DirectionDown,
 			tankBrakingService,
 			coordinateService,
 		)
 
-		// Создаем танк врага
-		err := enemyTankUseCases.StartSpawn()
+		// Запускаем спавн танка врага через lifecycle
+		err := enemyLifecycle.Spawn(enemyTank)
 		if err != nil {
 			return nil, err
 		}
 
-		// Получаем танк врага для добавления в список
-		enemyTank := enemyTankUseCases.GetTank()
+		enemyTanksEntities = append(enemyTanksEntities, enemyTank)
+		enemyUseCasesList = append(enemyUseCasesList, enemyUseCases)
+		enemyRenderUseCasesList = append(
+			enemyRenderUseCasesList,
+			enemyRenderUseCases,
+		)
+		enemyLifecyclesList = append(enemyLifecyclesList, enemyLifecycle)
 
-		enemyTanks = append(enemyTanks, enemyTank)
-		enemyUseCasesList = append(enemyUseCasesList, enemyTankUseCases)
+		// Создаем TankActionsUseCases для AI инпут-адаптера врага
+		enemyTankActions := use_cases.NewTankActionsUseCases(
+			tankBrakingService,
+			coordinateService,
+			bulletUseCases,
+		)
 
-		// Создаем AI input адаптер для этого врага с поддержкой Lua
+		// Создаем AI input адаптер для этого врага
 		aiInputAdapter, err := input_adapters.NewAiInputAdapter(
-			enemyTankUseCases,
+			enemyTankActions,
+			enemyTank,
 			aiContext,
 			updateInterval,
 			enemyScript,
@@ -186,15 +241,6 @@ func NewGameStateUseCasesFacade(
 		enemyInputAdapters = append(enemyInputAdapters, aiInputAdapter)
 	}
 
-	// Конвертируем enemyUseCasesList в []ITankUseCasesRef
-	enemyUseCasesRefs := make(
-		[]interfaces.ITankUseCasesRef,
-		len(enemyUseCasesList),
-	)
-	for i, uc := range enemyUseCasesList {
-		enemyUseCasesRefs[i] = uc
-	}
-
 	// Создаем временный BulletCollisionService с заглушкой для CheckColliders
 	tempBulletCollisionService := services.NewBulletCollisionService(
 		use_cases.TileMinSize,
@@ -203,13 +249,18 @@ func NewGameStateUseCasesFacade(
 		},
 	)
 
+	// Преобразуем []*TankCommonUseCases в []*TankCommonUseCases для CollisionUseCases
+	enemyUseCasesRefs := enemyUseCasesList
+
 	// Создаем CollisionUseCases первый раз для получения CheckColliders
 	collisionUseCases := use_cases.NewCollisionUseCasesWithEnemies(
 		bulletUseCases,
-		playerUseCases,
+		playerTank,
+		playerTankActions,
 		mapUseCases,
-		enemyTanks,
+		enemyTanksEntities,
 		enemyUseCasesRefs,
+		enemyLifecyclesList,
 		boundaryCollisionService,
 		wallCollisionService,
 		tempBulletCollisionService,
@@ -226,10 +277,12 @@ func NewGameStateUseCasesFacade(
 	// Пересоздаем CollisionUseCases с правильным BulletCollisionService
 	collisionUseCases = use_cases.NewCollisionUseCasesWithEnemies(
 		bulletUseCases,
-		playerUseCases,
+		playerTank,
+		playerTankActions,
 		mapUseCases,
-		enemyTanks,
+		enemyTanksEntities,
 		enemyUseCasesRefs,
+		enemyLifecyclesList,
 		boundaryCollisionService,
 		wallCollisionService,
 		bulletCollisionService,
@@ -237,11 +290,16 @@ func NewGameStateUseCasesFacade(
 
 	return &GameStateUseCasesFacade{
 		playerUseCases:         playerUseCases,
+		playerRenderUseCases:   playerRenderUseCases,
+		playerLifecycle:        playerLifecycle,
+		playerTank:             playerTank,
 		bulletUseCases:         bulletUseCases,
 		mapUseCases:            mapUseCases,
 		collisionUseCases:      collisionUseCases,
 		enemyUseCases:          enemyUseCasesList,
-		enemyTanks:             enemyTanks,
+		enemyRenderUseCases:    enemyRenderUseCasesList,
+		enemyLifecycles:        enemyLifecyclesList,
+		enemyTanksEntities:     enemyTanksEntities,
 		enemyInputAdapters:     enemyInputAdapters,
 		tilesUseCasesWithAnims: tilesUseCasesWithAnimations,
 		aiContext:              aiContext,
@@ -251,23 +309,41 @@ func NewGameStateUseCasesFacade(
 // Update обновляет игровое состояние
 func (g *GameStateUseCasesFacade) Update(dt float64) {
 	// Обновляем игрока
-	tank := g.playerUseCases.GetTank()
-	if tank != nil {
-		g.playerUseCases.Update(dt)
+	if g.playerUseCases != nil {
+		playerTank := g.playerTank
+		if playerTank != nil {
+			if err := g.playerUseCases.Update(playerTank, dt); err != nil {
+				// Ошибка обновления игнорируется
+				_ = err
+			}
+		}
 	}
 
 	// Обновляем контекст AI с данными об игроке, врагах и пулях
 	if g.aiContext != nil {
 		bullets := g.bulletUseCases.GetBullets()
-		g.aiContext.Player = tank
-		g.aiContext.Enemies = g.enemyTanks
+		g.aiContext.Player = g.playerTank
+		g.aiContext.Enemies = g.enemyTanksEntities
 		g.aiContext.Bullets = bullets
 	}
 
-	// Обновляем AI input адаптеры врагов (они сами управляют движением)
+	// Обновляем AI input адаптеры врагов (принимают решения о движении)
 	for _, adapter := range g.enemyInputAdapters {
 		if adapter != nil {
 			adapter.Update(dt)
+		}
+	}
+
+	// Обновляем движение врагов
+	for i, enemyUseCases := range g.enemyUseCases {
+		if enemyUseCases != nil {
+			enemyTank := g.enemyTanksEntities[i]
+			if enemyTank != nil {
+				if err := enemyUseCases.Update(enemyTank, dt); err != nil {
+					// Ошибка обновления игнорируется
+					_ = err
+				}
+			}
 		}
 	}
 
@@ -287,15 +363,22 @@ func (g *GameStateUseCasesFacade) UpdateAnimations() {
 
 // UpdateTankSpawn обновляет процесс спавна танка
 func (g *GameStateUseCasesFacade) UpdateTankSpawn(currentTime float64) {
-	g.playerUseCases.IsSpawnFinished(currentTime)
-	g.playerUseCases.IsExplosionFinished()
+	if g.playerLifecycle != nil && g.playerTank != nil {
+		g.playerLifecycle.IsSpawnFinished(g.playerTank, currentTime)
+		g.playerLifecycle.IsExplosionFinished(g.playerTank)
+	}
 }
 
 // UpdateEnemiesSpawn обновляет процесс спавна врагов
 func (g *GameStateUseCasesFacade) UpdateEnemiesSpawn(currentTime float64) {
-	for _, enemyUseCases := range g.enemyUseCases {
-		enemyUseCases.IsSpawnFinished(currentTime)
-		enemyUseCases.IsExplosionFinished()
+	for i, enemyLifecycle := range g.enemyLifecycles {
+		if enemyLifecycle != nil && i < len(g.enemyTanksEntities) {
+			enemyTank := g.enemyTanksEntities[i]
+			if enemyTank != nil {
+				enemyLifecycle.IsSpawnFinished(enemyTank, currentTime)
+				enemyLifecycle.IsExplosionFinished(enemyTank)
+			}
+		}
 	}
 }
 
@@ -307,20 +390,24 @@ func (g *GameStateUseCasesFacade) UpdateEnemiesAnimations() {
 
 // StartTankSpawn запускает спавн танка игрока
 func (g *GameStateUseCasesFacade) StartTankSpawn(spawnStartTime float64) {
-	// Создаем танк игрока через TankUseCases
-	err := g.playerUseCases.StartSpawn()
-	if err != nil {
-		panic(err)
-	}
+	if g.playerLifecycle != nil && g.playerTank != nil {
+		err := g.playerLifecycle.Spawn(g.playerTank)
+		if err != nil {
+			panic(err)
+		}
 
-	// Устанавливаем время спавна
-	tank := g.playerUseCases.GetTank()
-	tank.SpawnedAt = spawnStartTime
+		// Устанавливаем время спавна
+		g.playerTank.SpawnedAt = spawnStartTime
+	}
 }
 
 // Getter методы для доступа к use cases
-func (g *GameStateUseCasesFacade) TankUseCases() *use_cases.TankUseCases {
+func (g *GameStateUseCasesFacade) TankUseCases() interfaces.ITankCommonUseCases {
 	return g.playerUseCases
+}
+
+func (g *GameStateUseCasesFacade) GetPlayerTank() *types.TankEntity {
+	return g.playerTank
 }
 
 func (g *GameStateUseCasesFacade) BulletUseCases() *use_cases.BulletUseCases {
@@ -336,13 +423,17 @@ func (g *GameStateUseCasesFacade) CollisionUseCases() *use_cases.CollisionUseCas
 }
 
 func (g *GameStateUseCasesFacade) GetEnemyTanks() []*types.TankEntity {
-	return g.enemyTanks
+	return g.enemyTanksEntities
 }
 
-func (g *GameStateUseCasesFacade) GetEnemyUseCases() []interfaces.ITankUseCasesRef {
-	result := make([]interfaces.ITankUseCasesRef, len(g.enemyUseCases))
-	for i, uc := range g.enemyUseCases {
-		result[i] = uc
-	}
-	return result
+func (g *GameStateUseCasesFacade) GetEnemyUseCases() []interfaces.ITankCommonUseCases {
+	return g.enemyUseCases
+}
+
+func (g *GameStateUseCasesFacade) PlayerRenderUseCases() interfaces.ITankRenderUseCases {
+	return g.playerRenderUseCases
+}
+
+func (g *GameStateUseCasesFacade) GetEnemyRenderUseCases() []interfaces.ITankRenderUseCases {
+	return g.enemyRenderUseCases
 }

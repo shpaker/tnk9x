@@ -9,6 +9,7 @@ import "github.com/shpaker/gonflict/internal/types"
 // ITankBrakingService интерфейс для сервиса торможения танков
 type ITankBrakingService interface {
 	HandleBrakingState(tank *types.TankEntity, dt float64) error
+	HandleRotateWhileBraking(tank *types.TankEntity, direction types.Direction)
 }
 
 // ICoordinateService интерфейс для сервиса работы с координатами

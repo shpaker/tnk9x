@@ -1,8 +1,6 @@
 package input_adapters
 
 import (
-	"log"
-
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 
@@ -12,17 +10,19 @@ import (
 
 // KeyboardInputAdapter адаптер для обработки пользовательского ввода с клавиатуры
 type KeyboardInputAdapter struct {
-	tankUseCases interfaces.ITankUseCasesRef
-	upButton     ebiten.Key
-	downButton   ebiten.Key
-	leftButton   ebiten.Key
-	rightButton  ebiten.Key
-	shootButton  ebiten.Key
+	tankActions interfaces.ITankActionsUseCases
+	tank        *types.TankEntity
+	upButton    ebiten.Key
+	downButton  ebiten.Key
+	leftButton  ebiten.Key
+	rightButton ebiten.Key
+	shootButton ebiten.Key
 }
 
 // NewKeyboardInputAdapter создает новый экземпляр KeyboardInputAdapter
 func NewKeyboardInputAdapter(
-	tankUseCases interfaces.ITankUseCasesRef,
+	tankActions interfaces.ITankActionsUseCases,
+	tank *types.TankEntity,
 	upButton ebiten.Key,
 	downButton ebiten.Key,
 	leftButton ebiten.Key,
@@ -30,12 +30,13 @@ func NewKeyboardInputAdapter(
 	shootButton ebiten.Key,
 ) *KeyboardInputAdapter {
 	return &KeyboardInputAdapter{
-		tankUseCases: tankUseCases,
-		upButton:     upButton,
-		downButton:   downButton,
-		leftButton:   leftButton,
-		rightButton:  rightButton,
-		shootButton:  shootButton,
+		tankActions: tankActions,
+		tank:        tank,
+		upButton:    upButton,
+		downButton:  downButton,
+		leftButton:  leftButton,
+		rightButton: rightButton,
+		shootButton: shootButton,
 	}
 }
 
@@ -49,36 +50,34 @@ func (a *KeyboardInputAdapter) Update(dt float64) {
 func (a *KeyboardInputAdapter) keyPressedEvents() {
 	// Проверяем нажатие клавиши стрельбы
 	if inpututil.IsKeyJustPressed(a.shootButton) {
-		log.Printf("DEBUG: Shoot button pressed (key: %v)", a.shootButton)
 		a.tankShoot()
 	}
 
-	// Получаем танк
-	tank := a.tankUseCases.GetTank()
-	if tank == nil {
+	// Пропускаем если танка нет
+	if a.tank == nil {
 		return
 	}
 
 	// Rotate the tank if the key is pressed
 	tankRotated := false
 	if ebiten.IsKeyPressed(a.upButton) && !tankRotated {
-		a.tankUseCases.Rotate(types.DirectionUp)
-		a.tankUseCases.Move()
+		a.tankActions.Rotate(a.tank, types.DirectionUp)
+		a.tankActions.Move(a.tank)
 		tankRotated = true
 	}
 	if ebiten.IsKeyPressed(a.downButton) && !tankRotated {
-		a.tankUseCases.Rotate(types.DirectionDown)
-		a.tankUseCases.Move()
+		a.tankActions.Rotate(a.tank, types.DirectionDown)
+		a.tankActions.Move(a.tank)
 		tankRotated = true
 	}
 	if ebiten.IsKeyPressed(a.leftButton) && !tankRotated {
-		a.tankUseCases.Rotate(types.DirectionLeft)
-		a.tankUseCases.Move()
+		a.tankActions.Rotate(a.tank, types.DirectionLeft)
+		a.tankActions.Move(a.tank)
 		tankRotated = true
 	}
 	if ebiten.IsKeyPressed(a.rightButton) && !tankRotated {
-		a.tankUseCases.Rotate(types.DirectionRight)
-		a.tankUseCases.Move()
+		a.tankActions.Rotate(a.tank, types.DirectionRight)
+		a.tankActions.Move(a.tank)
 		// tankRotated = true // Не устанавливаем здесь, так как это последняя проверка
 	}
 }
@@ -86,34 +85,32 @@ func (a *KeyboardInputAdapter) keyPressedEvents() {
 // keyReleasedEvents обрабатывает события отпускания клавиш
 func (a *KeyboardInputAdapter) keyReleasedEvents() {
 	// Stop the tank if the key is released
-	tank := a.tankUseCases.GetTank()
-	if tank == nil {
+	if a.tank == nil {
 		return
 	}
 
 	if inpututil.IsKeyJustReleased(a.upButton) &&
-		tank.Direction == types.DirectionUp {
-		a.tankUseCases.Stop(false)
+		a.tank.Direction == types.DirectionUp {
+		a.tankActions.Stop(a.tank, false)
 	}
 	if inpututil.IsKeyJustReleased(a.downButton) &&
-		tank.Direction == types.DirectionDown {
-		a.tankUseCases.Stop(false)
+		a.tank.Direction == types.DirectionDown {
+		a.tankActions.Stop(a.tank, false)
 	}
 	if inpututil.IsKeyJustReleased(a.leftButton) &&
-		tank.Direction == types.DirectionLeft {
-		a.tankUseCases.Stop(false)
+		a.tank.Direction == types.DirectionLeft {
+		a.tankActions.Stop(a.tank, false)
 	}
 	if inpututil.IsKeyJustReleased(a.rightButton) &&
-		tank.Direction == types.DirectionRight {
-		a.tankUseCases.Stop(false)
+		a.tank.Direction == types.DirectionRight {
+		a.tankActions.Stop(a.tank, false)
 	}
 }
 
 // tankShoot обрабатывает стрельбу танка
 func (a *KeyboardInputAdapter) tankShoot() {
-	log.Printf("DEBUG: tankShoot called")
-	err := a.tankUseCases.Shoot()
-	if err != nil {
-		log.Printf("ERROR: Failed to shoot bullet: %v", err)
+	if a.tank == nil {
+		return
 	}
+	a.tankActions.Shoot(a.tank)
 }

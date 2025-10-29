@@ -3,7 +3,6 @@ package adapters
 import (
 	"image"
 	"image/color"
-	"log"
 	"math"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -18,10 +17,11 @@ import (
 // RendererAdapter адаптер для рендеринга игры
 type RendererAdapter struct {
 	mapUseCases            interfaces.IMapUseCases
-	tankUseCases           interfaces.ITankUseCasesRef
+	playerTank             *types.TankEntity
+	playerRenderUseCases   interfaces.ITankRenderUseCases // Use Cases для графики игрока
 	bulletUseCases         interfaces.IBulletUseCases
-	enemyTanks             []*types.TankEntity           // Массив врагов
-	enemyUseCases          []interfaces.ITankUseCasesRef // Use Cases врагов
+	enemyTanks             []*types.TankEntity              // Массив врагов
+	enemyRenderUseCases    []interfaces.ITankRenderUseCases // Use Cases для графики врагов
 	mapTilesUseCases       *use_cases.TilesUseCases
 	playerTilesUseCases    *use_cases.TilesUseCases
 	bulletTilesUseCases    *use_cases.TilesUseCases
@@ -34,10 +34,11 @@ type RendererAdapter struct {
 // NewRendererAdapter создает новый экземпляр RendererAdapter
 func NewRendererAdapter(
 	mapUseCases interfaces.IMapUseCases,
-	tankUseCases interfaces.ITankUseCasesRef,
+	playerTank *types.TankEntity,
+	playerRenderUseCases interfaces.ITankRenderUseCases,
 	bulletUseCases interfaces.IBulletUseCases,
 	enemyTanks []*types.TankEntity,
-	enemyUseCases []interfaces.ITankUseCasesRef,
+	enemyRenderUseCases []interfaces.ITankRenderUseCases,
 	mapTilesUseCases *use_cases.TilesUseCases,
 	playerTilesUseCases *use_cases.TilesUseCases,
 	bulletTilesUseCases *use_cases.TilesUseCases,
@@ -46,10 +47,11 @@ func NewRendererAdapter(
 ) *RendererAdapter {
 	return &RendererAdapter{
 		mapUseCases:            mapUseCases,
-		tankUseCases:           tankUseCases,
+		playerTank:             playerTank,
+		playerRenderUseCases:   playerRenderUseCases,
 		bulletUseCases:         bulletUseCases,
 		enemyTanks:             enemyTanks,
-		enemyUseCases:          enemyUseCases,
+		enemyRenderUseCases:    enemyRenderUseCases,
 		mapTilesUseCases:       mapTilesUseCases,
 		playerTilesUseCases:    playerTilesUseCases,
 		bulletTilesUseCases:    bulletTilesUseCases,
@@ -62,7 +64,7 @@ func NewRendererAdapter(
 
 // drawTank отрисовывает танк
 func (r *RendererAdapter) drawTank(screen *ebiten.Image) {
-	tank := r.tankUseCases.GetTank()
+	tank := r.playerTank
 	if tank == nil {
 		return
 	}
@@ -78,17 +80,15 @@ func (r *RendererAdapter) drawTank(screen *ebiten.Image) {
 		return
 	}
 
-	// Получаем ID изображения танка
-	imageID, err := r.tankUseCases.GetImageID()
+	// Получаем ID изображения танка через TankRenderUseCases
+	imageID, err := r.playerRenderUseCases.GetImageID()
 	if err != nil {
-		log.Printf("ERROR: Tank error getting image ID: %v", err)
 		return
 	}
 
 	// Получаем изображение танка через TankTilesUseCases
 	imageData, err := r.playerTilesUseCases.GetImage(imageID)
 	if err != nil {
-		log.Printf("ERROR: Tank error loading image '%s': %v", imageID, err)
 		return
 	}
 
@@ -99,12 +99,10 @@ func (r *RendererAdapter) drawTank(screen *ebiten.Image) {
 	rotationAngle := getRotationAngle(tank.Direction)
 	rotatedImg, err := r.imageService.RotateImageByAngle(image, rotationAngle)
 	if err != nil {
-		log.Printf("ERROR: Tank error rotating image: %v", err)
 		return
 	}
 	rotatedImage, ok := rotatedImg.(*ebiten.Image)
 	if !ok {
-		log.Printf("ERROR: Tank error: rotated image is not *ebiten.Image")
 		return
 	}
 
@@ -131,11 +129,6 @@ func (r *RendererAdapter) getCachedImage(
 
 	// Проверяем размер изображения
 	if imageData.Bounds().Dx() == 0 || imageData.Bounds().Dy() == 0 {
-		log.Printf(
-			"ERROR: Image '%s' has zero size (bounds: %s)",
-			imageID,
-			imageData.Bounds(),
-		)
 		// Возвращаем пустое изображение 1x1 вместо nil
 		ebitenImage := ebiten.NewImage(1, 1)
 		return ebitenImage
@@ -167,25 +160,19 @@ func (r *RendererAdapter) drawEnemiesWithoutExplosions(screen *ebiten.Image) {
 			continue
 		}
 
-		// Получаем ID изображения врага через Use Cases
-		if i >= len(r.enemyUseCases) {
+		// Получаем ID изображения врага через TankRenderUseCases
+		if i >= len(r.enemyRenderUseCases) {
 			continue
 		}
-		enemyUseCases := r.enemyUseCases[i]
-		imageID, err := enemyUseCases.GetImageID()
+		enemyRenderUseCases := r.enemyRenderUseCases[i]
+		imageID, err := enemyRenderUseCases.GetImageID()
 		if err != nil {
-			log.Printf("ERROR: Enemy error getting image ID: %v", err)
 			continue
 		}
 
 		// Получаем изображение через TilesUseCases
 		imageData, err := r.playerTilesUseCases.GetImage(imageID)
 		if err != nil {
-			log.Printf(
-				"ERROR: Enemy error loading image '%s': %v",
-				imageID,
-				err,
-			)
 			continue
 		}
 
@@ -217,25 +204,19 @@ func (r *RendererAdapter) drawEnemiesExplosions(screen *ebiten.Image) {
 			continue
 		}
 
-		// Получаем ID изображения взрыва через Use Cases
-		if i >= len(r.enemyUseCases) {
+		// Получаем ID изображения взрыва через TankRenderUseCases
+		if i >= len(r.enemyRenderUseCases) {
 			continue
 		}
-		enemyUseCases := r.enemyUseCases[i]
-		imageID, err := enemyUseCases.GetImageID()
+		enemyRenderUseCases := r.enemyRenderUseCases[i]
+		imageID, err := enemyRenderUseCases.GetImageID()
 		if err != nil {
-			log.Printf("ERROR: Enemy explosion error getting image ID: %v", err)
 			continue
 		}
 
 		// Получаем изображение через explosion tileset
 		imageData, err := r.explosionTilesUseCases.GetImage(imageID)
 		if err != nil {
-			log.Printf(
-				"ERROR: Enemy explosion error loading image '%s': %v",
-				imageID,
-				err,
-			)
 			continue
 		}
 
@@ -246,7 +227,7 @@ func (r *RendererAdapter) drawEnemiesExplosions(screen *ebiten.Image) {
 
 		// Применяем offset если это анимация
 		var offsetX, offsetY float64 = 0, 0
-		if animGetter := enemyUseCases.GetAnimationGetter(); animGetter != nil {
+		if animGetter := enemyRenderUseCases.GetAnimationGetter(); animGetter != nil {
 			if tileAnim, ok := animGetter.(*types.TileAnimationEntity); ok {
 				offsetX = tileAnim.Offset[0]
 				offsetY = tileAnim.Offset[1]
@@ -268,30 +249,21 @@ func (r *RendererAdapter) drawEnemySpawnAnimation(
 	enemy *types.TankEntity,
 	enemyIndex int,
 ) {
-	// Получаем Use Cases для этого врага
-	if enemyIndex >= len(r.enemyUseCases) {
+	// Получаем TankRenderUseCases для этого врага
+	if enemyIndex >= len(r.enemyRenderUseCases) {
 		return
 	}
-	enemyUseCases := r.enemyUseCases[enemyIndex]
+	enemyRenderUseCases := r.enemyRenderUseCases[enemyIndex]
 
-	// Получаем ID изображения анимации спавна через Use Cases
-	imageID, err := enemyUseCases.GetImageID()
+	// Получаем ID изображения анимации спавна через TankRenderUseCases
+	imageID, err := enemyRenderUseCases.GetImageID()
 	if err != nil {
-		log.Printf(
-			"ERROR: Enemy spawn animation error getting image ID: %v",
-			err,
-		)
 		return
 	}
 
 	// Получаем изображение через TilesUseCases
 	imageData, err := r.spawnerTilesUseCases.GetImage(imageID)
 	if err != nil {
-		log.Printf(
-			"ERROR: Enemy spawn animation error loading image '%s': %v",
-			imageID,
-			err,
-		)
 		return
 	}
 
@@ -312,21 +284,15 @@ func (r *RendererAdapter) drawSpawnAnimation(
 	screen *ebiten.Image,
 	tank *types.TankEntity,
 ) {
-	// Получаем ID изображения анимации спавна через TankUseCases
-	imageID, err := r.tankUseCases.GetImageID()
+	// Получаем ID изображения анимации спавна через TankRenderUseCases
+	imageID, err := r.playerRenderUseCases.GetImageID()
 	if err != nil {
-		log.Printf("ERROR: Spawn animation error getting image ID: %v", err)
 		return
 	}
 
 	// Получаем изображение анимации спавна через SpawnerTilesUseCases
 	imageData, err := r.spawnerTilesUseCases.GetImage(imageID)
 	if err != nil {
-		log.Printf(
-			"ERROR: Spawn animation error loading image '%s': %v",
-			imageID,
-			err,
-		)
 		return
 	}
 
@@ -364,28 +330,17 @@ func getRotationAngle(direction types.Direction) float64 {
 func (r *RendererAdapter) drawBullets(screen *ebiten.Image) {
 	bullets := r.bulletUseCases.GetBullets()
 
-	for i, bullet := range bullets {
+	for _, bullet := range bullets {
 		if bullet.ImageGetter != nil {
 			// Получаем ID изображения пули
 			imageID, err := bullet.ImageGetter.GetImageID()
 			if err != nil {
-				log.Printf(
-					"ERROR: Bullet %d error getting image ID: %v",
-					i,
-					err,
-				)
 				continue
 			}
 
 			// Получаем изображение пули через BulletTilesUseCases
 			imageData, err := r.bulletTilesUseCases.GetImage(imageID)
 			if err != nil {
-				log.Printf(
-					"ERROR: Bullet %d error loading image '%s': %v",
-					i,
-					imageID,
-					err,
-				)
 				continue
 			}
 
@@ -399,15 +354,10 @@ func (r *RendererAdapter) drawBullets(screen *ebiten.Image) {
 				rotationAngle,
 			)
 			if err != nil {
-				log.Printf("ERROR: Bullet %d error rotating image: %v", i, err)
 				continue
 			}
 			rotatedImage, ok := rotatedImg.(*ebiten.Image)
 			if !ok {
-				log.Printf(
-					"ERROR: Bullet %d error: rotated image is not *ebiten.Image",
-					i,
-				)
 				continue
 			}
 
@@ -420,8 +370,6 @@ func (r *RendererAdapter) drawBullets(screen *ebiten.Image) {
 			op.GeoM.Translate(screenX, screenY)
 
 			screen.DrawImage(rotatedImage, op)
-		} else {
-			log.Printf("WARNING: Bullet %d has nil ImageGetter", i)
 		}
 	}
 }
@@ -480,7 +428,7 @@ func (r *RendererAdapter) drawBlocksByAltitude(
 	altitude types.Altitude,
 ) {
 	blocks := r.mapUseCases.GetBlocks()
-	for i, block := range blocks {
+	for _, block := range blocks {
 		// Пропускаем блоки других уровней
 		if block.Altitude != altitude {
 			continue
@@ -489,19 +437,12 @@ func (r *RendererAdapter) drawBlocksByAltitude(
 		// Получаем ID изображения блока
 		imageID, err := block.ImageGetter.GetImageID()
 		if err != nil {
-			log.Printf("ERROR: Block %d error getting image ID: %v", i, err)
 			continue
 		}
 
 		// Получаем изображение блока через TilesUseCases
 		imageData, err := r.mapTilesUseCases.GetImage(imageID)
 		if err != nil {
-			log.Printf(
-				"ERROR: Block %d error loading image '%s': %v",
-				i,
-				imageID,
-				err,
-			)
 			continue
 		}
 

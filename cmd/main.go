@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"log"
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -14,7 +14,8 @@ func main() {
 	// Загружаем конфигурацию
 	cfg, err := internal.LoadConfig()
 	if err != nil {
-		log.Fatalf("Failed to load config: %v", err)
+		fmt.Fprintf(os.Stderr, "Failed to load config: %v\n", err)
+		os.Exit(1)
 	}
 
 	// Создаем приложение
@@ -30,8 +31,6 @@ func main() {
 
 	// Запускаем приложение
 	if err := application.Run(ctx); err != nil {
-		log.Fatalf("Application failed: %v", err)
+		os.Exit(1)
 	}
-
-	log.Println("Application stopped gracefully")
 }
