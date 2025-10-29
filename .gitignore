@@ -1,7 +1,6 @@
 *.zip
 *.bak*
 dist/
-docs/
 _assets/
 
 # Binaries for programs and plugins
