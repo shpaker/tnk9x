@@ -5,18 +5,18 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/shpaker/gonflict/internal/repositories/raw"
+	"github.com/shpaker/gonflict/internal/interfaces"
 	"github.com/shpaker/gonflict/internal/types"
 )
 
 type MapsDataRepository struct {
-	fileRepo    raw.IFileRepository
-	tilesetRepo ITilesetRepository
+	fileRepo    interfaces.IFileRepository
+	tilesetRepo interfaces.ITilesetRepository
 }
 
 func NewMapsDataRepository(
-	fileRepo raw.IFileRepository,
-	tilesetRepo ITilesetRepository,
+	fileRepo interfaces.IFileRepository,
+	tilesetRepo interfaces.ITilesetRepository,
 ) *MapsDataRepository {
 	return &MapsDataRepository{
 		fileRepo:    fileRepo,

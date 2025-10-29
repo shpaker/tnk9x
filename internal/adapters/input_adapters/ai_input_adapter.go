@@ -5,13 +5,14 @@ import (
 
 	lua "github.com/yuin/gopher-lua"
 
+	"github.com/shpaker/gonflict/internal/interfaces"
 	"github.com/shpaker/gonflict/internal/types"
 	"github.com/shpaker/gonflict/internal/use_cases"
 )
 
 // AiInputAdapter адаптер для работы с AI через Lua скрипты
 type AiInputAdapter struct {
-	tankUseCases   use_cases.ITankUseCasesRef
+	tankUseCases   interfaces.ITankUseCasesRef
 	aiContext      *types.GameAiContext
 	updateInterval int
 	tickCounter    int
@@ -20,7 +21,7 @@ type AiInputAdapter struct {
 
 // NewAiInputAdapter создает новый AI адаптер
 func NewAiInputAdapter(
-	tankUseCases use_cases.ITankUseCasesRef,
+	tankUseCases interfaces.ITankUseCasesRef,
 	aiContext *types.GameAiContext,
 	updateInterval int,
 	script string,

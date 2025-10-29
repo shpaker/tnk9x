@@ -6,19 +6,19 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/shpaker/gonflict/internal/repositories/raw"
+	"github.com/shpaker/gonflict/internal/interfaces"
 	"github.com/shpaker/gonflict/internal/types"
 )
 
 type TilesetDataRepository struct {
-	fileRepo         raw.IFileRepository
+	fileRepo         interfaces.IFileRepository
 	imagesCache      map[string]image.Image
 	animationsData   map[string]types.AnimationData
 	animationsConfig map[string]types.AnimationConfig // Храним полную конфигурацию
 }
 
 func NewTilesetDataRepository(
-	fileRepo raw.IFileRepository,
+	fileRepo interfaces.IFileRepository,
 	tilesetName string,
 ) (*TilesetDataRepository, error) {
 	// Загружаем конфигурацию тайлсета

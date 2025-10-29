@@ -3,20 +3,20 @@ package use_cases
 import (
 	"log"
 
-	"github.com/shpaker/gonflict/internal/repositories/game"
+	"github.com/shpaker/gonflict/internal/interfaces"
 	"github.com/shpaker/gonflict/internal/types"
 )
 
 // BulletUseCases реализация интерфейса BulletUseCases
 type BulletUseCases struct {
-	bulletsRepo   game.IBulletsRepository
-	tilesUseCases ITilesUseCases
+	bulletsRepo   interfaces.IBulletsRepository
+	tilesUseCases interfaces.ITilesUseCases
 }
 
 // NewBulletUseCases создает новый экземпляр BulletUseCases
 func NewBulletUseCases(
-	bulletsRepo game.IBulletsRepository,
-	tilesUseCases ITilesUseCases,
+	bulletsRepo interfaces.IBulletsRepository,
+	tilesUseCases interfaces.ITilesUseCases,
 ) *BulletUseCases {
 	return &BulletUseCases{
 		bulletsRepo:   bulletsRepo,

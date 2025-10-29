@@ -9,6 +9,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 
+	"github.com/shpaker/gonflict/internal/interfaces"
 	"github.com/shpaker/gonflict/internal/services"
 	"github.com/shpaker/gonflict/internal/types"
 	"github.com/shpaker/gonflict/internal/use_cases"
@@ -16,11 +17,11 @@ import (
 
 // RendererAdapter адаптер для рендеринга игры
 type RendererAdapter struct {
-	mapUseCases            use_cases.IMapUseCases
-	tankUseCases           use_cases.ITankUseCasesRef
-	bulletUseCases         use_cases.IBulletUseCases
-	enemyTanks             []*types.TankEntity          // Массив врагов
-	enemyUseCases          []use_cases.ITankUseCasesRef // Use Cases врагов
+	mapUseCases            interfaces.IMapUseCases
+	tankUseCases           interfaces.ITankUseCasesRef
+	bulletUseCases         interfaces.IBulletUseCases
+	enemyTanks             []*types.TankEntity           // Массив врагов
+	enemyUseCases          []interfaces.ITankUseCasesRef // Use Cases врагов
 	mapTilesUseCases       *use_cases.TilesUseCases
 	playerTilesUseCases    *use_cases.TilesUseCases
 	bulletTilesUseCases    *use_cases.TilesUseCases
@@ -32,11 +33,11 @@ type RendererAdapter struct {
 
 // NewRendererAdapter создает новый экземпляр RendererAdapter
 func NewRendererAdapter(
-	mapUseCases use_cases.IMapUseCases,
-	tankUseCases use_cases.ITankUseCasesRef,
-	bulletUseCases use_cases.IBulletUseCases,
+	mapUseCases interfaces.IMapUseCases,
+	tankUseCases interfaces.ITankUseCasesRef,
+	bulletUseCases interfaces.IBulletUseCases,
 	enemyTanks []*types.TankEntity,
-	enemyUseCases []use_cases.ITankUseCasesRef,
+	enemyUseCases []interfaces.ITankUseCasesRef,
 	mapTilesUseCases *use_cases.TilesUseCases,
 	playerTilesUseCases *use_cases.TilesUseCases,
 	bulletTilesUseCases *use_cases.TilesUseCases,
@@ -96,9 +97,14 @@ func (r *RendererAdapter) drawTank(screen *ebiten.Image) {
 
 	// Поворачиваем изображение в зависимости от направления танка
 	rotationAngle := getRotationAngle(tank.Direction)
-	rotatedImage, err := r.imageService.RotateImageByAngle(image, rotationAngle)
+	rotatedImg, err := r.imageService.RotateImageByAngle(image, rotationAngle)
 	if err != nil {
 		log.Printf("ERROR: Tank error rotating image: %v", err)
+		return
+	}
+	rotatedImage, ok := rotatedImg.(*ebiten.Image)
+	if !ok {
+		log.Printf("ERROR: Tank error: rotated image is not *ebiten.Image")
 		return
 	}
 
@@ -187,7 +193,11 @@ func (r *RendererAdapter) drawEnemiesWithoutExplosions(screen *ebiten.Image) {
 		img := r.getCachedImage(imageID, imageData)
 
 		// Поворачиваем изображение в зависимости от направления
-		rotatedImage := r.imageService.RotateImage(img, enemy.Direction)
+		rotatedImg := r.imageService.RotateImage(img, enemy.Direction)
+		rotatedImage, ok := rotatedImg.(*ebiten.Image)
+		if !ok {
+			rotatedImage = img
+		}
 
 		op := &ebiten.DrawImageOptions{}
 		op.GeoM.Translate(
@@ -384,12 +394,20 @@ func (r *RendererAdapter) drawBullets(screen *ebiten.Image) {
 
 			// Поворачиваем изображение в зависимости от направления пули
 			rotationAngle := getRotationAngle(bullet.Direction)
-			rotatedImage, err := r.imageService.RotateImageByAngle(
+			rotatedImg, err := r.imageService.RotateImageByAngle(
 				image,
 				rotationAngle,
 			)
 			if err != nil {
 				log.Printf("ERROR: Bullet %d error rotating image: %v", i, err)
+				continue
+			}
+			rotatedImage, ok := rotatedImg.(*ebiten.Image)
+			if !ok {
+				log.Printf(
+					"ERROR: Bullet %d error: rotated image is not *ebiten.Image",
+					i,
+				)
 				continue
 			}
 

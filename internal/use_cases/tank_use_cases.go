@@ -4,21 +4,20 @@ import (
 	"errors"
 	"log"
 
-	"github.com/shpaker/gonflict/internal/repositories/game"
-	"github.com/shpaker/gonflict/internal/services"
+	"github.com/shpaker/gonflict/internal/interfaces"
 	"github.com/shpaker/gonflict/internal/types"
 )
 
 // TankUseCases предоставляет базовые операции для работы с танками
 type TankUseCases struct {
-	tanksRepo         game.ITanksRepository
-	bulletUseCases    IBulletUseCases              // Use Cases пуль
-	tilesUseCases     *TilesUseCases               // Для всех анимаций (спавн, взрыв, танк)
-	spawnAt           types.Position               // Координаты спавна игрока
-	tank              types.TankEntity             // Танк
-	animationGetter   types.IImageIDGetter         // Анимация танка
-	brakingService    *services.TankBrakingService // Сервис торможения танка
-	coordinateService *services.CoordinateService  // Сервис для работы с координатами
+	tanksRepo         interfaces.ITanksRepository
+	bulletUseCases    interfaces.IBulletUseCases     // Use Cases пуль
+	tilesUseCases     *TilesUseCases                 // Для всех анимаций (спавн, взрыв, танк)
+	spawnAt           types.Position                 // Координаты спавна игрока
+	tank              types.TankEntity               // Танк
+	animationGetter   types.IImageIDGetter           // Анимация танка
+	brakingService    interfaces.ITankBrakingService // Сервис торможения танка
+	coordinateService interfaces.ICoordinateService  // Сервис для работы с координатами
 }
 
 // ============================================================================
@@ -27,11 +26,13 @@ type TankUseCases struct {
 
 // NewTankUseCases создает новый экземпляр TankUseCases
 func NewTankUseCases(
-	tanksRepo game.ITanksRepository,
-	bulletUseCases IBulletUseCases,
+	tanksRepo interfaces.ITanksRepository,
+	bulletUseCases interfaces.IBulletUseCases,
 	tilesUseCases *TilesUseCases,
 	spawnAt types.Position,
 	direction types.Direction,
+	brakingService interfaces.ITankBrakingService,
+	coordinateService interfaces.ICoordinateService,
 ) *TankUseCases {
 	// Создаем танк
 	tank := &types.TankEntity{
@@ -49,13 +50,22 @@ func NewTankUseCases(
 		spawnAt:           spawnAt,
 		tank:              *tank,
 		animationGetter:   nil,
-		brakingService:    nil, // Инициализируется после добавления танка в репозиторий
-		coordinateService: services.NewCoordinateService(),
+		brakingService:    brakingService,
+		coordinateService: coordinateService,
 	}
 	uc.tanksRepo.AddTank(&uc.tank)
-	// Инициализируем сервис торможения после создания танка
-	uc.brakingService = services.NewTankBrakingService(&uc.tank)
 	return uc
+}
+
+// ============================================================================
+// УПРАВЛЕНИЕ СЕРВИСАМИ
+// ============================================================================
+
+// SetBrakingService устанавливает сервис торможения
+func (uc *TankUseCases) SetBrakingService(
+	brakingService interfaces.ITankBrakingService,
+) {
+	uc.brakingService = brakingService
 }
 
 // ============================================================================
@@ -110,7 +120,10 @@ func (uc *TankUseCases) Update(
 
 	// Обрабатываем состояние Braking отдельно
 	if uc.tank.State == types.TankStateBraking {
-		return uc.brakingService.HandleBrakingState(dt)
+		if uc.brakingService == nil {
+			return errors.New("brakingService is not initialized")
+		}
+		return uc.brakingService.HandleBrakingState(&uc.tank, dt)
 	}
 
 	delta := uc.tank.Speed * dt
@@ -290,10 +303,8 @@ func (uc *TankUseCases) IsSpawnFinished(currentTime float64) {
 		if anim, ok := uc.animationGetter.(*types.TileAnimationEntity); ok {
 			if anim.IsFinished() {
 				// Завершаем спавн - устанавливаем анимацию танка
-				tankTilesUseCases := NewTilesUseCases(
-					uc.tilesUseCases.tilesRepository,
-				)
-				tankAnimation, err := tankTilesUseCases.CreateAnimationTile(
+				// Используем существующий tilesUseCases для создания анимации
+				tankAnimation, err := uc.tilesUseCases.CreateAnimationTile(
 					"base_tank",
 				)
 				if err == nil {

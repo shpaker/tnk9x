@@ -3,21 +3,21 @@ package processed
 import (
 	"fmt"
 
-	"github.com/shpaker/gonflict/internal/repositories/raw"
+	"github.com/shpaker/gonflict/internal/interfaces"
 )
 
 // TilesetRepositoryRegistry содержит все репозитории тайлсетов
 type TilesetRepositoryRegistry struct {
-	blocks    ITilesetRepository
-	player    ITilesetRepository
-	bullet    ITilesetRepository
-	spawner   ITilesetRepository
-	explosion ITilesetRepository
+	blocks    interfaces.ITilesetRepository
+	player    interfaces.ITilesetRepository
+	bullet    interfaces.ITilesetRepository
+	spawner   interfaces.ITilesetRepository
+	explosion interfaces.ITilesetRepository
 }
 
 // NewTilesetRepositoryRegistry создает новый реестр тайлсетов
 func NewTilesetRepositoryRegistry(
-	fileRepo raw.IFileRepository,
+	fileRepo interfaces.IFileRepository,
 ) (*TilesetRepositoryRegistry, error) {
 	// Создаем репозиторий для блоков
 	blocksRepo, err := NewTilesetDataRepository(fileRepo, "tiles/blocks")
@@ -59,26 +59,26 @@ func NewTilesetRepositoryRegistry(
 }
 
 // Blocks возвращает репозиторий тайлсетов для блоков
-func (tr *TilesetRepositoryRegistry) Blocks() ITilesetRepository {
+func (tr *TilesetRepositoryRegistry) Blocks() interfaces.ITilesetRepository {
 	return tr.blocks
 }
 
 // Player возвращает репозиторий тайлсетов для игрока
-func (tr *TilesetRepositoryRegistry) Player() ITilesetRepository {
+func (tr *TilesetRepositoryRegistry) Player() interfaces.ITilesetRepository {
 	return tr.player
 }
 
 // Bullet возвращает репозиторий тайлсетов для пуль
-func (tr *TilesetRepositoryRegistry) Bullet() ITilesetRepository {
+func (tr *TilesetRepositoryRegistry) Bullet() interfaces.ITilesetRepository {
 	return tr.bullet
 }
 
 // Spawner возвращает репозиторий тайлсетов для спавна
-func (tr *TilesetRepositoryRegistry) Spawner() ITilesetRepository {
+func (tr *TilesetRepositoryRegistry) Spawner() interfaces.ITilesetRepository {
 	return tr.spawner
 }
 
 // Explosion возвращает репозиторий тайлсетов для взрыва
-func (tr *TilesetRepositoryRegistry) Explosion() ITilesetRepository {
+func (tr *TilesetRepositoryRegistry) Explosion() interfaces.ITilesetRepository {
 	return tr.explosion
 }

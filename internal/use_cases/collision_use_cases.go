@@ -1,53 +1,43 @@
 package use_cases
 
 import (
-	"github.com/shpaker/gonflict/internal/services"
+	"github.com/shpaker/gonflict/internal/interfaces"
 	"github.com/shpaker/gonflict/internal/types"
 )
 
 // CollisionUseCases реализация для операций с коллизиями
 type CollisionUseCases struct {
-	bulletUseCases           IBulletUseCases
-	tankUseCases             ITankUseCasesRef
-	mapUseCases              IMapUseCases
+	bulletUseCases           interfaces.IBulletUseCases
+	tankUseCases             interfaces.ITankUseCasesRef
+	mapUseCases              interfaces.IMapUseCases
 	enemyTanks               []*types.TankEntity
-	enemyUseCases            []ITankUseCasesRef // Use cases для врагов
-	boundaryCollisionService *services.BoundaryCollisionService
-	wallCollisionService     *services.WallCollisionService
-	bulletCollisionService   *services.BulletCollisionService
+	enemyUseCases            []interfaces.ITankUseCasesRef // Use cases для врагов
+	boundaryCollisionService interfaces.IBoundaryCollisionService
+	wallCollisionService     interfaces.IWallCollisionService
+	bulletCollisionService   interfaces.IBulletCollisionService
 }
 
 // NewCollisionUseCasesWithEnemies создает новый экземпляр CollisionUseCases с массивом врагов
 func NewCollisionUseCasesWithEnemies(
-	bulletUseCases IBulletUseCases,
-	tankUseCases ITankUseCasesRef,
-	mapUseCases IMapUseCases,
+	bulletUseCases interfaces.IBulletUseCases,
+	tankUseCases interfaces.ITankUseCasesRef,
+	mapUseCases interfaces.IMapUseCases,
 	enemyTanks []*types.TankEntity,
-	enemyUseCases []ITankUseCasesRef,
+	enemyUseCases []interfaces.ITankUseCasesRef,
+	boundaryCollisionService interfaces.IBoundaryCollisionService,
+	wallCollisionService interfaces.IWallCollisionService,
+	bulletCollisionService interfaces.IBulletCollisionService,
 ) *CollisionUseCases {
 	uc := &CollisionUseCases{
-		bulletUseCases: bulletUseCases,
-		tankUseCases:   tankUseCases,
-		mapUseCases:    mapUseCases,
-		enemyTanks:     enemyTanks,
-		enemyUseCases:  enemyUseCases,
+		bulletUseCases:           bulletUseCases,
+		tankUseCases:             tankUseCases,
+		mapUseCases:              mapUseCases,
+		enemyTanks:               enemyTanks,
+		enemyUseCases:            enemyUseCases,
+		boundaryCollisionService: boundaryCollisionService,
+		wallCollisionService:     wallCollisionService,
+		bulletCollisionService:   bulletCollisionService,
 	}
-
-	// Создаем сервисы коллизий
-	uc.boundaryCollisionService = services.NewBoundaryCollisionService(
-		MapWidthHeight,
-		TankSpriteSize,
-	)
-
-	uc.wallCollisionService = services.NewWallCollisionService(
-		TankSpriteSize,
-		TileMinSize,
-	)
-
-	uc.bulletCollisionService = services.NewBulletCollisionService(
-		TileMinSize,
-		uc.CheckColliders,
-	)
 
 	return uc
 }

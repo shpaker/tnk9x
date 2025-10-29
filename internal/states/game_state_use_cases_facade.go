@@ -2,8 +2,9 @@ package states
 
 import (
 	"github.com/shpaker/gonflict/internal/adapters/input_adapters"
+	"github.com/shpaker/gonflict/internal/interfaces"
 	"github.com/shpaker/gonflict/internal/repositories/game"
-	"github.com/shpaker/gonflict/internal/repositories/processed"
+	"github.com/shpaker/gonflict/internal/services"
 	"github.com/shpaker/gonflict/internal/types"
 	"github.com/shpaker/gonflict/internal/use_cases"
 )
@@ -15,22 +16,22 @@ type GameStateUseCasesFacade struct {
 	mapUseCases            *use_cases.MapUseCases
 	collisionUseCases      *use_cases.CollisionUseCases
 	enemyUseCases          []*use_cases.TankUseCases
-	enemyTanks             []*types.TankEntity            // Массив танков врагов для обратной совместимости
-	enemyInputAdapters     []input_adapters.IInputAdapter // AI input адаптеры для врагов
-	tilesUseCasesWithAnims *use_cases.TilesUseCases       // Общий tilesUseCases для всех анимаций
-	aiContext              *types.GameAiContext           // AI контекст для всех адаптеров
+	enemyTanks             []*types.TankEntity        // Массив танков врагов для обратной совместимости
+	enemyInputAdapters     []interfaces.IInputAdapter // AI input адаптеры для врагов
+	tilesUseCasesWithAnims *use_cases.TilesUseCases   // Общий tilesUseCases для всех анимаций
+	aiContext              *types.GameAiContext       // AI контекст для всех адаптеров
 }
 
 // NewGameStateUseCasesFacade создает фасад для оркестрации use cases игрового состояния
 func NewGameStateUseCasesFacade(
-	mapsRepo processed.IMapsDataRepository,
-	scriptsRepo processed.IScriptsRepository,
+	mapsRepo interfaces.IMapsDataRepository,
+	scriptsRepo interfaces.IScriptsRepository,
 	levelNumber int,
-	mapTilesetRepo processed.ITilesetRepository,
-	playerTilesetRepo processed.ITilesetRepository,
-	bulletTilesetRepo processed.ITilesetRepository,
-	spawnerTilesetRepo processed.ITilesetRepository,
-	explosionTilesetRepo processed.ITilesetRepository,
+	mapTilesetRepo interfaces.ITilesetRepository,
+	playerTilesetRepo interfaces.ITilesetRepository,
+	bulletTilesetRepo interfaces.ITilesetRepository,
+	spawnerTilesetRepo interfaces.ITilesetRepository,
+	explosionTilesetRepo interfaces.ITilesetRepository,
 	gameConfig *GameConfig,
 ) (*GameStateUseCasesFacade, error) {
 	// Загружаем уровень
@@ -47,12 +48,22 @@ func NewGameStateUseCasesFacade(
 		gameRepo.BlocksRepository().AddBlock(block)
 	}
 
+	// Создаем сервисы для тайлов и анимаций
+	tileService := services.NewTileServiceWithSpecialRepos(
+		playerTilesetRepo,
+		spawnerTilesetRepo,
+		explosionTilesetRepo,
+	)
+	animationService := services.NewAnimationService()
+
 	// Создаем Use Cases
 	tilesUseCasesWithAnimations := use_cases.NewTilesUseCasesWithAnimations(
 		playerTilesetRepo,
 		gameRepo.AnimationsRepository(),
 		spawnerTilesetRepo,
 		explosionTilesetRepo,
+		tileService,
+		animationService,
 	)
 
 	// Берем первую позицию спавна игрока из конфига
@@ -72,18 +83,36 @@ func NewGameStateUseCasesFacade(
 		playerSpawner = types.Position{X: 12 * use_cases.TankSpriteSize, Y: 24 * use_cases.TankSpriteSize}
 	}
 
-	bulletTilesUseCases := use_cases.NewTilesUseCases(bulletTilesetRepo)
+	// Создаем сервисы для пули
+	bulletTileService := services.NewTileService(bulletTilesetRepo)
+	bulletAnimationService := services.NewAnimationService()
+	bulletTilesUseCases := use_cases.NewTilesUseCases(
+		bulletTilesetRepo,
+		bulletTileService,
+		bulletAnimationService,
+	)
 	bulletUseCases := use_cases.NewBulletUseCases(
 		gameRepo.BulletsRepository(),
 		bulletTilesUseCases,
 	)
+
+	// Создаем сервисы для танка
+	coordinateService := services.NewCoordinateService()
+
+	// Создаем use case без brakingService (будет установлен после создания танка)
 	playerUseCases := use_cases.NewTankUseCases(
 		gameRepo.TanksRepository(),
 		bulletUseCases,
 		tilesUseCasesWithAnimations,
 		playerSpawner,
 		types.DirectionUp,
+		nil, // brakingService будет установлен позже через SetBrakingService
+		coordinateService,
 	)
+
+	// Создаем сервис торможения и устанавливаем его
+	tankBrakingService := services.NewTankBrakingService()
+	playerUseCases.SetBrakingService(tankBrakingService)
 	mapUseCases := use_cases.NewMapUseCases(gameRepo.BlocksRepository())
 
 	// Создаем AI контекст
@@ -109,7 +138,7 @@ func NewGameStateUseCasesFacade(
 
 	// Создаем до 3 врагов
 	enemyUseCasesList := make([]*use_cases.TankUseCases, 0, 3)
-	enemyInputAdapters := make([]input_adapters.IInputAdapter, 0, 3)
+	enemyInputAdapters := make([]interfaces.IInputAdapter, 0, 3)
 	enemyTanks := make([]*types.TankEntity, 0, 3)
 
 	for i, spawner := range gameConfig.EnemySpawners {
@@ -126,13 +155,18 @@ func NewGameStateUseCasesFacade(
 			Y: float64(spawner[1]) * use_cases.TankSpriteSize,
 		}
 
-		// Создаем отдельный TankUseCases для этого врага
+		// Создаем сервисы для врага
+		enemyCoordinateService := services.NewCoordinateService()
+
+		// Создаем TankUseCases для этого врага (brakingService будет установлен после создания танка)
 		enemyTankUseCases := use_cases.NewTankUseCases(
 			gameRepo.TanksRepository(),
 			bulletUseCases,
 			tilesUseCasesWithAnimations,
 			position,
 			types.DirectionDown,
+			nil, // brakingService будет установлен позже через SetBrakingService
+			enemyCoordinateService,
 		)
 
 		// Создаем танк врага
@@ -141,7 +175,11 @@ func NewGameStateUseCasesFacade(
 			return nil, err
 		}
 
-		// Получаем танк врага
+		// Создаем сервис торможения и устанавливаем его
+		enemyBrakingService := services.NewTankBrakingService()
+		enemyTankUseCases.SetBrakingService(enemyBrakingService)
+
+		// Получаем танк врага для добавления в список
 		enemyTank := enemyTankUseCases.GetTank()
 
 		enemyTanks = append(enemyTanks, enemyTank)
@@ -162,20 +200,59 @@ func NewGameStateUseCasesFacade(
 
 	// Конвертируем enemyUseCasesList в []ITankUseCasesRef
 	enemyUseCasesRefs := make(
-		[]use_cases.ITankUseCasesRef,
+		[]interfaces.ITankUseCasesRef,
 		len(enemyUseCasesList),
 	)
 	for i, uc := range enemyUseCasesList {
 		enemyUseCasesRefs[i] = uc
 	}
 
-	// Создаем CollisionUseCases
+	// Создаем сервисы коллизий
+	boundaryCollisionService := services.NewBoundaryCollisionService(
+		use_cases.MapWidthHeight,
+		use_cases.TankSpriteSize,
+	)
+	wallCollisionService := services.NewWallCollisionService(
+		use_cases.TankSpriteSize,
+		use_cases.TileMinSize,
+	)
+	bulletCollisionService := services.NewBulletCollisionService(
+		use_cases.TileMinSize,
+		func(obj1 types.IMapObject, obj2 types.IMapObject) bool {
+			// Проксируем вызов через CollisionUseCases
+			// Это временное решение, пока не создадим CollisionUseCases
+			return false
+		},
+	)
+
+	// Создаем временный CollisionUseCases для получения CheckColliders
+	tempCollisionUseCases := use_cases.NewCollisionUseCasesWithEnemies(
+		bulletUseCases,
+		playerUseCases,
+		mapUseCases,
+		enemyTanks,
+		enemyUseCasesRefs,
+		boundaryCollisionService,
+		wallCollisionService,
+		bulletCollisionService,
+	)
+
+	// Создаем правильный BulletCollisionService с реальным CheckColliders
+	bulletCollisionService = services.NewBulletCollisionService(
+		use_cases.TileMinSize,
+		tempCollisionUseCases.CheckColliders,
+	)
+
+	// Создаем финальный CollisionUseCases
 	collisionUseCases := use_cases.NewCollisionUseCasesWithEnemies(
 		bulletUseCases,
 		playerUseCases,
 		mapUseCases,
 		enemyTanks,
 		enemyUseCasesRefs,
+		boundaryCollisionService,
+		wallCollisionService,
+		bulletCollisionService,
 	)
 
 	return &GameStateUseCasesFacade{
@@ -282,8 +359,8 @@ func (g *GameStateUseCasesFacade) GetEnemyTanks() []*types.TankEntity {
 	return g.enemyTanks
 }
 
-func (g *GameStateUseCasesFacade) GetEnemyUseCases() []use_cases.ITankUseCasesRef {
-	result := make([]use_cases.ITankUseCasesRef, len(g.enemyUseCases))
+func (g *GameStateUseCasesFacade) GetEnemyUseCases() []interfaces.ITankUseCasesRef {
+	result := make([]interfaces.ITankUseCasesRef, len(g.enemyUseCases))
 	for i, uc := range g.enemyUseCases {
 		result[i] = uc
 	}

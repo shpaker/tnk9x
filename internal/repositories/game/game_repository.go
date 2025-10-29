@@ -1,15 +1,16 @@
 package game
 
 import (
+	"github.com/shpaker/gonflict/internal/interfaces"
 	"github.com/shpaker/gonflict/internal/types"
 )
 
 // GameRepositoriesRegistry содержит все игровые репозитории
 type GameRepositoriesRegistry struct {
-	blocks     IBlocksRepository
-	bullets    IBulletsRepository
-	animations IAnimationsRepository
-	tanks      ITanksRepository
+	blocks     interfaces.IBlocksRepository
+	bullets    interfaces.IBulletsRepository
+	animations interfaces.IAnimationsRepository
+	tanks      interfaces.ITanksRepository
 }
 
 // NewGameRepositoriesRegistry создает новый GameRepositoriesRegistry со всеми репозиториями
@@ -25,22 +26,22 @@ func NewGameRepositoriesRegistry() *GameRepositoriesRegistry {
 // === Методы для доступа к репозиториям ===
 
 // BlocksRepository возвращает репозиторий блоков
-func (gr *GameRepositoriesRegistry) BlocksRepository() IBlocksRepository {
+func (gr *GameRepositoriesRegistry) BlocksRepository() interfaces.IBlocksRepository {
 	return gr.blocks
 }
 
 // BulletsRepository возвращает репозиторий пуль
-func (gr *GameRepositoriesRegistry) BulletsRepository() IBulletsRepository {
+func (gr *GameRepositoriesRegistry) BulletsRepository() interfaces.IBulletsRepository {
 	return gr.bullets
 }
 
 // AnimationsRepository возвращает репозиторий анимаций
-func (gr *GameRepositoriesRegistry) AnimationsRepository() IAnimationsRepository {
+func (gr *GameRepositoriesRegistry) AnimationsRepository() interfaces.IAnimationsRepository {
 	return gr.animations
 }
 
 // TanksRepository возвращает репозиторий танков
-func (gr *GameRepositoriesRegistry) TanksRepository() ITanksRepository {
+func (gr *GameRepositoriesRegistry) TanksRepository() interfaces.ITanksRepository {
 	return gr.tanks
 }
 

@@ -8,7 +8,8 @@ import (
 
 	"github.com/shpaker/gonflict/internal/adapters"
 	"github.com/shpaker/gonflict/internal/adapters/input_adapters"
-	"github.com/shpaker/gonflict/internal/repositories/processed"
+	"github.com/shpaker/gonflict/internal/interfaces"
+	"github.com/shpaker/gonflict/internal/services"
 	"github.com/shpaker/gonflict/internal/use_cases"
 )
 
@@ -21,16 +22,16 @@ type GameConfig struct {
 
 type GameState struct {
 	gameStateServices *GameStateUseCasesFacade
-	inputAdapter      input_adapters.IInputAdapter
+	inputAdapter      interfaces.IInputAdapter
 	rendererAdapter   *adapters.RendererAdapter
 	startTime         time.Time // Время начала игры для отслеживания спавна
 }
 
 // NewGameState создает новое состояние игры с переданным реестром тайлсетов
 func NewGameState(
-	mapsRepo processed.IMapsDataRepository,
-	scriptsRepo processed.IScriptsRepository,
-	tilesetRegistry processed.ITilesetRepositoryRegistry,
+	mapsRepo interfaces.IMapsDataRepository,
+	scriptsRepo interfaces.IScriptsRepository,
+	tilesetRegistry interfaces.ITilesetRepositoryRegistry,
 	gameConfig *GameConfig,
 ) (GameState, error) {
 	// Создаем GameStateUseCasesFacade
@@ -115,16 +116,40 @@ func (state GameState) Draw(screen *ebiten.Image) {
 // createRendererAdapter создает адаптер рендерера
 func createRendererAdapter(
 	gameStateServices *GameStateUseCasesFacade,
-	tilesetRegistry processed.ITilesetRepositoryRegistry,
+	tilesetRegistry interfaces.ITilesetRepositoryRegistry,
 ) *adapters.RendererAdapter {
-	mapTilesUseCases := use_cases.NewTilesUseCases(tilesetRegistry.Blocks())
-	playerTilesUseCases := use_cases.NewTilesUseCases(tilesetRegistry.Player())
-	bulletTilesUseCases := use_cases.NewTilesUseCases(tilesetRegistry.Bullet())
+	// Создаем сервисы для тайлов
+	mapTileService := services.NewTileService(tilesetRegistry.Blocks())
+	playerTileService := services.NewTileService(tilesetRegistry.Player())
+	bulletTileService := services.NewTileService(tilesetRegistry.Bullet())
+	spawnerTileService := services.NewTileService(tilesetRegistry.Spawner())
+	explosionTileService := services.NewTileService(tilesetRegistry.Explosion())
+	animationService := services.NewAnimationService()
+
+	mapTilesUseCases := use_cases.NewTilesUseCases(
+		tilesetRegistry.Blocks(),
+		mapTileService,
+		animationService,
+	)
+	playerTilesUseCases := use_cases.NewTilesUseCases(
+		tilesetRegistry.Player(),
+		playerTileService,
+		animationService,
+	)
+	bulletTilesUseCases := use_cases.NewTilesUseCases(
+		tilesetRegistry.Bullet(),
+		bulletTileService,
+		animationService,
+	)
 	spawnerTilesUseCases := use_cases.NewTilesUseCases(
 		tilesetRegistry.Spawner(),
+		spawnerTileService,
+		animationService,
 	)
 	explosionTilesUseCases := use_cases.NewTilesUseCases(
 		tilesetRegistry.Explosion(),
+		explosionTileService,
+		animationService,
 	)
 
 	return adapters.NewRendererAdapter(

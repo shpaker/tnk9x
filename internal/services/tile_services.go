@@ -3,20 +3,20 @@ package services
 import (
 	"fmt"
 
-	"github.com/shpaker/gonflict/internal/repositories/processed"
+	"github.com/shpaker/gonflict/internal/interfaces"
 	"github.com/shpaker/gonflict/internal/types"
 )
 
 // TileService предоставляет логику создания тайлов и анимаций
 type TileService struct {
-	tilesRepository      processed.ITilesetRepository
-	spawnerTilesetRepo   processed.ITilesetRepository
-	explosionTilesetRepo processed.ITilesetRepository
+	tilesRepository      interfaces.ITilesetRepository
+	spawnerTilesetRepo   interfaces.ITilesetRepository
+	explosionTilesetRepo interfaces.ITilesetRepository
 }
 
 // NewTileService создает новый сервис тайлов
 func NewTileService(
-	tilesRepository processed.ITilesetRepository,
+	tilesRepository interfaces.ITilesetRepository,
 ) *TileService {
 	return &TileService{
 		tilesRepository: tilesRepository,
@@ -25,9 +25,9 @@ func NewTileService(
 
 // NewTileServiceWithSpecialRepos создает новый сервис тайлов с репозиториями для специальных анимаций
 func NewTileServiceWithSpecialRepos(
-	tilesRepository processed.ITilesetRepository,
-	spawnerTilesetRepo processed.ITilesetRepository,
-	explosionTilesetRepo processed.ITilesetRepository,
+	tilesRepository interfaces.ITilesetRepository,
+	spawnerTilesetRepo interfaces.ITilesetRepository,
+	explosionTilesetRepo interfaces.ITilesetRepository,
 ) *TileService {
 	return &TileService{
 		tilesRepository:      tilesRepository,
@@ -95,7 +95,7 @@ func (s *TileService) HasOffset(offset [2]float64) bool {
 
 // CreateAnimationTileFromRepo создает анимированный тайл из указанного репозитория
 func (s *TileService) CreateAnimationTileFromRepo(
-	repo processed.ITilesetRepository,
+	repo interfaces.ITilesetRepository,
 	id string,
 ) (*types.TileAnimationEntity, error) {
 	if repo == nil {

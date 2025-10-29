@@ -4,53 +4,50 @@ import (
 	"fmt"
 	"image"
 
-	"github.com/shpaker/gonflict/internal/repositories/game"
-	"github.com/shpaker/gonflict/internal/repositories/processed"
-	"github.com/shpaker/gonflict/internal/services"
+	"github.com/shpaker/gonflict/internal/interfaces"
 	"github.com/shpaker/gonflict/internal/types"
 )
 
 // TilesUseCases содержит бизнес-логику для работы с тайлами и анимациями
 type TilesUseCases struct {
-	tilesRepository      processed.ITilesetRepository
-	animationsRepo       game.IAnimationsRepository
-	spawnerTilesetRepo   processed.ITilesetRepository
-	explosionTilesetRepo processed.ITilesetRepository
-	tileService          *services.TileService
-	animationService     *services.AnimationService
+	tilesRepository      interfaces.ITilesetRepository
+	animationsRepo       interfaces.IAnimationsRepository
+	spawnerTilesetRepo   interfaces.ITilesetRepository
+	explosionTilesetRepo interfaces.ITilesetRepository
+	tileService          interfaces.ITileService
+	animationService     interfaces.IAnimationService
 }
 
 // NewTilesUseCases создает новый экземпляр TilesUseCases
 func NewTilesUseCases(
-	tilesRepository processed.ITilesetRepository,
+	tilesRepository interfaces.ITilesetRepository,
+	tileService interfaces.ITileService,
+	animationService interfaces.IAnimationService,
 ) *TilesUseCases {
 	return &TilesUseCases{
 		tilesRepository:  tilesRepository,
-		tileService:      services.NewTileService(tilesRepository),
-		animationService: services.NewAnimationService(),
+		tileService:      tileService,
+		animationService: animationService,
 	}
 }
 
 // NewTilesUseCasesWithAnimations создает новый экземпляр TilesUseCases с поддержкой анимаций
 func NewTilesUseCasesWithAnimations(
-	tilesRepository processed.ITilesetRepository,
-	animationsRepo game.IAnimationsRepository,
-	spawnerTilesetRepo processed.ITilesetRepository,
-	explosionTilesetRepo processed.ITilesetRepository,
+	tilesRepository interfaces.ITilesetRepository,
+	animationsRepo interfaces.IAnimationsRepository,
+	spawnerTilesetRepo interfaces.ITilesetRepository,
+	explosionTilesetRepo interfaces.ITilesetRepository,
+	tileService interfaces.ITileService,
+	animationService interfaces.IAnimationService,
 ) *TilesUseCases {
 	tuc := &TilesUseCases{
 		tilesRepository:      tilesRepository,
 		animationsRepo:       animationsRepo,
 		spawnerTilesetRepo:   spawnerTilesetRepo,
 		explosionTilesetRepo: explosionTilesetRepo,
-		animationService:     services.NewAnimationService(),
+		tileService:          tileService,
+		animationService:     animationService,
 	}
-
-	tuc.tileService = services.NewTileServiceWithSpecialRepos(
-		tilesRepository,
-		spawnerTilesetRepo,
-		explosionTilesetRepo,
-	)
 
 	return tuc
 }
@@ -137,8 +134,8 @@ func (tuc *TilesUseCases) CreateSpawnAnimation() (*types.TileAnimationEntity, er
 		return nil, fmt.Errorf("spawner tileset repository not initialized")
 	}
 
-	tempService := services.NewTileService(tuc.spawnerTilesetRepo)
-	animation, err := tempService.CreateAnimationTileFromRepo(
+	// Используем tileService для создания анимации из специального репозитория
+	animation, err := tuc.tileService.CreateAnimationTileFromRepo(
 		tuc.spawnerTilesetRepo,
 		"spawner",
 	)
@@ -156,8 +153,8 @@ func (tuc *TilesUseCases) CreateExplosionAnimation() (*types.TileAnimationEntity
 		return nil, fmt.Errorf("explosion tileset repository not initialized")
 	}
 
-	tempService := services.NewTileService(tuc.explosionTilesetRepo)
-	animation, err := tempService.CreateAnimationTileFromRepo(
+	// Используем tileService для создания анимации из специального репозитория
+	animation, err := tuc.tileService.CreateAnimationTileFromRepo(
 		tuc.explosionTilesetRepo,
 		"explosion",
 	)

@@ -326,12 +326,12 @@ func InitializeGameState() (*GameState, error) {
 }
 ```
 
-### 2. Создать пакет `ports` для интерфейсов
+### 2. Создать пакет `interfaces` для интерфейсов
 
 Структура:
 ```
 internal/
-└── ports/
+└── interfaces/
     ├── repositories.go      # Интерфейсы репозиториев
     ├── services.go          # Интерфейсы сервисов
     └── use_cases.go         # Интерфейсы use cases
@@ -419,7 +419,7 @@ func (uc *TankUseCases) Stop(byCollision bool) {
 ### Низкий приоритет
 
 8. ✅ **Преобразовать stateless-сервисы** в package-level функции
-9. ✅ **Создать пакет `ports`** для централизации интерфейсов
+9. ✅ **Создать пакет `interfaces`** для централизации интерфейсов
 10. ✅ **Использовать Value Objects** для типов с валидацией
 
 ---

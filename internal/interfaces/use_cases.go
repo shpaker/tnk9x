@@ -1,4 +1,4 @@
-package use_cases
+package interfaces
 
 import (
 	"image"
@@ -18,7 +18,7 @@ type ITankUseCasesRef interface {
 	IsActive() bool
 	IsStopped() bool
 	GetImageID() (string, error)
-	GetAnimationGetter() types.IImageIDGetter
+	GetAnimationGetter() IImageIDGetter
 	Shoot() error
 }
 
@@ -46,20 +46,20 @@ type IMapUseCases interface {
 // ICollisionUseCases интерфейс для операций с коллизиями
 type ICollisionUseCases interface {
 	UpdateCollisions() error
-	CheckColliders(obj1 types.IMapObject, obj2 types.IMapObject) bool
+	CheckColliders(obj1 IMapObject, obj2 IMapObject) bool
 	CheckCollidersWithArray(
-		obj types.IMapObject,
-		objects []types.IMapObject,
-	) []types.IMapObject
+		obj IMapObject,
+		objects []IMapObject,
+	) []IMapObject
 	CheckCollidersWithArrayFirst(
-		obj types.IMapObject,
-		objects []types.IMapObject,
-	) types.IMapObject
+		obj IMapObject,
+		objects []IMapObject,
+	) IMapObject
 }
 
 // ITilesUseCases определяет интерфейс для работы с тайлами и анимациями
 type ITilesUseCases interface {
-	CreateStaticTile(id string) (types.IImageIDGetter, error)
+	CreateStaticTile(id string) (IImageIDGetter, error)
 	CreateAnimationTile(id string) (*types.TileAnimationEntity, error)
 	GetImage(id string) (image.Image, error)
 	AddAnimation(animation *types.TileAnimationEntity)

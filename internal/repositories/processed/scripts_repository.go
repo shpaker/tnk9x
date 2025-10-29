@@ -3,16 +3,18 @@ package processed
 import (
 	"fmt"
 
-	"github.com/shpaker/gonflict/internal/repositories/raw"
+	"github.com/shpaker/gonflict/internal/interfaces"
 )
 
 // ScriptsRepository читает Lua скрипты из файлов
 type ScriptsRepository struct {
-	fileRepo raw.IFileRepository
+	fileRepo interfaces.IFileRepository
 }
 
 // NewScriptsRepository создает новый репозиторий для работы с Lua скриптами
-func NewScriptsRepository(fileRepo raw.IFileRepository) *ScriptsRepository {
+func NewScriptsRepository(
+	fileRepo interfaces.IFileRepository,
+) *ScriptsRepository {
 	return &ScriptsRepository{
 		fileRepo: fileRepo,
 	}

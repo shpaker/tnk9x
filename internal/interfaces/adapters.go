@@ -1,4 +1,4 @@
-package input_adapters
+package interfaces
 
 // IInputAdapter интерфейс для адаптеров ввода
 type IInputAdapter interface {

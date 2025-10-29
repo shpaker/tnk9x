@@ -5,6 +5,7 @@ import (
 	"image"
 	"testing"
 
+	"github.com/shpaker/gonflict/internal/interfaces"
 	"github.com/shpaker/gonflict/internal/types"
 )
 
@@ -99,7 +100,7 @@ func TestGetLevel_Success(t *testing.T) {
 	// Создаем сервис уровней
 	mockTilesetRepo := &MockTilesetRepository{}
 	// Проверяем, что мок реализует интерфейс
-	var _ ITilesetRepository = mockTilesetRepo
+	var _ interfaces.ITilesetRepository = mockTilesetRepo
 	mapsService := NewMapsDataRepository(mockFileRepo, mockTilesetRepo)
 
 	// Вызываем функцию
@@ -150,7 +151,7 @@ func TestGetLevel_InvalidSize(t *testing.T) {
 	// Создаем сервис уровней
 	mockTilesetRepo := &MockTilesetRepository{}
 	// Проверяем, что мок реализует интерфейс
-	var _ ITilesetRepository = mockTilesetRepo
+	var _ interfaces.ITilesetRepository = mockTilesetRepo
 	mapsService := NewMapsDataRepository(mockFileRepo, mockTilesetRepo)
 
 	// Вызываем функцию

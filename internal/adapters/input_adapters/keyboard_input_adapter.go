@@ -6,13 +6,13 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 
+	"github.com/shpaker/gonflict/internal/interfaces"
 	"github.com/shpaker/gonflict/internal/types"
-	"github.com/shpaker/gonflict/internal/use_cases"
 )
 
 // KeyboardInputAdapter адаптер для обработки пользовательского ввода с клавиатуры
 type KeyboardInputAdapter struct {
-	tankUseCases use_cases.ITankUseCasesRef
+	tankUseCases interfaces.ITankUseCasesRef
 	upButton     ebiten.Key
 	downButton   ebiten.Key
 	leftButton   ebiten.Key
@@ -22,7 +22,7 @@ type KeyboardInputAdapter struct {
 
 // NewKeyboardInputAdapter создает новый экземпляр KeyboardInputAdapter
 func NewKeyboardInputAdapter(
-	tankUseCases use_cases.ITankUseCasesRef,
+	tankUseCases interfaces.ITankUseCasesRef,
 	upButton ebiten.Key,
 	downButton ebiten.Key,
 	leftButton ebiten.Key,

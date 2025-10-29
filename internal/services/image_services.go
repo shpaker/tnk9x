@@ -18,9 +18,13 @@ func NewImageService() *ImageService {
 
 // RotateImage поворачивает изображение в зависимости от направления
 func (s *ImageService) RotateImage(
-	image *ebiten.Image,
+	image interface{},
 	direction types.Direction,
-) *ebiten.Image {
+) interface{} {
+	img, ok := image.(*ebiten.Image)
+	if !ok {
+		return image
+	}
 	var angle float64
 	switch direction {
 	case types.DirectionUp:
@@ -35,20 +39,24 @@ func (s *ImageService) RotateImage(
 		angle = 0
 	}
 
-	rotatedImage, err := s.RotateImageByAngle(image, angle)
+	rotatedImage, err := s.RotateImageByAngle(img, angle)
 	if err != nil {
-		return image
+		return img
 	}
 	return rotatedImage
 }
 
 // RotateImageByAngle поворачивает изображение на указанный угол
 func (s *ImageService) RotateImageByAngle(
-	image *ebiten.Image,
+	image interface{},
 	angle float64,
-) (*ebiten.Image, error) {
+) (interface{}, error) {
+	img, ok := image.(*ebiten.Image)
+	if !ok {
+		return image, nil
+	}
 	// Получаем размеры изображения
-	bounds := image.Bounds()
+	bounds := img.Bounds()
 	width := bounds.Dx()
 	height := bounds.Dy()
 
@@ -70,7 +78,7 @@ func (s *ImageService) RotateImageByAngle(
 	op.GeoM.Translate(centerX, centerY)
 
 	// Отрисовываем повернутое изображение
-	rotatedImage.DrawImage(image, op)
+	rotatedImage.DrawImage(img, op)
 
 	return rotatedImage, nil
 }

@@ -7,17 +7,11 @@ import (
 )
 
 // TankBrakingService предоставляет логику торможения танка
-type TankBrakingService struct {
-	tank *types.TankEntity
-}
+type TankBrakingService struct{}
 
 // NewTankBrakingService создает новый сервис торможения
-func NewTankBrakingService(
-	tank *types.TankEntity,
-) *TankBrakingService {
-	return &TankBrakingService{
-		tank: tank,
-	}
+func NewTankBrakingService() *TankBrakingService {
+	return &TankBrakingService{}
 }
 
 // brakingMovementContext содержит контекст для движения танка к цели в состоянии Braking
@@ -29,69 +23,74 @@ type brakingMovementContext struct {
 
 // HandleBrakingState обрабатывает движение танка в состоянии Braking
 // Танк должен доехать до координаты кратной 4
-func (s *TankBrakingService) HandleBrakingState(dt float64) error {
-	ctx := s.getBrakingMovementContext()
+func (s *TankBrakingService) HandleBrakingState(
+	tank *types.TankEntity,
+	dt float64,
+) error {
+	ctx := s.getBrakingMovementContext(tank)
 
 	// Проверка: если координата больше кратного 4 на 0.5, возвращаем на 0.5 назад
-	if s.checkAndHandleHalfStepBack(ctx) {
+	if s.checkAndHandleHalfStepBack(tank, ctx) {
 		log.Printf(
 			"DEBUG: Tank braking - half step back (%.2f, %.2f) target=%.2f",
-			s.tank.Position.X,
-			s.tank.Position.Y,
+			tank.Position.X,
+			tank.Position.Y,
 			ctx.targetMultipleOf4,
 		)
 		return nil
 	}
 
 	// Двигаемся к целевому кратному 4
-	s.moveTowardsTarget(ctx, dt)
+	s.moveTowardsTarget(tank, ctx, dt)
 
 	log.Printf(
 		"DEBUG: Tank braking position (%.2f, %.2f) target=%.2f currentCoord=%.2f state=%d direction=%d speed=%.2f",
-		s.tank.Position.X,
-		s.tank.Position.Y,
+		tank.Position.X,
+		tank.Position.Y,
 		ctx.targetMultipleOf4,
 		*ctx.currentCoord,
-		s.tank.State,
-		s.tank.Direction,
-		s.tank.Speed,
+		tank.State,
+		tank.Direction,
+		tank.Speed,
 	)
 
 	return nil
 }
 
 // getBrakingMovementContext определяет текущую координату, цель и направление движения
-func (s *TankBrakingService) getBrakingMovementContext() brakingMovementContext {
+func (s *TankBrakingService) getBrakingMovementContext(
+	tank *types.TankEntity,
+) brakingMovementContext {
 	var currentCoord *float64
 	var targetMultipleOf4 float64
 	var isMovingForward bool
 
 	// Определяем текущую координату и целевое кратное 4
 	// Целевое кратное 4 должно быть ближайшим в направлении движения
-	switch s.tank.Direction {
+	switch tank.Direction {
 	case types.DirectionUp:
-		currentCoord = &s.tank.Position.Y
+		currentCoord = &tank.Position.Y
 		targetMultipleOf4 = s.getNearestMultipleOf4InDirection(
 			*currentCoord,
 			false,
 		)
 		isMovingForward = false
 	case types.DirectionDown:
-		currentCoord = &s.tank.Position.Y
+		currentCoord = &tank.Position.Y
 		targetMultipleOf4 = s.getNearestMultipleOf4InDirection(
 			*currentCoord,
 			true,
 		)
 		isMovingForward = true
 	case types.DirectionLeft:
-		currentCoord = &s.tank.Position.X
+		currentCoord = &tank.Position.X
 		targetMultipleOf4 = s.getNearestMultipleOf4InDirection(
 			*currentCoord,
 			false,
 		)
 		isMovingForward = false
 	case types.DirectionRight:
-		currentCoord = &s.tank.Position.X
+		currentCoord = &tank.Position.X
 		targetMultipleOf4 = s.getNearestMultipleOf4InDirection(
 			*currentCoord,
 			true,
@@ -109,14 +108,15 @@ func (s *TankBrakingService) getBrakingMovementContext() brakingMovementContext 
 // checkAndHandleHalfStepBack проверяет и обрабатывает случай возврата на 0.5 назад
 // Возвращает true, если обработка выполнена и танк остановлен
 func (s *TankBrakingService) checkAndHandleHalfStepBack(
+	tank *types.TankEntity,
 	ctx brakingMovementContext,
 ) bool {
 	diff := *ctx.currentCoord - ctx.targetMultipleOf4
 	if diff > 0 && diff <= 0.5 {
 		*ctx.currentCoord = ctx.targetMultipleOf4 - 0.5
-		s.tank.Speed = 0
-		s.tank.State = types.TankStateStopped
-		s.tank.NextDirection = nil
+		tank.Speed = 0
+		tank.State = types.TankStateStopped
+		tank.NextDirection = nil
 		return true
 	}
 	return false
@@ -124,20 +124,22 @@ func (s *TankBrakingService) checkAndHandleHalfStepBack(
 
 // moveTowardsTarget двигает танк к целевому кратному 4
 func (s *TankBrakingService) moveTowardsTarget(
+	tank *types.TankEntity,
 	ctx brakingMovementContext,
 	dt float64,
 ) {
-	delta := s.tank.Speed * dt
+	delta := tank.Speed * dt
 
 	if ctx.isMovingForward {
-		s.moveForwardToTarget(ctx, delta)
+		s.moveForwardToTarget(tank, ctx, delta)
 	} else {
-		s.moveBackwardToTarget(ctx, delta)
+		s.moveBackwardToTarget(tank, ctx, delta)
 	}
 }
 
 // moveForwardToTarget двигает танк вперед к цели
 func (s *TankBrakingService) moveForwardToTarget(
+	tank *types.TankEntity,
 	ctx brakingMovementContext,
 	delta float64,
 ) {
@@ -145,22 +147,23 @@ func (s *TankBrakingService) moveForwardToTarget(
 		// Двигаемся вперед к цели
 		if *ctx.currentCoord+delta >= ctx.targetMultipleOf4 {
 			*ctx.currentCoord = ctx.targetMultipleOf4
-			s.completeBraking()
+			s.completeBraking(tank)
 		} else {
 			*ctx.currentCoord += delta
 		}
 	} else if *ctx.currentCoord == ctx.targetMultipleOf4 {
 		// Достигли цели
-		s.completeBraking()
+		s.completeBraking(tank)
 	} else {
 		// Переехали цель - останавливаемся на текущем кратном 4
 		*ctx.currentCoord = ctx.targetMultipleOf4
-		s.completeBraking()
+		s.completeBraking(tank)
 	}
 }
 
 // moveBackwardToTarget двигает танк назад к цели
 func (s *TankBrakingService) moveBackwardToTarget(
+	tank *types.TankEntity,
 	ctx brakingMovementContext,
 	delta float64,
 ) {
@@ -168,48 +171,48 @@ func (s *TankBrakingService) moveBackwardToTarget(
 		// Двигаемся назад к цели
 		if *ctx.currentCoord-delta <= ctx.targetMultipleOf4 {
 			*ctx.currentCoord = ctx.targetMultipleOf4
-			s.completeBraking()
+			s.completeBraking(tank)
 		} else {
 			*ctx.currentCoord -= delta
 		}
 	} else if *ctx.currentCoord == ctx.targetMultipleOf4 {
 		// Достигли цели
-		s.completeBraking()
+		s.completeBraking(tank)
 	} else {
 		// Переехали цель - останавливаемся на текущем кратном 4
 		*ctx.currentCoord = ctx.targetMultipleOf4
-		s.completeBraking()
+		s.completeBraking(tank)
 	}
 }
 
 // completeBraking завершает процесс торможения и обнуляет скорость
-func (s *TankBrakingService) completeBraking() {
-	s.tank.Speed = 0
-	s.finishBraking()
+func (s *TankBrakingService) completeBraking(tank *types.TankEntity) {
+	tank.Speed = 0
+	s.finishBraking(tank)
 }
 
 // finishBraking завершает состояние Braking
-func (s *TankBrakingService) finishBraking() {
+func (s *TankBrakingService) finishBraking(tank *types.TankEntity) {
 	// Если есть новое направление, меняем направление и начинаем движение
-	if s.tank.NextDirection != nil {
-		oldDir := s.tank.Direction
-		s.tank.Direction = *s.tank.NextDirection
-		s.tank.NextDirection = nil
-		s.tank.State = types.TankStateMoving
-		s.tank.Speed = 32.0
+	if tank.NextDirection != nil {
+		oldDir := tank.Direction
+		tank.Direction = *tank.NextDirection
+		tank.NextDirection = nil
+		tank.State = types.TankStateMoving
+		tank.Speed = 32.0
 		log.Printf(
 			"DEBUG: Tank finished braking, rotated %d->%d position (%.2f, %.2f) state=Moving",
 			oldDir,
-			s.tank.Direction,
-			s.tank.Position.X,
-			s.tank.Position.Y,
+			tank.Direction,
+			tank.Position.X,
+			tank.Position.Y,
 		)
 	} else {
 		// Иначе просто останавливаемся
-		s.tank.State = types.TankStateStopped
-		s.tank.NextDirection = nil
+		tank.State = types.TankStateStopped
+		tank.NextDirection = nil
 		log.Printf("DEBUG: Tank finished braking, stopped at position (%.2f, %.2f) state=Stopped",
-			s.tank.Position.X, s.tank.Position.Y)
+			tank.Position.X, tank.Position.Y)
 	}
 }
 
