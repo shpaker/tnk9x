@@ -1,5 +1,90 @@
 # Предлагаемые решения архитектурных проблем
 
+## ✅ Выполненные улучшения
+
+### Рефакторинг Use Cases танка
+
+#### Проблема
+Изначально вся логика работы с танками была сосредоточена в одном большом `TankUseCases`, что создавало проблемы с разделением ответственности и тестированием.
+
+#### Реализованное решение
+
+**1. Разделение Use Cases на специализированные компоненты:**
+
+- **`TankCommonUseCases`** — общие операции с танком (движение)
+  - `Update(tank *types.TankEntity, dt float64) error`
+  
+- **`TankRenderUseCases`** — графика и рендеринг танка
+  - `GetImageID() (string, error)`
+  - `GetAnimationGetter() types.IImageIDGetter`
+  - `SetAnimationGetter(animationGetter types.IImageIDGetter)`
+  - `IsSpawnAnimationFinished() bool`
+  - `IsExplosionAnimationFinished() bool`
+
+- **`TankLifecycleUseCases`** — жизненный цикл танка (спавн, взрыв, анимации)
+  - `Spawn(tank *types.TankEntity) error`
+  - `Explode(tank *types.TankEntity) error`
+  - `IsSpawnFinished(tank *types.TankEntity, currentTime float64)`
+  - `IsExplosionFinished(tank *types.TankEntity)`
+
+- **`TankActionsUseCases`** — действия танка (движение и боевые действия)
+  - `Update(tank *types.TankEntity, dt float64) error`
+  - `Rotate(tank *types.TankEntity, direction types.Direction) error`
+  - `Move(tank *types.TankEntity) error`
+  - `Stop(tank *types.TankEntity, byCollision bool)`
+  - `IsStopped(tank *types.TankEntity) bool`
+  - `Shoot(tank *types.TankEntity) error`
+  - `ApplyDecision(tank *types.TankEntity, decision types.EnemyAIDecision)`
+
+**2. Создание интерфейсов для всех Use Cases:**
+
+Созданы интерфейсы в `internal/interfaces/use_cases.go`:
+- `ITankCommonUseCases`
+- `ITankRenderUseCases`
+- `ITankLifecycleUseCases`
+- `ITankActionsUseCases`
+
+**3. Централизация работы с анимациями:**
+
+Вся работа с `animationGetter` и графикой теперь осуществляется через `TankRenderUseCases`:
+- `TankLifecycleUseCases` использует `ITankRenderUseCases` для установки и проверки анимаций
+- Удалена прямая зависимость между компонентами
+- Инкапсуляция работы с графикой в одном месте
+
+**4. Обновление зависимостей:**
+
+Все зависимости обновлены для использования интерфейсов:
+- `GameStateUseCasesFacade` — использует интерфейсы вместо конкретных типов
+- `RendererAdapter` — принимает `ITankRenderUseCases`
+- `CollisionUseCases` — использует `ITankActionsUseCases` и `ITankCommonUseCases`
+- `InputAdapters` — используют `ITankActionsUseCases`
+
+#### Преимущества реализации
+
+- ✅ **Чёткое разделение ответственности**: Каждый Use Case отвечает за свою область
+- ✅ **Улучшенная тестируемость**: Можно легко создать mock-объекты для интерфейсов
+- ✅ **Гибкость**: Легко заменить реализацию без изменения зависимостей
+- ✅ **Соответствие принципам SOLID**: Single Responsibility, Dependency Inversion
+- ✅ **Централизация графики**: Вся работа с рендерингом в одном месте
+
+#### Файлы, затронутые изменениями
+
+- `internal/use_cases/tank_common_use_cases.go`
+- `internal/use_cases/tank_render_use_cases.go`
+- `internal/use_cases/tank_lifecycle_use_cases.go`
+- `internal/use_cases/tank_actions_use_cases.go`
+- `internal/interfaces/use_cases.go`
+- `internal/states/game_state_use_cases_facade.go`
+- `internal/adapters/renderer_adapter.go`
+- `internal/use_cases/collision_use_cases.go`
+- `internal/adapters/input_adapters/keyboard_input_adapter.go`
+- `internal/adapters/input_adapters/ai_input_adapter.go`
+- `internal/use_cases/interfaces_check.go`
+
+---
+
+## Предлагаемые решения архитектурных проблем
+
 ## 🟡 Проблема 1: God Object в конструкторе фасада
 
 ### Текущая ситуация
@@ -32,21 +117,52 @@ func NewGameStateUseCasesFacade(
 3. **Плохая расширяемость**: Добавление нового параметра требует изменения всех вызовов
 4. **Нарушение Single Responsibility**: Конструктор берёт на себя слишком много ответственности
 
-### Решение 1: Структура конфигурации (Рекомендуется)
+### Решение: GameSession с конфигурацией (Планируется)
 
-Создать структуру `GameStateUseCasesFacadeConfig`, которая группирует параметры по смыслу:
+Создать структуру `GameSession`, которая представляет одну игровую сессию (раунд/катку), и структуру `GameSessionConfig` для конфигурации:
 
 ```go
-// internal/states/game_state_use_cases_facade_config.go
+// internal/states/game_session.go
 package states
 
 import (
 	"github.com/shpaker/gonflict/internal/config"
 	"github.com/shpaker/gonflict/internal/interfaces"
+	"github.com/shpaker/gonflict/internal/types"
+	"github.com/shpaker/gonflict/internal/use_cases"
 )
 
-// GameStateUseCasesFacadeConfig содержит конфигурацию для фасада Use Cases
-type GameStateUseCasesFacadeConfig struct {
+// GameSession представляет одну игровую сессию (раунд/катку)
+type GameSession struct {
+	// Игрок
+	Player struct {
+		Tank       *types.TankEntity
+		Common     interfaces.ITankCommonUseCases
+		Render     interfaces.ITankRenderUseCases
+		Lifecycle  interfaces.ITankLifecycleUseCases
+		Actions    interfaces.ITankActionsUseCases
+	}
+
+	// Враги
+	Enemies []struct {
+		Tank         *types.TankEntity
+		Common       interfaces.ITankCommonUseCases
+		Render       interfaces.ITankRenderUseCases
+		Lifecycle    interfaces.ITankLifecycleUseCases
+		Actions      interfaces.ITankActionsUseCases
+		InputAdapter interfaces.IInputAdapter // AI адаптер
+	}
+
+	// Игровые системы
+	Bullets         *use_cases.BulletUseCases
+	Map             *use_cases.MapUseCases
+	Collisions      *use_cases.CollisionUseCases
+	Animations      *use_cases.TilesUseCases
+	AIContext       *types.GameAiContext
+}
+
+// GameSessionConfig содержит всю конфигурацию для создания игровой сессии
+type GameSessionConfig struct {
 	// Репозитории данных
 	MapsRepo    interfaces.IMapsDataRepository
 	ScriptsRepo interfaces.IScriptsRepository
@@ -57,108 +173,36 @@ type GameStateUseCasesFacadeConfig struct {
 	GameConfig  *config.GameConfig
 	
 	// Репозитории тайлсетов
-	Tilesets TilesetsConfig
+	Tilesets struct {
+		Map       interfaces.ITilesetRepository
+		Player    interfaces.ITilesetRepository
+		Bullet    interfaces.ITilesetRepository
+		Spawner   interfaces.ITilesetRepository
+		Explosion interfaces.ITilesetRepository
+	}
 	
 	// Сервисы
-	Services ServicesConfig
-}
-
-// TilesetsConfig содержит репозитории тайлсетов
-type TilesetsConfig struct {
-	Map      interfaces.ITilesetRepository
-	Player   interfaces.ITilesetRepository
-	Bullet   interfaces.ITilesetRepository
-	Spawner  interfaces.ITilesetRepository
-	Explosion interfaces.ITilesetRepository
-}
-
-// ServicesConfig содержит сервисы для Use Cases
-type ServicesConfig struct {
-	BoundaryCollision interfaces.IBoundaryCollisionService
-	WallCollision     interfaces.IWallCollisionService
-	Coordinate        interfaces.ICoordinateService
-	TankBraking       interfaces.ITankBrakingService
-}
-
-// NewGameStateUseCasesFacadeConfig создает конфигурацию с валидацией
-func NewGameStateUseCasesFacadeConfig(
-	mapsRepo interfaces.IMapsDataRepository,
-	scriptsRepo interfaces.IScriptsRepository,
-	gameRepo interfaces.IGameRepositoriesRegistry,
-	levelNumber int,
-	gameConfig *config.GameConfig,
-	tilesets TilesetsConfig,
-	services ServicesConfig,
-) (*GameStateUseCasesFacadeConfig, error) {
-	// Валидация обязательных полей
-	if mapsRepo == nil {
-		return nil, errors.New("mapsRepo is required")
+	Services struct {
+		BoundaryCollision interfaces.IBoundaryCollisionService
+		WallCollision     interfaces.IWallCollisionService
+		Coordinate        interfaces.ICoordinateService
+		TankBraking       interfaces.ITankBrakingService
 	}
-	if scriptsRepo == nil {
-		return nil, errors.New("scriptsRepo is required")
-	}
-	// ... остальная валидация
-	
-	return &GameStateUseCasesFacadeConfig{
-		MapsRepo:    mapsRepo,
-		ScriptsRepo: scriptsRepo,
-		GameRepo:    gameRepo,
-		LevelNumber: levelNumber,
-		GameConfig:  gameConfig,
-		Tilesets:    tilesets,
-		Services:    services,
-	}, nil
 }
-```
 
-**Обновлённый конструктор:**
-
-```go
-func NewGameStateUseCasesFacade(
-	cfg *GameStateUseCasesFacadeConfig,
-) (*GameStateUseCasesFacade, error) {
-	// Использование конфигурации
-	level, err := cfg.MapsRepo.GetLevel(cfg.LevelNumber)
+// NewGameSession создает новую игровую сессию из конфигурации
+func NewGameSession(cfg GameSessionConfig) (*GameSession, error) {
+	// Логика создания из текущего NewGameStateUseCasesFacade
 	// ...
 }
 ```
 
-**Использование в App:**
-
-```go
-facadeConfig := &states.GameStateUseCasesFacadeConfig{
-	MapsRepo:    mapsRepo,
-	ScriptsRepo: scriptsRepo,
-	GameRepo:    gameRepo,
-	LevelNumber: gameConfig.LevelNumber,
-	GameConfig:  gameConfig,
-	Tilesets: states.TilesetsConfig{
-		Map:      tilesetRegistry.Blocks(),
-		Player:   tilesetRegistry.Player(),
-		Bullet:   tilesetRegistry.Bullet(),
-		Spawner:  tilesetRegistry.Spawner(),
-		Explosion: tilesetRegistry.Explosion(),
-	},
-	Services: states.ServicesConfig{
-		BoundaryCollision: boundaryCollisionService,
-		WallCollision:     wallCollisionService,
-		Coordinate:        coordinateService,
-		TankBraking:       tankBrakingService,
-	},
-}
-
-gameStateServices, err := states.NewGameStateUseCasesFacade(facadeConfig)
-```
-
 **Преимущества:**
-- ✅ Улучшенная читаемость — понятно, какие параметры относятся к какой группе
-- ✅ Простое расширение — добавление нового параметра не требует изменения сигнатуры
-- ✅ Валидация — можно проверить конфигурацию перед созданием фасада
-- ✅ Меньше ошибок — именованные поля исключают путаницу с порядком параметров
-
-**Недостатки:**
-- ⚠️ Дополнительный слой абстракции
-- ⚠️ Нужно создать и поддерживать структуру конфигурации
+- ✅ **Семантическая ясность**: `GameSession` явно представляет игровую сессию
+- ✅ **Логическая группировка**: Все компоненты игрока и врагов сгруппированы
+- ✅ **Упрощённый конструктор**: Один параметр `GameSessionConfig` вместо 13
+- ✅ **Лучшая инкапсуляция**: Вся логика сессии в одном месте
+- ✅ **Улучшенная читаемость**: Понятно, что относится к какой части игры
 
 ---
 
@@ -268,9 +312,9 @@ facade, err := states.NewGameStateUseCasesFacadeBuilder().
 
 ---
 
-### Рекомендация
+### Текущий статус
 
-**Рекомендуется Решение 1 (Структура конфигурации)** как более простое и явное. Builder паттерн стоит рассматривать, если ожидается усложнение логики создания или нужно создавать разные варианты конфигурации.
+**Планируется реализация `GameSession`** — структуры, представляющей игровую сессию. Это решение лучше отражает доменную модель (игровая сессия/раунд) и упрощает использование.
 
 ---
 
