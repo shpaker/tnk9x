@@ -1,17 +1,18 @@
 package use_cases
 
 import (
+	"github.com/shpaker/gonflict/internal/services"
 	"github.com/shpaker/gonflict/internal/types"
-	"github.com/shpaker/gonflict/internal/utils"
 )
 
 // CollisionUseCases реализация для операций с коллизиями
 type CollisionUseCases struct {
-	bulletUseCases IBulletUseCases
-	tankUseCases   ITankUseCasesRef
-	mapUseCases    IMapUseCases
-	enemyTanks     []*types.TankEntity
-	enemyUseCases  []ITankUseCasesRef // Use cases для врагов
+	bulletUseCases   IBulletUseCases
+	tankUseCases     ITankUseCasesRef
+	mapUseCases      IMapUseCases
+	enemyTanks       []*types.TankEntity
+	enemyUseCases    []ITankUseCasesRef // Use cases для врагов
+	collisionService *services.CollisionService
 }
 
 // NewCollisionUseCasesWithEnemies создает новый экземпляр CollisionUseCases с массивом врагов
@@ -22,13 +23,24 @@ func NewCollisionUseCasesWithEnemies(
 	enemyTanks []*types.TankEntity,
 	enemyUseCases []ITankUseCasesRef,
 ) *CollisionUseCases {
-	return &CollisionUseCases{
+	uc := &CollisionUseCases{
 		bulletUseCases: bulletUseCases,
 		tankUseCases:   tankUseCases,
 		mapUseCases:    mapUseCases,
 		enemyTanks:     enemyTanks,
 		enemyUseCases:  enemyUseCases,
 	}
+
+	// Создаем сервис коллизий с колбэками для публичных методов
+	uc.collisionService = services.NewCollisionService(
+		MapWidthHeight,
+		TankSpriteSize,
+		TileMinSize,
+		uc.CheckColliders,
+		uc.CheckCollidersWithArrayFirst,
+	)
+
+	return uc
 }
 
 // UpdateCollisions обновляет все коллизии в игре
@@ -59,145 +71,66 @@ func (uc *CollisionUseCases) checkEnemyCollisions() {
 		}
 
 		// Проверяем коллизии с границами
-		uc.checkEnemyBoundaryCollisions(enemy)
+		uc.collisionService.CheckEnemyBoundaryCollisions(enemy)
 
 		// Проверяем коллизии со стенами
-		uc.checkEnemyWallCollisions(enemy)
+		level := uc.mapUseCases.GetBlocks()
+		collidingBlock := uc.collisionService.CheckEnemyWallCollision(
+			enemy,
+			level,
+		)
+
+		if collidingBlock != nil {
+			uc.collisionService.HandleEnemyWallCollision(enemy, collidingBlock)
+		}
 	}
-}
-
-// checkEnemyBoundaryCollisions проверяет коллизии врага с границами экрана
-func (uc *CollisionUseCases) checkEnemyBoundaryCollisions(
-	enemy *types.TankEntity,
-) {
-	// Откатываем позицию при выходе за границы
-	if enemy.Position.X < 0 {
-		enemy.Position.X = 0
-		enemy.Speed = 0
-	}
-	if enemy.Position.Y < 0 {
-		enemy.Position.Y = 0
-		enemy.Speed = 0
-	}
-	if enemy.Position.X > MapWidthHeight-TankSpriteSize {
-		enemy.Position.X = MapWidthHeight - TankSpriteSize
-		enemy.Speed = 0
-	}
-	if enemy.Position.Y > MapWidthHeight-TankSpriteSize {
-		enemy.Position.Y = MapWidthHeight - TankSpriteSize
-		enemy.Speed = 0
-	}
-
-	// Округляем координаты врага до ближайшего кратного 4
-	if enemy.Speed == 0 {
-		enemy.Position.X = utils.RoundToNearestMultipleOf4(enemy.Position.X)
-		enemy.Position.Y = utils.RoundToNearestMultipleOf4(enemy.Position.Y)
-	}
-}
-
-// checkEnemyWallCollisions проверяет коллизии врага со стенами
-func (uc *CollisionUseCases) checkEnemyWallCollisions(enemy *types.TankEntity) {
-	level := uc.mapUseCases.GetBlocks()
-	mapObjects := uc.createMapObjectsFromLevel(level)
-
-	// Проверяем коллизии с использованием внутренних методов
-	collidingObject := uc.CheckCollidersWithArrayFirst(enemy, mapObjects)
-
-	if collidingObject != nil {
-		uc.handleEnemyWallCollision(enemy, collidingObject.(*types.BlockEntity))
-	}
-}
-
-// handleEnemyWallCollision обрабатывает коллизию врага со стеной
-func (uc *CollisionUseCases) handleEnemyWallCollision(
-	enemy *types.TankEntity,
-	block *types.BlockEntity,
-) {
-	blockPos := block.GetPosition()
-	blockSize := block.GetSize()
-
-	// Откатываем позицию врага в зависимости от направления
-	switch enemy.Direction {
-	case types.DirectionUp:
-		enemy.Position.Y = blockPos.Y + float64(blockSize.Height)
-	case types.DirectionDown:
-		enemy.Position.Y = blockPos.Y - float64(TankSpriteSize)
-	case types.DirectionLeft:
-		enemy.Position.X = blockPos.X + float64(blockSize.Width)
-	case types.DirectionRight:
-		enemy.Position.X = blockPos.X - float64(TankSpriteSize)
-	}
-
-	// Останавливаем врага
-	enemy.Speed = 0
-
-	// Округляем координаты врага до ближайшего кратного 4
-	enemy.Position.X = utils.RoundToNearestMultipleOf4(enemy.Position.X)
-	enemy.Position.Y = utils.RoundToNearestMultipleOf4(enemy.Position.Y)
 }
 
 // checkBulletBoundaryCollisions проверяет коллизии пуль с границами экрана
 func (uc *CollisionUseCases) checkBulletBoundaryCollisions() {
 	bullets := uc.bulletUseCases.GetBullets()
+	indicesToRemove := uc.collisionService.CheckBulletBoundaryCollisions(
+		bullets,
+	)
 
-	for i := len(bullets) - 1; i >= 0; i-- {
-		bullet := &bullets[i]
-
-		// Удаляем пули, которые вышли за границы экрана
-		if bullet.Position.X < 0 || bullet.Position.X > MapWidthHeight ||
-			bullet.Position.Y < 0 || bullet.Position.Y > MapWidthHeight {
-			uc.bulletUseCases.RemoveBullet(i)
-		}
+	for _, i := range indicesToRemove {
+		uc.bulletUseCases.RemoveBullet(i)
 	}
 }
 
 // checkBulletTankCollisions проверяет коллизии пуль с танком
 func (uc *CollisionUseCases) checkBulletTankCollisions(tank *types.TankEntity) {
 	bullets := uc.bulletUseCases.GetBullets()
+	indicesToRemove := uc.collisionService.CheckBulletTankCollision(
+		bullets,
+		tank,
+		uc.CheckColliders,
+	)
 
-	for i := len(bullets) - 1; i >= 0; i-- {
-		bullet := &bullets[i]
-
-		// Проверяем коллизию между пулей и танком
-		if bullet.Owner != tank && uc.CheckColliders(bullet, tank) {
-			// Удаляем пулю при попадании в танк
-			uc.bulletUseCases.RemoveBullet(i)
-			// Здесь можно добавить логику обработки попадания в танк
-			// println("Tank hit by bullet!")
-		}
+	for _, i := range indicesToRemove {
+		uc.bulletUseCases.RemoveBullet(i)
+		// Здесь можно добавить логику обработки попадания в танк
+		// println("Tank hit by bullet!")
 	}
 }
 
 // checkBulletEnemyCollisions проверяет коллизии пуль с врагами
 func (uc *CollisionUseCases) checkBulletEnemyCollisions() {
 	bullets := uc.bulletUseCases.GetBullets()
+	bulletIndicesToRemove, enemyIndicesToExplode := uc.collisionService.CheckBulletEnemyCollisions(
+		bullets,
+		uc.enemyTanks,
+		uc.CheckColliders,
+	)
 
-	for i := len(bullets) - 1; i >= 0; i-- {
-		bullet := &bullets[i]
+	for _, i := range bulletIndicesToRemove {
+		uc.bulletUseCases.RemoveBullet(i)
 
-		// Проверяем коллизию с каждым врагом
-		for enemyIndex, enemy := range uc.enemyTanks {
-			// Пропускаем если врага нет
-			if enemy == nil {
-				continue
-			}
-
-			// Проверяем, что пуля не принадлежит этому танку (избегаем самоуничтожения)
-			if bullet.Owner == enemy {
-				continue
-			}
-
-			// Если враг активен и есть коллизия
-			if enemy.IsActive() && uc.CheckColliders(bullet, enemy) {
-				// Удаляем пулю
-				uc.bulletUseCases.RemoveBullet(i)
-				// Запускаем анимацию взрыва для врага через его Use Cases
-				if enemyIndex < len(uc.enemyUseCases) &&
-					uc.enemyUseCases[enemyIndex] != nil {
-					uc.enemyUseCases[enemyIndex].StartExplosion()
-				}
-				// Выходим из цикла врагов, так как пуля уже удалена
-				break
+		// Запускаем анимацию взрыва для врага через его Use Cases
+		if enemyIndex, exists := enemyIndicesToExplode[i]; exists {
+			if enemyIndex < len(uc.enemyUseCases) &&
+				uc.enemyUseCases[enemyIndex] != nil {
+				uc.enemyUseCases[enemyIndex].StartExplosion()
 			}
 		}
 	}
@@ -208,45 +141,24 @@ func (uc *CollisionUseCases) checkBulletWallCollisions() {
 	bullets := uc.bulletUseCases.GetBullets()
 	level := uc.mapUseCases.GetBlocks()
 
-	for i := len(bullets) - 1; i >= 0; i-- {
-		bullet := &bullets[i]
+	bulletIndicesToRemove, blockIndicesToRemove := uc.collisionService.CheckBulletWallCollisions(
+		bullets,
+		level,
+		uc.CheckColliders,
+	)
 
-		// Проверяем коллизии пули со стенами
-		bulletHit := false
-		var blocksToRemove []int
-
-		for j, wall := range level {
-			if wall.Data == nil {
-				continue
-			}
-
-			block := uc.createBlockFromWall(wall)
-
-			// Проверяем коллизию пули с блоком
-			if uc.CheckColliders(bullet, &block) {
-				// Если блок - кирпичная стена, помечаем для удаления
-				if wall.Data.Name == types.Brick {
-					blocksToRemove = append(blocksToRemove, j)
-				}
-
-				bulletHit = true
-				// Не прерываем цикл, продолжаем проверять другие блоки
-			}
+	// Удаляем блоки в обратном порядке (чтобы индексы не сдвигались)
+	for k := len(blockIndicesToRemove) - 1; k >= 0; k-- {
+		blockIndex := blockIndicesToRemove[k]
+		blocks := uc.mapUseCases.GetBlocks()
+		if blockIndex < len(blocks) {
+			uc.mapUseCases.RemoveBlock(&blocks[blockIndex])
 		}
+	}
 
-		// Удаляем блоки в обратном порядке (чтобы индексы не сдвигались)
-		for k := len(blocksToRemove) - 1; k >= 0; k-- {
-			blockIndex := blocksToRemove[k]
-			blocks := uc.mapUseCases.GetBlocks()
-			if blockIndex < len(blocks) {
-				uc.mapUseCases.RemoveBlock(&blocks[blockIndex])
-			}
-		}
-
-		// Удаляем пулю только после проверки всех блоков
-		if bulletHit {
-			uc.bulletUseCases.RemoveBullet(i)
-		}
+	// Удаляем пули
+	for _, i := range bulletIndicesToRemove {
+		uc.bulletUseCases.RemoveBullet(i)
 	}
 }
 
@@ -254,95 +166,27 @@ func (uc *CollisionUseCases) checkBulletWallCollisions() {
 func (uc *CollisionUseCases) checkTankBoundaryCollisions(
 	tank *types.TankEntity,
 ) {
-	if tank.Position.X < 0 {
-		tank.Position.X = 0
-		uc.tankUseCases.Stop(false)
-	}
-	if tank.Position.Y < 0 {
-		tank.Position.Y = 0
-		uc.tankUseCases.Stop(false)
-	}
-	if tank.Position.X > MapWidthHeight-TankSpriteSize {
-		tank.Position.X = MapWidthHeight - TankSpriteSize
-		uc.tankUseCases.Stop(false)
-	}
-	if tank.Position.Y > MapWidthHeight-TankSpriteSize {
-		tank.Position.Y = MapWidthHeight - TankSpriteSize
-		uc.tankUseCases.Stop(false)
-	}
+	uc.collisionService.CheckTankBoundaryCollisions(tank, uc.tankUseCases.Stop)
 }
 
 // checkTankWallCollisions проверяет коллизии танка со стенами
 func (uc *CollisionUseCases) checkTankWallCollisions(tank *types.TankEntity) {
 	level := uc.mapUseCases.GetBlocks()
-	mapObjects := uc.createMapObjectsFromLevel(level)
+	collidingBlock := uc.collisionService.CheckTankWallCollision(tank, level)
 
-	// Проверяем коллизии с использованием внутренних методов
-	collidingObject := uc.CheckCollidersWithArrayFirst(tank, mapObjects)
-
-	if collidingObject != nil {
-		uc.handleTankWallCollision(tank, collidingObject.(*types.BlockEntity))
+	if collidingBlock != nil {
+		uc.collisionService.HandleTankWallCollision(
+			tank,
+			collidingBlock,
+			uc.tankUseCases.Stop,
+		)
 	}
-}
-
-// createBlockFromWall создает блок из данных стены для проверки коллизий
-func (uc *CollisionUseCases) createBlockFromWall(
-	wall types.BlockEntity,
-) types.BlockEntity {
-	return types.BlockEntity{
-		ImageGetter: wall.ImageGetter,
-		Data:        wall.Data,
-		Position: types.Position{
-			X: wall.Position.X * TileMinSize,
-			Y: wall.Position.Y * TileMinSize,
-		},
-		Altitude: wall.Altitude,
-	}
-}
-
-// createMapObjectsFromLevel создает массив объектов карты из уровня
-func (uc *CollisionUseCases) createMapObjectsFromLevel(
-	level []types.BlockEntity,
-) []IMapObject {
-	var mapObjects []IMapObject
-	for _, wall := range level {
-		if wall.Data != nil {
-			block := uc.createBlockFromWall(wall)
-			mapObjects = append(mapObjects, &block)
-		}
-	}
-	return mapObjects
-}
-
-// handleTankWallCollision обрабатывает коллизию танка со стеной
-func (uc *CollisionUseCases) handleTankWallCollision(
-	tank *types.TankEntity,
-	block *types.BlockEntity,
-) {
-	blockPos := block.GetPosition()
-	blockSize := block.GetSize()
-
-	switch tank.Direction {
-	case types.DirectionUp:
-		// верх танка упирается в низ блока
-		tank.Position.Y = blockPos.Y + float64(blockSize.Height)
-	case types.DirectionDown:
-		// низ танка упирается в верх блока
-		tank.Position.Y = blockPos.Y - float64(TankSpriteSize)
-	case types.DirectionLeft:
-		// левая сторона танка упирается в правую сторону блока
-		tank.Position.X = blockPos.X + float64(blockSize.Width)
-	case types.DirectionRight:
-		// правая сторона танка упирается в левую сторону блока
-		tank.Position.X = blockPos.X - float64(TankSpriteSize)
-	}
-	uc.tankUseCases.Stop(true)
 }
 
 // CheckColliders проверяет коллизию между двумя объектами карты
 func (uc *CollisionUseCases) CheckColliders(
-	obj1 IMapObject,
-	obj2 IMapObject,
+	obj1 types.IMapObject,
+	obj2 types.IMapObject,
 ) bool {
 	// Проверяем, что объекты на одном уровне высоты
 	if obj1.GetAltitude() != obj2.GetAltitude() {
@@ -363,10 +207,10 @@ func (uc *CollisionUseCases) CheckColliders(
 
 // CheckCollidersWithArray проверяет коллизии между объектом и массивом объектов карты
 func (uc *CollisionUseCases) CheckCollidersWithArray(
-	obj IMapObject,
-	objects []IMapObject,
-) []IMapObject {
-	var collidingObjects []IMapObject
+	obj types.IMapObject,
+	objects []types.IMapObject,
+) []types.IMapObject {
+	var collidingObjects []types.IMapObject
 
 	for _, mapObj := range objects {
 		if uc.CheckColliders(obj, mapObj) {
@@ -380,9 +224,9 @@ func (uc *CollisionUseCases) CheckCollidersWithArray(
 // CheckCollidersWithArrayFirst проверяет коллизии между объектом и массивом объектов карты
 // Возвращает первый коллидирующий объект или nil, если коллизий нет
 func (uc *CollisionUseCases) CheckCollidersWithArrayFirst(
-	obj IMapObject,
-	objects []IMapObject,
-) IMapObject {
+	obj types.IMapObject,
+	objects []types.IMapObject,
+) types.IMapObject {
 	for _, mapObj := range objects {
 		if uc.CheckColliders(obj, mapObj) {
 			return mapObj

@@ -18,6 +18,13 @@ type IImageIDGetter interface {
 	GetImageID() (string, error)
 }
 
+// IMapObject определяет интерфейс для объектов карты
+type IMapObject interface {
+	GetSize() Size
+	GetPosition() Position
+	GetAltitude() Altitude
+}
+
 // Типы
 type (
 	BlockType string

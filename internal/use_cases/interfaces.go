@@ -6,13 +6,6 @@ import (
 	"github.com/shpaker/gonflict/internal/types"
 )
 
-// IMapObject определяет интерфейс для объектов карты
-type IMapObject interface {
-	GetSize() types.Size
-	GetPosition() types.Position
-	GetAltitude() types.Altitude
-}
-
 // ITankUseCasesRef интерфейс для базовых операций с танками
 type ITankUseCasesRef interface {
 	StartSpawn() error
@@ -53,12 +46,15 @@ type IMapUseCases interface {
 // ICollisionUseCases интерфейс для операций с коллизиями
 type ICollisionUseCases interface {
 	UpdateCollisions() error
-	CheckColliders(obj1 IMapObject, obj2 IMapObject) bool
-	CheckCollidersWithArray(obj IMapObject, objects []IMapObject) []IMapObject
+	CheckColliders(obj1 types.IMapObject, obj2 types.IMapObject) bool
+	CheckCollidersWithArray(
+		obj types.IMapObject,
+		objects []types.IMapObject,
+	) []types.IMapObject
 	CheckCollidersWithArrayFirst(
-		obj IMapObject,
-		objects []IMapObject,
-	) IMapObject
+		obj types.IMapObject,
+		objects []types.IMapObject,
+	) types.IMapObject
 }
 
 // ITilesUseCases определяет интерфейс для работы с тайлами и анимациями
