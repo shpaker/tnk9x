@@ -160,12 +160,22 @@ func NewGameStateUseCasesFacade(
 		enemyInputAdapters = append(enemyInputAdapters, aiInputAdapter)
 	}
 
+	// Конвертируем enemyUseCasesList в []ITankUseCasesRef
+	enemyUseCasesRefs := make(
+		[]use_cases.ITankUseCasesRef,
+		len(enemyUseCasesList),
+	)
+	for i, uc := range enemyUseCasesList {
+		enemyUseCasesRefs[i] = uc
+	}
+
 	// Создаем CollisionUseCases
 	collisionUseCases := use_cases.NewCollisionUseCasesWithEnemies(
 		bulletUseCases,
 		playerUseCases,
 		mapUseCases,
 		enemyTanks,
+		enemyUseCasesRefs,
 	)
 
 	return &GameStateUseCasesFacade{

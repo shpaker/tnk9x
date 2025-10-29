@@ -11,6 +11,7 @@ type CollisionUseCases struct {
 	tankUseCases   ITankUseCasesRef
 	mapUseCases    IMapUseCases
 	enemyTanks     []*types.TankEntity
+	enemyUseCases  []ITankUseCasesRef // Use cases для врагов
 }
 
 // NewCollisionUseCasesWithEnemies создает новый экземпляр CollisionUseCases с массивом врагов
@@ -19,12 +20,14 @@ func NewCollisionUseCasesWithEnemies(
 	tankUseCases ITankUseCasesRef,
 	mapUseCases IMapUseCases,
 	enemyTanks []*types.TankEntity,
+	enemyUseCases []ITankUseCasesRef,
 ) *CollisionUseCases {
 	return &CollisionUseCases{
 		bulletUseCases: bulletUseCases,
 		tankUseCases:   tankUseCases,
 		mapUseCases:    mapUseCases,
 		enemyTanks:     enemyTanks,
+		enemyUseCases:  enemyUseCases,
 	}
 }
 
@@ -173,7 +176,7 @@ func (uc *CollisionUseCases) checkBulletEnemyCollisions() {
 		bullet := &bullets[i]
 
 		// Проверяем коллизию с каждым врагом
-		for _, enemy := range uc.enemyTanks {
+		for enemyIndex, enemy := range uc.enemyTanks {
 			// Пропускаем если врага нет
 			if enemy == nil {
 				continue
@@ -188,9 +191,11 @@ func (uc *CollisionUseCases) checkBulletEnemyCollisions() {
 			if enemy.IsActive() && uc.CheckColliders(bullet, enemy) {
 				// Удаляем пулю
 				uc.bulletUseCases.RemoveBullet(i)
-				// Удаляем врага
-				// Запускаем анимацию взрыва через TankUseCases
-				uc.tankUseCases.StartExplosion()
+				// Запускаем анимацию взрыва для врага через его Use Cases
+				if enemyIndex < len(uc.enemyUseCases) &&
+					uc.enemyUseCases[enemyIndex] != nil {
+					uc.enemyUseCases[enemyIndex].StartExplosion()
+				}
 				// Выходим из цикла врагов, так как пуля уже удалена
 				break
 			}
