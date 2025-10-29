@@ -9,17 +9,14 @@ import (
 // TankBrakingService предоставляет логику торможения танка
 type TankBrakingService struct {
 	tank *types.TankEntity
-	stop func(bool) // Функция для остановки танка
 }
 
 // NewTankBrakingService создает новый сервис торможения
 func NewTankBrakingService(
 	tank *types.TankEntity,
-	stop func(bool),
 ) *TankBrakingService {
 	return &TankBrakingService{
 		tank: tank,
-		stop: stop,
 	}
 }
 
@@ -117,7 +114,7 @@ func (s *TankBrakingService) checkAndHandleHalfStepBack(
 	diff := *ctx.currentCoord - ctx.targetMultipleOf4
 	if diff > 0 && diff <= 0.5 {
 		*ctx.currentCoord = ctx.targetMultipleOf4 - 0.5
-		s.stop(true)
+		s.tank.Speed = 0
 		s.tank.State = types.TankStateStopped
 		s.tank.NextDirection = nil
 		return true
@@ -187,7 +184,7 @@ func (s *TankBrakingService) moveBackwardToTarget(
 
 // completeBraking завершает процесс торможения и обнуляет скорость
 func (s *TankBrakingService) completeBraking() {
-	s.stop(true)
+	s.tank.Speed = 0
 	s.finishBraking()
 }
 

@@ -9,9 +9,9 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 
+	"github.com/shpaker/gonflict/internal/services"
 	"github.com/shpaker/gonflict/internal/types"
 	"github.com/shpaker/gonflict/internal/use_cases"
-	"github.com/shpaker/gonflict/internal/utils"
 )
 
 // RendererAdapter адаптер для рендеринга игры
@@ -27,6 +27,7 @@ type RendererAdapter struct {
 	spawnerTilesUseCases   *use_cases.TilesUseCases
 	explosionTilesUseCases *use_cases.TilesUseCases
 	imageCache             map[string]*ebiten.Image // Кэш ebiten.Image
+	imageService           *services.ImageService   // Сервис для работы с изображениями
 }
 
 // NewRendererAdapter создает новый экземпляр RendererAdapter
@@ -54,6 +55,7 @@ func NewRendererAdapter(
 		spawnerTilesUseCases:   spawnerTilesUseCases,
 		explosionTilesUseCases: explosionTilesUseCases,
 		imageCache:             make(map[string]*ebiten.Image),
+		imageService:           services.NewImageService(),
 	}
 }
 
@@ -94,7 +96,7 @@ func (r *RendererAdapter) drawTank(screen *ebiten.Image) {
 
 	// Поворачиваем изображение в зависимости от направления танка
 	rotationAngle := getRotationAngle(tank.Direction)
-	rotatedImage, err := utils.RotateImageByAngle(image, rotationAngle)
+	rotatedImage, err := r.imageService.RotateImageByAngle(image, rotationAngle)
 	if err != nil {
 		log.Printf("ERROR: Tank error rotating image: %v", err)
 		return
@@ -185,7 +187,7 @@ func (r *RendererAdapter) drawEnemiesWithoutExplosions(screen *ebiten.Image) {
 		img := r.getCachedImage(imageID, imageData)
 
 		// Поворачиваем изображение в зависимости от направления
-		rotatedImage := utils.RotateImage(img, enemy.Direction)
+		rotatedImage := r.imageService.RotateImage(img, enemy.Direction)
 
 		op := &ebiten.DrawImageOptions{}
 		op.GeoM.Translate(
@@ -382,7 +384,10 @@ func (r *RendererAdapter) drawBullets(screen *ebiten.Image) {
 
 			// Поворачиваем изображение в зависимости от направления пули
 			rotationAngle := getRotationAngle(bullet.Direction)
-			rotatedImage, err := utils.RotateImageByAngle(image, rotationAngle)
+			rotatedImage, err := r.imageService.RotateImageByAngle(
+				image,
+				rotationAngle,
+			)
 			if err != nil {
 				log.Printf("ERROR: Bullet %d error rotating image: %v", i, err)
 				continue

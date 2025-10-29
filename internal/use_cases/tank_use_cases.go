@@ -7,18 +7,18 @@ import (
 	"github.com/shpaker/gonflict/internal/repositories/game"
 	"github.com/shpaker/gonflict/internal/services"
 	"github.com/shpaker/gonflict/internal/types"
-	"github.com/shpaker/gonflict/internal/utils"
 )
 
 // TankUseCases предоставляет базовые операции для работы с танками
 type TankUseCases struct {
-	tanksRepo       game.ITanksRepository
-	bulletUseCases  IBulletUseCases              // Use Cases пуль
-	tilesUseCases   *TilesUseCases               // Для всех анимаций (спавн, взрыв, танк)
-	spawnAt         types.Position               // Координаты спавна игрока
-	tank            types.TankEntity             // Танк
-	animationGetter types.IImageIDGetter         // Анимация танка
-	brakingService  *services.TankBrakingService // Сервис торможения танка
+	tanksRepo         game.ITanksRepository
+	bulletUseCases    IBulletUseCases              // Use Cases пуль
+	tilesUseCases     *TilesUseCases               // Для всех анимаций (спавн, взрыв, танк)
+	spawnAt           types.Position               // Координаты спавна игрока
+	tank              types.TankEntity             // Танк
+	animationGetter   types.IImageIDGetter         // Анимация танка
+	brakingService    *services.TankBrakingService // Сервис торможения танка
+	coordinateService *services.CoordinateService  // Сервис для работы с координатами
 }
 
 // ============================================================================
@@ -43,17 +43,18 @@ func NewTankUseCases(
 	}
 
 	uc := &TankUseCases{
-		tanksRepo:       tanksRepo,
-		bulletUseCases:  bulletUseCases,
-		tilesUseCases:   tilesUseCases,
-		spawnAt:         spawnAt,
-		tank:            *tank,
-		animationGetter: nil,
-		brakingService:  nil, // Инициализируется после добавления танка в репозиторий
+		tanksRepo:         tanksRepo,
+		bulletUseCases:    bulletUseCases,
+		tilesUseCases:     tilesUseCases,
+		spawnAt:           spawnAt,
+		tank:              *tank,
+		animationGetter:   nil,
+		brakingService:    nil, // Инициализируется после добавления танка в репозиторий
+		coordinateService: services.NewCoordinateService(),
 	}
 	uc.tanksRepo.AddTank(&uc.tank)
 	// Инициализируем сервис торможения после создания танка
-	uc.brakingService = services.NewTankBrakingService(&uc.tank, uc.Stop)
+	uc.brakingService = services.NewTankBrakingService(&uc.tank)
 	return uc
 }
 
@@ -212,8 +213,12 @@ func (uc *TankUseCases) Stop(
 	if byCollision {
 		// При коллизии сразу останавливаем и округляем
 		uc.tank.Speed = 0
-		uc.tank.Position.X = utils.RoundToNearestMultipleOf4(uc.tank.Position.X)
-		uc.tank.Position.Y = utils.RoundToNearestMultipleOf4(uc.tank.Position.Y)
+		uc.tank.Position.X = uc.coordinateService.RoundToNearestMultipleOf4(
+			uc.tank.Position.X,
+		)
+		uc.tank.Position.Y = uc.coordinateService.RoundToNearestMultipleOf4(
+			uc.tank.Position.Y,
+		)
 		uc.tank.State = types.TankStateStopped
 		return
 	}
