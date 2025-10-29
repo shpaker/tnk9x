@@ -19,7 +19,7 @@ type ITankUseCasesRef interface {
 	GetTank() *types.TankEntity
 	Rotate(direction types.Direction) error
 	Move() error
-	StopTank(byCollision bool) error
+	Stop(byCollision bool)
 	Update(dt float64) error
 	StartExplosion() error
 	IsActive() bool

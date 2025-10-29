@@ -2,8 +2,10 @@ package use_cases
 
 import (
 	"errors"
+	"log"
 
 	"github.com/shpaker/gonflict/internal/repositories/game"
+	"github.com/shpaker/gonflict/internal/services"
 	"github.com/shpaker/gonflict/internal/types"
 	"github.com/shpaker/gonflict/internal/utils"
 )
@@ -11,11 +13,12 @@ import (
 // TankUseCases предоставляет базовые операции для работы с танками
 type TankUseCases struct {
 	tanksRepo       game.ITanksRepository
-	bulletUseCases  IBulletUseCases      // Use Cases пуль
-	tilesUseCases   *TilesUseCases       // Для всех анимаций (спавн, взрыв, танк)
-	spawnAt         types.Position       // Координаты спавна игрока
-	tank            types.TankEntity     // Танк
-	animationGetter types.IImageIDGetter // Анимация танка
+	bulletUseCases  IBulletUseCases              // Use Cases пуль
+	tilesUseCases   *TilesUseCases               // Для всех анимаций (спавн, взрыв, танк)
+	spawnAt         types.Position               // Координаты спавна игрока
+	tank            types.TankEntity             // Танк
+	animationGetter types.IImageIDGetter         // Анимация танка
+	brakingService  *services.TankBrakingService // Сервис торможения танка
 }
 
 // ============================================================================
@@ -46,8 +49,11 @@ func NewTankUseCases(
 		spawnAt:         spawnAt,
 		tank:            *tank,
 		animationGetter: nil,
+		brakingService:  nil, // Инициализируется после добавления танка в репозиторий
 	}
 	uc.tanksRepo.AddTank(&uc.tank)
+	// Инициализируем сервис торможения после создания танка
+	uc.brakingService = services.NewTankBrakingService(&uc.tank, uc.Stop)
 	return uc
 }
 
@@ -101,6 +107,11 @@ func (uc *TankUseCases) Update(
 		return errors.New("tank is not active")
 	}
 
+	// Обрабатываем состояние Braking отдельно
+	if uc.tank.State == types.TankStateBraking {
+		return uc.brakingService.HandleBrakingState(dt)
+	}
+
 	delta := uc.tank.Speed * dt
 
 	switch uc.tank.Direction {
@@ -113,6 +124,15 @@ func (uc *TankUseCases) Update(
 	case types.DirectionRight:
 		uc.tank.Position.X += delta
 	}
+
+	log.Printf(
+		"DEBUG: Tank position (%.2f, %.2f) state=%d direction=%d speed=%.2f",
+		uc.tank.Position.X,
+		uc.tank.Position.Y,
+		uc.tank.State,
+		uc.tank.Direction,
+		uc.tank.Speed,
+	)
 
 	return nil
 }
@@ -128,12 +148,33 @@ func (uc *TankUseCases) Rotate(
 	if !uc.tank.IsActive() {
 		return errors.New("tank is not active")
 	}
-
-	if uc.tank.Speed != 0 {
-		return errors.New("cannot rotate while moving")
+	if direction == uc.tank.Direction {
+		return nil
 	}
 
-	uc.tank.Direction = direction
+	// Если танк в состоянии Braking, запоминаем новое направление
+	// После доезжания до кратного 4 танк начнет движение в новом направлении
+	if uc.tank.State == types.TankStateBraking {
+		// Если направление совпадает с текущим, не нужно его менять
+		if direction == uc.tank.Direction {
+			uc.tank.NextDirection = nil
+		} else {
+			directionCopy := direction
+			uc.tank.NextDirection = &directionCopy
+		}
+		return nil
+	}
+
+	if uc.tank.State == types.TankStateStopped {
+		uc.tank.Direction = direction
+		return nil
+	}
+
+	// Если танк в состоянии Moving, переводим в Braking и запоминаем новое направление
+	// Танк сначала доедет до кратного 4, потом повернется
+	directionCopy := direction
+	uc.tank.NextDirection = &directionCopy
+	uc.tank.State = types.TankStateBraking
 	return nil
 }
 
@@ -143,48 +184,43 @@ func (uc *TankUseCases) Move() error {
 		return errors.New("tank is not active")
 	}
 
-	uc.tank.Speed = 32.0
-	return nil
-}
-
-// StopTank останавливает танк
-func (uc *TankUseCases) StopTank(
-	byCollision bool,
-) error {
-	if !uc.tank.IsActive() {
-		return errors.New("tank is not active")
-	}
-
-	uc.tank.Speed = 0
-
-	if byCollision {
-		// Округляем координаты до ближайшего кратного 4
-		uc.tank.Position.X = utils.RoundToNearestMultipleOf4(uc.tank.Position.X)
-		uc.tank.Position.Y = utils.RoundToNearestMultipleOf4(uc.tank.Position.Y)
+	// Если танк в состоянии Braking, нужно доехать до кратного 4
+	// Новое направление уже установлено через Rotate, так что просто продолжаем
+	if uc.tank.State == types.TankStateBraking {
+		// Если NextDirection уже установлен, ничего не делаем - просто продолжаем доезжать
+		// Если NextDirection не установлен, значит направление не менялось, просто продолжаем движение
+		if uc.tank.NextDirection == nil {
+			// Направление не менялось - останавливаем процесс остановки и продолжаем движение
+			uc.tank.State = types.TankStateMoving
+		}
 		return nil
 	}
 
-	// Выравниваем позицию по сетке
-	switch uc.tank.Direction {
-	case types.DirectionUp:
-		uc.tank.Position.Y = float64(
-			utils.RoundToEven(uc.tank.Position.Y, false),
-		)
-	case types.DirectionDown:
-		uc.tank.Position.Y = float64(
-			utils.RoundToEven(uc.tank.Position.Y, true),
-		)
-	case types.DirectionLeft:
-		uc.tank.Position.X = float64(
-			utils.RoundToEven(uc.tank.Position.X, false),
-		)
-	case types.DirectionRight:
-		uc.tank.Position.X = float64(
-			utils.RoundToEven(uc.tank.Position.X, true),
-		)
+	uc.tank.Speed = 32.0
+	uc.tank.State = types.TankStateMoving
+	return nil
+}
+
+// Stop останавливает танк
+func (uc *TankUseCases) Stop(
+	byCollision bool,
+) {
+	if !uc.tank.IsActive() {
+		return
+	}
+	uc.tank.NextDirection = nil
+	if byCollision {
+		// При коллизии сразу останавливаем и округляем
+		uc.tank.Speed = 0
+		uc.tank.Position.X = utils.RoundToNearestMultipleOf4(uc.tank.Position.X)
+		uc.tank.Position.Y = utils.RoundToNearestMultipleOf4(uc.tank.Position.Y)
+		uc.tank.State = types.TankStateStopped
+		return
 	}
 
-	return nil
+	// При отпускании клавиши - переходим в состояние Braking
+	// Танк будет доезжать до кратного 4
+	uc.tank.State = types.TankStateBraking
 }
 
 // ============================================================================

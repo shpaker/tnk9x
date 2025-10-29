@@ -256,19 +256,19 @@ func (uc *CollisionUseCases) checkTankBoundaryCollisions(
 ) {
 	if tank.Position.X < 0 {
 		tank.Position.X = 0
-		uc.tankUseCases.StopTank(false)
+		uc.tankUseCases.Stop(false)
 	}
 	if tank.Position.Y < 0 {
 		tank.Position.Y = 0
-		uc.tankUseCases.StopTank(false)
+		uc.tankUseCases.Stop(false)
 	}
 	if tank.Position.X > MapWidthHeight-TankSpriteSize {
 		tank.Position.X = MapWidthHeight - TankSpriteSize
-		uc.tankUseCases.StopTank(false)
+		uc.tankUseCases.Stop(false)
 	}
 	if tank.Position.Y > MapWidthHeight-TankSpriteSize {
 		tank.Position.Y = MapWidthHeight - TankSpriteSize
-		uc.tankUseCases.StopTank(false)
+		uc.tankUseCases.Stop(false)
 	}
 }
 
@@ -336,7 +336,7 @@ func (uc *CollisionUseCases) handleTankWallCollision(
 		// правая сторона танка упирается в левую сторону блока
 		tank.Position.X = blockPos.X - float64(TankSpriteSize)
 	}
-	uc.tankUseCases.StopTank(true)
+	uc.tankUseCases.Stop(true)
 }
 
 // CheckColliders проверяет коллизию между двумя объектами карты

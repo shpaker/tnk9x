@@ -93,19 +93,19 @@ func (a *KeyboardInputAdapter) keyReleasedEvents() {
 
 	if inpututil.IsKeyJustReleased(a.upButton) &&
 		tank.Direction == types.DirectionUp {
-		a.tankUseCases.StopTank(false)
+		a.tankUseCases.Stop(false)
 	}
 	if inpututil.IsKeyJustReleased(a.downButton) &&
 		tank.Direction == types.DirectionDown {
-		a.tankUseCases.StopTank(false)
+		a.tankUseCases.Stop(false)
 	}
 	if inpututil.IsKeyJustReleased(a.leftButton) &&
 		tank.Direction == types.DirectionLeft {
-		a.tankUseCases.StopTank(false)
+		a.tankUseCases.Stop(false)
 	}
 	if inpututil.IsKeyJustReleased(a.rightButton) &&
 		tank.Direction == types.DirectionRight {
-		a.tankUseCases.StopTank(false)
+		a.tankUseCases.Stop(false)
 	}
 }
 
