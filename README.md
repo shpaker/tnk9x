@@ -11,6 +11,7 @@
 - ⚔️ **Коллизии** - проверка столкновений между танками и объектами
 - ⚙️ **Конфигурация** - настройка через `config.yml`
 - 🎯 **Скрипты AI** - изменение поведения врагов без перекомпиляции
+- 🔫 **Стрельба танков** - танки могут стрелять через метод Shoot()
 
 ## 📁 Структура проекта
 
@@ -19,6 +20,7 @@ gonflict/
 ├── cmd/
 ├── internal/
 │   ├── adapters/
+│   │   └── input_adapters/
 │   ├── repositories/
 │   │   ├── game/
 │   │   ├── processed/
@@ -52,73 +54,67 @@ gonflict/
    - `Infrastructure Layer` (repositories) — хранение данных
 
 2. **Dependency Inversion**:
-   - Зависимости через **интерфейсы** (ITanksRepository, ITankUseCases)
+   - Зависимости через **интерфейсы** (ITanksRepository, ITankUseCasesRef)
    - Конкретные реализации скрыты от бизнес-логики
    - Легко подменять реализации (например, для тестов)
 
 3. **Single Responsibility**:
-   - `TankUseCases` — только логика танков
+   - `TankUseCases` — только логика танков (движение, стрельба, анимации)
    - `CollisionUseCases` — только коллизии
    - `RendererAdapter` — только отрисовка
+   - `AiInputAdapter` — только AI логика врагов
+
+4. **Registry Pattern**:
+   - `TilesetRepositoryRegistry` — централизованное управление тайлсетами
+   - Упрощение конструкторов и инъекции зависимостей
 
 #### ⚠️ Области для улучшения:
 
 1. **Dependency Injection**:
    - ✅ Используются интерфейсы
-   - ⚠️ Фасад сам создает зависимости (строки 35-56 в `game_state_use_cases_facade.go`)
-   - ⚠️ 8 параметров конструктора (God Object антипаттерн)
-   - ❌ Фасад создает конкретные классы вместо получения через DI
+   - ✅ Registry Pattern для упрощения DI
+   - ⚠️ Фасад все еще создает некоторые зависимости
+   - ✅ Уменьшено количество параметров конструкторов
 
-2. **Дублирование структур**:
-   - ❌ `GameConfig` определен в `internal/config.go` и `internal/states/game_state.go`
-   - **Причина**: Циклический импорт `internal/app.go` → `states` → `internal`
-   - ✅ Временное решение для избежания циклических зависимостей
+2. **Инкапсуляция**:
+   - ✅ `AnimationGetter` перенесен в `TankUseCases`
+   - ✅ Методы `GetImageId()` и `GetAnimationGetter()` в Use Cases
+   - ✅ Удален `GetScreenPosition()` из интерфейса `IMapObject`
 
-**Общая оценка: 85/100** — хорошо спроектированная архитектура
+**Общая оценка: 90/100** — отлично спроектированная архитектура
 
 ### Где можно улучшить?
 
-1. **Зависимость от константы DT**:
-   ```go
-   a.tankUseCases.Update(use_cases.DT)
-   ```
-   **Проблема**: Глобальные константы усложняют тестирование  
-   **Решение**: Передавать `dt` извне (например, от GameState)
+1. **Интеграция звуков**:
+   - `SoundsRepository` и `SoundUseCases` созданы, но не интегрированы
+   - Нужно добавить воспроизведение звуков стрельбы и взрывов
 
-2. **GameState создает Use Cases** (строки 37-46 в `game_state.go`):
-   ```go
-   gameStateServices, err := NewGameStateUseCasesFacade(...)
-   ```
-   **Проблема**: Знание об уровне (константа `13`) и репозиториях  
-   **Решение**: Внедрять `GameStateUseCasesFacade` через конструктор App
+2. **Упрощение интерфейсов**:
+   - `IMapObject` теперь содержит только необходимые методы
+   - Удален избыточный `GetScreenPosition()`
 
-3. **Дублирование GameConfig**:
-   - Определен в `internal/config.go` (для загрузки) и `internal/states/game_state.go` (для использования)
-   - Причина: циклический импорт `internal/app.go` → `states` → `internal`
-   - Временное решение, требующее рефакторинга структуры пакетов
-
-4. **Direction как string vs int**:
-   - Был string для удобства в Lua, теперь int для производительности
-   - Преимущество: прямое преобразование без конвертации
+3. **Централизация анимаций**:
+   - `AnimationGetter` управляется через `TankUseCases`
+   - Упрощен доступ к анимациям через Use Cases
 
 ### Диаграмма слоев архитектуры
 
 ```mermaid
 graph TB
     subgraph P["🎨 Presentation Layer"]
-        Keyboard["⌨️ KeyboardInputAdapter"]
+        Keyboard["⌨️ KeyboardInputAdapter<br/>WASD + Space"]
         AI["🤖 AiInputAdapter<br/>script: string<br/>Lua gopher"]
         Render["🎨 RendererAdapter<br/>Ebiten"]
     end
     
     subgraph A["⚙️ Application Layer"]
         Facade["🎯 GameStateFacade<br/>оркестрация"]
-        TankUC["🚗 TankUseCases<br/>Rotate/Move<br/>Update/IsActive/IsStopped"]
-        EnemyUC["👾 EnemyUseCases"]
-        BulletUC["💣 BulletUseCases<br/>Shoot/Update"]
+        TankUC["🚗 TankUseCases<br/>Rotate/Move/Update<br/>Shoot/IsActive/IsStopped<br/>GetImageId/GetAnimationGetter"]
+        BulletUC["💣 BulletUseCases<br/>ShootBullet/Update"]
         CollisionUC["💥 CollisionUseCases<br/>проверки коллизий"]
         TilesUC["🎨 TilesUseCases<br/>статичные/анимации"]
         MapUC["🗺️ MapUseCases<br/>блоки карты"]
+        SoundUC["🔊 SoundUseCases<br/>загрузка звуков"]
     end
     
     subgraph D["📦 Domain Layer"]
@@ -129,38 +125,32 @@ graph TB
     subgraph I["💾 Infrastructure Layer"]
         RawRepo["📂 FileRepository<br/>чтение файлов"]
         
-        ProcessedRepo["🔧 Processed Repositories<br/>MapsDataRepository<br/>TilesetRepository<br/>TilesetRegistry<br/>ScriptsRepository"]
+        ProcessedRepo["🔧 Processed Repositories<br/>MapsDataRepository<br/>TilesetRepository<br/>TilesetRegistry<br/>ScriptsRepository<br/>SoundsRepository"]
         
         GameRepo["🎮 Game Repositories<br/>TanksRepository<br/>BlocksRepository<br/>BulletsRepository<br/>AnimationsRepository"]
         
         LuaScript["📜 enemies.lua<br/>Direction возвращает int"]
     end
     
-    Keyboard -.->|"Update()"| TankUC
-    Keyboard -.->|"Rotate(Direction)<br/>Move()"| TankUC
-    Keyboard -.->|"ShootBullet(tank)"| BulletUC
-    
-    AI -.->|"Update()<br/>IsActive()"| TankUC
-    AI -.->|"CallEnemyAI()<br/>applyDecision()"| TankUC
+    Keyboard -.->|"Rotate(Direction)<br/>Move()<br/>Shoot()"| TankUC
+    AI -.->|"Update()<br/>IsActive()<br/>ApplyDecision()"| TankUC
     
     Facade -.->|"Update()"| TankUC
-    Facade -.->|"Update()"| EnemyUC
     Facade -.->|"UpdateBullets()"| BulletUC
     Facade -.->|"UpdateCollisions()"| CollisionUC
     Facade -.->|"UpdateAnimations()"| TilesUC
     
-    TankUC -->|"GetTank()<br/>IsActive()<br/>IsStopped()"| Entities
-    EnemyUC -->|"GetTank()<br/>Update()"| Entities
+    TankUC -->|"GetTank()<br/>IsActive()<br/>IsStopped()<br/>GetImageId()"| Entities
     BulletUC -->|"ShootBullet()<br/>GetBullets()"| Entities
     
     CollisionUC -->|"checkEnemyCollisions()"| TankUC
     CollisionUC -->|"checkBulletCollisions()"| BulletUC
     
     TankUC -.->|"использует"| GameRepo
-    EnemyUC -.->|"использует"| GameRepo
     BulletUC -.->|"использует"| GameRepo
     TilesUC -.->|"использует"| GameRepo
     MapUC -.->|"использует"| GameRepo
+    SoundUC -.->|"использует"| ProcessedRepo
     
     Facade -.->|"CreateAnimation<br/>StartAnimation"| TilesUC
     
@@ -182,22 +172,22 @@ flowchart TB
     
     subgraph "🎮 Presentation"
         Keyboard[⌨️ KeyboardInput<br/>WASD/Space]
-        AI[🤖 AiInput<br/>Rotate/Move<br/>Update]
+        AI[🤖 AiInput<br/>Rotate/Move<br/>Update/Shoot]
         Render[🎨 Renderer]
     end
     
     subgraph "⚡ Application"
         Facade[🎯 Facade<br/>Update цикл]
-        TankUC[🚗 TankUseCases]
-        EnemyUC[👾 EnemyUseCases]
+        TankUC[🚗 TankUseCases<br/>Shoot/Rotate/Move<br/>GetImageId/GetAnimationGetter]
         BulletUC[💣 BulletUseCases]
         CollisionUC[💥 CollisionUseCases]
         TilesUC[🎨 TilesUseCases]
         MapUC[🗺️ MapUseCases]
+        SoundUC[🔊 SoundUseCases]
     end
     
     subgraph "📦 Domain"
-        TankEnt[🏗️ TankEntity<br/>IsActive Speed<br/>Direction: int]
+        TankEnt[🏗️ TankEntity<br/>IsActive Speed<br/>Direction: int<br/>GetPosition/GetSize/GetAltitude]
         BulletEnt[🏗️ BulletEntity]
         BlockEnt[🏗️ BlockEntity]
         TileEnt[🏗️ TileEntity]
@@ -205,36 +195,32 @@ flowchart TB
     
     subgraph "💾 Infrastructure"
         GameRepos[(🎮 Repositories<br/>Tanks/Blocks<br/>Bullets/Animations)]
-        ProcRepos[🔧 Processed<br/>Maps/Tilesets<br/>Scripts]
+        ProcRepos[🔧 Processed<br/>Maps/Tilesets<br/>Scripts/Sounds]
         Lua[📜 enemies.lua]
     end
     
     User -->|"input"| Keyboard
-    Keyboard -->|"Rotate/Move<br/>ShootBullet"| TankUC
-    Keyboard -->|"ShootBullet"| BulletUC
+    Keyboard -->|"Rotate/Move<br/>Shoot"| TankUC
     
-    AI -->|"Rotate/Move<br/>Update"| TankUC
+    AI -->|"Rotate/Move<br/>Update/Shoot"| TankUC
     AI -->|"CallEnemyAI<br/>Direction: int"| TankUC
     
     Facade -->|"Update()"| TankUC
-    Facade -->|"Update()"| EnemyUC
     Facade -->|"UpdateBullets()"| BulletUC
     Facade -->|"UpdateCollisions()"| CollisionUC
     Facade -->|"DrawAll()"| Render
     
-    TankUC -->|"GetTank<br/>IsActive<br/>IsStopped"| TankEnt
-    EnemyUC -->|"GetTank<br/>Update"| TankEnt
+    TankUC -->|"GetTank<br/>IsActive<br/>IsStopped<br/>GetImageId"| TankEnt
     BulletUC -->|"ShootBullet<br/>UpdateBullets"| BulletEnt
     
     CollisionUC -->|"проверяет<br/>checkEnemyCollisions"| TankUC
     CollisionUC -->|"проверяет"| BulletUC
-    CollisionUC -->|"проверяет"| EnemyUC
     
     TankUC -.->|"AddTank<br/>GetTank"| GameRepos
-    EnemyUC -.->|"AddTank"| GameRepos
     BulletUC -.->|"AddBullet<br/>RemoveBullet"| GameRepos
     TilesUC -.->|"AddAnimation<br/>StartAnimation"| GameRepos
     MapUC -.->|"GetBlocks<br/>RemoveBlock"| GameRepos
+    SoundUC -.->|"GetSound"| ProcRepos
     
     TilesUC -.->|"CreateAnimation<br/>GetImage"| ProcRepos
     AI -.->|"DoString(script)"| Lua
@@ -255,7 +241,6 @@ sequenceDiagram
     participant State as 🎮 GameState
     participant Facade as 🎯 Facade
     participant Tank as 🚗 TankUseCases
-    participant Enemy as 👾 EnemyUseCases
     participant AI as 🤖 AiInputAdapter
     participant Collision as 💥 CollisionUseCases
     participant Bullet as 💣 BulletUseCases
@@ -278,8 +263,7 @@ sequenceDiagram
     end
     
     par AI врагов
-        Facade->>+Enemy: UpdateAI()
-        Enemy->>+AI: Update()
+        Facade->>+AI: Update()
         
         AI->>AI: IsActive() проверка
         AI->>AI: CallEnemyAI(context)
@@ -287,8 +271,8 @@ sequenceDiagram
         AI->>Tank: Rotate(Direction: int)
         AI->>Tank: Move()
         AI->>Tank: Update(dt)
-        AI-->>Enemy: готово
-        Enemy-->>Facade: готово
+        AI->>Tank: Shoot()
+        AI-->>Facade: готово
     end
     
     par Коллизии
@@ -322,17 +306,26 @@ sequenceDiagram
 
 **Правильная инверсия зависимостей:**
 ```go
-// InputAdapter зависит от интерфейса ITankUseCases, а не от конкретной реализации
-type InputAdapter struct {
-    tankUseCases use_cases.ITankUseCases  // ✅ Интерфейс
+// TankUseCases зависит от интерфейса IBulletUseCases
+type TankUseCases struct {
+    bulletUseCases IBulletUseCases  // ✅ Интерфейс
+}
+
+// Метод Shoot делегирует создание пули
+func (uc *TankUseCases) Shoot() error {
+    return uc.bulletUseCases.ShootBullet(&uc.tank)
 }
 ```
 
 **Правильное разделение ответственности:**
 ```go
-// CollisionUseCases только для коллизий
-type CollisionUseCases struct {
-    bulletUseCases IBulletUseCases  // Не напрямую репозиторий пуль
+// TankUseCases управляет анимациями танка
+type TankUseCases struct {
+    animationGetter types.IImageIdGetter  // ✅ Инкапсуляция
+}
+
+func (uc *TankUseCases) GetImageId() (string, error) {
+    return uc.animationGetter.GetImageId()
 }
 ```
 
@@ -348,6 +341,9 @@ if tank.State == Spawning || tank.State == Exploding { ... }
 // ✅ Разделение Rotate и Move
 Rotate(direction)  // Устанавливает направление
 Move()             // Запускает движение (устанавливает скорость)
+
+// ✅ Shoot() в TankUseCases
+Shoot()  // Создает пулю через BulletUseCases
 ```
 
 ### Поток данных
@@ -355,11 +351,11 @@ Move()             // Запускает движение (устанавлив�
 ```
 [Пользователь] 
     ↓
-[InputAdapter] → [TankUseCases / BulletUseCases]
+[InputAdapter] → [TankUseCases] → [Shoot()] → [BulletUseCases]
     ↓
 [GameStateUseCasesFacade] → [Update/Logic]
     ↓
-[EnemyUseCases] → [AIUseCases] → [AiInputAdapter] → [enemies.lua]
+[AIUseCases] → [AiInputAdapter] → [enemies.lua]
     ↓                                        ↓
 [Repositories] ← [Domain Entities]     [GameContext]
     ↓
@@ -426,7 +422,7 @@ game:
 
 ### Архитектурные улучшения
 
-- **Система анимаций** - централизованное управление через AnimationUseCases
+- **Система анимаций** - централизованное управление через TankUseCases
 - **Спавнер танка** - анимированный объект для появления танка игрока
 - **Новый формат анимаций** - компактный YAML формат с duration, repeats и offset
 - **Clean Architecture** - четкое разделение слоев (Use Cases, Adapters, Repositories)
@@ -435,20 +431,22 @@ game:
 - **TanksRepository** - единый репозиторий для танка игрока и врагов
 - **TilesetRepositoryRegistry** - реестр всех тайлсетов (блоки, игрок, пули, спавн, взрыв)
 - **ScriptsRepository** - репозиторий для загрузки Lua скриптов AI
+- **SoundsRepository** - репозиторий для загрузки звуковых файлов
 - **Враги** - танки врагов с анимацией спавна и уничтожением
 - **Конфигурация** - настройка через `config.yml` с врагами
-- **Коллизии танков** - проверка столкновений между танком игрока и врагами
+- **Коллизии танков** - проверка столкновений между танками и объектами
 - **Анимация движения** - анимация гусениц работает только при движении танка
 - **Упрощение API** - уменьшение параметров конструкторов через использование Registry
+- **Стрельба танков** - танки могут стрелять через метод Shoot() в TankUseCases
+- **Инкапсуляция анимаций** - AnimationGetter управляется через TankUseCases
+- **Упрощение интерфейсов** - удален избыточный GetScreenPosition() из IMapObject
 
 ### Технические детали
 
-- **AnimationUseCases** - централизованное управление анимациями
-- **AIUseCases** - управление AI логикой врагов
+- **TankUseCases** - централизованное управление танками (движение, стрельба, анимации)
 - **AiInputAdapter** - AI адаптер для управления через Lua скрипты
 - **LuaAdapter** - конвертация данных между Go и Lua
 - **SpawnerEntity** - сущность спавнера с анимацией
-- **TankUseCases** - переименованный PlayerUseCases для лучшей семантики
 - **Новый формат YAML** - duration, repeats и offset в конфиге анимаций
 - **Lua скрипты** - `assets/scripts/enemies.lua` для управления врагами
 - **Offset для анимаций** - смещение анимации относительно сущности
@@ -458,9 +456,11 @@ game:
 - **Коллизии танков** - танк игрока не может проехать сквозь врагов
 - **Обратная совместимость** - существующий код анимации продолжает работать
 - **ИИ на Lua** - управление врагами через Lua скрипты (gopher-lua)
-- **AIUseCases** - централизованное управление AI логикой врагов
-- **AiInputAdapter** - AI адаптер для управления через Lua скрипты
 - **Тактика NES** - поведение врагов в стиле классической Battle City
+- **Direction как int** - направление теперь числовой тип для производительности
+- **Методы состояния** - IsActive() и IsStopped() для проверки состояния танка
+- **Разделение движения** - Rotate() для направления, Move() для запуска движения
+- **Переименование Update** - MoveTank переименован в Update для лучшей семантики
 
 ## 🎮 Игровая функциональность
 
@@ -523,13 +523,16 @@ just help             # Показать все команды
   - `Rotate(direction)` - поворот в направлении
   - `Move()` - запуск движения (устанавливает скорость)
   - `Update(dt)` - обновление позиции
+  - `Shoot()` - создание пули через BulletUseCases
   - `IsActive()` - проверка активности
   - `IsStopped()` - проверка остановки
-- **EnemyUseCases** - бизнес-логика врагов (спавн, анимация, уничтожение)
+  - `GetImageId()` - получение ID изображения
+  - `GetAnimationGetter()` - получение анимации
 - **BulletUseCases** - бизнес-логика пуль (создание, обновление, удаление)
 - **MapUseCases** - бизнес-логика карты (работа с блоками)
 - **CollisionUseCases** - бизнес-логика коллизий между объектами
 - **TilesUseCases** - бизнес-логика тайлов (статические и анимированные)
+- **SoundUseCases** - бизнес-логика звуков (загрузка и воспроизведение)
 
 ### Domain Layer (Доменный слой)
 
@@ -544,6 +547,9 @@ just help             # Показать все команды
   - `IsActive()` - проверка активности танка
   - `Speed` - скорость движения
   - `Direction` (int) - текущее направление
+  - `GetPosition()` - получение позиции (для IMapObject)
+  - `GetSize()` - получение размера (для IMapObject)
+  - `GetAltitude()` - получение высоты (для IMapObject)
 - **BulletEntity** - сущность пули
 - **BlockEntity** - сущность блока карты
 - **SpawnerEntity** - сущность спавнера танка
@@ -561,8 +567,9 @@ just help             # Показать все команды
 **Processed Repositories:**
 - **MapsDataRepository** - загрузка и обработка уровней
 - **TilesetRepository** - загрузка и кеширование тайлсетов
-- **TilesetRepositoryRegistry** - реестр всех тайлсетов (блоки, игрок, пули, спавн, взрыв), упрощает создание и передачу
+- **TilesetRepositoryRegistry** - реестр всех тайлсетов (блоки, игрок, пули, спавн, взрыв)
 - **ScriptsRepository** - загрузка Lua скриптов для AI (без кэширования)
+- **SoundsRepository** - загрузка звуковых файлов
 
 **Raw Repositories:**
 - **FileRepository** - чтение файлов из assets
@@ -632,14 +639,14 @@ func (tr *TanksRepository) GetTank(index int) (*types.TankEntity, error) {
 
 ### Идеи для расширения
 
-- 🎯 **ИИ врагов** - добавить стрельбу врагов, преследование игрока
+- 🎯 **Улучшение AI** - добавление стрельбы врагов, преследования игрока
 - 🎯 **Система очков** - подсчет очков за уничтожение
 - 🎨 **Меню и UI** - главное меню, экран победы/поражения
 - 🌐 **Сетевой режим** - мультиплеер
 - 🏆 **Достижения** - система наград
 - 🛠️ **Редактор уровней** - создание своих карт
 - 💥 **Эффекты** - взрывы, частицы
-- 🎵 **Музыка** - фоновая музыка
+- 🎵 **Музыка** - фоновая музыка и звуковые эффекты
 - 🎮 **Дополнительные уровни** - больше карт
 
 ## 📝 Соглашения по коду
@@ -685,7 +692,7 @@ import "github.com/shpaker/gonflict/internal/repositories/raw"
 - Враги пока не стреляют (только двигаются)
 - Нет главного меню
 - Нет сохранений
-- Нет звуковых эффектов
+- Звуковые эффекты не интегрированы (есть SoundsRepository и SoundUseCases)
 - Нет системы очков
 - Спавнер не имеет коллизий
 
@@ -705,6 +712,11 @@ MIT License
 
 ### Последние обновления
 
+- ✅ **Стрельба танков** - добавлен метод `Shoot()` в `TankUseCases`, который делегирует создание пули через `BulletUseCases`
+- ✅ **Инкапсуляция анимаций** - `AnimationGetter` перенесен из `TankEntity` в `TankUseCases`
+- ✅ **Методы анимаций** - добавлены `GetImageId()` и `GetAnimationGetter()` в `TankUseCases`
+- ✅ **Упрощение интерфейсов** - удален `GetScreenPosition()` из интерфейса `IMapObject`
+- ✅ **Удаление избыточных методов** - убран `GetImageId()` из `TankEntity`
 - ✅ **Direction как int** - направление теперь числовой тип (0=Up, 1=Down, 2=Left, 3=Right) для производительности и простоты
 - ✅ **IsActive() и IsStopped()** - добавлены методы для проверки состояния танка
 - ✅ **Разделение Rotate и Move** - `Rotate(direction)` устанавливает направление, `Move()` запускает движение
@@ -712,6 +724,8 @@ MIT License
 - ✅ **Удалены методы конвертации** - не нужны т.к. Direction уже int, прямое преобразование
 - ✅ **TilesetRepositoryRegistry** - реестр всех тайлсетов для упрощения управления
 - ✅ **ScriptsRepository** - загрузка Lua скриптов из файлов
+- ✅ **SoundsRepository** - репозиторий для загрузки звуковых файлов
+- ✅ **SoundUseCases** - бизнес-логика для работы со звуками
 - ✅ **AiInputAdapter** - принимает скрипт как строку вместо пути к файлу
 - ✅ **Упрощение API** - уменьшение количества параметров конструкторов
 - ✅ **ИИ врагов на Lua** - управление врагами через Lua скрипты (gopher-lua)
@@ -733,6 +747,7 @@ MIT License
 
 ### Планируемые улучшения
 
+- 🎯 **Интеграция звуков** - подключение SoundsRepository и SoundUseCases к игровому процессу
 - 🎯 **Улучшение AI** - добавление стрельбы врагов, преследования игрока
 - 🎯 **Система очков** - подсчет очков за уничтожение
 - 🎨 **Меню и UI** - главное меню, экран победы/поражения

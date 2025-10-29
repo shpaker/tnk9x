@@ -1,7 +1,5 @@
 package types
 
-import "errors"
-
 // TankState представляет состояние танка
 type TankState int
 
@@ -15,26 +13,12 @@ const (
 
 // TankEntity представляет танк (игрока или врага)
 type TankEntity struct {
-	AnimationGetter IImageIdGetter
-	Position        Position
-	Speed           float64
-	Direction       Direction
-	State           TankState // Состояние танка
-	SpawnedAt       float64   // Время спавна танка
-	Altitude        Altitude
-}
-
-// GetImageId возвращает ID изображения танка (реализует IImageIdGetter)
-func (t *TankEntity) GetImageId() (string, error) {
-	if t.AnimationGetter == nil {
-		return "", errors.New("ImageGetter is nil")
-	}
-	return t.AnimationGetter.GetImageId()
-}
-
-// GetScreenPosition возвращает позицию танка на экране
-func (t *TankEntity) GetScreenPosition() Position {
-	return t.Position
+	Position  Position
+	Speed     float64
+	Direction Direction
+	State     TankState // Состояние танка
+	SpawnedAt float64   // Время спавна танка
+	Altitude  Altitude
 }
 
 // GetSize возвращает размер танка

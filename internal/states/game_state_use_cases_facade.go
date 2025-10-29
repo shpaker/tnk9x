@@ -62,9 +62,9 @@ func NewGameStateUseCasesFacade(
 		playerSpawner = types.Position{X: 12 * use_cases.TankSpriteSize, Y: 24 * use_cases.TankSpriteSize}
 	}
 
-	playerUseCases := use_cases.NewTankUseCases(gameRepo.TanksRepository(), tilesUseCasesWithAnimations, playerSpawner, types.DirectionUp)
 	bulletTilesUseCases := use_cases.NewTilesUseCases(bulletTilesetRepo)
 	bulletUseCases := use_cases.NewBulletUseCases(gameRepo.BulletsRepository(), bulletTilesUseCases)
+	playerUseCases := use_cases.NewTankUseCases(gameRepo.TanksRepository(), bulletUseCases, tilesUseCasesWithAnimations, playerSpawner, types.DirectionUp)
 	mapUseCases := use_cases.NewMapUseCases(gameRepo.BlocksRepository())
 
 	// Создаем AI контекст
@@ -108,7 +108,7 @@ func NewGameStateUseCasesFacade(
 		}
 
 		// Создаем отдельный TankUseCases для этого врага
-		enemyTankUseCases := use_cases.NewTankUseCases(gameRepo.TanksRepository(), tilesUseCasesWithAnimations, position, types.DirectionDown)
+		enemyTankUseCases := use_cases.NewTankUseCases(gameRepo.TanksRepository(), bulletUseCases, tilesUseCasesWithAnimations, position, types.DirectionDown)
 
 		// Создаем танк врага
 		err := enemyTankUseCases.StartSpawn()
@@ -240,4 +240,12 @@ func (g *GameStateUseCasesFacade) CollisionUseCases() *use_cases.CollisionUseCas
 
 func (g *GameStateUseCasesFacade) GetEnemyTanks() []*types.TankEntity {
 	return g.enemyTanks
+}
+
+func (g *GameStateUseCasesFacade) GetEnemyUseCases() []use_cases.ITankUseCasesRef {
+	result := make([]use_cases.ITankUseCasesRef, len(g.enemyUseCases))
+	for i, uc := range g.enemyUseCases {
+		result[i] = uc
+	}
+	return result
 }

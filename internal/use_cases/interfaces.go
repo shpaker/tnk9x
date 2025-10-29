@@ -10,7 +10,6 @@ import (
 type IMapObject interface {
 	GetSize() types.Size
 	GetPosition() types.Position
-	GetScreenPosition() types.Position
 	GetAltitude() types.Altitude
 }
 
@@ -22,9 +21,12 @@ type ITankUseCasesRef interface {
 	Move() error
 	StopTank(byCollision bool) error
 	Update(dt float64) error
-	StartExplosion(tank *types.TankEntity) error
+	StartExplosion() error
 	IsActive() bool
 	IsStopped() bool
+	GetImageId() (string, error)
+	GetAnimationGetter() types.IImageIdGetter
+	Shoot() error
 }
 
 // IPlayerUseCases интерфейс для операций с игроком

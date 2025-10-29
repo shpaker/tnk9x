@@ -11,19 +11,17 @@ import (
 
 // KeyboardInputAdapter адаптер для обработки пользовательского ввода с клавиатуры
 type KeyboardInputAdapter struct {
-	tankUseCases   use_cases.ITankUseCasesRef
-	bulletUseCases use_cases.IBulletUseCases
-	upButton       ebiten.Key
-	downButton     ebiten.Key
-	leftButton     ebiten.Key
-	rightButton    ebiten.Key
-	shootButton    ebiten.Key
+	tankUseCases use_cases.ITankUseCasesRef
+	upButton     ebiten.Key
+	downButton   ebiten.Key
+	leftButton   ebiten.Key
+	rightButton  ebiten.Key
+	shootButton  ebiten.Key
 }
 
 // NewKeyboardInputAdapter создает новый экземпляр KeyboardInputAdapter
 func NewKeyboardInputAdapter(
 	tankUseCases use_cases.ITankUseCasesRef,
-	bulletUseCases use_cases.IBulletUseCases,
 	upButton ebiten.Key,
 	downButton ebiten.Key,
 	leftButton ebiten.Key,
@@ -31,13 +29,12 @@ func NewKeyboardInputAdapter(
 	shootButton ebiten.Key,
 ) *KeyboardInputAdapter {
 	return &KeyboardInputAdapter{
-		tankUseCases:   tankUseCases,
-		bulletUseCases: bulletUseCases,
-		upButton:       upButton,
-		downButton:     downButton,
-		leftButton:     leftButton,
-		rightButton:    rightButton,
-		shootButton:    shootButton,
+		tankUseCases: tankUseCases,
+		upButton:     upButton,
+		downButton:   downButton,
+		leftButton:   leftButton,
+		rightButton:  rightButton,
+		shootButton:  shootButton,
 	}
 }
 
@@ -110,13 +107,7 @@ func (a *KeyboardInputAdapter) keyReleasedEvents() {
 // tankShoot обрабатывает стрельбу танка
 func (a *KeyboardInputAdapter) tankShoot() {
 	log.Printf("DEBUG: tankShoot called")
-	tank := a.tankUseCases.GetTank()
-	if tank == nil {
-		log.Printf("ERROR: Failed to get tank: tank is nil")
-		return
-	}
-	log.Printf("DEBUG: Got tank, calling ShootBullet")
-	err := a.bulletUseCases.ShootBullet(tank)
+	err := a.tankUseCases.Shoot()
 	if err != nil {
 		log.Printf("ERROR: Failed to shoot bullet: %v", err)
 	}

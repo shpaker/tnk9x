@@ -20,11 +20,6 @@ func (b *BulletEntity) GetImageId() (string, error) {
 	return b.ImageGetter.GetImageId()
 }
 
-// GetScreenPosition возвращает позицию пули на экране
-func (b *BulletEntity) GetScreenPosition() Position {
-	return b.Position
-}
-
 // GetSize возвращает размер пули
 func (b *BulletEntity) GetSize() Size {
 	return Size{Width: 4, Height: 4}

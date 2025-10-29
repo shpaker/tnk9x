@@ -18,7 +18,8 @@ type RendererAdapter struct {
 	mapUseCases            use_cases.IMapUseCases
 	tankUseCases           use_cases.ITankUseCasesRef
 	bulletUseCases         use_cases.IBulletUseCases
-	enemyTanks             []*types.TankEntity // Массив врагов
+	enemyTanks             []*types.TankEntity          // Массив врагов
+	enemyUseCases          []use_cases.ITankUseCasesRef // Use Cases врагов
 	mapTilesUseCases       *use_cases.TilesUseCases
 	playerTilesUseCases    *use_cases.TilesUseCases
 	bulletTilesUseCases    *use_cases.TilesUseCases
@@ -33,6 +34,7 @@ func NewRendererAdapter(
 	tankUseCases use_cases.ITankUseCasesRef,
 	bulletUseCases use_cases.IBulletUseCases,
 	enemyTanks []*types.TankEntity,
+	enemyUseCases []use_cases.ITankUseCasesRef,
 	mapTilesUseCases *use_cases.TilesUseCases,
 	playerTilesUseCases *use_cases.TilesUseCases,
 	bulletTilesUseCases *use_cases.TilesUseCases,
@@ -44,6 +46,7 @@ func NewRendererAdapter(
 		tankUseCases:           tankUseCases,
 		bulletUseCases:         bulletUseCases,
 		enemyTanks:             enemyTanks,
+		enemyUseCases:          enemyUseCases,
 		mapTilesUseCases:       mapTilesUseCases,
 		playerTilesUseCases:    playerTilesUseCases,
 		bulletTilesUseCases:    bulletTilesUseCases,
@@ -114,7 +117,7 @@ func (r *RendererAdapter) drawTank(screen *ebiten.Image) {
 	}
 
 	// Получаем ID изображения танка
-	imageId, err := tank.AnimationGetter.GetImageId()
+	imageId, err := r.tankUseCases.GetImageId()
 	if err != nil {
 		log.Printf("ERROR: Tank error getting image ID: %v", err)
 		return
@@ -189,8 +192,12 @@ func (r *RendererAdapter) drawEnemiesWithoutExplosions(screen *ebiten.Image) {
 			continue
 		}
 
-		// Получаем ID изображения врага
-		imageId, err := enemy.AnimationGetter.GetImageId()
+		// Получаем ID изображения врага через Use Cases
+		if i >= len(r.enemyUseCases) {
+			continue
+		}
+		enemyUseCases := r.enemyUseCases[i]
+		imageId, err := enemyUseCases.GetImageId()
 		if err != nil {
 			log.Printf("ERROR: Enemy error getting image ID: %v", err)
 			continue
@@ -221,14 +228,18 @@ func (r *RendererAdapter) drawEnemiesWithoutExplosions(screen *ebiten.Image) {
 
 // drawEnemiesExplosions отрисовывает взрывы врагов (уровень AIR)
 func (r *RendererAdapter) drawEnemiesExplosions(screen *ebiten.Image) {
-	for _, enemy := range r.enemyTanks {
+	for i, enemy := range r.enemyTanks {
 		// Пропускаем если врага нет или он не взрывается
 		if enemy == nil || enemy.State != types.TankStateExploding {
 			continue
 		}
 
-		// Получаем ID изображения взрыва
-		imageId, err := enemy.AnimationGetter.GetImageId()
+		// Получаем ID изображения взрыва через Use Cases
+		if i >= len(r.enemyUseCases) {
+			continue
+		}
+		enemyUseCases := r.enemyUseCases[i]
+		imageId, err := enemyUseCases.GetImageId()
 		if err != nil {
 			log.Printf("ERROR: Enemy explosion error getting image ID: %v", err)
 			continue
@@ -248,9 +259,11 @@ func (r *RendererAdapter) drawEnemiesExplosions(screen *ebiten.Image) {
 
 		// Применяем offset если это анимация
 		var offsetX, offsetY float64 = 0, 0
-		if anim, ok := enemy.AnimationGetter.(*types.TileAnimationEntity); ok {
-			offsetX = anim.Offset[0]
-			offsetY = anim.Offset[1]
+		if animGetter := enemyUseCases.GetAnimationGetter(); animGetter != nil {
+			if tileAnim, ok := animGetter.(*types.TileAnimationEntity); ok {
+				offsetX = tileAnim.Offset[0]
+				offsetY = tileAnim.Offset[1]
+			}
 		}
 
 		op.GeoM.Translate(
@@ -264,14 +277,14 @@ func (r *RendererAdapter) drawEnemiesExplosions(screen *ebiten.Image) {
 
 // drawEnemySpawnAnimation отрисовывает анимацию спавна врага
 func (r *RendererAdapter) drawEnemySpawnAnimation(screen *ebiten.Image, enemy *types.TankEntity, enemyIndex int) {
-	// Получаем анимацию спавна напрямую из AnimationGetter танка
-	spawnAnimation := enemy.AnimationGetter
-	if spawnAnimation == nil {
+	// Получаем Use Cases для этого врага
+	if enemyIndex >= len(r.enemyUseCases) {
 		return
 	}
+	enemyUseCases := r.enemyUseCases[enemyIndex]
 
-	// Получаем ID изображения анимации спавна
-	imageId, err := spawnAnimation.GetImageId()
+	// Получаем ID изображения анимации спавна через Use Cases
+	imageId, err := enemyUseCases.GetImageId()
 	if err != nil {
 		log.Printf("ERROR: Enemy spawn animation error getting image ID: %v", err)
 		return
@@ -298,14 +311,8 @@ func (r *RendererAdapter) drawEnemySpawnAnimation(screen *ebiten.Image, enemy *t
 
 // drawSpawnAnimation отрисовывает анимацию спавна
 func (r *RendererAdapter) drawSpawnAnimation(screen *ebiten.Image, tank *types.TankEntity) {
-	// Получаем анимацию спавна напрямую из AnimationGetter танка
-	spawnAnimation := tank.AnimationGetter
-	if spawnAnimation == nil {
-		return
-	}
-
-	// Получаем ID изображения анимации спавна
-	imageId, err := spawnAnimation.GetImageId()
+	// Получаем ID изображения анимации спавна через TankUseCases
+	imageId, err := r.tankUseCases.GetImageId()
 	if err != nil {
 		log.Printf("ERROR: Spawn animation error getting image ID: %v", err)
 		return

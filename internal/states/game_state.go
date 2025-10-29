@@ -57,7 +57,6 @@ func NewGameState(
 	// Используем клавиатурный адаптер
 	inputAdapter := input_adapters.NewKeyboardInputAdapter(
 		gameStateServices.TankUseCases(),
-		gameStateServices.BulletUseCases(),
 		ebiten.KeyW,     // up
 		ebiten.KeyS,     // down
 		ebiten.KeyA,     // left
@@ -128,6 +127,7 @@ func createRendererAdapter(
 		gameStateServices.TankUseCases(),
 		gameStateServices.BulletUseCases(),
 		gameStateServices.GetEnemyTanks(),
+		gameStateServices.GetEnemyUseCases(),
 		mapTilesUseCases,
 		playerTilesUseCases,
 		bulletTilesUseCases,

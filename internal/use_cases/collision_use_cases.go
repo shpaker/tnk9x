@@ -185,7 +185,7 @@ func (uc *CollisionUseCases) checkBulletEnemyCollisions() {
 				uc.bulletUseCases.RemoveBullet(i)
 				// Удаляем врага
 				// Запускаем анимацию взрыва через TankUseCases
-				uc.tankUseCases.StartExplosion(enemy)
+				uc.tankUseCases.StartExplosion()
 				// Выходим из цикла врагов, так как пуля уже удалена
 				break
 			}

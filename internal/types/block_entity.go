@@ -29,11 +29,6 @@ func (b *BlockEntity) GetImageId() (string, error) {
 	return b.ImageGetter.GetImageId()
 }
 
-// GetScreenPosition возвращает позицию блока на экране
-func (b *BlockEntity) GetScreenPosition() Position {
-	return b.Position
-}
-
 // GetSize возвращает размер блока
 func (b *BlockEntity) GetSize() Size {
 	return Size{Width: 8, Height: 8} // Стандартный размер блока (TileMinSize)

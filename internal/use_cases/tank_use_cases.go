@@ -10,15 +10,22 @@ import (
 
 // TankUseCases предоставляет базовые операции для работы с танками
 type TankUseCases struct {
-	tanksRepo     game.ITanksRepository
-	tilesUseCases *TilesUseCases   // Для всех анимаций (спавн, взрыв, танк)
-	spawnAt       types.Position   // Координаты спавна игрока
-	tank          types.TankEntity // Танк
+	tanksRepo       game.ITanksRepository
+	bulletUseCases  IBulletUseCases      // Use Cases пуль
+	tilesUseCases   *TilesUseCases       // Для всех анимаций (спавн, взрыв, танк)
+	spawnAt         types.Position       // Координаты спавна игрока
+	tank            types.TankEntity     // Танк
+	animationGetter types.IImageIdGetter // Анимация танка
 }
+
+// ============================================================================
+// КОНСТРУКТОР
+// ============================================================================
 
 // NewTankUseCases создает новый экземпляр TankUseCases
 func NewTankUseCases(
 	tanksRepo game.ITanksRepository,
+	bulletUseCases IBulletUseCases,
 	tilesUseCases *TilesUseCases,
 	spawnAt types.Position,
 	direction types.Direction,
@@ -33,14 +40,20 @@ func NewTankUseCases(
 	}
 
 	uc := &TankUseCases{
-		tanksRepo:     tanksRepo,
-		tilesUseCases: tilesUseCases,
-		spawnAt:       spawnAt,
-		tank:          *tank,
+		tanksRepo:       tanksRepo,
+		bulletUseCases:  bulletUseCases,
+		tilesUseCases:   tilesUseCases,
+		spawnAt:         spawnAt,
+		tank:            *tank,
+		animationGetter: nil,
 	}
 	uc.tanksRepo.AddTank(&uc.tank)
 	return uc
 }
+
+// ============================================================================
+// УПРАВЛЕНИЕ СОСТОЯНИЕМ ТАНКА
+// ============================================================================
 
 // StartSpawn создает танк и запускает процесс спавна с анимацией
 // Использует танк, переданный в конструктор
@@ -53,14 +66,61 @@ func (uc *TankUseCases) StartSpawn() error {
 	}
 
 	// Устанавливаем анимацию спавна танку
-	uc.tank.AnimationGetter = spawnAnimation
+	uc.animationGetter = spawnAnimation
 	uc.tank.State = types.TankStateSpawning
+	uc.tank.Altitude = types.SURFACE
 
 	// Запускаем анимацию спавна
 	uc.tilesUseCases.StartAnimation(spawnAnimation)
 
 	return nil
 }
+
+// StartExplosion устанавливает и запускает анимацию взрыва для танка
+func (uc *TankUseCases) StartExplosion() error {
+	explosionAnim, err := uc.tilesUseCases.CreateExplosionAnimation()
+	if err != nil {
+		return err
+	}
+
+	// Устанавливаем анимацию взрыва танку
+	uc.animationGetter = explosionAnim
+	uc.tank.State = types.TankStateExploding
+	uc.tank.Altitude = types.AIR
+
+	// Запускаем анимацию
+	uc.tilesUseCases.StartAnimation(explosionAnim)
+
+	return nil
+}
+
+// Update обновляет состояние танка (движение)
+func (uc *TankUseCases) Update(
+	dt float64,
+) error {
+	if !uc.tank.IsActive() {
+		return errors.New("tank is not active")
+	}
+
+	delta := uc.tank.Speed * dt
+
+	switch uc.tank.Direction {
+	case types.DirectionUp:
+		uc.tank.Position.Y -= delta
+	case types.DirectionDown:
+		uc.tank.Position.Y += delta
+	case types.DirectionLeft:
+		uc.tank.Position.X -= delta
+	case types.DirectionRight:
+		uc.tank.Position.X += delta
+	}
+
+	return nil
+}
+
+// ============================================================================
+// УПРАВЛЕНИЕ ДВИЖЕНИЕМ
+// ============================================================================
 
 // Rotate поворачивает танк в указанном направлении
 func (uc *TankUseCases) Rotate(
@@ -120,57 +180,24 @@ func (uc *TankUseCases) StopTank(
 	return nil
 }
 
-// Update обновляет состояние танка (движение)
-func (uc *TankUseCases) Update(
-	dt float64,
-) error {
+// ============================================================================
+// СТРЕЛЬБА
+// ============================================================================
+
+// Shoot создает пулю от танка
+func (uc *TankUseCases) Shoot() error {
+	// Проверяем, активен ли танк
 	if !uc.tank.IsActive() {
 		return errors.New("tank is not active")
 	}
 
-	delta := uc.tank.Speed * dt
-
-	switch uc.tank.Direction {
-	case types.DirectionUp:
-		uc.tank.Position.Y -= delta
-	case types.DirectionDown:
-		uc.tank.Position.Y += delta
-	case types.DirectionLeft:
-		uc.tank.Position.X -= delta
-	case types.DirectionRight:
-		uc.tank.Position.X += delta
-	}
-
-	return nil
+	// Используем BulletUseCases для создания пули
+	return uc.bulletUseCases.ShootBullet(&uc.tank)
 }
 
-// StartExplosion устанавливает и запускает анимацию взрыва для танка
-func (uc *TankUseCases) StartExplosion(
-	tank *types.TankEntity,
-) error {
-	if tank == nil {
-		return errors.New("tank is nil")
-	}
-
-	explosionAnim, err := uc.tilesUseCases.CreateExplosionAnimation()
-	if err != nil {
-		return err
-	}
-
-	// Устанавливаем анимацию взрыва танку
-	tank.AnimationGetter = explosionAnim
-	tank.State = types.TankStateExploding
-
-	// Запускаем анимацию
-	uc.tilesUseCases.StartAnimation(explosionAnim)
-
-	return nil
-}
-
-// GetTank возвращает танк
-func (uc *TankUseCases) GetTank() *types.TankEntity {
-	return &uc.tank
-}
+// ============================================================================
+// ПРОВЕРКИ СОСТОЯНИЯ
+// ============================================================================
 
 // IsActive возвращает true если танк активен
 func (uc *TankUseCases) IsActive() bool {
@@ -182,17 +209,43 @@ func (uc *TankUseCases) IsStopped() bool {
 	return uc.tank.Speed == 0
 }
 
+// ============================================================================
+// ПОЛУЧЕНИЕ ДАННЫХ
+// ============================================================================
+
+// GetTank возвращает танк
+func (uc *TankUseCases) GetTank() *types.TankEntity {
+	return &uc.tank
+}
+
+// GetImageId возвращает ID изображения танка
+func (uc *TankUseCases) GetImageId() (string, error) {
+	if uc.animationGetter == nil {
+		return "", errors.New("AnimationGetter is nil")
+	}
+	return uc.animationGetter.GetImageId()
+}
+
+// GetAnimationGetter возвращает AnimationGetter для доступа к offset
+func (uc *TankUseCases) GetAnimationGetter() types.IImageIdGetter {
+	return uc.animationGetter
+}
+
+// ============================================================================
+// ПРОВЕРКИ АНИМАЦИЙ
+// ============================================================================
+
 // IsSpawnFinished проверяет и обновляет процесс спавна танка
 func (uc *TankUseCases) IsSpawnFinished(currentTime float64) {
 	// Если танк еще не заспавнен, проверяем анимацию спавна
 	if uc.tank.State == types.TankStateSpawning {
-		if anim, ok := uc.tank.AnimationGetter.(*types.TileAnimationEntity); ok {
+		if anim, ok := uc.animationGetter.(*types.TileAnimationEntity); ok {
 			if anim.IsFinished() {
 				// Завершаем спавн - устанавливаем анимацию танка
 				tankTilesUseCases := NewTilesUseCases(uc.tilesUseCases.tilesRepository)
 				tankAnimation, err := tankTilesUseCases.CreateAnimationTile("base_tank")
 				if err == nil {
-					uc.tank.AnimationGetter = tankAnimation
+					uc.animationGetter = tankAnimation
 					uc.tilesUseCases.AddAnimation(tankAnimation)
 				}
 
@@ -207,7 +260,7 @@ func (uc *TankUseCases) IsSpawnFinished(currentTime float64) {
 func (uc *TankUseCases) IsExplosionFinished() {
 	// Если танк взрывается, проверяем завершение анимации взрыва
 	if uc.tank.State == types.TankStateExploding {
-		if anim, ok := uc.tank.AnimationGetter.(*types.TileAnimationEntity); ok {
+		if anim, ok := uc.animationGetter.(*types.TileAnimationEntity); ok {
 			if anim.IsFinished() {
 				// Завершаем взрыв - устанавливаем состояние взорванного танка
 				uc.tank.State = types.TankStateExploded

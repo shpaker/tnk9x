@@ -82,15 +82,3 @@ func TestBulletEntity_GetPosition(t *testing.T) {
 		t.Errorf("GetPosition() = %v, want %v", result, expectedPos)
 	}
 }
-
-func TestBulletEntity_GetScreenPosition(t *testing.T) {
-	expectedPos := Position{X: 100, Y: 200}
-	bullet := &BulletEntity{
-		Position: expectedPos,
-	}
-
-	result := bullet.GetScreenPosition()
-	if result != expectedPos {
-		t.Errorf("GetScreenPosition() = %v, want %v", result, expectedPos)
-	}
-}
