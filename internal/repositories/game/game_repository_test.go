@@ -31,12 +31,11 @@ func TestGameRepositoriesRegistryBlocks(t *testing.T) {
 	// Создаем блок с минимальными данными
 	block := types.BlockEntity{
 		Position: types.Position{X: 10, Y: 20},
-		Altitude:      types.SURFACE,
+		Altitude: types.SURFACE,
 		Data: &types.BlockData{
 			Name:     types.Brick,
 			Position: types.Position{X: 10, Y: 20},
 		},
-		Properties: &types.BlockProperties{},
 	}
 
 	// Добавляем блок
@@ -60,10 +59,10 @@ func TestGameRepositoriesRegistryBullets(t *testing.T) {
 
 	// Создаем пулю с минимальными данными
 	bullet := types.BulletEntity{
-		Position: types.Position{X: 10, Y: 20},
-		Direction:     types.DirectionUp,
-		Speed:         100,
-		Altitude:      types.SURFACE,
+		Position:  types.Position{X: 10, Y: 20},
+		Direction: types.DirectionUp,
+		Speed:     100,
+		Altitude:  types.SURFACE,
 	}
 
 	// Добавляем пулю
@@ -97,9 +96,9 @@ func TestGameRepositoriesRegistryTanks(t *testing.T) {
 
 	// Создаем танк игрока
 	playerTank := &types.TankEntity{
-		Position: types.Position{X: 100, Y: 200},
-		Direction:     types.DirectionUp,
-		Speed:         0,
+		Position:  types.Position{X: 100, Y: 200},
+		Direction: types.DirectionUp,
+		Speed:     0,
 	}
 
 	// Добавляем танк игрока
@@ -113,9 +112,9 @@ func TestGameRepositoriesRegistryTanks(t *testing.T) {
 
 	// Создаем врага
 	enemyTank := &types.TankEntity{
-		Position: types.Position{X: 300, Y: 400},
-		Direction:     types.DirectionDown,
-		Speed:         0,
+		Position:  types.Position{X: 300, Y: 400},
+		Direction: types.DirectionDown,
+		Speed:     0,
 	}
 
 	// Добавляем врага
@@ -139,38 +138,37 @@ func TestGetGameContext(t *testing.T) {
 
 	// Добавляем игрока
 	playerTank := &types.TankEntity{
-		Position: types.Position{X: 100, Y: 200},
-		Direction:     types.DirectionUp,
-		Speed:         0,
+		Position:  types.Position{X: 100, Y: 200},
+		Direction: types.DirectionUp,
+		Speed:     0,
 	}
 	gameRepo.TanksRepository().SetPlayer(playerTank)
 
 	// Добавляем врага
 	enemyTank := &types.TankEntity{
-		Position: types.Position{X: 300, Y: 400},
-		Direction:     types.DirectionDown,
-		Speed:         0,
+		Position:  types.Position{X: 300, Y: 400},
+		Direction: types.DirectionDown,
+		Speed:     0,
 	}
 	gameRepo.TanksRepository().AddEnemy(enemyTank)
 
 	// Добавляем пулю
 	bullet := types.BulletEntity{
-		Position: types.Position{X: 150, Y: 250},
-		Direction:     types.DirectionUp,
-		Speed:         100,
-		Altitude:      types.SURFACE,
+		Position:  types.Position{X: 150, Y: 250},
+		Direction: types.DirectionUp,
+		Speed:     100,
+		Altitude:  types.SURFACE,
 	}
 	gameRepo.BulletsRepository().AddBullet(bullet)
 
 	// Добавляем блок
 	block := types.BlockEntity{
 		Position: types.Position{X: 50, Y: 50},
-		Altitude:      types.SURFACE,
+		Altitude: types.SURFACE,
 		Data: &types.BlockData{
 			Name:     types.Brick,
 			Position: types.Position{X: 50, Y: 50},
 		},
-		Properties: &types.BlockProperties{},
 	}
 	gameRepo.BlocksRepository().AddBlock(block)
 
@@ -194,7 +192,8 @@ func TestGetGameContext(t *testing.T) {
 	if len(context.Enemies) != 1 {
 		t.Errorf("Expected 1 enemy, got %d", len(context.Enemies))
 	}
-	if context.Enemies[0].Position.X != 300 || context.Enemies[0].Position.Y != 400 {
+	if context.Enemies[0].Position.X != 300 ||
+		context.Enemies[0].Position.Y != 400 {
 		t.Error("Enemy position mismatch")
 	}
 
@@ -202,7 +201,8 @@ func TestGetGameContext(t *testing.T) {
 	if len(context.Bullets) != 1 {
 		t.Errorf("Expected 1 bullet, got %d", len(context.Bullets))
 	}
-	if context.Bullets[0].Position.X != 150 || context.Bullets[0].Position.Y != 250 {
+	if context.Bullets[0].Position.X != 150 ||
+		context.Bullets[0].Position.Y != 250 {
 		t.Error("Bullet position mismatch")
 	}
 
@@ -210,7 +210,8 @@ func TestGetGameContext(t *testing.T) {
 	if len(context.Blocks) != 1 {
 		t.Errorf("Expected 1 block, got %d", len(context.Blocks))
 	}
-	if context.Blocks[0].Position.X != 50 || context.Blocks[0].Position.Y != 50 {
+	if context.Blocks[0].Position.X != 50 ||
+		context.Blocks[0].Position.Y != 50 {
 		t.Error("Block position mismatch")
 	}
 }

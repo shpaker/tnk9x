@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
+
 	"github.com/shpaker/gonflict/internal/adapters"
 	"github.com/shpaker/gonflict/internal/adapters/input_adapters"
 	"github.com/shpaker/gonflict/internal/repositories/processed"
@@ -119,8 +120,12 @@ func createRendererAdapter(
 	mapTilesUseCases := use_cases.NewTilesUseCases(tilesetRegistry.Blocks())
 	playerTilesUseCases := use_cases.NewTilesUseCases(tilesetRegistry.Player())
 	bulletTilesUseCases := use_cases.NewTilesUseCases(tilesetRegistry.Bullet())
-	spawnerTilesUseCases := use_cases.NewTilesUseCases(tilesetRegistry.Spawner())
-	explosionTilesUseCases := use_cases.NewTilesUseCases(tilesetRegistry.Explosion())
+	spawnerTilesUseCases := use_cases.NewTilesUseCases(
+		tilesetRegistry.Spawner(),
+	)
+	explosionTilesUseCases := use_cases.NewTilesUseCases(
+		tilesetRegistry.Explosion(),
+	)
 
 	return adapters.NewRendererAdapter(
 		gameStateServices.MapUseCases(),

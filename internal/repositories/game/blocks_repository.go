@@ -27,7 +27,9 @@ func (br *BlocksRepository) GetAllBlocks() *[]types.BlockEntity {
 }
 
 // RemoveBlockByPointer удаляет блок по указателю
-func (br *BlocksRepository) RemoveBlockByPointer(block *types.BlockEntity) error {
+func (br *BlocksRepository) RemoveBlockByPointer(
+	block *types.BlockEntity,
+) error {
 	if block == nil {
 		return fmt.Errorf("block pointer cannot be nil")
 	}

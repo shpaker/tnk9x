@@ -36,14 +36,20 @@ jobs:
     - name: Download dependencies
       run: just deps
 
-    - name: Run tests
-      run: just test
+    - name: Install development tools
+      run: just install-tools
+      env:
+        PATH: ${{ env.PATH }}:$HOME/go/bin
+
+    - name: Run formatter
+      run: just fmt
+      env:
+        PATH: ${{ env.PATH }}:$HOME/go/bin
 
     - name: Run linter
-      run: |
-        go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
-        golangci-lint run
+      run: just lint
+      env:
+        PATH: ${{ env.PATH }}:$HOME/go/bin
 
-    - name: Check formatting
-      run: just fmt
-      continue-on-error: true
+    - name: Run tests
+      run: just test

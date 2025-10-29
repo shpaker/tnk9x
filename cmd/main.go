@@ -21,7 +21,11 @@ func main() {
 	application := internal.New(cfg)
 
 	// Создаем контекст с возможностью отмены
-	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	ctx, cancel := signal.NotifyContext(
+		context.Background(),
+		os.Interrupt,
+		syscall.SIGTERM,
+	)
 	defer cancel()
 
 	// Запускаем приложение

@@ -5,6 +5,7 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
+
 	"github.com/shpaker/gonflict/internal/types"
 	"github.com/shpaker/gonflict/internal/use_cases"
 )
@@ -78,7 +79,7 @@ func (a *KeyboardInputAdapter) keyPressedEvents() {
 	if ebiten.IsKeyPressed(a.rightButton) && !tankRotated {
 		a.tankUseCases.Rotate(types.DirectionRight)
 		a.tankUseCases.Move()
-		tankRotated = true
+		// tankRotated = true // Не устанавливаем здесь, так как это последняя проверка
 	}
 }
 
@@ -90,16 +91,20 @@ func (a *KeyboardInputAdapter) keyReleasedEvents() {
 		return
 	}
 
-	if inpututil.IsKeyJustReleased(a.upButton) && tank.Direction == types.DirectionUp {
+	if inpututil.IsKeyJustReleased(a.upButton) &&
+		tank.Direction == types.DirectionUp {
 		a.tankUseCases.StopTank(false)
 	}
-	if inpututil.IsKeyJustReleased(a.downButton) && tank.Direction == types.DirectionDown {
+	if inpututil.IsKeyJustReleased(a.downButton) &&
+		tank.Direction == types.DirectionDown {
 		a.tankUseCases.StopTank(false)
 	}
-	if inpututil.IsKeyJustReleased(a.leftButton) && tank.Direction == types.DirectionLeft {
+	if inpututil.IsKeyJustReleased(a.leftButton) &&
+		tank.Direction == types.DirectionLeft {
 		a.tankUseCases.StopTank(false)
 	}
-	if inpututil.IsKeyJustReleased(a.rightButton) && tank.Direction == types.DirectionRight {
+	if inpututil.IsKeyJustReleased(a.rightButton) &&
+		tank.Direction == types.DirectionRight {
 		a.tankUseCases.StopTank(false)
 	}
 }

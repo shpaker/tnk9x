@@ -53,7 +53,13 @@ func TestRoundToEven(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result := RoundToEven(tt.number, tt.up)
 			if result != tt.expected {
-				t.Errorf("RoundToEven(%v, %v) = %v, ожидалось %v", tt.number, tt.up, result, tt.expected)
+				t.Errorf(
+					"RoundToEven(%v, %v) = %v, ожидалось %v",
+					tt.number,
+					tt.up,
+					result,
+					tt.expected,
+				)
 			}
 		})
 	}
@@ -129,7 +135,14 @@ func TestRoundToDivisible(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result := RoundToDivisible(tt.number, tt.divisor, tt.up)
 			if result != tt.expected {
-				t.Errorf("RoundToDivisible(%v, %v, %v) = %v, ожидалось %v", tt.number, tt.divisor, tt.up, result, tt.expected)
+				t.Errorf(
+					"RoundToDivisible(%v, %v, %v) = %v, ожидалось %v",
+					tt.number,
+					tt.divisor,
+					tt.up,
+					result,
+					tt.expected,
+				)
 			}
 		})
 	}

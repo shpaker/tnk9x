@@ -8,6 +8,7 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
+
 	"github.com/shpaker/gonflict/internal/types"
 	"github.com/shpaker/gonflict/internal/use_cases"
 	"github.com/shpaker/gonflict/internal/utils"
@@ -56,48 +57,6 @@ func NewRendererAdapter(
 	}
 }
 
-// drawMap отрисовывает игровую карту
-func (r *RendererAdapter) drawMap(screen *ebiten.Image) {
-	vector.FillRect(
-		screen,
-		float32(use_cases.MapOffset),
-		float32(use_cases.MapOffset),
-		float32(use_cases.MapWidthHeight),
-		float32(use_cases.MapWidthHeight),
-		color.Black,
-		false,
-	)
-
-	// Draw blocks on the map
-	blocks := r.mapUseCases.GetBlocks()
-	for i, block := range blocks {
-		// Получаем ID изображения блока
-		imageId, err := block.ImageGetter.GetImageId()
-		if err != nil {
-			log.Printf("ERROR: Block %d error getting image ID: %v", i, err)
-			continue
-		}
-
-		// Получаем изображение блока через TilesUseCases
-		imageData, err := r.mapTilesUseCases.GetImage(imageId)
-		if err != nil {
-			log.Printf("ERROR: Block %d error loading image '%s': %v", i, imageId, err)
-			continue
-		}
-
-		// Конвертируем image.Image в ebiten.Image
-		image := ebiten.NewImageFromImage(imageData)
-
-		op := &ebiten.DrawImageOptions{}
-		// Предполагаем, что блоки имеют координаты X, Y в Position
-		op.GeoM.Translate(
-			use_cases.MapOffset+block.Position.X*use_cases.TileMinSize,
-			use_cases.MapOffset+block.Position.Y*use_cases.TileMinSize,
-		)
-		screen.DrawImage(image, op)
-	}
-}
-
 // drawTank отрисовывает танк
 func (r *RendererAdapter) drawTank(screen *ebiten.Image) {
 	tank := r.tankUseCases.GetTank()
@@ -117,16 +76,16 @@ func (r *RendererAdapter) drawTank(screen *ebiten.Image) {
 	}
 
 	// Получаем ID изображения танка
-	imageId, err := r.tankUseCases.GetImageId()
+	imageID, err := r.tankUseCases.GetImageID()
 	if err != nil {
 		log.Printf("ERROR: Tank error getting image ID: %v", err)
 		return
 	}
 
 	// Получаем изображение танка через TankTilesUseCases
-	imageData, err := r.playerTilesUseCases.GetImage(imageId)
+	imageData, err := r.playerTilesUseCases.GetImage(imageID)
 	if err != nil {
-		log.Printf("ERROR: Tank error loading image '%s': %v", imageId, err)
+		log.Printf("ERROR: Tank error loading image '%s': %v", imageID, err)
 		return
 	}
 
@@ -153,15 +112,22 @@ func (r *RendererAdapter) drawTank(screen *ebiten.Image) {
 }
 
 // getCachedImage возвращает закэшированное ebiten.Image или создает новое
-func (r *RendererAdapter) getCachedImage(imageId string, imageData image.Image) *ebiten.Image {
+func (r *RendererAdapter) getCachedImage(
+	imageID string,
+	imageData image.Image,
+) *ebiten.Image {
 	// Проверяем кэш
-	if cachedImage, exists := r.imageCache[imageId]; exists {
+	if cachedImage, exists := r.imageCache[imageID]; exists {
 		return cachedImage
 	}
 
 	// Проверяем размер изображения
 	if imageData.Bounds().Dx() == 0 || imageData.Bounds().Dy() == 0 {
-		log.Printf("ERROR: Image '%s' has zero size (bounds: %s)", imageId, imageData.Bounds())
+		log.Printf(
+			"ERROR: Image '%s' has zero size (bounds: %s)",
+			imageID,
+			imageData.Bounds(),
+		)
 		// Возвращаем пустое изображение 1x1 вместо nil
 		ebitenImage := ebiten.NewImage(1, 1)
 		return ebitenImage
@@ -169,7 +135,7 @@ func (r *RendererAdapter) getCachedImage(imageId string, imageData image.Image) 
 
 	// Создаем новое изображение и кэшируем его
 	ebitenImage := ebiten.NewImageFromImage(imageData)
-	r.imageCache[imageId] = ebitenImage
+	r.imageCache[imageID] = ebitenImage
 	return ebitenImage
 }
 
@@ -182,7 +148,8 @@ func (r *RendererAdapter) drawEnemiesWithoutExplosions(screen *ebiten.Image) {
 		}
 
 		// Пропускаем взрывающихся и взорванных врагов
-		if enemy.State == types.TankStateExploding || enemy.State == types.TankStateExploded {
+		if enemy.State == types.TankStateExploding ||
+			enemy.State == types.TankStateExploded {
 			continue
 		}
 
@@ -197,21 +164,25 @@ func (r *RendererAdapter) drawEnemiesWithoutExplosions(screen *ebiten.Image) {
 			continue
 		}
 		enemyUseCases := r.enemyUseCases[i]
-		imageId, err := enemyUseCases.GetImageId()
+		imageID, err := enemyUseCases.GetImageID()
 		if err != nil {
 			log.Printf("ERROR: Enemy error getting image ID: %v", err)
 			continue
 		}
 
 		// Получаем изображение через TilesUseCases
-		imageData, err := r.playerTilesUseCases.GetImage(imageId)
+		imageData, err := r.playerTilesUseCases.GetImage(imageID)
 		if err != nil {
-			log.Printf("ERROR: Enemy error loading image '%s': %v", imageId, err)
+			log.Printf(
+				"ERROR: Enemy error loading image '%s': %v",
+				imageID,
+				err,
+			)
 			continue
 		}
 
 		// Получаем закэшированное изображение
-		img := r.getCachedImage(imageId, imageData)
+		img := r.getCachedImage(imageID, imageData)
 
 		// Поворачиваем изображение в зависимости от направления
 		rotatedImage := utils.RotateImage(img, enemy.Direction)
@@ -239,21 +210,25 @@ func (r *RendererAdapter) drawEnemiesExplosions(screen *ebiten.Image) {
 			continue
 		}
 		enemyUseCases := r.enemyUseCases[i]
-		imageId, err := enemyUseCases.GetImageId()
+		imageID, err := enemyUseCases.GetImageID()
 		if err != nil {
 			log.Printf("ERROR: Enemy explosion error getting image ID: %v", err)
 			continue
 		}
 
 		// Получаем изображение через explosion tileset
-		imageData, err := r.explosionTilesUseCases.GetImage(imageId)
+		imageData, err := r.explosionTilesUseCases.GetImage(imageID)
 		if err != nil {
-			log.Printf("ERROR: Enemy explosion error loading image '%s': %v", imageId, err)
+			log.Printf(
+				"ERROR: Enemy explosion error loading image '%s': %v",
+				imageID,
+				err,
+			)
 			continue
 		}
 
 		// Получаем закэшированное изображение
-		img := r.getCachedImage(imageId, imageData)
+		img := r.getCachedImage(imageID, imageData)
 
 		op := &ebiten.DrawImageOptions{}
 
@@ -276,7 +251,11 @@ func (r *RendererAdapter) drawEnemiesExplosions(screen *ebiten.Image) {
 }
 
 // drawEnemySpawnAnimation отрисовывает анимацию спавна врага
-func (r *RendererAdapter) drawEnemySpawnAnimation(screen *ebiten.Image, enemy *types.TankEntity, enemyIndex int) {
+func (r *RendererAdapter) drawEnemySpawnAnimation(
+	screen *ebiten.Image,
+	enemy *types.TankEntity,
+	enemyIndex int,
+) {
 	// Получаем Use Cases для этого врага
 	if enemyIndex >= len(r.enemyUseCases) {
 		return
@@ -284,16 +263,23 @@ func (r *RendererAdapter) drawEnemySpawnAnimation(screen *ebiten.Image, enemy *t
 	enemyUseCases := r.enemyUseCases[enemyIndex]
 
 	// Получаем ID изображения анимации спавна через Use Cases
-	imageId, err := enemyUseCases.GetImageId()
+	imageID, err := enemyUseCases.GetImageID()
 	if err != nil {
-		log.Printf("ERROR: Enemy spawn animation error getting image ID: %v", err)
+		log.Printf(
+			"ERROR: Enemy spawn animation error getting image ID: %v",
+			err,
+		)
 		return
 	}
 
 	// Получаем изображение через TilesUseCases
-	imageData, err := r.spawnerTilesUseCases.GetImage(imageId)
+	imageData, err := r.spawnerTilesUseCases.GetImage(imageID)
 	if err != nil {
-		log.Printf("ERROR: Enemy spawn animation error loading image '%s': %v", imageId, err)
+		log.Printf(
+			"ERROR: Enemy spawn animation error loading image '%s': %v",
+			imageID,
+			err,
+		)
 		return
 	}
 
@@ -310,18 +296,25 @@ func (r *RendererAdapter) drawEnemySpawnAnimation(screen *ebiten.Image, enemy *t
 }
 
 // drawSpawnAnimation отрисовывает анимацию спавна
-func (r *RendererAdapter) drawSpawnAnimation(screen *ebiten.Image, tank *types.TankEntity) {
+func (r *RendererAdapter) drawSpawnAnimation(
+	screen *ebiten.Image,
+	tank *types.TankEntity,
+) {
 	// Получаем ID изображения анимации спавна через TankUseCases
-	imageId, err := r.tankUseCases.GetImageId()
+	imageID, err := r.tankUseCases.GetImageID()
 	if err != nil {
 		log.Printf("ERROR: Spawn animation error getting image ID: %v", err)
 		return
 	}
 
 	// Получаем изображение анимации спавна через SpawnerTilesUseCases
-	imageData, err := r.spawnerTilesUseCases.GetImage(imageId)
+	imageData, err := r.spawnerTilesUseCases.GetImage(imageID)
 	if err != nil {
-		log.Printf("ERROR: Spawn animation error loading image '%s': %v", imageId, err)
+		log.Printf(
+			"ERROR: Spawn animation error loading image '%s': %v",
+			imageID,
+			err,
+		)
 		return
 	}
 
@@ -362,16 +355,25 @@ func (r *RendererAdapter) drawBullets(screen *ebiten.Image) {
 	for i, bullet := range bullets {
 		if bullet.ImageGetter != nil {
 			// Получаем ID изображения пули
-			imageId, err := bullet.ImageGetter.GetImageId()
+			imageID, err := bullet.ImageGetter.GetImageID()
 			if err != nil {
-				log.Printf("ERROR: Bullet %d error getting image ID: %v", i, err)
+				log.Printf(
+					"ERROR: Bullet %d error getting image ID: %v",
+					i,
+					err,
+				)
 				continue
 			}
 
 			// Получаем изображение пули через BulletTilesUseCases
-			imageData, err := r.bulletTilesUseCases.GetImage(imageId)
+			imageData, err := r.bulletTilesUseCases.GetImage(imageID)
 			if err != nil {
-				log.Printf("ERROR: Bullet %d error loading image '%s': %v", i, imageId, err)
+				log.Printf(
+					"ERROR: Bullet %d error loading image '%s': %v",
+					i,
+					imageID,
+					err,
+				)
 				continue
 			}
 
@@ -450,7 +452,10 @@ func (r *RendererAdapter) drawMapBackground(screen *ebiten.Image) {
 }
 
 // drawBlocksByAltitude отрисовывает блоки на определенном уровне высоты
-func (r *RendererAdapter) drawBlocksByAltitude(screen *ebiten.Image, altitude types.Altitude) {
+func (r *RendererAdapter) drawBlocksByAltitude(
+	screen *ebiten.Image,
+	altitude types.Altitude,
+) {
 	blocks := r.mapUseCases.GetBlocks()
 	for i, block := range blocks {
 		// Пропускаем блоки других уровней
@@ -459,16 +464,21 @@ func (r *RendererAdapter) drawBlocksByAltitude(screen *ebiten.Image, altitude ty
 		}
 
 		// Получаем ID изображения блока
-		imageId, err := block.ImageGetter.GetImageId()
+		imageID, err := block.ImageGetter.GetImageID()
 		if err != nil {
 			log.Printf("ERROR: Block %d error getting image ID: %v", i, err)
 			continue
 		}
 
 		// Получаем изображение блока через TilesUseCases
-		imageData, err := r.mapTilesUseCases.GetImage(imageId)
+		imageData, err := r.mapTilesUseCases.GetImage(imageID)
 		if err != nil {
-			log.Printf("ERROR: Block %d error loading image '%s': %v", i, imageId, err)
+			log.Printf(
+				"ERROR: Block %d error loading image '%s': %v",
+				i,
+				imageID,
+				err,
+			)
 			continue
 		}
 

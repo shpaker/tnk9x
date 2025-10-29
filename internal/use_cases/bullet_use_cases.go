@@ -14,7 +14,10 @@ type BulletUseCases struct {
 }
 
 // NewBulletUseCases создает новый экземпляр BulletUseCases
-func NewBulletUseCases(bulletsRepo game.IBulletsRepository, tilesUseCases ITilesUseCases) *BulletUseCases {
+func NewBulletUseCases(
+	bulletsRepo game.IBulletsRepository,
+	tilesUseCases ITilesUseCases,
+) *BulletUseCases {
 	return &BulletUseCases{
 		bulletsRepo:   bulletsRepo,
 		tilesUseCases: tilesUseCases,
@@ -29,8 +32,12 @@ func (uc *BulletUseCases) ShootBullet(tank *types.TankEntity) error {
 		return nil // Просто игнорируем выстрел
 	}
 
-	log.Printf("DEBUG: ShootBullet called for tank at position (%.2f, %.2f) direction %d",
-		tank.Position.X, tank.Position.Y, tank.Direction)
+	log.Printf(
+		"DEBUG: ShootBullet called for tank at position (%.2f, %.2f) direction %d",
+		tank.Position.X,
+		tank.Position.Y,
+		tank.Direction,
+	)
 
 	// Создаем тайл для пули с ID "bullet"
 	bulletImageGetter, err := uc.tilesUseCases.CreateStaticTile("bullet")

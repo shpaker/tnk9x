@@ -3,9 +3,10 @@ package input_adapters
 import (
 	"log"
 
+	lua "github.com/yuin/gopher-lua"
+
 	"github.com/shpaker/gonflict/internal/types"
 	"github.com/shpaker/gonflict/internal/use_cases"
-	lua "github.com/yuin/gopher-lua"
 )
 
 // AiInputAdapter адаптер для работы с AI через Lua скрипты
@@ -64,7 +65,6 @@ func (a *AiInputAdapter) Update() {
 				a.applyDecision(decision)
 			}
 		}
-
 	}
 	// Увеличиваем счетчик тиков
 	a.tickCounter++
@@ -105,7 +105,6 @@ func (a *AiInputAdapter) CallEnemyAI(
 		NRet:    2,
 		Protect: true,
 	}, tankTable, contextTable)
-
 	if err != nil {
 		log.Printf("Error calling Lua AI: %v", err)
 		return false, 0

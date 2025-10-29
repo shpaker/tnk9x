@@ -13,14 +13,16 @@ type GameAiContext struct {
 	Blocks  []BlockEntity  // Блоки/стены
 }
 
-// IImageIdGetter определяет интерфейс для получения ID изображения
-type IImageIdGetter interface {
-	GetImageId() (string, error)
+// IImageIDGetter определяет интерфейс для получения ID изображения
+type IImageIDGetter interface {
+	GetImageID() (string, error)
 }
 
 // Типы
-type BlockType string
-type Direction int
+type (
+	BlockType string
+	Direction int
+)
 
 // Константы направлений
 const (

@@ -16,7 +16,9 @@ type TilesetRepositoryRegistry struct {
 }
 
 // NewTilesetRepositoryRegistry создает новый реестр тайлсетов
-func NewTilesetRepositoryRegistry(fileRepo raw.IFileRepository) (*TilesetRepositoryRegistry, error) {
+func NewTilesetRepositoryRegistry(
+	fileRepo raw.IFileRepository,
+) (*TilesetRepositoryRegistry, error) {
 	// Создаем репозиторий для блоков
 	blocksRepo, err := NewTilesetDataRepository(fileRepo, "tiles/blocks")
 	if err != nil {

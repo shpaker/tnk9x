@@ -2,6 +2,7 @@
 gocmd := "go"
 binary_name := "gonflict"
 binary_unix := binary_name + "_unix"
+max_line_length := "80"
 
 # Основные команды
 default:
@@ -56,28 +57,32 @@ dev:
     echo "Running in development mode..."
     {{gocmd}} run ./cmd
 
-# Форматирование и линтинг
+# Форматирование
 fmt:
     #!/bin/bash
-    echo "Formatting code..."
-    {{gocmd}} fmt ./...
+    GOBIN_PATH="$({{gocmd}} env GOPATH)/bin"
+    "$GOBIN_PATH/gofumpt" -l -w .
+    "$GOBIN_PATH/golines" -w --max-len={{max_line_length}} .
 
+# Линтинг
 lint:
     #!/bin/bash
-    echo "Running linter..."
-    golangci-lint run
+    GOBIN_PATH="$({{gocmd}} env GOPATH)/bin"
+    "$GOBIN_PATH/golangci-lint" run
 
 lint-fix:
     #!/bin/bash
-    echo "Running linter with auto-fix..."
-    golangci-lint run --fix
+    GOBIN_PATH="$({{gocmd}} env GOPATH)/bin"
+    "$GOBIN_PATH/golangci-lint" run --fix
 
 # Установка инструментов
 install-tools:
     #!/bin/bash
     echo "Installing development tools..."
+    {{gocmd}} install mvdan.cc/gofumpt@latest
+    {{gocmd}} install github.com/segmentio/golines@latest
     {{gocmd}} install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
-    echo "Tools installed"
+    echo "Tools installed. Make sure \$GOBIN or \$(go env GOPATH)/bin is in your PATH"
 
 # Проверки качества кода
 check: fmt lint test

@@ -47,14 +47,16 @@ func (tuc *TilesUseCases) GetImage(id string) (image.Image, error) {
 }
 
 // GetTileAnimationFrames возвращает данные анимации по ID
-func (tuc *TilesUseCases) GetTileAnimationFrames(id string) (types.AnimationData, error) {
+func (tuc *TilesUseCases) GetTileAnimationFrames(
+	id string,
+) (types.AnimationData, error) {
 	return tuc.tilesRepository.GetAnimationData(id)
 }
 
 // CreateStaticTile создает статический тайл по ID изображения
 func (tuc *TilesUseCases) CreateStaticTile(
 	id string,
-) (types.IImageIdGetter, error) {
+) (types.IImageIDGetter, error) {
 	// Проверяем, что изображение существует
 	_, err := tuc.tilesRepository.GetImage(id)
 	if err != nil {
@@ -62,12 +64,14 @@ func (tuc *TilesUseCases) CreateStaticTile(
 	}
 
 	return &types.TileStaticEntity{
-		ImageId: id,
+		ImageID: id,
 	}, nil
 }
 
 // CreateAnimationTile создает анимированный тайл по ID анимации
-func (tuc *TilesUseCases) CreateAnimationTile(id string) (*types.TileAnimationEntity, error) {
+func (tuc *TilesUseCases) CreateAnimationTile(
+	id string,
+) (*types.TileAnimationEntity, error) {
 	// Получаем конфигурацию анимации
 	config, err := tuc.tilesRepository.GetAnimationConfig(id)
 	if err != nil {
@@ -89,7 +93,10 @@ func (tuc *TilesUseCases) CreateAnimationTile(id string) (*types.TileAnimationEn
 	if config.Repeats == nil {
 		// Бесконечная анимация
 		if hasOffset {
-			animation = types.NewTileAnimationEntityWithOffset(animationFrames, config.Offset)
+			animation = types.NewTileAnimationEntityWithOffset(
+				animationFrames,
+				config.Offset,
+			)
 		} else {
 			animation = types.NewTileAnimationEntity(animationFrames)
 		}

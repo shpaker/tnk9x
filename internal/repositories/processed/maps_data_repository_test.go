@@ -15,20 +15,24 @@ func (mtr *MockTilesetRepository) GetImage(id string) (image.Image, error) {
 	return nil, nil
 }
 
-func (mtr *MockTilesetRepository) GetAnimationData(id string) (types.AnimationData, error) {
+func (mtr *MockTilesetRepository) GetAnimationData(
+	id string,
+) (types.AnimationData, error) {
 	return types.AnimationData{}, nil
 }
 
-func (mtr *MockTilesetRepository) GetAnimationConfig(id string) (types.AnimationConfig, error) {
+func (mtr *MockTilesetRepository) GetAnimationConfig(
+	id string,
+) (types.AnimationConfig, error) {
 	return types.AnimationConfig{}, nil
 }
 
-// MockImageIdGetter - мок для тестирования
-type MockImageIdGetter struct {
+// MockImageIDGetter - мок для тестирования
+type MockImageIDGetter struct {
 	id string
 }
 
-func (mig *MockImageIdGetter) GetImageId() (string, error) {
+func (mig *MockImageIDGetter) GetImageID() (string, error) {
 	return mig.id, nil
 }
 
@@ -100,7 +104,6 @@ func TestGetLevel_Success(t *testing.T) {
 
 	// Вызываем функцию
 	level, err := mapsService.GetLevel(1)
-
 	// Проверяем результат
 	if err != nil {
 		t.Fatalf("GetLevel вернул ошибку: %v", err)

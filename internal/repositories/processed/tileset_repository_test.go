@@ -29,7 +29,9 @@ func (m *MockTilesetFileRepository) ReadFile(name string) ([]byte, error) {
 	return nil, errors.New("file not found")
 }
 
-func (m *MockTilesetFileRepository) ReadImage(name string) (image.Image, error) {
+func (m *MockTilesetFileRepository) ReadImage(
+	name string,
+) (image.Image, error) {
 	if img, exists := m.images[name]; exists {
 		return img, nil
 	}
@@ -89,7 +91,6 @@ func TestNewTilesetRepository_Success(t *testing.T) {
 
 	// Создаем репозиторий
 	repo, err := NewTilesetDataRepository(mockFileRepo, "blocks")
-
 	// Проверяем результат
 	if err != nil {
 		t.Fatalf("NewTilesetRepository вернул ошибку: %v", err)
@@ -153,7 +154,6 @@ func TestGetImage_Success(t *testing.T) {
 
 	// Получаем изображение
 	img, err := repo.GetImage("brick")
-
 	// Проверяем результат
 	if err != nil {
 		t.Fatalf("GetImage вернул ошибку: %v", err)
@@ -192,7 +192,11 @@ func TestGetImage_NotFound(t *testing.T) {
 
 	expectedError := "image 'nonexistent' not found"
 	if err.Error() != expectedError {
-		t.Errorf("Ожидалась ошибка '%s', получена '%s'", expectedError, err.Error())
+		t.Errorf(
+			"Ожидалась ошибка '%s', получена '%s'",
+			expectedError,
+			err.Error(),
+		)
 	}
 }
 
@@ -210,7 +214,6 @@ func TestGetAnimationData_Success(t *testing.T) {
 
 	// Получаем данные анимации
 	animationData, err := repo.GetAnimationData("base_tank")
-
 	// Проверяем результат
 	if err != nil {
 		t.Fatalf("GetAnimationData вернул ошибку: %v", err)
@@ -223,11 +226,17 @@ func TestGetAnimationData_Success(t *testing.T) {
 	// Проверяем, что первая анимация имеет правильные данные
 	// В новом формате frames конвертируется в AnimationData
 	if animationData[0].Image != "tank_base" {
-		t.Errorf("Ожидался image 'tank_base', получен '%s'", animationData[0].Image)
+		t.Errorf(
+			"Ожидался image 'tank_base', получен '%s'",
+			animationData[0].Image,
+		)
 	}
 
 	if animationData[0].Duration != 100 {
-		t.Errorf("Ожидалась длительность 100, получена %d", animationData[0].Duration)
+		t.Errorf(
+			"Ожидалась длительность 100, получена %d",
+			animationData[0].Duration,
+		)
 	}
 
 	// Проверяем второй кадр
@@ -235,7 +244,10 @@ func TestGetAnimationData_Success(t *testing.T) {
 		t.Fatal("Ожидалось 2 кадра")
 	}
 	if animationData[1].Image != "tank_base_2" {
-		t.Errorf("Ожидался image 'tank_base_2', получен '%s'", animationData[1].Image)
+		t.Errorf(
+			"Ожидался image 'tank_base_2', получен '%s'",
+			animationData[1].Image,
+		)
 	}
 }
 
@@ -261,7 +273,11 @@ func TestGetAnimationData_NotFound(t *testing.T) {
 
 	expectedError := "animation 'nonexistent' not found"
 	if err.Error() != expectedError {
-		t.Errorf("Ожидалась ошибка '%s', получена '%s'", expectedError, err.Error())
+		t.Errorf(
+			"Ожидалась ошибка '%s', получена '%s'",
+			expectedError,
+			err.Error(),
+		)
 	}
 }
 
@@ -292,23 +308,26 @@ animations:
 
 	// Получаем данные анимации
 	animationData, err := repo.GetAnimationData("base_tank")
-
 	// Проверяем результат
 	if err != nil {
 		t.Fatalf("GetAnimationData вернул ошибку: %v", err)
 	}
 
 	if len(animationData) != 0 {
-		t.Errorf("Ожидались пустые данные анимации, получено %d кадров", len(animationData))
+		t.Errorf(
+			"Ожидались пустые данные анимации, получено %d кадров",
+			len(animationData),
+		)
 	}
-
 }
 
 // Интеграционный тест с реальными файлами
 func TestTilesetRepository_Integration(t *testing.T) {
 	// Пропускаем тест, если нет реальных файлов
 	if _, err := os.Stat("assets/tiles/blocks.yml"); os.IsNotExist(err) {
-		t.Skip("Пропуск интеграционного теста: файлы assets/tiles/blocks.yml не найдены")
+		t.Skip(
+			"Пропуск интеграционного теста: файлы assets/tiles/blocks.yml не найдены",
+		)
 	}
 
 	// Создаем реальный файловый репозиторий
@@ -353,7 +372,11 @@ func TestTilesetRepository_Cache(t *testing.T) {
 	// Проверяем, что все изображения предварительно закешированы
 	expectedCacheSize := 3 // brick, steel, water из createTestBlocksConfig
 	if len(repo.imagesCache) != expectedCacheSize {
-		t.Errorf("Ожидалось %d элементов в кэше, получено %d", expectedCacheSize, len(repo.imagesCache))
+		t.Errorf(
+			"Ожидалось %d элементов в кэше, получено %d",
+			expectedCacheSize,
+			len(repo.imagesCache),
+		)
 	}
 
 	// Получаем изображение первый раз
@@ -364,7 +387,11 @@ func TestTilesetRepository_Cache(t *testing.T) {
 
 	// Проверяем, что размер кэша не изменился (предварительное кэширование)
 	if len(repo.imagesCache) != expectedCacheSize {
-		t.Errorf("Ожидалось %d элементов в кэше, получено %d", expectedCacheSize, len(repo.imagesCache))
+		t.Errorf(
+			"Ожидалось %d элементов в кэше, получено %d",
+			expectedCacheSize,
+			len(repo.imagesCache),
+		)
 	}
 
 	// Получаем то же изображение второй раз
@@ -380,7 +407,11 @@ func TestTilesetRepository_Cache(t *testing.T) {
 
 	// Проверяем, что размер кэша все еще не изменился
 	if len(repo.imagesCache) != expectedCacheSize {
-		t.Errorf("Ожидалось %d элементов в кэше, получено %d", expectedCacheSize, len(repo.imagesCache))
+		t.Errorf(
+			"Ожидалось %d элементов в кэше, получено %d",
+			expectedCacheSize,
+			len(repo.imagesCache),
+		)
 	}
 
 	// Получаем другое изображение
@@ -391,7 +422,11 @@ func TestTilesetRepository_Cache(t *testing.T) {
 
 	// Проверяем, что размер кэша все еще не изменился
 	if len(repo.imagesCache) != expectedCacheSize {
-		t.Errorf("Ожидалось %d элементов в кэше, получено %d", expectedCacheSize, len(repo.imagesCache))
+		t.Errorf(
+			"Ожидалось %d элементов в кэше, получено %d",
+			expectedCacheSize,
+			len(repo.imagesCache),
+		)
 	}
 
 	// Проверяем, что это разные объекты

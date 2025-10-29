@@ -4,9 +4,8 @@ import "errors"
 
 // BlockEntity представляет блок карты
 type BlockEntity struct {
-	ImageGetter IImageIdGetter
+	ImageGetter IImageIDGetter
 	Data        *BlockData
-	Properties  *BlockProperties
 	Position    Position
 	Altitude    Altitude
 }
@@ -17,16 +16,12 @@ type BlockData struct {
 	Position Position
 }
 
-// BlockProperties содержит свойства блока
-type BlockProperties struct {
-}
-
-// GetImageId возвращает ID изображения блока
-func (b *BlockEntity) GetImageId() (string, error) {
+// GetImageID возвращает ID изображения блока
+func (b *BlockEntity) GetImageID() (string, error) {
 	if b.ImageGetter == nil {
 		return "", errors.New("ImageGetter is nil")
 	}
-	return b.ImageGetter.GetImageId()
+	return b.ImageGetter.GetImageID()
 }
 
 // GetSize возвращает размер блока
@@ -49,7 +44,7 @@ func NewBlockEntity(
 	blockType string,
 	positionX,
 	positionY float64,
-	imageGetter IImageIdGetter,
+	imageGetter IImageIDGetter,
 ) *BlockEntity {
 	altitude := SURFACE // По умолчанию блоки на уровне поверхности
 	// Деревья (Forest) рисуются выше игрока
@@ -63,8 +58,7 @@ func NewBlockEntity(
 			Name:     BlockType(blockType),
 			Position: Position{X: positionX, Y: positionY},
 		},
-		Properties: &BlockProperties{},
-		Position:   Position{X: positionX, Y: positionY},
-		Altitude:   altitude,
+		Position: Position{X: positionX, Y: positionY},
+		Altitude: altitude,
 	}
 }

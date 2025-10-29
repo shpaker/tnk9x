@@ -2,10 +2,10 @@ package types
 
 // TileStaticEntity представляет статический тайл с изображением
 type TileStaticEntity struct {
-	ImageId string
+	ImageID string
 }
 
-// GetImageId возвращает ID изображения тайла (реализует IImageIdGetter)
-func (tse *TileStaticEntity) GetImageId() (string, error) {
-	return tse.ImageId, nil
+// GetImageID возвращает ID изображения тайла (реализует IImageIDGetter)
+func (tse *TileStaticEntity) GetImageID() (string, error) {
+	return tse.ImageID, nil
 }

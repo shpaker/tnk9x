@@ -48,14 +48,24 @@ func NewGameStateUseCasesFacade(
 	}
 
 	// Создаем Use Cases
-	tilesUseCasesWithAnimations := use_cases.NewTilesUseCasesWithAnimations(playerTilesetRepo, gameRepo.AnimationsRepository(), spawnerTilesetRepo, explosionTilesetRepo)
+	tilesUseCasesWithAnimations := use_cases.NewTilesUseCasesWithAnimations(
+		playerTilesetRepo,
+		gameRepo.AnimationsRepository(),
+		spawnerTilesetRepo,
+		explosionTilesetRepo,
+	)
 
 	// Берем первую позицию спавна игрока из конфига
 	var playerSpawner types.Position
-	if len(gameConfig.PlayerSpawners) > 0 && len(gameConfig.PlayerSpawners[0]) == 2 {
+	if len(gameConfig.PlayerSpawners) > 0 &&
+		len(gameConfig.PlayerSpawners[0]) == 2 {
 		playerSpawner = types.Position{
-			X: float64(gameConfig.PlayerSpawners[0][0]) * use_cases.TankSpriteSize,
-			Y: float64(gameConfig.PlayerSpawners[0][1]) * use_cases.TankSpriteSize,
+			X: float64(
+				gameConfig.PlayerSpawners[0][0],
+			) * use_cases.TankSpriteSize,
+			Y: float64(
+				gameConfig.PlayerSpawners[0][1],
+			) * use_cases.TankSpriteSize,
 		}
 	} else {
 		// Значение по умолчанию
@@ -63,8 +73,17 @@ func NewGameStateUseCasesFacade(
 	}
 
 	bulletTilesUseCases := use_cases.NewTilesUseCases(bulletTilesetRepo)
-	bulletUseCases := use_cases.NewBulletUseCases(gameRepo.BulletsRepository(), bulletTilesUseCases)
-	playerUseCases := use_cases.NewTankUseCases(gameRepo.TanksRepository(), bulletUseCases, tilesUseCasesWithAnimations, playerSpawner, types.DirectionUp)
+	bulletUseCases := use_cases.NewBulletUseCases(
+		gameRepo.BulletsRepository(),
+		bulletTilesUseCases,
+	)
+	playerUseCases := use_cases.NewTankUseCases(
+		gameRepo.TanksRepository(),
+		bulletUseCases,
+		tilesUseCasesWithAnimations,
+		playerSpawner,
+		types.DirectionUp,
+	)
 	mapUseCases := use_cases.NewMapUseCases(gameRepo.BlocksRepository())
 
 	// Создаем AI контекст
@@ -108,7 +127,13 @@ func NewGameStateUseCasesFacade(
 		}
 
 		// Создаем отдельный TankUseCases для этого врага
-		enemyTankUseCases := use_cases.NewTankUseCases(gameRepo.TanksRepository(), bulletUseCases, tilesUseCasesWithAnimations, position, types.DirectionDown)
+		enemyTankUseCases := use_cases.NewTankUseCases(
+			gameRepo.TanksRepository(),
+			bulletUseCases,
+			tilesUseCasesWithAnimations,
+			position,
+			types.DirectionDown,
+		)
 
 		// Создаем танк врага
 		err := enemyTankUseCases.StartSpawn()
@@ -123,7 +148,12 @@ func NewGameStateUseCasesFacade(
 		enemyUseCasesList = append(enemyUseCasesList, enemyTankUseCases)
 
 		// Создаем AI input адаптер для этого врага с поддержкой Lua
-		aiInputAdapter, err := input_adapters.NewAiInputAdapter(enemyTankUseCases, aiContext, updateInterval, enemyScript)
+		aiInputAdapter, err := input_adapters.NewAiInputAdapter(
+			enemyTankUseCases,
+			aiContext,
+			updateInterval,
+			enemyScript,
+		)
 		if err != nil {
 			return nil, err
 		}

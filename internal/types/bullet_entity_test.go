@@ -4,16 +4,16 @@ import (
 	"testing"
 )
 
-func TestBulletEntity_GetImageId(t *testing.T) {
+func TestBulletEntity_GetImageID(t *testing.T) {
 	tests := []struct {
 		name        string
-		imageGetter IImageIdGetter
+		imageGetter IImageIDGetter
 		expected    string
 		expectError bool
 	}{
 		{
 			name:        "Valid ImageGetter",
-			imageGetter: &MockImageIdGetter{id: "bullet"},
+			imageGetter: &MockImageIDGetter{id: "bullet"},
 			expected:    "bullet",
 			expectError: false,
 		},
@@ -25,7 +25,7 @@ func TestBulletEntity_GetImageId(t *testing.T) {
 		},
 		{
 			name:        "Empty ID",
-			imageGetter: &MockImageIdGetter{id: ""},
+			imageGetter: &MockImageIDGetter{id: ""},
 			expected:    "",
 			expectError: false,
 		},
@@ -37,7 +37,7 @@ func TestBulletEntity_GetImageId(t *testing.T) {
 				ImageGetter: tt.imageGetter,
 			}
 
-			result, err := bullet.GetImageId()
+			result, err := bullet.GetImageID()
 
 			if tt.expectError {
 				if err == nil {
@@ -48,7 +48,7 @@ func TestBulletEntity_GetImageId(t *testing.T) {
 					t.Errorf("Не ожидалась ошибка: %v", err)
 				}
 				if result != tt.expected {
-					t.Errorf("GetImageId() = %v, want %v", result, tt.expected)
+					t.Errorf("GetImageID() = %v, want %v", result, tt.expected)
 				}
 			}
 		})

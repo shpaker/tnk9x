@@ -6,6 +6,7 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
+
 	"github.com/shpaker/gonflict/internal/repositories/processed"
 	"github.com/shpaker/gonflict/internal/repositories/raw"
 	"github.com/shpaker/gonflict/internal/states"
@@ -22,19 +23,28 @@ func (app *App) Layout(outsideWidth, outsideHeight int) (int, int) {
 }
 
 func (app *App) Update() error {
-	new_state, err := app.State.Update()
+	newState, err := app.State.Update()
 	if err != nil {
 		return err
 	}
-	if new_state != nil {
-		app.State = new_state
+	if newState != nil {
+		app.State = newState
 	}
 	return nil
 }
 
 func (app *App) Draw(screen *ebiten.Image) {
 	app.State.Draw(screen)
-	ebitenutil.DebugPrintAt(screen, fmt.Sprintf("TPS: %.2f,\nFPS: %.2f", ebiten.ActualTPS(), ebiten.ActualFPS()), 0, 0)
+	ebitenutil.DebugPrintAt(
+		screen,
+		fmt.Sprintf(
+			"TPS: %.2f,\nFPS: %.2f",
+			ebiten.ActualTPS(),
+			ebiten.ActualFPS(),
+		),
+		0,
+		0,
+	)
 }
 
 func New(cfg *Config) *App {
@@ -52,7 +62,10 @@ func New(cfg *Config) *App {
 	scriptsRepo := processed.NewScriptsRepository(fileRepo)
 
 	// Создаем репозиторий карт уровней
-	mapsRepo := processed.NewMapsDataRepository(fileRepo, tilesetRegistry.Blocks())
+	mapsRepo := processed.NewMapsDataRepository(
+		fileRepo,
+		tilesetRegistry.Blocks(),
+	)
 
 	// Создаем игровую конфигурацию из общей конфигурации
 	gameConfig := &states.GameConfig{
@@ -80,7 +93,10 @@ func New(cfg *Config) *App {
 }
 
 func (app *App) Run(ctx context.Context) error {
-	ebiten.SetWindowSize(app.config.ScreenWidth()*3, app.config.ScreenHeight()*3)
+	ebiten.SetWindowSize(
+		app.config.ScreenWidth()*3,
+		app.config.ScreenHeight()*3,
+	)
 	ebiten.SetWindowTitle(app.config.Name)
 
 	if err := ebiten.RunGame(app); err != nil {

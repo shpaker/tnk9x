@@ -6,12 +6,12 @@ import (
 	"github.com/shpaker/gonflict/internal/types"
 )
 
-// MockImageIdGetter для тестирования
-type MockImageIdGetter struct {
+// MockImageIDGetter для тестирования
+type MockImageIDGetter struct {
 	id string
 }
 
-func (m *MockImageIdGetter) GetImageId() (string, error) {
+func (m *MockImageIDGetter) GetImageID() (string, error) {
 	return m.id, nil
 }
 
@@ -33,10 +33,10 @@ func TestAddAndGetBullets(t *testing.T) {
 
 	// Создаем тестовую пулю с ImageGetter
 	bullet := types.BulletEntity{
-		ImageGetter:   &MockImageIdGetter{id: "bullet"},
-		Position: types.Position{X: 100, Y: 100},
-		Speed:         200.0,
-		Direction:     types.DirectionUp,
+		ImageGetter: &MockImageIDGetter{id: "bullet"},
+		Position:    types.Position{X: 100, Y: 100},
+		Speed:       200.0,
+		Direction:   types.DirectionUp,
 	}
 
 	repo.AddBullet(bullet)
@@ -51,12 +51,12 @@ func TestAddAndGetBullets(t *testing.T) {
 		t.Error("ImageGetter не должен быть nil")
 	}
 
-	imageId, err := bullets[0].ImageGetter.GetImageId()
+	imageID, err := bullets[0].ImageGetter.GetImageID()
 	if err != nil {
 		t.Errorf("Не ожидалась ошибка: %v", err)
 	}
-	if imageId != "bullet" {
-		t.Errorf("Ожидался ID 'bullet', получен '%s'", imageId)
+	if imageID != "bullet" {
+		t.Errorf("Ожидался ID 'bullet', получен '%s'", imageID)
 	}
 }
 
@@ -65,16 +65,16 @@ func TestRemoveBullet(t *testing.T) {
 
 	// Создаем тестовые пули с ImageGetter
 	bullet1 := types.BulletEntity{
-		ImageGetter:   &MockImageIdGetter{id: "bullet"},
-		Position: types.Position{X: 100, Y: 100},
-		Speed:         200.0,
-		Direction:     types.DirectionUp,
+		ImageGetter: &MockImageIDGetter{id: "bullet"},
+		Position:    types.Position{X: 100, Y: 100},
+		Speed:       200.0,
+		Direction:   types.DirectionUp,
 	}
 	bullet2 := types.BulletEntity{
-		ImageGetter:   &MockImageIdGetter{id: "bullet"},
-		Position: types.Position{X: 200, Y: 200},
-		Speed:         200.0,
-		Direction:     types.DirectionDown,
+		ImageGetter: &MockImageIDGetter{id: "bullet"},
+		Position:    types.Position{X: 200, Y: 200},
+		Speed:       200.0,
+		Direction:   types.DirectionDown,
 	}
 
 	repo.AddBullet(bullet1)

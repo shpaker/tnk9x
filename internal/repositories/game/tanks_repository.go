@@ -55,7 +55,11 @@ func (tr *TanksRepository) GetAllEnemies() []*types.TankEntity {
 // RemoveEnemy удаляет врага по индексу
 func (tr *TanksRepository) RemoveEnemy(index int) error {
 	if index < 0 || index >= len(tr.enemies) {
-		return fmt.Errorf("enemy index %d out of range [0, %d)", index, len(tr.enemies))
+		return fmt.Errorf(
+			"enemy index %d out of range [0, %d)",
+			index,
+			len(tr.enemies),
+		)
 	}
 	tr.enemies = append(tr.enemies[:index], tr.enemies[index+1:]...)
 	return nil

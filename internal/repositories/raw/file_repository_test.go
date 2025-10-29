@@ -15,7 +15,6 @@ func TestGetAssetPath(t *testing.T) {
 
 	repo := NewFileRepository(baseDir)
 	result, err := repo.getPath(assetName)
-
 	if err != nil {
 		t.Errorf("неожиданная ошибка: %v", err)
 		return
@@ -38,13 +37,12 @@ func TestReadFile(t *testing.T) {
 	testFile := "test.txt"
 	filePath := filepath.Join(tempDir, testFile)
 
-	if err := os.WriteFile(filePath, testData, 0644); err != nil {
+	if err := os.WriteFile(filePath, testData, 0o644); err != nil {
 		t.Fatalf("не удалось создать тестовый файл: %v", err)
 	}
 
 	repo := NewFileRepository(tempDir)
 	result, err := repo.ReadFile(testFile)
-
 	if err != nil {
 		t.Errorf("неожиданная ошибка: %v", err)
 		return
@@ -78,7 +76,6 @@ func TestReadImage(t *testing.T) {
 
 	repo := NewFileRepository(tempDir)
 	result, err := repo.ReadImage(testFile)
-
 	if err != nil {
 		t.Errorf("неожиданная ошибка: %v", err)
 		return
@@ -100,7 +97,7 @@ func TestReadConfig(t *testing.T) {
 	filePath := filepath.Join(tempDir, testFile+".yml")
 	testYAML := []byte("name: test\nvalue: 42\n")
 
-	if err := os.WriteFile(filePath, testYAML, 0644); err != nil {
+	if err := os.WriteFile(filePath, testYAML, 0o644); err != nil {
 		t.Fatalf("не удалось создать тестовый файл: %v", err)
 	}
 
@@ -111,7 +108,6 @@ func TestReadConfig(t *testing.T) {
 
 	repo := NewFileRepository(tempDir)
 	config, err := ReadConfig[TestConfig](repo, testFile)
-
 	if err != nil {
 		t.Errorf("неожиданная ошибка: %v", err)
 		return

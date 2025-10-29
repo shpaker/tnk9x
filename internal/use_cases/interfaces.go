@@ -24,8 +24,8 @@ type ITankUseCasesRef interface {
 	StartExplosion() error
 	IsActive() bool
 	IsStopped() bool
-	GetImageId() (string, error)
-	GetAnimationGetter() types.IImageIdGetter
+	GetImageID() (string, error)
+	GetAnimationGetter() types.IImageIDGetter
 	Shoot() error
 }
 
@@ -55,12 +55,15 @@ type ICollisionUseCases interface {
 	UpdateCollisions() error
 	CheckColliders(obj1 IMapObject, obj2 IMapObject) bool
 	CheckCollidersWithArray(obj IMapObject, objects []IMapObject) []IMapObject
-	CheckCollidersWithArrayFirst(obj IMapObject, objects []IMapObject) IMapObject
+	CheckCollidersWithArrayFirst(
+		obj IMapObject,
+		objects []IMapObject,
+	) IMapObject
 }
 
 // ITilesUseCases определяет интерфейс для работы с тайлами и анимациями
 type ITilesUseCases interface {
-	CreateStaticTile(id string) (types.IImageIdGetter, error)
+	CreateStaticTile(id string) (types.IImageIDGetter, error)
 	CreateAnimationTile(id string) (*types.TileAnimationEntity, error)
 	GetImage(id string) (image.Image, error)
 	GetTileAnimationFrames(id string) (types.AnimationData, error)

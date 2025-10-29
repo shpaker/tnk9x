@@ -64,7 +64,9 @@ func (uc *CollisionUseCases) checkEnemyCollisions() {
 }
 
 // checkEnemyBoundaryCollisions проверяет коллизии врага с границами экрана
-func (uc *CollisionUseCases) checkEnemyBoundaryCollisions(enemy *types.TankEntity) {
+func (uc *CollisionUseCases) checkEnemyBoundaryCollisions(
+	enemy *types.TankEntity,
+) {
 	// Откатываем позицию при выходе за границы
 	if enemy.Position.X < 0 {
 		enemy.Position.X = 0
@@ -104,7 +106,10 @@ func (uc *CollisionUseCases) checkEnemyWallCollisions(enemy *types.TankEntity) {
 }
 
 // handleEnemyWallCollision обрабатывает коллизию врага со стеной
-func (uc *CollisionUseCases) handleEnemyWallCollision(enemy *types.TankEntity, block *types.BlockEntity) {
+func (uc *CollisionUseCases) handleEnemyWallCollision(
+	enemy *types.TankEntity,
+	block *types.BlockEntity,
+) {
 	blockPos := block.GetPosition()
 	blockSize := block.GetSize()
 
@@ -241,7 +246,9 @@ func (uc *CollisionUseCases) checkBulletWallCollisions() {
 }
 
 // checkTankBoundaryCollisions проверяет коллизии танка с границами экрана
-func (uc *CollisionUseCases) checkTankBoundaryCollisions(tank *types.TankEntity) {
+func (uc *CollisionUseCases) checkTankBoundaryCollisions(
+	tank *types.TankEntity,
+) {
 	if tank.Position.X < 0 {
 		tank.Position.X = 0
 		uc.tankUseCases.StopTank(false)
@@ -274,11 +281,12 @@ func (uc *CollisionUseCases) checkTankWallCollisions(tank *types.TankEntity) {
 }
 
 // createBlockFromWall создает блок из данных стены для проверки коллизий
-func (uc *CollisionUseCases) createBlockFromWall(wall types.BlockEntity) types.BlockEntity {
+func (uc *CollisionUseCases) createBlockFromWall(
+	wall types.BlockEntity,
+) types.BlockEntity {
 	return types.BlockEntity{
 		ImageGetter: wall.ImageGetter,
 		Data:        wall.Data,
-		Properties:  wall.Properties,
 		Position: types.Position{
 			X: wall.Position.X * TileMinSize,
 			Y: wall.Position.Y * TileMinSize,
@@ -288,7 +296,9 @@ func (uc *CollisionUseCases) createBlockFromWall(wall types.BlockEntity) types.B
 }
 
 // createMapObjectsFromLevel создает массив объектов карты из уровня
-func (uc *CollisionUseCases) createMapObjectsFromLevel(level []types.BlockEntity) []IMapObject {
+func (uc *CollisionUseCases) createMapObjectsFromLevel(
+	level []types.BlockEntity,
+) []IMapObject {
 	var mapObjects []IMapObject
 	for _, wall := range level {
 		if wall.Data != nil {
@@ -300,7 +310,10 @@ func (uc *CollisionUseCases) createMapObjectsFromLevel(level []types.BlockEntity
 }
 
 // handleTankWallCollision обрабатывает коллизию танка со стеной
-func (uc *CollisionUseCases) handleTankWallCollision(tank *types.TankEntity, block *types.BlockEntity) {
+func (uc *CollisionUseCases) handleTankWallCollision(
+	tank *types.TankEntity,
+	block *types.BlockEntity,
+) {
 	blockPos := block.GetPosition()
 	blockSize := block.GetSize()
 

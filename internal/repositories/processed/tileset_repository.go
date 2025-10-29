@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"image"
 
+	"gopkg.in/yaml.v3"
+
 	"github.com/shpaker/gonflict/internal/repositories/raw"
 	"github.com/shpaker/gonflict/internal/types"
-	"gopkg.in/yaml.v3"
 )
 
 type TilesetDataRepository struct {
@@ -54,8 +55,14 @@ func NewTilesetDataRepository(
 			SubImage(r image.Rectangle) image.Image
 		}).SubImage(
 			image.Rectangle{
-				Min: image.Point{X: coords[0] * tileSize, Y: coords[1] * tileSize},
-				Max: image.Point{X: (coords[0] + 1) * tileSize, Y: (coords[1] + 1) * tileSize},
+				Min: image.Point{
+					X: coords[0] * tileSize,
+					Y: coords[1] * tileSize,
+				},
+				Max: image.Point{
+					X: (coords[0] + 1) * tileSize,
+					Y: (coords[1] + 1) * tileSize,
+				},
 			},
 		)
 
@@ -107,10 +114,15 @@ func (tr *TilesetDataRepository) GetAnimationData(
 }
 
 // GetAnimationConfig получает конфигурацию анимации
-func (tr *TilesetDataRepository) GetAnimationConfig(id string) (types.AnimationConfig, error) {
+func (tr *TilesetDataRepository) GetAnimationConfig(
+	id string,
+) (types.AnimationConfig, error) {
 	config, exists := tr.animationsConfig[id]
 	if !exists {
-		return types.AnimationConfig{}, fmt.Errorf("animation config '%s' not found", id)
+		return types.AnimationConfig{}, fmt.Errorf(
+			"animation config '%s' not found",
+			id,
+		)
 	}
 	return config, nil
 }

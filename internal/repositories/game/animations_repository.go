@@ -15,7 +15,9 @@ func NewAnimationsRepository() *AnimationsRepository {
 }
 
 // AddAnimation добавляет анимацию в репозиторий
-func (ar *AnimationsRepository) AddAnimation(animation *types.TileAnimationEntity) {
+func (ar *AnimationsRepository) AddAnimation(
+	animation *types.TileAnimationEntity,
+) {
 	ar.animations = append(ar.animations, animation)
 }
 

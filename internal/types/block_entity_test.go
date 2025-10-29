@@ -17,20 +17,22 @@ func (mtr *MockTilesetRepository) GetImage(id string) (*ebiten.Image, error) {
 	return ebiten.NewImage(8, 8), nil
 }
 
-func (mtr *MockTilesetRepository) GetAnimationData(id string) (AnimationData, error) {
+func (mtr *MockTilesetRepository) GetAnimationData(
+	id string,
+) (AnimationData, error) {
 	return AnimationData{}, nil
 }
 
-// MockImageIdGetter для тестирования
-type MockImageIdGetter struct {
+// MockImageIDGetter для тестирования
+type MockImageIDGetter struct {
 	id string
 }
 
-func (mig *MockImageIdGetter) GetImageId() (string, error) {
+func (mig *MockImageIDGetter) GetImageID() (string, error) {
 	return mig.id, nil
 }
 
-func TestBlockEntity_GetImageId_NilImageGetter(t *testing.T) {
+func TestBlockEntity_GetImageID_NilImageGetter(t *testing.T) {
 	// Создаем блок с nil ImageGetter
 	block := &BlockEntity{
 		ImageGetter: nil,
@@ -38,13 +40,12 @@ func TestBlockEntity_GetImageId_NilImageGetter(t *testing.T) {
 			Name:     "test",
 			Position: Position{X: 0, Y: 0},
 		},
-		Properties:    &BlockProperties{},
 		Position: Position{X: 0, Y: 0},
-		Altitude:      SURFACE,
+		Altitude: SURFACE,
 	}
 
 	// Пытаемся получить ID изображения
-	_, err := block.GetImageId()
+	_, err := block.GetImageID()
 
 	// Проверяем, что возвращается ошибка
 	if err == nil {
@@ -53,56 +54,59 @@ func TestBlockEntity_GetImageId_NilImageGetter(t *testing.T) {
 
 	expectedError := "ImageGetter is nil"
 	if err.Error() != expectedError {
-		t.Errorf("Ожидалась ошибка '%s', получена '%s'", expectedError, err.Error())
+		t.Errorf(
+			"Ожидалась ошибка '%s', получена '%s'",
+			expectedError,
+			err.Error(),
+		)
 	}
 }
 
-func TestBlockEntity_GetImageId_EmptyImageId(t *testing.T) {
+func TestBlockEntity_GetImageID_EmptyImageID(t *testing.T) {
 	// Создаем блок с ImageGetter, который возвращает пустой ID
 	block := &BlockEntity{
-		ImageGetter: &MockImageIdGetter{id: ""},
+		ImageGetter: &MockImageIDGetter{id: ""},
 		Data: &BlockData{
 			Name:     "test",
 			Position: Position{X: 0, Y: 0},
 		},
-		Properties:    &BlockProperties{},
 		Position: Position{X: 0, Y: 0},
-		Altitude:      SURFACE,
+		Altitude: SURFACE,
 	}
 
 	// Пытаемся получить ID изображения
-	imageId, err := block.GetImageId()
-
+	imageID, err := block.GetImageID()
 	// Проверяем, что ошибки нет и возвращается пустая строка
 	if err != nil {
 		t.Errorf("Не ожидалась ошибка: %v", err)
 	}
-	if imageId != "" {
-		t.Errorf("Ожидалась пустая строка для пустого ImageId, получена '%s'", imageId)
+	if imageID != "" {
+		t.Errorf(
+			"Ожидалась пустая строка для пустого ImageID, получена '%s'",
+			imageID,
+		)
 	}
 }
 
-func TestBlockEntity_GetImageId_ValidImageId(t *testing.T) {
+func TestBlockEntity_GetImageID_ValidImageID(t *testing.T) {
 	// Создаем блок с валидным ImageGetter
 	block := &BlockEntity{
-		ImageGetter: &MockImageIdGetter{id: "valid"},
+		ImageGetter: &MockImageIDGetter{id: "valid"},
 		Data: &BlockData{
 			Name:     "test",
 			Position: Position{X: 0, Y: 0},
 		},
-		Properties:    &BlockProperties{},
 		Position: Position{X: 0, Y: 0},
-		Altitude:      SURFACE,
+		Altitude: SURFACE,
 	}
 
 	// Пытаемся получить ID изображения
-	imageId, err := block.GetImageId()
-
+	imageID, err := block.GetImageID()
 	// Проверяем, что ошибки нет и ID получен корректно
 	if err != nil {
 		t.Errorf("Не ожидалась ошибка: %v", err)
 	}
-	if imageId != "valid" {
-		t.Errorf("Ожидался ID 'valid', получен '%s'", imageId)
+	if imageID != "valid" {
+		t.Errorf("Ожидался ID 'valid', получен '%s'", imageID)
 	}
 }

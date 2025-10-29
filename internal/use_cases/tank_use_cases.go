@@ -15,7 +15,7 @@ type TankUseCases struct {
 	tilesUseCases   *TilesUseCases       // Для всех анимаций (спавн, взрыв, танк)
 	spawnAt         types.Position       // Координаты спавна игрока
 	tank            types.TankEntity     // Танк
-	animationGetter types.IImageIdGetter // Анимация танка
+	animationGetter types.IImageIDGetter // Анимация танка
 }
 
 // ============================================================================
@@ -58,7 +58,6 @@ func NewTankUseCases(
 // StartSpawn создает танк и запускает процесс спавна с анимацией
 // Использует танк, переданный в конструктор
 func (uc *TankUseCases) StartSpawn() error {
-
 	// Создаем анимацию спавна
 	spawnAnimation, err := uc.tilesUseCases.CreateSpawnAnimation()
 	if err != nil {
@@ -168,13 +167,21 @@ func (uc *TankUseCases) StopTank(
 	// Выравниваем позицию по сетке
 	switch uc.tank.Direction {
 	case types.DirectionUp:
-		uc.tank.Position.Y = float64(utils.RoundToEven(uc.tank.Position.Y, false))
+		uc.tank.Position.Y = float64(
+			utils.RoundToEven(uc.tank.Position.Y, false),
+		)
 	case types.DirectionDown:
-		uc.tank.Position.Y = float64(utils.RoundToEven(uc.tank.Position.Y, true))
+		uc.tank.Position.Y = float64(
+			utils.RoundToEven(uc.tank.Position.Y, true),
+		)
 	case types.DirectionLeft:
-		uc.tank.Position.X = float64(utils.RoundToEven(uc.tank.Position.X, false))
+		uc.tank.Position.X = float64(
+			utils.RoundToEven(uc.tank.Position.X, false),
+		)
 	case types.DirectionRight:
-		uc.tank.Position.X = float64(utils.RoundToEven(uc.tank.Position.X, true))
+		uc.tank.Position.X = float64(
+			utils.RoundToEven(uc.tank.Position.X, true),
+		)
 	}
 
 	return nil
@@ -218,16 +225,16 @@ func (uc *TankUseCases) GetTank() *types.TankEntity {
 	return &uc.tank
 }
 
-// GetImageId возвращает ID изображения танка
-func (uc *TankUseCases) GetImageId() (string, error) {
+// GetImageID возвращает ID изображения танка
+func (uc *TankUseCases) GetImageID() (string, error) {
 	if uc.animationGetter == nil {
 		return "", errors.New("AnimationGetter is nil")
 	}
-	return uc.animationGetter.GetImageId()
+	return uc.animationGetter.GetImageID()
 }
 
 // GetAnimationGetter возвращает AnimationGetter для доступа к offset
-func (uc *TankUseCases) GetAnimationGetter() types.IImageIdGetter {
+func (uc *TankUseCases) GetAnimationGetter() types.IImageIDGetter {
 	return uc.animationGetter
 }
 
@@ -242,8 +249,12 @@ func (uc *TankUseCases) IsSpawnFinished(currentTime float64) {
 		if anim, ok := uc.animationGetter.(*types.TileAnimationEntity); ok {
 			if anim.IsFinished() {
 				// Завершаем спавн - устанавливаем анимацию танка
-				tankTilesUseCases := NewTilesUseCases(uc.tilesUseCases.tilesRepository)
-				tankAnimation, err := tankTilesUseCases.CreateAnimationTile("base_tank")
+				tankTilesUseCases := NewTilesUseCases(
+					uc.tilesUseCases.tilesRepository,
+				)
+				tankAnimation, err := tankTilesUseCases.CreateAnimationTile(
+					"base_tank",
+				)
 				if err == nil {
 					uc.animationGetter = tankAnimation
 					uc.tilesUseCases.AddAnimation(tankAnimation)

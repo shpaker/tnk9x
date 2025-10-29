@@ -1,0 +1,19 @@
+repos:
+  - repo: local
+    hooks:
+      - id: just-fmt
+        name: Format code with just fmt
+        entry: just fmt
+        language: system
+        types: [file]
+        files: \.(go)$
+        pass_filenames: false
+        always_run: false
+      - id: just-lint
+        name: Lint code with just lint
+        entry: just lint
+        language: system
+        types: [file]
+        files: \.(go)$
+        pass_filenames: false
+        always_run: false

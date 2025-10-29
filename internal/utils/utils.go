@@ -4,6 +4,7 @@ import (
 	"math"
 
 	"github.com/hajimehoshi/ebiten/v2"
+
 	"github.com/shpaker/gonflict/internal/types"
 )
 
@@ -31,7 +32,10 @@ func RotateImage(image *ebiten.Image, direction types.Direction) *ebiten.Image {
 }
 
 // RotateImageByAngle поворачивает изображение на указанный угол
-func RotateImageByAngle(image *ebiten.Image, angle float64) (*ebiten.Image, error) {
+func RotateImageByAngle(
+	image *ebiten.Image,
+	angle float64,
+) (*ebiten.Image, error) {
 	// Получаем размеры изображения
 	bounds := image.Bounds()
 	width := bounds.Dx()
@@ -75,7 +79,9 @@ func RoundToDivisible(
 	up bool,
 ) int {
 	if divisor <= 0 {
-		return int(number) // Возвращаем исходное число, если делитель некорректный
+		return int(
+			number,
+		) // Возвращаем исходное число, если делитель некорректный
 	}
 
 	// Сначала округляем до ближайшего целого

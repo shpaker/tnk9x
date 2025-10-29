@@ -12,8 +12,8 @@ type TileAnimationEntity struct {
 	Offset          [2]float64 // Смещение анимации относительно сущности [x, y]
 }
 
-// GetImageId возвращает ID изображения текущего кадра (реализует IImageIdGetter)
-func (tae *TileAnimationEntity) GetImageId() (string, error) {
+// GetImageID возвращает ID изображения текущего кадра (реализует IImageIDGetter)
+func (tae *TileAnimationEntity) GetImageID() (string, error) {
 	if len(tae.AnimationFrames) == 0 {
 		return "", errors.New("no animation frames available")
 	}
@@ -29,11 +29,10 @@ func (tae *TileAnimationEntity) GetImageId() (string, error) {
 func (tae *TileAnimationEntity) StartAnimation() {
 	tae.IsAnimating = true
 	// Если у анимации есть repeats, сбрасываем счетчик при каждом запуске
-	if tae.LoopCount != nil && *tae.LoopCount <= 0 {
-		// Восстанавливаем оригинальное значение repeats из конфигурации
-		// Но мы не можем это сделать здесь, так как не храним оригинальное значение
-		// Это будет обработано на уровне Use Cases при пересоздании анимации
-	}
+	// Восстанавливаем оригинальное значение repeats из конфигурации
+	// Но мы не можем это сделать здесь, так как не храним оригинальное значение
+	// Это будет обработано на уровне Use Cases при пересоздании анимации
+	_ = tae.LoopCount // Используем для избежания пустой ветки
 }
 
 // StopAnimation останавливает анимацию
@@ -78,7 +77,9 @@ func (tae *TileAnimationEntity) UpdateAnimation() {
 }
 
 // NewTileAnimationEntity создает новый экземпляр TileAnimationEntity с бесконечными циклами
-func NewTileAnimationEntity(animationFrames AnimationData) *TileAnimationEntity {
+func NewTileAnimationEntity(
+	animationFrames AnimationData,
+) *TileAnimationEntity {
 	return &TileAnimationEntity{
 		CurrentFrame:    0,
 		AnimationFrames: animationFrames,
@@ -90,7 +91,10 @@ func NewTileAnimationEntity(animationFrames AnimationData) *TileAnimationEntity 
 }
 
 // NewTileAnimationEntityWithLoops создает анимацию с заданным количеством циклов
-func NewTileAnimationEntityWithLoops(animationFrames AnimationData, loops int) *TileAnimationEntity {
+func NewTileAnimationEntityWithLoops(
+	animationFrames AnimationData,
+	loops int,
+) *TileAnimationEntity {
 	return &TileAnimationEntity{
 		CurrentFrame:    0,
 		AnimationFrames: animationFrames,
@@ -102,7 +106,10 @@ func NewTileAnimationEntityWithLoops(animationFrames AnimationData, loops int) *
 }
 
 // NewTileAnimationEntityWithOffset создает анимацию с offset
-func NewTileAnimationEntityWithOffset(animationFrames AnimationData, offset [2]float64) *TileAnimationEntity {
+func NewTileAnimationEntityWithOffset(
+	animationFrames AnimationData,
+	offset [2]float64,
+) *TileAnimationEntity {
 	return &TileAnimationEntity{
 		CurrentFrame:    0,
 		AnimationFrames: animationFrames,
@@ -114,7 +121,11 @@ func NewTileAnimationEntityWithOffset(animationFrames AnimationData, offset [2]f
 }
 
 // NewTileAnimationEntityWithLoopsAndOffset создает анимацию с количеством циклов и offset
-func NewTileAnimationEntityWithLoopsAndOffset(animationFrames AnimationData, loops int, offset [2]float64) *TileAnimationEntity {
+func NewTileAnimationEntityWithLoopsAndOffset(
+	animationFrames AnimationData,
+	loops int,
+	offset [2]float64,
+) *TileAnimationEntity {
 	return &TileAnimationEntity{
 		CurrentFrame:    0,
 		AnimationFrames: animationFrames,
