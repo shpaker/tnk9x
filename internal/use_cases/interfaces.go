@@ -66,11 +66,9 @@ type ITilesUseCases interface {
 	CreateStaticTile(id string) (types.IImageIDGetter, error)
 	CreateAnimationTile(id string) (*types.TileAnimationEntity, error)
 	GetImage(id string) (image.Image, error)
-	GetTileAnimationFrames(id string) (types.AnimationData, error)
 	AddAnimation(animation *types.TileAnimationEntity)
 	UpdateAnimations()
 	StartAnimation(animation *types.TileAnimationEntity)
-	StopAnimation(animation *types.TileAnimationEntity)
 	CreateSpawnAnimation() (*types.TileAnimationEntity, error)
 	CreateExplosionAnimation() (*types.TileAnimationEntity, error)
 }

@@ -25,57 +25,6 @@ func (tae *TileAnimationEntity) GetImageID() (string, error) {
 	return tae.AnimationFrames[tae.CurrentFrame].Image, nil
 }
 
-// StartAnimation запускает анимацию
-func (tae *TileAnimationEntity) StartAnimation() {
-	tae.IsAnimating = true
-	// Если у анимации есть repeats, сбрасываем счетчик при каждом запуске
-	// Восстанавливаем оригинальное значение repeats из конфигурации
-	// Но мы не можем это сделать здесь, так как не храним оригинальное значение
-	// Это будет обработано на уровне Use Cases при пересоздании анимации
-	_ = tae.LoopCount // Используем для избежания пустой ветки
-}
-
-// StopAnimation останавливает анимацию
-func (tae *TileAnimationEntity) StopAnimation() {
-	tae.IsAnimating = false
-	tae.CurrentFrame = 0 // Сбрасываем на первый кадр
-	tae.CurrentTick = 0
-}
-
-// UpdateAnimation обновляет анимацию на основе тиков
-func (tae *TileAnimationEntity) UpdateAnimation() {
-	if len(tae.AnimationFrames) == 0 || !tae.IsAnimating {
-		return
-	}
-
-	tae.CurrentTick++
-
-	// Проверяем, нужно ли переключить кадр
-	if int(tae.CurrentFrame) < len(tae.AnimationFrames) {
-		currentFrameDuration := tae.AnimationFrames[tae.CurrentFrame].Duration
-		if tae.CurrentTick >= uint(currentFrameDuration) {
-			// Переключаем на следующий кадр
-			nextFrame := (tae.CurrentFrame + 1) % uint(len(tae.AnimationFrames))
-
-			// Если закончили один цикл (вернулись к началу)
-			if nextFrame == 0 && tae.LoopCount != nil {
-				loopsLeft := *tae.LoopCount
-				loopsLeft--
-				tae.LoopCount = &loopsLeft
-
-				if loopsLeft <= 0 {
-					// Анимация закончилась
-					tae.IsAnimating = false
-					return
-				}
-			}
-
-			tae.CurrentFrame = nextFrame
-			tae.CurrentTick = 0
-		}
-	}
-}
-
 // NewTileAnimationEntity создает новый экземпляр TileAnimationEntity с бесконечными циклами
 func NewTileAnimationEntity(
 	animationFrames AnimationData,
