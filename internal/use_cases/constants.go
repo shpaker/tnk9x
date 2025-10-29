@@ -9,5 +9,4 @@ const (
 	UpDownLeftPanelLength = 2
 	RightPanelLength      = 4
 	MapOffset             = UpDownLeftPanelLength * TileMinSize
-	DT                    = 1.0 / 60.0
 )

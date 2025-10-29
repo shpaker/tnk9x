@@ -3,6 +3,7 @@ app:
   name: "gonflict"
 
 game:
+  level_number: 13  # Номер уровня для загрузки
   enemy_spawners:
     - [0, 0]   # Левый верхний угол
     - [6, 0]   # Центр сверху

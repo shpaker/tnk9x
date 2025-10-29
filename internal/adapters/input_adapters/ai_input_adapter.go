@@ -7,7 +7,6 @@ import (
 
 	"github.com/shpaker/gonflict/internal/interfaces"
 	"github.com/shpaker/gonflict/internal/types"
-	"github.com/shpaker/gonflict/internal/use_cases"
 )
 
 // AiInputAdapter адаптер для работы с AI через Lua скрипты
@@ -47,7 +46,7 @@ func NewAiInputAdapter(
 }
 
 // Update обновляет AI логику для танка
-func (a *AiInputAdapter) Update() {
+func (a *AiInputAdapter) Update(dt float64) {
 	// Пропускаем неактивных врагов
 	if !a.tankUseCases.IsActive() {
 		return
@@ -75,7 +74,7 @@ func (a *AiInputAdapter) Update() {
 	}
 
 	// Двигаем танк
-	if err := a.tankUseCases.Update(use_cases.DT); err != nil {
+	if err := a.tankUseCases.Update(dt); err != nil {
 		log.Printf("ERROR: Failed to update AI tank: %v", err)
 	}
 }

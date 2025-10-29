@@ -7,9 +7,14 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 
+	"github.com/shpaker/gonflict/internal/adapters"
+	"github.com/shpaker/gonflict/internal/adapters/input_adapters"
+	"github.com/shpaker/gonflict/internal/repositories/game"
 	"github.com/shpaker/gonflict/internal/repositories/processed"
 	"github.com/shpaker/gonflict/internal/repositories/raw"
+	"github.com/shpaker/gonflict/internal/services"
 	"github.com/shpaker/gonflict/internal/states"
+	"github.com/shpaker/gonflict/internal/use_cases"
 )
 
 type App struct {
@@ -67,18 +72,116 @@ func New(cfg *Config) *App {
 		tilesetRegistry.Blocks(),
 	)
 
-	// Создаем игровую конфигурацию из общей конфигурации
-	gameConfig := &states.GameConfig{
-		EnemySpawners:  cfg.EnemySpawners,
-		PlayerSpawners: cfg.PlayerSpawners,
+	// Используем GameConfig напрямую из Config
+	gameConfig := &cfg.GameConfig
+
+	// Создаем реестр игровых репозиториев
+	gameRepo := game.NewGameRepositoriesRegistry()
+
+	// Создаем временный GameStateUseCasesFacade для получения Use Cases (будет пересоздан позже)
+	// Но для создания RendererAdapter нам нужны Use Cases, поэтому создадим их через фасад
+	// Вместо этого создадим TilesUseCases напрямую для RendererAdapter
+	mapTileService := services.NewTileService(tilesetRegistry.Blocks())
+	playerTileService := services.NewTileService(tilesetRegistry.Player())
+	bulletTileService := services.NewTileService(tilesetRegistry.Bullet())
+	spawnerTileService := services.NewTileService(tilesetRegistry.Spawner())
+	explosionTileService := services.NewTileService(tilesetRegistry.Explosion())
+	animationService := services.NewAnimationService()
+
+	mapTilesUseCases := use_cases.NewTilesUseCases(
+		tilesetRegistry.Blocks(),
+		mapTileService,
+		animationService,
+	)
+	playerTilesUseCases := use_cases.NewTilesUseCases(
+		tilesetRegistry.Player(),
+		playerTileService,
+		animationService,
+	)
+	bulletTilesUseCases := use_cases.NewTilesUseCases(
+		tilesetRegistry.Bullet(),
+		bulletTileService,
+		animationService,
+	)
+	spawnerTilesUseCases := use_cases.NewTilesUseCases(
+		tilesetRegistry.Spawner(),
+		spawnerTileService,
+		animationService,
+	)
+	explosionTilesUseCases := use_cases.NewTilesUseCases(
+		tilesetRegistry.Explosion(),
+		explosionTileService,
+		animationService,
+	)
+
+	// Создаем сервисы коллизий
+	boundaryCollisionService := services.NewBoundaryCollisionService(
+		use_cases.MapWidthHeight,
+		use_cases.TankSpriteSize,
+	)
+	wallCollisionService := services.NewWallCollisionService(
+		use_cases.TankSpriteSize,
+		use_cases.TileMinSize,
+	)
+	coordinateService := services.NewCoordinateService()
+	tankBrakingService := services.NewTankBrakingService()
+
+	// Создаем GameStateUseCasesFacade
+	gameStateServices, err := states.NewGameStateUseCasesFacade(
+		mapsRepo,
+		scriptsRepo,
+		gameConfig.LevelNumber,
+		tilesetRegistry.Blocks(),
+		tilesetRegistry.Player(),
+		tilesetRegistry.Bullet(),
+		tilesetRegistry.Spawner(),
+		tilesetRegistry.Explosion(),
+		gameConfig,
+		gameRepo,
+		boundaryCollisionService,
+		wallCollisionService,
+		coordinateService,
+		tankBrakingService,
+	)
+	if err != nil {
+		fmt.Printf("Error creating GameStateUseCasesFacade: %v\n", err)
+		panic(err)
 	}
 
-	// Создаем GameState с переданным реестром
+	// Создаем RendererAdapter
+	rendererAdapter := adapters.NewRendererAdapter(
+		gameStateServices.MapUseCases(),
+		gameStateServices.TankUseCases(),
+		gameStateServices.BulletUseCases(),
+		gameStateServices.GetEnemyTanks(),
+		gameStateServices.GetEnemyUseCases(),
+		mapTilesUseCases,
+		playerTilesUseCases,
+		bulletTilesUseCases,
+		spawnerTilesUseCases,
+		explosionTilesUseCases,
+	)
+
+	// Создаем InputAdapter
+	inputAdapter := input_adapters.NewKeyboardInputAdapter(
+		gameStateServices.TankUseCases(),
+		ebiten.KeyW,     // up
+		ebiten.KeyS,     // down
+		ebiten.KeyA,     // left
+		ebiten.KeyD,     // right
+		ebiten.KeySpace, // shoot
+	)
+
+	// Создаем GameState с переданными зависимостями
 	gameState, err := states.NewGameState(
 		mapsRepo,
 		scriptsRepo,
 		tilesetRegistry,
 		gameConfig,
+		gameRepo,
+		rendererAdapter,
+		inputAdapter,
+		gameStateServices,
 	)
 	if err != nil {
 		// Логируем ошибку и падаем

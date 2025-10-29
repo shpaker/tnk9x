@@ -40,7 +40,7 @@ func NewKeyboardInputAdapter(
 }
 
 // Update обрабатывает пользовательский ввод
-func (a *KeyboardInputAdapter) Update() {
+func (a *KeyboardInputAdapter) Update(dt float64) {
 	a.keyPressedEvents()
 	a.keyReleasedEvents()
 }

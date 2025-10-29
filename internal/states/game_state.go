@@ -7,18 +7,9 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 
 	"github.com/shpaker/gonflict/internal/adapters"
-	"github.com/shpaker/gonflict/internal/adapters/input_adapters"
+	"github.com/shpaker/gonflict/internal/config"
 	"github.com/shpaker/gonflict/internal/interfaces"
-	"github.com/shpaker/gonflict/internal/services"
-	"github.com/shpaker/gonflict/internal/use_cases"
 )
-
-// GameConfig представляет конфигурацию игры (для избежания циклических импортов)
-type GameConfig struct {
-	EnemySpawners         [][2]int `yaml:"enemy_spawners"`
-	PlayerSpawners        [][2]int `yaml:"players_spawners"`
-	AIUpdateIntervalTicks int      `yaml:"ai_update_interval_ticks"` // Интервал обновления AI в тиках
-}
 
 type GameState struct {
 	gameStateServices *GameStateUseCasesFacade
@@ -32,40 +23,12 @@ func NewGameState(
 	mapsRepo interfaces.IMapsDataRepository,
 	scriptsRepo interfaces.IScriptsRepository,
 	tilesetRegistry interfaces.ITilesetRepositoryRegistry,
-	gameConfig *GameConfig,
+	gameConfig *config.GameConfig,
+	gameRepo interfaces.IGameRepositoriesRegistry,
+	rendererAdapter *adapters.RendererAdapter,
+	inputAdapter interfaces.IInputAdapter,
+	gameStateServices *GameStateUseCasesFacade,
 ) (GameState, error) {
-	// Создаем GameStateUseCasesFacade
-	gameStateServices, err := NewGameStateUseCasesFacade(
-		mapsRepo,
-		scriptsRepo,
-		13, // Номер уровня
-		tilesetRegistry.Blocks(),
-		tilesetRegistry.Player(),
-		tilesetRegistry.Bullet(),
-		tilesetRegistry.Spawner(),
-		tilesetRegistry.Explosion(),
-		gameConfig,
-	)
-	if err != nil {
-		return GameState{}, err
-	}
-
-	// Создаем адаптеры
-	rendererAdapter := createRendererAdapter(
-		gameStateServices,
-		tilesetRegistry,
-	)
-
-	// Используем клавиатурный адаптер
-	inputAdapter := input_adapters.NewKeyboardInputAdapter(
-		gameStateServices.TankUseCases(),
-		ebiten.KeyW,     // up
-		ebiten.KeyS,     // down
-		ebiten.KeyA,     // left
-		ebiten.KeyD,     // right
-		ebiten.KeySpace, // shoot
-	)
-
 	gameState := GameState{
 		gameStateServices: gameStateServices,
 		inputAdapter:      inputAdapter,
@@ -90,6 +53,15 @@ func (state GameState) Update() (State, error) {
 		return nil, errors.New("exit application")
 	}
 
+	// Вычисляем delta time из ActualTPS
+	tps := ebiten.ActualTPS()
+	var dt float64
+	if tps > 0 {
+		dt = 1.0 / tps
+	} else {
+		dt = 1.0 / 60.0 // Fallback если TPS равен 0
+	}
+
 	// Обновляем спавн танка
 	elapsedTime := time.Since(state.startTime).Seconds()
 	state.gameStateServices.UpdateTankSpawn(elapsedTime)
@@ -98,10 +70,10 @@ func (state GameState) Update() (State, error) {
 	state.gameStateServices.UpdateEnemiesSpawn(elapsedTime)
 
 	// Обновляем input
-	state.inputAdapter.Update()
+	state.inputAdapter.Update(dt)
 
 	// Обновляем игровое состояние
-	state.gameStateServices.Update()
+	state.gameStateServices.Update(dt)
 
 	// Обновляем все анимации
 	state.gameStateServices.UpdateAnimations()
@@ -111,57 +83,4 @@ func (state GameState) Update() (State, error) {
 
 func (state GameState) Draw(screen *ebiten.Image) {
 	state.rendererAdapter.DrawAll(screen)
-}
-
-// createRendererAdapter создает адаптер рендерера
-func createRendererAdapter(
-	gameStateServices *GameStateUseCasesFacade,
-	tilesetRegistry interfaces.ITilesetRepositoryRegistry,
-) *adapters.RendererAdapter {
-	// Создаем сервисы для тайлов
-	mapTileService := services.NewTileService(tilesetRegistry.Blocks())
-	playerTileService := services.NewTileService(tilesetRegistry.Player())
-	bulletTileService := services.NewTileService(tilesetRegistry.Bullet())
-	spawnerTileService := services.NewTileService(tilesetRegistry.Spawner())
-	explosionTileService := services.NewTileService(tilesetRegistry.Explosion())
-	animationService := services.NewAnimationService()
-
-	mapTilesUseCases := use_cases.NewTilesUseCases(
-		tilesetRegistry.Blocks(),
-		mapTileService,
-		animationService,
-	)
-	playerTilesUseCases := use_cases.NewTilesUseCases(
-		tilesetRegistry.Player(),
-		playerTileService,
-		animationService,
-	)
-	bulletTilesUseCases := use_cases.NewTilesUseCases(
-		tilesetRegistry.Bullet(),
-		bulletTileService,
-		animationService,
-	)
-	spawnerTilesUseCases := use_cases.NewTilesUseCases(
-		tilesetRegistry.Spawner(),
-		spawnerTileService,
-		animationService,
-	)
-	explosionTilesUseCases := use_cases.NewTilesUseCases(
-		tilesetRegistry.Explosion(),
-		explosionTileService,
-		animationService,
-	)
-
-	return adapters.NewRendererAdapter(
-		gameStateServices.MapUseCases(),
-		gameStateServices.TankUseCases(),
-		gameStateServices.BulletUseCases(),
-		gameStateServices.GetEnemyTanks(),
-		gameStateServices.GetEnemyUseCases(),
-		mapTilesUseCases,
-		playerTilesUseCases,
-		bulletTilesUseCases,
-		spawnerTilesUseCases,
-		explosionTilesUseCases,
-	)
 }

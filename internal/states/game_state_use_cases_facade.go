@@ -2,8 +2,8 @@ package states
 
 import (
 	"github.com/shpaker/gonflict/internal/adapters/input_adapters"
+	"github.com/shpaker/gonflict/internal/config"
 	"github.com/shpaker/gonflict/internal/interfaces"
-	"github.com/shpaker/gonflict/internal/repositories/game"
 	"github.com/shpaker/gonflict/internal/services"
 	"github.com/shpaker/gonflict/internal/types"
 	"github.com/shpaker/gonflict/internal/use_cases"
@@ -32,16 +32,18 @@ func NewGameStateUseCasesFacade(
 	bulletTilesetRepo interfaces.ITilesetRepository,
 	spawnerTilesetRepo interfaces.ITilesetRepository,
 	explosionTilesetRepo interfaces.ITilesetRepository,
-	gameConfig *GameConfig,
+	gameConfig *config.GameConfig,
+	gameRepo interfaces.IGameRepositoriesRegistry,
+	boundaryCollisionService interfaces.IBoundaryCollisionService,
+	wallCollisionService interfaces.IWallCollisionService,
+	coordinateService interfaces.ICoordinateService,
+	tankBrakingService interfaces.ITankBrakingService,
 ) (*GameStateUseCasesFacade, error) {
 	// Загружаем уровень
 	level, err := mapsRepo.GetLevel(levelNumber)
 	if err != nil {
 		return nil, err
 	}
-
-	// Создаем реестр игровых репозиториев
-	gameRepo := game.NewGameRepositoriesRegistry()
 
 	// Заполняем репозиторий блоков данными уровня
 	for _, block := range level {
@@ -96,23 +98,16 @@ func NewGameStateUseCasesFacade(
 		bulletTilesUseCases,
 	)
 
-	// Создаем сервисы для танка
-	coordinateService := services.NewCoordinateService()
-
-	// Создаем use case без brakingService (будет установлен после создания танка)
+	// Создаем use case с внедренными сервисами
 	playerUseCases := use_cases.NewTankUseCases(
 		gameRepo.TanksRepository(),
 		bulletUseCases,
 		tilesUseCasesWithAnimations,
 		playerSpawner,
 		types.DirectionUp,
-		nil, // brakingService будет установлен позже через SetBrakingService
+		tankBrakingService,
 		coordinateService,
 	)
-
-	// Создаем сервис торможения и устанавливаем его
-	tankBrakingService := services.NewTankBrakingService()
-	playerUseCases.SetBrakingService(tankBrakingService)
 	mapUseCases := use_cases.NewMapUseCases(gameRepo.BlocksRepository())
 
 	// Создаем AI контекст
@@ -155,18 +150,15 @@ func NewGameStateUseCasesFacade(
 			Y: float64(spawner[1]) * use_cases.TankSpriteSize,
 		}
 
-		// Создаем сервисы для врага
-		enemyCoordinateService := services.NewCoordinateService()
-
-		// Создаем TankUseCases для этого врага (brakingService будет установлен после создания танка)
+		// Создаем TankUseCases для врага с внедренными сервисами
 		enemyTankUseCases := use_cases.NewTankUseCases(
 			gameRepo.TanksRepository(),
 			bulletUseCases,
 			tilesUseCasesWithAnimations,
 			position,
 			types.DirectionDown,
-			nil, // brakingService будет установлен позже через SetBrakingService
-			enemyCoordinateService,
+			tankBrakingService,
+			coordinateService,
 		)
 
 		// Создаем танк врага
@@ -174,10 +166,6 @@ func NewGameStateUseCasesFacade(
 		if err != nil {
 			return nil, err
 		}
-
-		// Создаем сервис торможения и устанавливаем его
-		enemyBrakingService := services.NewTankBrakingService()
-		enemyTankUseCases.SetBrakingService(enemyBrakingService)
 
 		// Получаем танк врага для добавления в список
 		enemyTank := enemyTankUseCases.GetTank()
@@ -207,26 +195,16 @@ func NewGameStateUseCasesFacade(
 		enemyUseCasesRefs[i] = uc
 	}
 
-	// Создаем сервисы коллизий
-	boundaryCollisionService := services.NewBoundaryCollisionService(
-		use_cases.MapWidthHeight,
-		use_cases.TankSpriteSize,
-	)
-	wallCollisionService := services.NewWallCollisionService(
-		use_cases.TankSpriteSize,
-		use_cases.TileMinSize,
-	)
-	bulletCollisionService := services.NewBulletCollisionService(
+	// Создаем временный BulletCollisionService с заглушкой для CheckColliders
+	tempBulletCollisionService := services.NewBulletCollisionService(
 		use_cases.TileMinSize,
 		func(obj1 types.IMapObject, obj2 types.IMapObject) bool {
-			// Проксируем вызов через CollisionUseCases
-			// Это временное решение, пока не создадим CollisionUseCases
-			return false
+			return false // Временная заглушка
 		},
 	)
 
-	// Создаем временный CollisionUseCases для получения CheckColliders
-	tempCollisionUseCases := use_cases.NewCollisionUseCasesWithEnemies(
+	// Создаем CollisionUseCases первый раз для получения CheckColliders
+	collisionUseCases := use_cases.NewCollisionUseCasesWithEnemies(
 		bulletUseCases,
 		playerUseCases,
 		mapUseCases,
@@ -234,17 +212,19 @@ func NewGameStateUseCasesFacade(
 		enemyUseCasesRefs,
 		boundaryCollisionService,
 		wallCollisionService,
-		bulletCollisionService,
+		tempBulletCollisionService,
 	)
 
-	// Создаем правильный BulletCollisionService с реальным CheckColliders
-	bulletCollisionService = services.NewBulletCollisionService(
+	// Создаем правильный BulletCollisionService с реальным CheckColliders из CollisionUseCases
+	bulletCollisionService := services.NewBulletCollisionService(
 		use_cases.TileMinSize,
-		tempCollisionUseCases.CheckColliders,
+		func(obj1 types.IMapObject, obj2 types.IMapObject) bool {
+			return collisionUseCases.CheckColliders(obj1, obj2)
+		},
 	)
 
-	// Создаем финальный CollisionUseCases
-	collisionUseCases := use_cases.NewCollisionUseCasesWithEnemies(
+	// Пересоздаем CollisionUseCases с правильным BulletCollisionService
+	collisionUseCases = use_cases.NewCollisionUseCasesWithEnemies(
 		bulletUseCases,
 		playerUseCases,
 		mapUseCases,
@@ -269,11 +249,11 @@ func NewGameStateUseCasesFacade(
 }
 
 // Update обновляет игровое состояние
-func (g *GameStateUseCasesFacade) Update() {
+func (g *GameStateUseCasesFacade) Update(dt float64) {
 	// Обновляем игрока
 	tank := g.playerUseCases.GetTank()
 	if tank != nil {
-		g.playerUseCases.Update(use_cases.DT)
+		g.playerUseCases.Update(dt)
 	}
 
 	// Обновляем контекст AI с данными об игроке, врагах и пулях
@@ -287,12 +267,12 @@ func (g *GameStateUseCasesFacade) Update() {
 	// Обновляем AI input адаптеры врагов (они сами управляют движением)
 	for _, adapter := range g.enemyInputAdapters {
 		if adapter != nil {
-			adapter.Update()
+			adapter.Update(dt)
 		}
 	}
 
 	// Обновляем пули
-	g.bulletUseCases.UpdateBullets(use_cases.DT)
+	g.bulletUseCases.UpdateBullets(dt)
 
 	// Проверяем коллизии ПОСЛЕ движения всех объектов
 	g.collisionUseCases.UpdateCollisions()

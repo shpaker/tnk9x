@@ -5,6 +5,8 @@ import (
 	"os"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/shpaker/gonflict/internal/config"
 )
 
 // AppConfig содержит настройки приложения
@@ -12,23 +14,16 @@ type AppConfig struct {
 	Name string
 }
 
-// GameConfig содержит настройки игры
-type GameConfig struct {
-	EnemySpawners         [][2]int `yaml:"enemy_spawners"`
-	PlayerSpawners        [][2]int `yaml:"players_spawners"`
-	AIUpdateIntervalTicks int      `yaml:"ai_update_interval_ticks"` // Интервал обновления AI в тиках (по умолчанию 60 тиков = 1000мс)
-}
-
 // ConfigSchema структура для парсинга YAML файла
 type ConfigSchema struct {
-	App  AppConfig  `yaml:"app"`
-	Game GameConfig `yaml:"game"`
+	App  AppConfig         `yaml:"app"`
+	Game config.GameConfig `yaml:"game"`
 }
 
 // Config содержит конфигурацию приложения
 type Config struct {
 	AppConfig
-	GameConfig
+	config.GameConfig
 }
 
 // ScreenWidth возвращает ширину экрана
