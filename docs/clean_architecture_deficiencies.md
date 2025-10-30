@@ -53,15 +53,29 @@
 - Рефакторинг `GameStateUseCasesFacade` → `GameSession` с упрощённым конструктором
 
 ### Улучшения в последней итерации:
+- ✅ **Упрощение Render Use Cases** — удалены геттеры/сеттеры, `AnimationGetter` сделан публичным полем:
+  - `TankRenderUseCases.AnimationGetter` — прямое обращение вместо `GetAnimationGetter()`/`SetAnimationGetter()`
+  - `HQRenderUseCases.AnimationGetter` — прямое обращение вместо методов-обёрток
+  - Удалены методы `GetImageID()`, `SetAnimationGetter()`, `GetAnimationGetter()` из обоих классов
+- ✅ **Очистка неиспользуемого кода**:
+  - Удалён пакет `internal/utils` (функции перенесены в сервисный слой)
+  - Удалены неиспользуемые методы `Destroy()` и `IsDestroyed()` из `HQUseCases`
+  - Удалены неиспользуемые методы `StartTankAnimation()` и `StopTankAnimation()` из `TankCommonUseCases`
+  - Удалён устаревший метод `UpdateEnemiesAnimations()` из `GameStateUseCasesFacade`
+  - Удалена неиспользуемая функция `updatePosition()` из `TankActionsUseCases`
+- ✅ **Добавление базы (HQ) в игру**:
+  - Реализован `HQEntity` с состояниями (Intact, Exploding, Destroyed)
+  - Создан `HQUseCases` для обработки логики базы
+  - Создан `HQRenderUseCases` для рендеринга базы
+  - Интегрирована анимация взрыва базы
+  - База добавляется на карту через `config.yml` (`hq_position`)
+
+### Предыдущие улучшения:
 - ✅ **Разделение AI архитектуры** на слои:
   - `LuaEngine` (Infrastructure) — инкапсулирует работу с Lua VM
   - `AITypeConverter` (Application Service) — конвертация доменных типов
   - `AIUseCases` (Application Use Case) — бизнес-логика AI
 - ✅ **Правильное размещение интерфейсов** — `ILuaEngine` перенесён в слой интерфейсов
-- ✅ **Улучшенная тестируемость** — каждый компонент AI можно тестировать изолированно
-- ✅ **Соответствие Clean Architecture** — чёткое разделение слоёв и зависимостей
-
-### Предыдущие улучшения:
 - ✅ Разделение ответственности в Use Cases танка
 - ✅ Применение Dependency Inversion Principle через интерфейсы
 - ✅ Централизация работы с графикой
