@@ -13,6 +13,7 @@ type TilesetRepositoryRegistry struct {
 	bullet    interfaces.ITilesetRepository
 	spawner   interfaces.ITilesetRepository
 	explosion interfaces.ITilesetRepository
+	hq        interfaces.ITilesetRepository
 }
 
 // NewTilesetRepositoryRegistry создает новый реестр тайлсетов
@@ -49,12 +50,19 @@ func NewTilesetRepositoryRegistry(
 		return nil, fmt.Errorf("failed to create explosion tileset: %w", err)
 	}
 
+	// Создаем репозиторий для базы
+	hqRepo, err := NewTilesetDataRepository(fileRepo, "tiles/hq")
+	if err != nil {
+		return nil, fmt.Errorf("failed to create hq tileset: %w", err)
+	}
+
 	return &TilesetRepositoryRegistry{
 		blocks:    blocksRepo,
 		player:    playerRepo,
 		bullet:    bulletRepo,
 		spawner:   spawnerRepo,
 		explosion: explosionRepo,
+		hq:        hqRepo,
 	}, nil
 }
 
@@ -81,4 +89,9 @@ func (tr *TilesetRepositoryRegistry) Spawner() interfaces.ITilesetRepository {
 // Explosion возвращает репозиторий тайлсетов для взрыва
 func (tr *TilesetRepositoryRegistry) Explosion() interfaces.ITilesetRepository {
 	return tr.explosion
+}
+
+// HQ возвращает репозиторий тайлсетов для базы
+func (tr *TilesetRepositoryRegistry) HQ() interfaces.ITilesetRepository {
+	return tr.hq
 }

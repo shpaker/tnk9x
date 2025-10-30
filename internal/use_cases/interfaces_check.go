@@ -12,4 +12,6 @@ var (
 	_ interfaces.ITankRenderUseCases    = (*TankRenderUseCases)(nil)
 	_ interfaces.ITankLifecycleUseCases = (*TankLifecycleUseCases)(nil)
 	_ interfaces.ITankActionsUseCases   = (*TankActionsUseCases)(nil)
+	_ interfaces.IAIUseCases            = (*AIUseCases)(nil)
+	_ interfaces.IHQUseCases            = (*HQUseCases)(nil)
 )

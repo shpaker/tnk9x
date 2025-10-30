@@ -128,6 +128,14 @@ func (tuc *TilesUseCases) StartAnimation(animation *types.TileAnimationEntity) {
 	_ = animation.LoopCount // Используем для избежания пустой ветки
 }
 
+// StopAnimation останавливает анимацию объекта
+func (tuc *TilesUseCases) StopAnimation(animation *types.TileAnimationEntity) {
+	if animation == nil {
+		return
+	}
+	animation.IsAnimating = false
+}
+
 // CreateSpawnAnimation создает анимацию спавна
 func (tuc *TilesUseCases) CreateSpawnAnimation() (*types.TileAnimationEntity, error) {
 	if tuc.spawnerTilesetRepo == nil {

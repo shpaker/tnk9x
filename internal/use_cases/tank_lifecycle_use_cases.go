@@ -29,7 +29,9 @@ func (uc *TankLifecycleUseCases) Spawn(tank *types.TankEntity) error {
 		return err
 	}
 
-	uc.renderUseCases.SetAnimationGetter(spawnAnimation)
+	if tankRender, ok := uc.renderUseCases.(*TankRenderUseCases); ok {
+		tankRender.AnimationGetter = spawnAnimation
+	}
 	tank.State = types.TankStateSpawning
 	tank.Altitude = types.SURFACE
 
@@ -44,7 +46,9 @@ func (uc *TankLifecycleUseCases) Explode(tank *types.TankEntity) error {
 		return err
 	}
 
-	uc.renderUseCases.SetAnimationGetter(explosionAnim)
+	if tankRender, ok := uc.renderUseCases.(*TankRenderUseCases); ok {
+		tankRender.AnimationGetter = explosionAnim
+	}
 	tank.State = types.TankStateExploding
 	tank.Altitude = types.AIR
 
@@ -80,8 +84,13 @@ func (uc *TankLifecycleUseCases) finishSpawnAnimation(
 ) {
 	tankAnimation, err := uc.tilesUseCases.CreateAnimationTile("base_tank")
 	if err == nil {
-		uc.renderUseCases.SetAnimationGetter(tankAnimation)
+		if tankRender, ok := uc.renderUseCases.(*TankRenderUseCases); ok {
+			tankRender.AnimationGetter = tankAnimation
+		}
 		uc.tilesUseCases.AddAnimation(tankAnimation)
+		// Анимация будет запущена автоматически когда танк начнет двигаться
+		// Сейчас танк стоит, поэтому анимация должна быть остановлена
+		uc.tilesUseCases.StopAnimation(tankAnimation)
 	}
 
 	tank.State = types.TankStateStopped

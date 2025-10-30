@@ -141,3 +141,28 @@ func (s *BulletCollisionService) CheckBulletEnemyCollisions(
 
 	return bulletIndicesToRemove, enemyIndicesToExplode
 }
+
+// CheckBulletHQCollision проверяет коллизию пуль с базой
+// Возвращает список индексов пуль для удаления и true если база была уничтожена
+func (s *BulletCollisionService) CheckBulletHQCollision(
+	bullets []types.BulletEntity,
+	hq *types.HQEntity,
+) (bulletIndicesToRemove []int, hqDestroyed bool) {
+	if hq == nil || hq.IsDestroyed() {
+		return nil, false
+	}
+
+	for i := len(bullets) - 1; i >= 0; i-- {
+		bullet := &bullets[i]
+
+		// Проверяем коллизию между пулей и базой
+		if s.checkColliders(bullet, hq) {
+			bulletIndicesToRemove = append(bulletIndicesToRemove, i)
+			hqDestroyed = true
+			// Останавливаем после первого попадания (база умирает от одного попадания)
+			break
+		}
+	}
+
+	return bulletIndicesToRemove, hqDestroyed
+}

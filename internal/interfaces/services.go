@@ -52,6 +52,10 @@ type IBulletCollisionService interface {
 		bullets []types.BulletEntity,
 		enemies []*types.TankEntity,
 	) (bulletIndicesToRemove []int, enemyIndicesToExplode map[int]int)
+	CheckBulletHQCollision(
+		bullets []types.BulletEntity,
+		hq *types.HQEntity,
+	) (bulletIndicesToRemove []int, hqDestroyed bool)
 }
 
 // IImageService интерфейс для сервиса работы с изображениями

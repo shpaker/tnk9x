@@ -1,20 +1,20 @@
 package input_adapters
 
 import (
-	lua "github.com/yuin/gopher-lua"
-
 	"github.com/shpaker/gonflict/internal/interfaces"
 	"github.com/shpaker/gonflict/internal/types"
+	"github.com/shpaker/gonflict/internal/use_cases"
 )
 
 // AiInputAdapter адаптер для работы с AI через Lua скрипты
+// Теперь использует AIUseCases вместо прямой работы с Lua
 type AiInputAdapter struct {
 	tankActions    interfaces.ITankActionsUseCases
 	tank           *types.TankEntity
 	aiContext      *types.GameAiContext
 	updateInterval int
 	tickCounter    int
-	L              *lua.LState
+	aiUseCases     *use_cases.AIUseCases
 }
 
 // NewAiInputAdapter создает новый AI адаптер
@@ -23,26 +23,15 @@ func NewAiInputAdapter(
 	tank *types.TankEntity,
 	aiContext *types.GameAiContext,
 	updateInterval int,
-	script string,
+	aiUseCases *use_cases.AIUseCases,
 ) (*AiInputAdapter, error) {
-	L := lua.NewState()
-
-	// Инициализируем генератор случайных чисел
-	L.DoString("math.randomseed(os.time())")
-
-	// Загружаем скрипт из строки
-	if err := L.DoString(script); err != nil {
-		L.Close()
-		return nil, err
-	}
-
 	return &AiInputAdapter{
 		tankActions:    tankActions,
 		tank:           tank,
 		aiContext:      aiContext,
 		updateInterval: updateInterval,
 		tickCounter:    0,
-		L:              L,
+		aiUseCases:     aiUseCases,
 	}, nil
 }
 
@@ -55,13 +44,10 @@ func (a *AiInputAdapter) Update(dt float64) {
 
 	// Проверяем, нужно ли обновлять AI
 	if a.tickCounter == 0 {
-		// Если есть Lua, используем его напрямую
-		if a.L != nil && a.aiContext != nil {
-			shouldMove, directionInt := a.CallEnemyAI(a.aiContext)
-			if shouldMove {
-				decision := types.EnemyAIDecision{
-					Direction: types.Direction(directionInt),
-				}
+		// Используем AIUseCases для выполнения AI логики
+		if a.aiUseCases != nil && a.aiContext != nil {
+			decision, err := a.aiUseCases.ExecuteAI(a.tank, a.aiContext)
+			if err == nil && decision.Direction != 0 {
 				// Применяем решение
 				a.applyDecision(decision)
 			}
@@ -75,39 +61,6 @@ func (a *AiInputAdapter) Update(dt float64) {
 	}
 }
 
-// CallEnemyAI вызывает Lua функцию для AI врага
-func (a *AiInputAdapter) CallEnemyAI(
-	context *types.GameAiContext,
-) (bool, int) {
-	if a.L == nil || a.tank == nil {
-		return false, 0
-	}
-
-	// Конвертируем танк в Lua таблицу
-	tankTable := ConvertTankToLua(a.L, a.tank)
-
-	// Конвертируем контекст в Lua таблицу
-	contextTable := ConvertContextToLua(a.L, context)
-
-	// Вызываем Lua функцию
-	err := a.L.CallByParam(lua.P{
-		Fn:      a.L.GetGlobal("updateEnemyAI"),
-		NRet:    2,
-		Protect: true,
-	}, tankTable, contextTable)
-	if err != nil {
-		return false, 0
-	}
-
-	// Получаем результаты
-	shouldMove := a.L.ToBool(1)
-	directionInt := int(a.L.ToNumber(2))
-
-	a.L.Pop(2)
-
-	return shouldMove, directionInt
-}
-
 // applyDecision применяет решение AI к танку через TankActionsUseCases
 func (a *AiInputAdapter) applyDecision(
 	decision types.EnemyAIDecision,
@@ -116,4 +69,11 @@ func (a *AiInputAdapter) applyDecision(
 		return
 	}
 	a.tankActions.ApplyDecision(a.tank, decision)
+}
+
+// Close освобождает ресурсы
+func (a *AiInputAdapter) Close() {
+	if a.aiUseCases != nil {
+		a.aiUseCases.Close()
+	}
 }

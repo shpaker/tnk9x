@@ -105,6 +105,8 @@ type ITilesetRepositoryRegistry interface {
 	Spawner() ITilesetRepository
 	// Explosion возвращает репозиторий тайлсетов для взрыва
 	Explosion() ITilesetRepository
+	// HQ возвращает репозиторий тайлсетов для базы
+	HQ() ITilesetRepository
 }
 
 // IScriptsRepository определяет интерфейс для работы с Lua скриптами

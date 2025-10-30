@@ -12,6 +12,7 @@ type TankActionsUseCases struct {
 	brakingService    interfaces.ITankBrakingService
 	coordinateService interfaces.ICoordinateService
 	bulletUseCases    interfaces.IBulletUseCases
+	commonUseCases    interfaces.ITankCommonUseCases // Для управления анимацией через TankCommonUseCases
 }
 
 // NewTankActionsUseCases создает новый экземпляр TankActionsUseCases
@@ -19,11 +20,13 @@ func NewTankActionsUseCases(
 	brakingService interfaces.ITankBrakingService,
 	coordinateService interfaces.ICoordinateService,
 	bulletUseCases interfaces.IBulletUseCases,
+	commonUseCases interfaces.ITankCommonUseCases,
 ) *TankActionsUseCases {
 	return &TankActionsUseCases{
 		brakingService:    brakingService,
 		coordinateService: coordinateService,
 		bulletUseCases:    bulletUseCases,
+		commonUseCases:    commonUseCases,
 	}
 }
 
@@ -36,16 +39,8 @@ func (uc *TankActionsUseCases) Update(
 		return errors.New("tank is not active")
 	}
 
-	// Обрабатываем состояние Braking отдельно
-	if tank.State == types.TankStateBraking {
-		if uc.brakingService == nil {
-			return errors.New("brakingService is not initialized")
-		}
-		return uc.brakingService.HandleBrakingState(tank, dt)
-	}
-
-	uc.updatePosition(tank, dt)
-	return nil
+	// Делегируем обновление в TankCommonUseCases, который управляет анимацией
+	return uc.commonUseCases.Update(tank, dt)
 }
 
 // Rotate поворачивает танк в указанном направлении
@@ -110,6 +105,7 @@ func (uc *TankActionsUseCases) Stop(tank *types.TankEntity, byCollision bool) {
 
 	// При отпускании клавиши - переходим в состояние Braking
 	tank.State = types.TankStateBraking
+	// Анимация продолжается при торможении (ничего не делаем, анимация уже идет)
 }
 
 // IsStopped возвращает true если танк остановлен
@@ -138,25 +134,6 @@ func (uc *TankActionsUseCases) ApplyDecision(
 
 // Приватные вспомогательные методы
 
-// updatePosition обновляет позицию танка на основе скорости и направления
-func (uc *TankActionsUseCases) updatePosition(
-	tank *types.TankEntity,
-	dt float64,
-) {
-	delta := tank.Speed * dt
-
-	switch tank.Direction {
-	case types.DirectionUp:
-		tank.Position.Y -= delta
-	case types.DirectionDown:
-		tank.Position.Y += delta
-	case types.DirectionLeft:
-		tank.Position.X -= delta
-	case types.DirectionRight:
-		tank.Position.X += delta
-	}
-}
-
 // handleStopByCollision обрабатывает остановку танка при коллизии
 func (uc *TankActionsUseCases) handleStopByCollision(tank *types.TankEntity) {
 	tank.Speed = 0
@@ -167,4 +144,5 @@ func (uc *TankActionsUseCases) handleStopByCollision(tank *types.TankEntity) {
 		tank.Position.Y,
 	)
 	tank.State = types.TankStateStopped
+	// Анимация будет синхронизирована автоматически в TankCommonUseCases.Update
 }

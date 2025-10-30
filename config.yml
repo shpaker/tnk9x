@@ -11,4 +11,5 @@ game:
   players_spawners:
     - [4, 12]
     - [8, 12]
+  hq_position: [6, 12]
   ai_update_interval_ticks: 20  # Интервал обновления AI в тиках (60 тиков = 1000мс при 60 FPS)

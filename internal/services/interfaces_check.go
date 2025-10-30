@@ -12,4 +12,5 @@ var (
 	_ interfaces.IImageService             = (*ImageService)(nil)
 	_ interfaces.IAnimationService         = (*AnimationService)(nil)
 	_ interfaces.ITileService              = (*TileService)(nil)
+	// IAITypeConverter - внутренний интерфейс, проверяется напрямую в ai_type_converter.go
 )

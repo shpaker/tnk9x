@@ -61,9 +61,6 @@ type ITankCommonUseCases interface {
 
 // ITankRenderUseCases интерфейс для графики и рендеринга танка
 type ITankRenderUseCases interface {
-	GetImageID() (string, error)
-	GetAnimationGetter() types.IImageIDGetter
-	SetAnimationGetter(animationGetter types.IImageIDGetter)
 	IsSpawnAnimationFinished() bool
 	IsExplosionAnimationFinished() bool
 }
@@ -85,4 +82,20 @@ type ITankActionsUseCases interface {
 	IsStopped(tank *types.TankEntity) bool
 	Shoot(tank *types.TankEntity) error
 	ApplyDecision(tank *types.TankEntity, decision types.EnemyAIDecision)
+}
+
+// IAIUseCases интерфейс для операций с AI логикой
+type IAIUseCases interface {
+	ExecuteAI(
+		tank *types.TankEntity,
+		context *types.GameAiContext,
+	) (types.EnemyAIDecision, error)
+	Close()
+}
+
+// IHQUseCases интерфейс для операций с базой
+type IHQUseCases interface {
+	HandleBulletHit() (bulletIndicesToRemove []int, destroyed bool)
+	Explode() error
+	IsExplosionFinished()
 }

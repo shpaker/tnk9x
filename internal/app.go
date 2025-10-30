@@ -86,6 +86,7 @@ func New(cfg *Config) *App {
 	bulletTileService := services.NewTileService(tilesetRegistry.Bullet())
 	spawnerTileService := services.NewTileService(tilesetRegistry.Spawner())
 	explosionTileService := services.NewTileService(tilesetRegistry.Explosion())
+	hqTileService := services.NewTileService(tilesetRegistry.HQ())
 	animationService := services.NewAnimationService()
 
 	mapTilesUseCases := use_cases.NewTilesUseCases(
@@ -111,6 +112,11 @@ func New(cfg *Config) *App {
 	explosionTilesUseCases := use_cases.NewTilesUseCases(
 		tilesetRegistry.Explosion(),
 		explosionTileService,
+		animationService,
+	)
+	hqTilesUseCases := use_cases.NewTilesUseCases(
+		tilesetRegistry.HQ(),
+		hqTileService,
 		animationService,
 	)
 
@@ -161,6 +167,9 @@ func New(cfg *Config) *App {
 		bulletTilesUseCases,
 		spawnerTilesUseCases,
 		explosionTilesUseCases,
+		hqTilesUseCases,
+		gameStateServices.GetHQ(),
+		gameStateServices.GetHQRenderUseCases(),
 	)
 
 	// Создаем TankActionsUseCases для инпут-адаптера
@@ -168,6 +177,7 @@ func New(cfg *Config) *App {
 		tankBrakingService,
 		coordinateService,
 		gameStateServices.BulletUseCases(),
+		gameStateServices.TankUseCases(),
 	)
 
 	// Создаем InputAdapter

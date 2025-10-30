@@ -2,6 +2,7 @@ package states
 
 import (
 	"github.com/shpaker/gonflict/internal/adapters/input_adapters"
+	"github.com/shpaker/gonflict/internal/adapters/input_adapters/ai"
 	"github.com/shpaker/gonflict/internal/config"
 	"github.com/shpaker/gonflict/internal/interfaces"
 	"github.com/shpaker/gonflict/internal/services"
@@ -25,6 +26,9 @@ type GameStateUseCasesFacade struct {
 	enemyInputAdapters     []interfaces.IInputAdapter          // AI input адаптеры для врагов
 	tilesUseCasesWithAnims *use_cases.TilesUseCases            // Общий tilesUseCases для всех анимаций
 	aiContext              *types.GameAiContext                // AI контекст для всех адаптеров
+	hq                     *types.HQEntity                     // База
+	hqUseCases             interfaces.IHQUseCases              // Use cases для базы
+	hqRenderUseCases       *use_cases.HQRenderUseCases         // Render use cases для базы
 }
 
 // NewGameStateUseCasesFacade создает фасад для оркестрации use cases игрового состояния
@@ -127,6 +131,7 @@ func NewGameStateUseCasesFacade(
 		tilesUseCasesWithAnimations,
 		tankBrakingService,
 		coordinateService,
+		playerRenderUseCases,
 	)
 
 	// Создаем TankActionsUseCases для игрока (для Stop в коллизиях)
@@ -134,9 +139,23 @@ func NewGameStateUseCasesFacade(
 		tankBrakingService,
 		coordinateService,
 		bulletUseCases,
+		playerUseCases,
 	)
 
 	mapUseCases := use_cases.NewMapUseCases(gameRepo.BlocksRepository())
+
+	// Создаем базу из конфига
+	var hq *types.HQEntity
+	if len(gameConfig.HQPosition) == 2 {
+		hqPosition := types.Position{
+			X: float64(gameConfig.HQPosition[0]) * use_cases.TankSpriteSize,
+			Y: float64(gameConfig.HQPosition[1]) * use_cases.TankSpriteSize,
+		}
+		hq = &types.HQEntity{
+			Position: hqPosition,
+			State:    types.HQStateIntact,
+		}
+	}
 
 	// Создаем AI контекст
 	blocks := mapUseCases.GetBlocks()
@@ -204,6 +223,7 @@ func NewGameStateUseCasesFacade(
 			tilesUseCasesWithAnimations,
 			tankBrakingService,
 			coordinateService,
+			enemyRenderUseCases,
 		)
 
 		// Запускаем спавн танка врага через lifecycle
@@ -225,7 +245,21 @@ func NewGameStateUseCasesFacade(
 			tankBrakingService,
 			coordinateService,
 			bulletUseCases,
+			enemyUseCases,
 		)
+
+		// Создаем Lua engine для AI
+		luaEngine := ai.NewLuaEngine()
+		if err := luaEngine.Execute(enemyScript); err != nil {
+			luaEngine.Close()
+			return nil, err
+		}
+
+		// Создаем тип конвертер для AI
+		typeConverter := services.NewAITypeConverter(luaEngine)
+
+		// Создаем AI Use Cases
+		aiUseCases := use_cases.NewAIUseCases(luaEngine, typeConverter)
 
 		// Создаем AI input адаптер для этого врага
 		aiInputAdapter, err := input_adapters.NewAiInputAdapter(
@@ -233,9 +267,10 @@ func NewGameStateUseCasesFacade(
 			enemyTank,
 			aiContext,
 			updateInterval,
-			enemyScript,
+			aiUseCases,
 		)
 		if err != nil {
+			aiUseCases.Close()
 			return nil, err
 		}
 		enemyInputAdapters = append(enemyInputAdapters, aiInputAdapter)
@@ -252,6 +287,24 @@ func NewGameStateUseCasesFacade(
 	// Преобразуем []*TankCommonUseCases в []*TankCommonUseCases для CollisionUseCases
 	enemyUseCasesRefs := enemyUseCasesList
 
+	// Создаем HQRenderUseCases для базы
+	var hqRenderUseCases *use_cases.HQRenderUseCases
+	if hq != nil {
+		hqRenderUseCases = use_cases.NewHQRenderUseCases()
+	}
+
+	// Создаем временный HQUseCases для первого создания CollisionUseCases
+	var tempHQUseCases interfaces.IHQUseCases
+	if hq != nil {
+		tempHQUseCases = use_cases.NewHQUseCases(
+			hq,
+			bulletUseCases,
+			tempBulletCollisionService,
+			tilesUseCasesWithAnimations,
+			hqRenderUseCases,
+		)
+	}
+
 	// Создаем CollisionUseCases первый раз для получения CheckColliders
 	collisionUseCases := use_cases.NewCollisionUseCasesWithEnemies(
 		bulletUseCases,
@@ -264,6 +317,7 @@ func NewGameStateUseCasesFacade(
 		boundaryCollisionService,
 		wallCollisionService,
 		tempBulletCollisionService,
+		tempHQUseCases,
 	)
 
 	// Создаем правильный BulletCollisionService с реальным CheckColliders из CollisionUseCases
@@ -273,6 +327,18 @@ func NewGameStateUseCasesFacade(
 			return collisionUseCases.CheckColliders(obj1, obj2)
 		},
 	)
+
+	// Создаем HQUseCases с правильным BulletCollisionService
+	var hqUseCases interfaces.IHQUseCases
+	if hq != nil {
+		hqUseCases = use_cases.NewHQUseCases(
+			hq,
+			bulletUseCases,
+			bulletCollisionService,
+			tilesUseCasesWithAnimations,
+			hqRenderUseCases,
+		)
+	}
 
 	// Пересоздаем CollisionUseCases с правильным BulletCollisionService
 	collisionUseCases = use_cases.NewCollisionUseCasesWithEnemies(
@@ -286,6 +352,7 @@ func NewGameStateUseCasesFacade(
 		boundaryCollisionService,
 		wallCollisionService,
 		bulletCollisionService,
+		hqUseCases,
 	)
 
 	return &GameStateUseCasesFacade{
@@ -303,6 +370,9 @@ func NewGameStateUseCasesFacade(
 		enemyInputAdapters:     enemyInputAdapters,
 		tilesUseCasesWithAnims: tilesUseCasesWithAnimations,
 		aiContext:              aiContext,
+		hq:                     hq,
+		hqUseCases:             hqUseCases,
+		hqRenderUseCases:       hqRenderUseCases,
 	}, nil
 }
 
@@ -352,6 +422,11 @@ func (g *GameStateUseCasesFacade) Update(dt float64) {
 
 	// Проверяем коллизии ПОСЛЕ движения всех объектов
 	g.collisionUseCases.UpdateCollisions()
+
+	// Проверяем завершение анимации взрыва базы
+	if g.hqUseCases != nil {
+		g.hqUseCases.IsExplosionFinished()
+	}
 }
 
 // UpdateAnimations обновляет все анимации из репозитория
@@ -380,12 +455,6 @@ func (g *GameStateUseCasesFacade) UpdateEnemiesSpawn(currentTime float64) {
 			}
 		}
 	}
-}
-
-// UpdateEnemiesAnimations обновляет анимации врагов
-// Устаревший метод, используйте UpdateAnimations()
-func (g *GameStateUseCasesFacade) UpdateEnemiesAnimations() {
-	g.UpdateAnimations()
 }
 
 // StartTankSpawn запускает спавн танка игрока
@@ -436,4 +505,16 @@ func (g *GameStateUseCasesFacade) PlayerRenderUseCases() interfaces.ITankRenderU
 
 func (g *GameStateUseCasesFacade) GetEnemyRenderUseCases() []interfaces.ITankRenderUseCases {
 	return g.enemyRenderUseCases
+}
+
+func (g *GameStateUseCasesFacade) GetHQ() *types.HQEntity {
+	return g.hq
+}
+
+func (g *GameStateUseCasesFacade) GetHQRenderUseCases() *use_cases.HQRenderUseCases {
+	return g.hqRenderUseCases
+}
+
+func (g *GameStateUseCasesFacade) TilesUseCases() *use_cases.TilesUseCases {
+	return g.tilesUseCasesWithAnims
 }

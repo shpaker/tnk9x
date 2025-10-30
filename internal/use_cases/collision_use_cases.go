@@ -12,6 +12,7 @@ type CollisionUseCases struct {
 	mapUseCases              interfaces.IMapUseCases
 	playerTank               *types.TankEntity
 	enemyTanks               []*types.TankEntity
+	hqUseCases               interfaces.IHQUseCases
 	enemyUseCases            []interfaces.ITankCommonUseCases    // Use cases для врагов
 	enemyLifecycles          []interfaces.ITankLifecycleUseCases // Для Explode врагов
 	boundaryCollisionService interfaces.IBoundaryCollisionService
@@ -31,6 +32,7 @@ func NewCollisionUseCasesWithEnemies(
 	boundaryCollisionService interfaces.IBoundaryCollisionService,
 	wallCollisionService interfaces.IWallCollisionService,
 	bulletCollisionService interfaces.IBulletCollisionService,
+	hqUseCases interfaces.IHQUseCases,
 ) *CollisionUseCases {
 	uc := &CollisionUseCases{
 		bulletUseCases:           bulletUseCases,
@@ -38,6 +40,7 @@ func NewCollisionUseCasesWithEnemies(
 		tankActions:              tankActions,
 		mapUseCases:              mapUseCases,
 		enemyTanks:               enemyTanks,
+		hqUseCases:               hqUseCases,
 		enemyUseCases:            enemyUseCases,
 		enemyLifecycles:          enemyLifecycles,
 		boundaryCollisionService: boundaryCollisionService,
@@ -58,6 +61,7 @@ func (uc *CollisionUseCases) UpdateCollisions() error {
 	uc.checkBulletTankCollisions(uc.playerTank)
 	uc.checkBulletEnemyCollisions()
 	uc.checkBulletWallCollisions()
+	uc.checkBulletHQCollisions()
 	uc.checkTankBoundaryCollisions(uc.playerTank)
 	uc.checkTankWallCollisions(uc.playerTank)
 
@@ -162,6 +166,20 @@ func (uc *CollisionUseCases) checkBulletWallCollisions() {
 			uc.mapUseCases.RemoveBlock(&blocks[blockIndex])
 		}
 	}
+
+	// Удаляем пули
+	for _, i := range bulletIndicesToRemove {
+		uc.bulletUseCases.RemoveBullet(i)
+	}
+}
+
+// checkBulletHQCollisions проверяет коллизии пуль с базой
+func (uc *CollisionUseCases) checkBulletHQCollisions() {
+	if uc.hqUseCases == nil {
+		return
+	}
+
+	bulletIndicesToRemove, _ := uc.hqUseCases.HandleBulletHit()
 
 	// Удаляем пули
 	for _, i := range bulletIndicesToRemove {
