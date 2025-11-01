@@ -177,12 +177,12 @@ func TestGetGameContext(t *testing.T) {
 
 	// Проверяем, что контекст не nil
 	if context == nil {
-		t.Error("GameContext should not be nil")
+		t.Fatal("GameContext should not be nil")
 	}
 
 	// Проверяем игрока
 	if context.Player == nil {
-		t.Error("Player should not be nil")
+		t.Fatal("Player should not be nil")
 	}
 	if context.Player.Position.X != 100 || context.Player.Position.Y != 200 {
 		t.Error("Player position mismatch")

@@ -31,7 +31,9 @@ func TestReadFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("не удалось создать временную папку: %v", err)
 	}
-	defer os.RemoveAll(tempDir)
+	defer func() {
+		_ = os.RemoveAll(tempDir)
+	}()
 
 	testData := []byte("test content")
 	testFile := "test.txt"
@@ -58,7 +60,9 @@ func TestReadImage(t *testing.T) {
 	if err != nil {
 		t.Fatalf("не удалось создать временную папку: %v", err)
 	}
-	defer os.RemoveAll(tempDir)
+	defer func() {
+		_ = os.RemoveAll(tempDir)
+	}()
 
 	testFile := "test"
 	filePath := filepath.Join(tempDir, testFile+".png")
@@ -69,10 +73,10 @@ func TestReadImage(t *testing.T) {
 		t.Fatalf("не удалось создать тестовый файл: %v", err)
 	}
 	if err := png.Encode(file, img); err != nil {
-		file.Close()
+		_ = file.Close()
 		t.Fatalf("не удалось записать PNG: %v", err)
 	}
-	file.Close()
+	_ = file.Close()
 
 	repo := NewFileRepository(tempDir)
 	result, err := repo.ReadImage(testFile)
@@ -91,7 +95,9 @@ func TestReadConfig(t *testing.T) {
 	if err != nil {
 		t.Fatalf("не удалось создать временную папку: %v", err)
 	}
-	defer os.RemoveAll(tempDir)
+	defer func() {
+		_ = os.RemoveAll(tempDir)
+	}()
 
 	testFile := "config"
 	filePath := filepath.Join(tempDir, testFile+".yml")
