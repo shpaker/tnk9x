@@ -7,7 +7,6 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 
 	"github.com/shpaker/gonflict/internal/adapters"
-	"github.com/shpaker/gonflict/internal/config"
 	"github.com/shpaker/gonflict/internal/interfaces"
 )
 
@@ -23,7 +22,6 @@ func NewGameState(
 	mapsRepo interfaces.IMapsDataRepository,
 	scriptsRepo interfaces.IScriptsRepository,
 	tilesetRegistry interfaces.ITilesetRepositoryRegistry,
-	gameConfig *config.GameConfig,
 	gameRepo interfaces.IGameRepositoriesRegistry,
 	rendererAdapter *adapters.RendererAdapter,
 	inputAdapter interfaces.IInputAdapter,

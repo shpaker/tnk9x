@@ -1,16 +1,31 @@
 run:
-  tests: true
   timeout: 5m
+  issues-exit-code: 1
+  tests: true
 
 output:
   formats:
     - format: colored-line-number
   print-issued-lines: true
   print-linter-name: true
-  print-welcome: false
+
+linters-settings:
+  gocyclo:
+    min-complexity: 15
+  dupl:
+    threshold: 100
+  goimports:
+    local-prefixes: github.com/shpaker/gonflict
+  goconst:
+    min-len: 3
+    min-occurrences: 3
+  misspell:
+    locale: US
 
 linters:
+  disable-all: true
   enable:
+    - errcheck
     - gosimple
     - govet
     - ineffassign
@@ -18,62 +33,14 @@ linters:
     - unused
     - gofmt
     - goimports
-    - misspell
-    - revive
-  disable:
-    - errcheck
-  disable-all: false
-  fast: false
-
-linters-settings:
-  errcheck:
-    check-type-assertions: true
-    check-blank: false
-  gofmt:
-    simplify: true
-  goimports:
-    local-prefixes: github.com/shpaker/gonflict
-  revive:
-    min-confidence: 0.0
-    rules:
-      - name: exported
-        severity: warning
-        disabled: false
-      - name: error-return
-        severity: warning
-        disabled: false
-      - name: error-naming
-        severity: warning
-        disabled: false
-      - name: var-naming
-        severity: warning
-        disabled: false
-      - name: package-comments
-        severity: warning
-        disabled: false
+    - typecheck
 
 issues:
+  exclude-use-default: false
   exclude-dirs:
     - dist
-    - bin
-    - vendor
+    - web
   exclude-files:
-    - ".*_test\\.go$"
     - ".*\\.pb\\.go$"
-    - ".*\\.gen\\.go$"
-  exclude-rules:
-    # Разрешаем подчеркивания в именах пакетов (намеренное решение архитектуры)
-    - path: internal/adapters/input_adapters
-      linters:
-        - revive
-      text: "don't use an underscore in package name"
-    - path: internal/use_cases
-      linters:
-        - revive
-      text: "don't use an underscore in package name"
-    # Разрешаем GameRepositoriesRegistry (название со стуттером по причинам совместимости)
-    - path: internal/repositories/game/game_repository.go
-      linters:
-        - revive
-      text: "type name will be used as.*and that stutters"
-
+  max-issues-per-linter: 0
+  max-same-issues: 0

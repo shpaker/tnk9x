@@ -9,18 +9,30 @@ import (
 	"github.com/shpaker/gonflict/internal/types"
 )
 
+// MapCharsBlocksMapping содержит соответствие символов карты типам блоков
+var MapCharsBlocksMapping = map[string]types.BlockType{
+	"#": types.Brick,
+	"@": types.Steel,
+	"%": types.Forest,
+	"~": types.Water,
+	"=": types.Ice,
+}
+
 type MapsDataRepository struct {
-	fileRepo    interfaces.IFileRepository
-	tilesetRepo interfaces.ITilesetRepository
+	fileRepo        interfaces.IFileRepository
+	tilesetRepo     interfaces.ITilesetRepository
+	mapBlocksLength int
 }
 
 func NewMapsDataRepository(
 	fileRepo interfaces.IFileRepository,
 	tilesetRepo interfaces.ITilesetRepository,
+	mapBlocksLength int,
 ) *MapsDataRepository {
 	return &MapsDataRepository{
-		fileRepo:    fileRepo,
-		tilesetRepo: tilesetRepo,
+		fileRepo:        fileRepo,
+		tilesetRepo:     tilesetRepo,
+		mapBlocksLength: mapBlocksLength,
 	}
 }
 
@@ -84,10 +96,10 @@ func (mdr *MapsDataRepository) parseLevelLines(
 	var level []types.BlockEntity
 
 	// Проверяем количество строк (должно быть 26)
-	if len(lines) != MapBlocksLength {
+	if len(lines) != mdr.mapBlocksLength {
 		return level, fmt.Errorf(
 			"invalid row count: expected %d, got %d",
-			MapBlocksLength,
+			mdr.mapBlocksLength,
 			len(lines),
 		)
 	}
@@ -97,11 +109,11 @@ func (mdr *MapsDataRepository) parseLevelLines(
 		line = strings.TrimSpace(line)
 
 		// Проверяем длину строки (должна быть 26)
-		if len(line) != MapBlocksLength {
+		if len(line) != mdr.mapBlocksLength {
 			return level, fmt.Errorf(
 				"invalid row %d length: expected %d, got %d",
 				y+1,
-				MapBlocksLength,
+				mdr.mapBlocksLength,
 				len(line),
 			)
 		}

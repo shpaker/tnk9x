@@ -26,7 +26,10 @@ func (b *BlockEntity) GetImageID() (string, error) {
 
 // GetSize возвращает размер блока
 func (b *BlockEntity) GetSize() Size {
-	return Size{Width: 8, Height: 8} // Стандартный размер блока (TileMinSize)
+	return Size{
+		Width:  8,
+		Height: 8,
+	} // Стандартный размер блока (TileBaseSize = base_size_px/2)
 }
 
 // GetPosition возвращает позицию блока в мире

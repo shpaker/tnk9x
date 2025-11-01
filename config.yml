@@ -1,9 +1,10 @@
 ---
 app:
   name: "gonflict"
+  level_number: 1
+  screen_px: [1280, 720]  # Размер экрана в пикселях [width, height]
 
 game:
-  level_number: 13  # Номер уровня для загрузки
   enemy_spawners:
     - [0, 0]   # Левый верхний угол
     - [6, 0]   # Центр сверху
@@ -13,3 +14,8 @@ game:
     - [8, 12]
   hq_position: [6, 12]
   ai_update_interval_ticks: 20  # Интервал обновления AI в тиках (60 тиков = 1000мс при 60 FPS)
+
+  # Игровые константы
+  base_size_px: 16
+  map_blocks_count: [26, 26]  # Размер карты в блоках [width, height]
+  map_offsets_px: [16, 16]  # [x, y] оффсеты игровой карты от угла экрана

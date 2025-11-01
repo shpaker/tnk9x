@@ -1,6 +1,22 @@
 package interfaces
 
-import lua "github.com/yuin/gopher-lua"
+import (
+	lua "github.com/yuin/gopher-lua"
+
+	"github.com/shpaker/gonflict/internal/types"
+)
+
+// IConfigProvider интерфейс для получения данных конфигурации
+type IConfigProvider interface {
+	GetEnemySpawners() [][2]int
+	GetPlayerSpawners() [][2]int
+	GetHQPosition() [2]int
+	GetAIUpdateIntervalTicks() int
+	GetBaseSizePx() uint
+	GetMapBlocksCount() types.Size
+	GetMapOffsets() [2]uint
+	GetTileBaseSize() uint
+}
 
 // IInputAdapter интерфейс для адаптеров ввода
 type IInputAdapter interface {

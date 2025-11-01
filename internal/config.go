@@ -4,59 +4,56 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/shpaker/gonflict/internal/types"
 	"gopkg.in/yaml.v3"
-
-	"github.com/shpaker/gonflict/internal/config"
 )
 
-// AppConfig содержит настройки приложения
-type AppConfig struct {
-	Name string
+// configSchema структура для парсинга YAML файла
+type configSchema struct {
+	App  appConfigSchema  `yaml:"app"`
+	Game gameConfigSchema `yaml:"game"`
 }
 
-// ConfigSchema структура для парсинга YAML файла
-type ConfigSchema struct {
-	App  AppConfig         `yaml:"app"`
-	Game config.GameConfig `yaml:"game"`
+// appConfigSchema для парсинга app секции из YAML
+type appConfigSchema struct {
+	Name        string  `yaml:"name"`
+	LevelNumber int     `yaml:"level_number"`
+	ScreenPx    [2]uint `yaml:"screen_px"`
+}
+
+// gameConfigSchema для парсинга game секции из YAML
+type gameConfigSchema struct {
+	EnemySpawners         [][2]int `yaml:"enemy_spawners"`
+	PlayerSpawners        [][2]int `yaml:"players_spawners"`
+	HQPosition            [2]int   `yaml:"hq_position"`              // Позиция базы [x, y]
+	AIUpdateIntervalTicks int      `yaml:"ai_update_interval_ticks"` // Интервал обновления AI в тиках (по умолчанию 60 тиков = 1000мс)
+
+	// Игровые константы
+	BaseSizePx     uint    `yaml:"base_size_px"`
+	MapBlocksCount [2]int  `yaml:"map_blocks_count"` // Размер карты в блоках [width, height]
+	MapOffsets     [2]uint `yaml:"map_offsets_px"`   // Оффсеты игровой карты от угла экрана [x, y]
 }
 
 // Config содержит конфигурацию приложения
 type Config struct {
-	AppConfig
-	config.GameConfig
-}
+	// App settings
+	Name        string
+	LevelNumber int
+	ScreenPx    types.Size
 
-// ScreenWidth возвращает ширину экрана
-func (c *Config) ScreenWidth() int {
-	const (
-		TileMinSize           = 8
-		MapBlocksLength       = 26
-		UpDownLeftPanelLength = 2
-		RightPanelLength      = 4
-	)
-	MapWidthHeight := MapBlocksLength * TileMinSize
-	return MapWidthHeight + UpDownLeftPanelLength*TileMinSize + RightPanelLength*TileMinSize
-}
+	// Game settings
+	EnemySpawners         [][2]int
+	PlayerSpawners        [][2]int
+	HQPosition            [2]int
+	AIUpdateIntervalTicks int
 
-// ScreenHeight возвращает высоту экрана
-func (c *Config) ScreenHeight() int {
-	const (
-		TileMinSize           = 8
-		MapBlocksLength       = 26
-		UpDownLeftPanelLength = 2
-	)
-	MapWidthHeight := MapBlocksLength * TileMinSize
-	return MapWidthHeight + UpDownLeftPanelLength*TileMinSize*2
-}
+	// Game constants
+	BaseSizePx     uint
+	MapBlocksCount types.Size
+	MapOffsets     [2]uint
 
-// GameSpeed возвращает скорость игры
-func (c *Config) GameSpeed() float64 {
-	return 1.0 / 60.0
-}
-
-// TileSize возвращает размер тайла
-func (c *Config) TileSize() int {
-	return 8
+	// Вычисляемые значения
+	TileBaseSize uint // Вычисляется как base_size_px / 2
 }
 
 // LoadConfig загружает конфигурацию из файла config.yml
@@ -76,18 +73,89 @@ func LoadConfig() (*Config, error) {
 	}
 
 	// Парсим YAML
-	var configSchema ConfigSchema
-	if err := yaml.Unmarshal(data, &configSchema); err != nil {
+	var schema configSchema
+	if err := yaml.Unmarshal(data, &schema); err != nil {
 		return nil, fmt.Errorf("failed to parse config file: %w", err)
 	}
 
 	// Создаем конфигурацию
 	cfg := &Config{
-		AppConfig: AppConfig{
-			Name: configSchema.App.Name,
+		Name:        schema.App.Name,
+		LevelNumber: schema.App.LevelNumber,
+		ScreenPx: types.Size{
+			Width:  int(schema.App.ScreenPx[0]),
+			Height: int(schema.App.ScreenPx[1]),
 		},
-		GameConfig: configSchema.Game,
+
+		EnemySpawners:         schema.Game.EnemySpawners,
+		PlayerSpawners:        schema.Game.PlayerSpawners,
+		HQPosition:            schema.Game.HQPosition,
+		AIUpdateIntervalTicks: schema.Game.AIUpdateIntervalTicks,
+
+		BaseSizePx: schema.Game.BaseSizePx,
+		MapBlocksCount: types.Size{
+			Width:  schema.Game.MapBlocksCount[0],
+			Height: schema.Game.MapBlocksCount[1],
+		},
+		MapOffsets: schema.Game.MapOffsets,
 	}
 
+	// Вычисляем TileBaseSize как base_size_px / 2
+	cfg.TileBaseSize = cfg.BaseSizePx / 2
+
 	return cfg, nil
+}
+
+// Геттеры для интерфейса IConfigProvider
+
+func (c *Config) GetEnemySpawners() [][2]int {
+	return c.EnemySpawners
+}
+
+func (c *Config) GetPlayerSpawners() [][2]int {
+	return c.PlayerSpawners
+}
+
+func (c *Config) GetHQPosition() [2]int {
+	return c.HQPosition
+}
+
+func (c *Config) GetAIUpdateIntervalTicks() int {
+	return c.AIUpdateIntervalTicks
+}
+
+func (c *Config) GetBaseSizePx() uint {
+	return c.BaseSizePx
+}
+
+func (c *Config) GetMapBlocksCount() types.Size {
+	return c.MapBlocksCount
+}
+
+func (c *Config) GetMapOffsets() [2]uint {
+	return c.MapOffsets
+}
+
+func (c *Config) GetTileBaseSize() uint {
+	return c.TileBaseSize
+}
+
+// ScreenWidth возвращает ширину экрана
+func (c *Config) ScreenWidth() int {
+	return c.ScreenPx.Width
+}
+
+// ScreenHeight возвращает высоту экрана
+func (c *Config) ScreenHeight() int {
+	return c.ScreenPx.Height
+}
+
+// GameSpeed возвращает скорость игры
+func (c *Config) GameSpeed() float64 {
+	return 1.0 / 60.0
+}
+
+// TileSize возвращает размер тайла
+func (c *Config) TileSize() int {
+	return int(c.TileBaseSize)
 }

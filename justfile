@@ -64,6 +64,14 @@ fmt:
     "$GOBIN_PATH/gofumpt" -l -w .
     "$GOBIN_PATH/golines" -w --max-len={{max_line_length}} .
 
+fmt-check:
+    #!/bin/bash
+    echo "Checking code formatting..."
+    GOBIN_PATH="$({{gocmd}} env GOPATH)/bin"
+    "$GOBIN_PATH/gofumpt" -l .
+    "$GOBIN_PATH/golines" -l --max-len={{max_line_length}} .
+    echo "Formatting check passed"
+
 # Линтинг
 lint:
     #!/bin/bash
@@ -85,14 +93,13 @@ install-tools:
     echo "Tools installed. Make sure \$GOBIN or \$(go env GOPATH)/bin is in your PATH"
 
 # Проверки качества кода
-check: fmt lint test
+check:
     #!/bin/bash
+    echo "Running code quality checks..."
+    @just fmt-check
+    @just lint
+    @just test
     echo "All checks completed successfully"
-
-# Полная сборка с проверками
-ci: deps check build
-    #!/bin/bash
-    echo "CI pipeline completed successfully"
 
 # Отладка
 debug: build

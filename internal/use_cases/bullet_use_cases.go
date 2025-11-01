@@ -7,18 +7,21 @@ import (
 
 // BulletUseCases реализация интерфейса BulletUseCases
 type BulletUseCases struct {
-	bulletsRepo   interfaces.IBulletsRepository
-	tilesUseCases interfaces.ITilesUseCases
+	bulletsRepo    interfaces.IBulletsRepository
+	tilesUseCases  interfaces.ITilesUseCases
+	tankSpriteSize uint
 }
 
 // NewBulletUseCases создает новый экземпляр BulletUseCases
 func NewBulletUseCases(
 	bulletsRepo interfaces.IBulletsRepository,
 	tilesUseCases interfaces.ITilesUseCases,
+	tankSpriteSize uint,
 ) *BulletUseCases {
 	return &BulletUseCases{
-		bulletsRepo:   bulletsRepo,
-		tilesUseCases: tilesUseCases,
+		bulletsRepo:    bulletsRepo,
+		tilesUseCases:  tilesUseCases,
+		tankSpriteSize: tankSpriteSize,
 	}
 }
 
@@ -36,19 +39,19 @@ func (uc *BulletUseCases) ShootBullet(tank *types.TankEntity) error {
 	}
 
 	// Вычисляем позицию пули в зависимости от направления танка
-	bulletX := tank.Position.X + TankSpriteSize/2 - 2
-	bulletY := tank.Position.Y + TankSpriteSize/2 - 2
+	bulletX := tank.Position.X + float64(uc.tankSpriteSize)/2 - 2
+	bulletY := tank.Position.Y + float64(uc.tankSpriteSize)/2 - 2
 
 	// Корректируем позицию в зависимости от направления
 	switch tank.Direction {
 	case types.DirectionUp:
 		bulletY = tank.Position.Y - 4
 	case types.DirectionDown:
-		bulletY = tank.Position.Y + TankSpriteSize/2
+		bulletY = tank.Position.Y + float64(uc.tankSpriteSize)/2
 	case types.DirectionLeft:
 		bulletX = tank.Position.X - 4
 	case types.DirectionRight:
-		bulletX = tank.Position.X + TankSpriteSize/2
+		bulletX = tank.Position.X + float64(uc.tankSpriteSize)/2
 	}
 
 	bullet := types.BulletEntity{

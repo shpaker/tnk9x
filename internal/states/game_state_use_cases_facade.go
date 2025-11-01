@@ -3,7 +3,6 @@ package states
 import (
 	"github.com/shpaker/gonflict/internal/adapters/input_adapters"
 	"github.com/shpaker/gonflict/internal/adapters/input_adapters/ai"
-	"github.com/shpaker/gonflict/internal/config"
 	"github.com/shpaker/gonflict/internal/interfaces"
 	"github.com/shpaker/gonflict/internal/services"
 	"github.com/shpaker/gonflict/internal/types"
@@ -41,7 +40,7 @@ func NewGameStateUseCasesFacade(
 	bulletTilesetRepo interfaces.ITilesetRepository,
 	spawnerTilesetRepo interfaces.ITilesetRepository,
 	explosionTilesetRepo interfaces.ITilesetRepository,
-	gameConfig *config.GameConfig,
+	config interfaces.IConfigProvider,
 	gameRepo interfaces.IGameRepositoriesRegistry,
 	boundaryCollisionService interfaces.IBoundaryCollisionService,
 	wallCollisionService interfaces.IWallCollisionService,
@@ -79,19 +78,21 @@ func NewGameStateUseCasesFacade(
 
 	// Берем первую позицию спавна игрока из конфига
 	var playerSpawner types.Position
-	if len(gameConfig.PlayerSpawners) > 0 &&
-		len(gameConfig.PlayerSpawners[0]) == 2 {
+	playerSpawners := config.GetPlayerSpawners()
+	baseSizePx := config.GetBaseSizePx()
+	if len(playerSpawners) > 0 &&
+		len(playerSpawners[0]) == 2 {
 		playerSpawner = types.Position{
 			X: float64(
-				gameConfig.PlayerSpawners[0][0],
-			) * use_cases.TankSpriteSize,
+				playerSpawners[0][0],
+			) * float64(baseSizePx),
 			Y: float64(
-				gameConfig.PlayerSpawners[0][1],
-			) * use_cases.TankSpriteSize,
+				playerSpawners[0][1],
+			) * float64(baseSizePx),
 		}
 	} else {
 		// Значение по умолчанию
-		playerSpawner = types.Position{X: 12 * use_cases.TankSpriteSize, Y: 24 * use_cases.TankSpriteSize}
+		playerSpawner = types.Position{X: float64(12 * baseSizePx), Y: float64(24 * baseSizePx)}
 	}
 
 	// Создаем сервисы для пули
@@ -105,6 +106,7 @@ func NewGameStateUseCasesFacade(
 	bulletUseCases := use_cases.NewBulletUseCases(
 		gameRepo.BulletsRepository(),
 		bulletTilesUseCases,
+		baseSizePx,
 	)
 
 	// Создаем танк игрока
@@ -114,6 +116,7 @@ func NewGameStateUseCasesFacade(
 		Direction: types.DirectionUp,
 		State:     types.TankStateSpawning,
 		Altitude:  types.SURFACE,
+		Size:      types.Size{Width: int(baseSizePx), Height: int(baseSizePx)},
 	}
 	gameRepo.TanksRepository().AddTank(playerTank)
 
@@ -146,10 +149,11 @@ func NewGameStateUseCasesFacade(
 
 	// Создаем базу из конфига
 	var hq *types.HQEntity
-	if len(gameConfig.HQPosition) == 2 {
+	hqPos := config.GetHQPosition()
+	if len(hqPos) == 2 {
 		hqPosition := types.Position{
-			X: float64(gameConfig.HQPosition[0]) * use_cases.TankSpriteSize,
-			Y: float64(gameConfig.HQPosition[1]) * use_cases.TankSpriteSize,
+			X: float64(hqPos[0]) * float64(baseSizePx),
+			Y: float64(hqPos[1]) * float64(baseSizePx),
 		}
 		hq = &types.HQEntity{
 			Position: hqPosition,
@@ -168,8 +172,8 @@ func NewGameStateUseCasesFacade(
 
 	// Получаем интервал обновления AI в тиках (по умолчанию 60 тиков)
 	updateInterval := 60
-	if gameConfig.AIUpdateIntervalTicks > 0 {
-		updateInterval = gameConfig.AIUpdateIntervalTicks
+	if config.GetAIUpdateIntervalTicks() > 0 {
+		updateInterval = config.GetAIUpdateIntervalTicks()
 	}
 
 	// Загружаем скрипт AI для врагов один раз
@@ -185,7 +189,7 @@ func NewGameStateUseCasesFacade(
 	enemyInputAdapters := make([]interfaces.IInputAdapter, 0, 3)
 	enemyTanksEntities := make([]*types.TankEntity, 0, 3)
 
-	for i, spawner := range gameConfig.EnemySpawners {
+	for i, spawner := range config.GetEnemySpawners() {
 		if i >= 3 { // Максимум 3 врага
 			break
 		}
@@ -195,8 +199,8 @@ func NewGameStateUseCasesFacade(
 
 		// Конвертируем координаты в пиксели
 		position := types.Position{
-			X: float64(spawner[0]) * use_cases.TankSpriteSize,
-			Y: float64(spawner[1]) * use_cases.TankSpriteSize,
+			X: float64(spawner[0]) * float64(baseSizePx),
+			Y: float64(spawner[1]) * float64(baseSizePx),
 		}
 
 		// Создаем танк врага
@@ -206,6 +210,10 @@ func NewGameStateUseCasesFacade(
 			Direction: types.DirectionDown,
 			State:     types.TankStateSpawning,
 			Altitude:  types.SURFACE,
+			Size: types.Size{
+				Width:  int(baseSizePx),
+				Height: int(baseSizePx),
+			},
 		}
 		gameRepo.TanksRepository().AddTank(enemyTank)
 
@@ -278,7 +286,7 @@ func NewGameStateUseCasesFacade(
 
 	// Создаем временный BulletCollisionService с заглушкой для CheckColliders
 	tempBulletCollisionService := services.NewBulletCollisionService(
-		use_cases.TileMinSize,
+		int(config.GetTileBaseSize()),
 		func(obj1 types.IMapObject, obj2 types.IMapObject) bool {
 			return false // Временная заглушка
 		},
@@ -322,7 +330,7 @@ func NewGameStateUseCasesFacade(
 
 	// Создаем правильный BulletCollisionService с реальным CheckColliders из CollisionUseCases
 	bulletCollisionService := services.NewBulletCollisionService(
-		use_cases.TileMinSize,
+		int(config.GetTileBaseSize()),
 		func(obj1 types.IMapObject, obj2 types.IMapObject) bool {
 			return collisionUseCases.CheckColliders(obj1, obj2)
 		},

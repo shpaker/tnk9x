@@ -24,7 +24,7 @@ type App struct {
 
 // ebiten game interface
 func (app *App) Layout(outsideWidth, outsideHeight int) (int, int) {
-	return app.config.ScreenWidth(), app.config.ScreenHeight()
+	return app.config.ScreenWidth() / 3, app.config.ScreenHeight() / 3
 }
 
 func (app *App) Update() error {
@@ -70,10 +70,8 @@ func New(cfg *Config) *App {
 	mapsRepo := processed.NewMapsDataRepository(
 		fileRepo,
 		tilesetRegistry.Blocks(),
+		cfg.MapBlocksCount.Width,
 	)
-
-	// Используем GameConfig напрямую из Config
-	gameConfig := &cfg.GameConfig
 
 	// Создаем реестр игровых репозиториев
 	gameRepo := game.NewGameRepositoriesRegistry()
@@ -121,13 +119,14 @@ func New(cfg *Config) *App {
 	)
 
 	// Создаем сервисы коллизий
+	mapWidthHeight := cfg.MapBlocksCount.Width * int(cfg.TileBaseSize)
 	boundaryCollisionService := services.NewBoundaryCollisionService(
-		use_cases.MapWidthHeight,
-		use_cases.TankSpriteSize,
+		mapWidthHeight,
+		int(cfg.BaseSizePx),
 	)
 	wallCollisionService := services.NewWallCollisionService(
-		use_cases.TankSpriteSize,
-		use_cases.TileMinSize,
+		int(cfg.BaseSizePx),
+		int(cfg.TileBaseSize),
 	)
 	coordinateService := services.NewCoordinateService()
 	tankBrakingService := services.NewTankBrakingService()
@@ -136,13 +135,13 @@ func New(cfg *Config) *App {
 	gameStateServices, err := states.NewGameStateUseCasesFacade(
 		mapsRepo,
 		scriptsRepo,
-		gameConfig.LevelNumber,
+		cfg.LevelNumber,
 		tilesetRegistry.Blocks(),
 		tilesetRegistry.Player(),
 		tilesetRegistry.Bullet(),
 		tilesetRegistry.Spawner(),
 		tilesetRegistry.Explosion(),
-		gameConfig,
+		cfg,
 		gameRepo,
 		boundaryCollisionService,
 		wallCollisionService,
@@ -155,6 +154,8 @@ func New(cfg *Config) *App {
 	}
 
 	// Создаем RendererAdapter
+	mapOffsetX := int(cfg.MapOffsets[0])
+	mapOffsetY := int(cfg.MapOffsets[1])
 	rendererAdapter := adapters.NewRendererAdapter(
 		gameStateServices.MapUseCases(),
 		gameStateServices.GetPlayerTank(),
@@ -170,6 +171,10 @@ func New(cfg *Config) *App {
 		hqTilesUseCases,
 		gameStateServices.GetHQ(),
 		gameStateServices.GetHQRenderUseCases(),
+		int(cfg.TileBaseSize),
+		mapOffsetX,
+		mapOffsetY,
+		mapWidthHeight,
 	)
 
 	// Создаем TankActionsUseCases для инпут-адаптера
@@ -196,7 +201,6 @@ func New(cfg *Config) *App {
 		mapsRepo,
 		scriptsRepo,
 		tilesetRegistry,
-		gameConfig,
 		gameRepo,
 		rendererAdapter,
 		inputAdapter,
@@ -216,8 +220,8 @@ func New(cfg *Config) *App {
 
 func (app *App) Run(ctx context.Context) error {
 	ebiten.SetWindowSize(
-		app.config.ScreenWidth()*3,
-		app.config.ScreenHeight()*3,
+		app.config.ScreenWidth(),
+		app.config.ScreenHeight(),
 	)
 	ebiten.SetWindowTitle(app.config.Name)
 

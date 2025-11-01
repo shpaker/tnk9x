@@ -74,12 +74,20 @@ Gonflict — это ремейк культовой игры Battle City (Tank 1
   - [x] Анимационные тайлы с offset
   - [x] Поворот изображений по направлению
 
+- [x] **База и защита**
+  - [x] База (HQ) на карте (фиксированная позиция)
+  - [x] База разрушается от пуль врагов
+  - [x] Визуализация базы (статический спрайт)
+  - [x] Анимация взрыва базы
+
 - [x] **Архитектура**
   - [x] Clean Architecture (Presentation, Application, Domain, Infrastructure)
-  - [x] Разделение на Use Cases
-  - [x] Репозитории для данных
-  - [x] Сервисы (TankBrakingService)
+  - [x] Разделение на Use Cases (10 специализированных компонентов)
+  - [x] Репозитории для данных (Game, Processed, Raw)
+  - [x] Сервисы (9 специализированных сервисов)
   - [x] Адаптеры (Input, Renderer, AI)
+  - [x] Разделение AI на слои (LuaEngine, AITypeConverter, AIUseCases)
+  - [x] Интерфейсы для всех компонентов (Dependency Inversion)
 
 - [x] **Звуки**
   - [x] Загрузка звуковых файлов
@@ -91,7 +99,7 @@ Gonflict — это ремейк культовой игры Battle City (Tank 1
 - [ ] Меню и экраны (главное меню, game over, победа)
 - [ ] Бонусы и power-ups
 - [ ] Система жизней игрока
-- [ ] Защита базы
+- [ ] Game Over при уничтожении базы (требуется интеграция)
 
 ### 📋 TODO / Планируется
 
@@ -169,9 +177,11 @@ just dev              # Запустить в режиме разработки
 just test             # Запустить тесты
 just test-coverage    # Тесты с покрытием
 just fmt              # Форматировать код
+just fmt-check        # Проверить форматирование
 just lint             # Запустить линтер
+just lint-fix         # Исправить проблемы линтера
 just clean            # Очистить собранные файлы
-just check            # Все проверки (fmt, lint, test)
+just check            # Все проверки (fmt-check, lint, test)
 ```
 
 ## 🎮 Управление
@@ -203,16 +213,34 @@ internal/
 ├── states/            # Presentation Layer
 │   └── game_state.go      # Управление состоянием игры
 ├── use_cases/         # Application Layer
-│   ├── tank_use_cases.go
+│   ├── tank_common_use_cases.go
+│   ├── tank_actions_use_cases.go
+│   ├── tank_lifecycle_use_cases.go
+│   ├── tank_render_use_cases.go
 │   ├── bullet_use_cases.go
 │   ├── collision_use_cases.go
-│   └── ...
+│   ├── hq_use_cases.go
+│   ├── ai_use_cases.go
+│   ├── map_use_cases.go
+│   └── tile_use_cases.go
 ├── services/          # Application Layer
-│   └── tank_braking_services.go # Сервис торможения
+│   ├── tank_braking_services.go
+│   ├── coordinate_services.go
+│   ├── boundary_collision_service.go
+│   ├── wall_collision_service.go
+│   ├── bullet_collision_service.go
+│   ├── tile_services.go
+│   ├── animation_services.go
+│   ├── image_services.go
+│   └── ai_type_converter.go
 ├── types/             # Domain Layer
 │   ├── tank_entity.go
 │   ├── bullet_entity.go
-│   └── ...
+│   ├── block_entity.go
+│   ├── hq_entity.go
+│   ├── tile_animation_entity.go
+│   ├── session_entity.go
+│   └── battle_entity.go
 └── repositories/      # Infrastructure Layer
     ├── game/              # In-memory репозитории
     ├── processed/         # Обработанные данные
@@ -360,19 +388,39 @@ graph TB
 
 #### 3. Use Cases / Business Logic Layer (Слой бизнес-логики)
 **Ответственность:** Реализация бизнес-правил и игровой логики
-- **TankUseCases** — логика движения, поворотов, стрельбы танков
+- **TankCommonUseCases** — логика движения танков
+- **TankActionsUseCases** — логика действий (поворот, движение, стрельба)
+- **TankRenderUseCases** — логика графики и анимаций танков
+- **TankLifecycleUseCases** — логика жизненного цикла (спавн, взрыв)
 - **BulletUseCases** — логика движения и взаимодействия пуль
 - **MapUseCases** — логика работы с картой и блоками
 - **CollisionUseCases** — логика определения и обработки коллизий
 - **TilesUseCases** — логика работы с тайлами и анимациями
+- **AIUseCases** — логика AI врагов
+- **HQUseCases/HQRenderUseCases** — логика работы с базой (объединены в один файл)
 
 #### 4. Services Layer (Слой сервисов)
 **Ответственность:** Специализированная бизнес-логика, выделенная из Use Cases
-- **TankBrakingService** — специализированная логика торможения танков
+- **TankBrakingService** — логика торможения танков
+- **CoordinateService** — работа с координатами (округление)
+- **BoundaryCollisionService** — коллизии с границами карты
+- **WallCollisionService** — коллизии со стенами
+- **BulletCollisionService** — коллизии пуль с объектами
+- **TileService** — работа с тайлами и анимациями
+- **AnimationService** — обновление анимаций
+- **ImageService** — работа с изображениями (поворот)
+- **AITypeConverter** — конвертация типов Go ↔ Lua (Application Service)
+- **LuaEngine** — работа с Lua VM (Infrastructure)
 
 #### 5. Domain / Entities Layer (Слой домена/сущностей)
 **Ответственность:** Представление доменных сущностей и их поведения
-- **TankEntity, BulletEntity, BlockEntity, TileAnimationEntity** — сущности домена
+- **TankEntity** — танк (игрок и враги)
+- **BulletEntity** — пуля
+- **BlockEntity** — блок карты
+- **TileAnimationEntity** — анимация тайлов
+- **HQEntity** — база
+- **SessionEntity** — игровая сессия
+- **GameAiContext** — контекст для AI
 - Чистый домен без зависимостей от других слоёв
 
 #### 6. Repository Layer (Слой репозиториев)
@@ -395,13 +443,28 @@ graph TB
 
 ### Основные компоненты
 
-- **TankUseCases** — бизнес-логика танков (движение, поворот, стрельба)
-- **TankBrakingService** — специализированная логика торможения
+**Use Cases:**
+- **TankCommonUseCases** — общая логика движения танков
+- **TankActionsUseCases** — логика действий танков (поворот, движение, стрельба)
+- **TankRenderUseCases** — логика графики танков
+- **TankLifecycleUseCases** — логика жизненного цикла танков (спавн, взрыв)
 - **BulletUseCases** — создание и обновление пуль
 - **CollisionUseCases** — обработка коллизий
+- **HQUseCases/HQRenderUseCases** — логика базы (объединены)
+- **AIUseCases** — логика AI врагов
 - **TilesUseCases** — управление тайлами и анимациями
 
-Подробнее об архитектуре: [docs/arch.md](docs/arch.md), [docs/layers_architecture.md](docs/layers_architecture.md)
+**Services:**
+- **TankBrakingService** — логика торможения
+- **CollisionServices** — специализированная логика коллизий
+- **TileService** — работа с тайлами
+- **AITypeConverter** — конвертация типов Go ↔ Lua
+
+**Repositories:**
+- **GameRepositoriesRegistry** — реестр игровых репозиториев
+- **ITilesetRepositoryRegistry** — реестр тайлсетов
+- **IMapsDataRepository** — карты уровней
+- **IFileRepository** — чтение файлов
 
 ## 🛠️ Технологии
 

@@ -101,7 +101,7 @@ func TestGetLevel_Success(t *testing.T) {
 	mockTilesetRepo := &MockTilesetRepository{}
 	// Проверяем, что мок реализует интерфейс
 	var _ interfaces.ITilesetRepository = mockTilesetRepo
-	mapsService := NewMapsDataRepository(mockFileRepo, mockTilesetRepo)
+	mapsService := NewMapsDataRepository(mockFileRepo, mockTilesetRepo, 26)
 
 	// Вызываем функцию
 	level, err := mapsService.GetLevel(1)
@@ -152,7 +152,7 @@ func TestGetLevel_InvalidSize(t *testing.T) {
 	mockTilesetRepo := &MockTilesetRepository{}
 	// Проверяем, что мок реализует интерфейс
 	var _ interfaces.ITilesetRepository = mockTilesetRepo
-	mapsService := NewMapsDataRepository(mockFileRepo, mockTilesetRepo)
+	mapsService := NewMapsDataRepository(mockFileRepo, mockTilesetRepo, 26)
 
 	// Вызываем функцию
 	_, err := mapsService.GetLevel(1)

@@ -21,11 +21,12 @@ type TankEntity struct {
 	SpawnedAt     float64   // Время спавна танка
 	Altitude      Altitude
 	NextDirection *Direction // Следующее направление (используется во время Stops)
+	Size          Size       // Размер танка
 }
 
 // GetSize возвращает размер танка
 func (t *TankEntity) GetSize() Size {
-	return Size{Width: 16, Height: 16} // Стандартный размер танка
+	return t.Size
 }
 
 // GetPosition возвращает позицию танка в мире

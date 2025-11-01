@@ -32,6 +32,10 @@ type RendererAdapter struct {
 	hqRenderUseCases       *use_cases.HQRenderUseCases
 	imageCache             map[string]*ebiten.Image // Кэш ebiten.Image
 	imageService           *services.ImageService   // Сервис для работы с изображениями
+	tileMinSize            int
+	mapOffsetX             int
+	mapOffsetY             int
+	mapWidthHeight         int
 }
 
 // NewRendererAdapter создает новый экземпляр RendererAdapter
@@ -50,6 +54,10 @@ func NewRendererAdapter(
 	hqTilesUseCases *use_cases.TilesUseCases,
 	hq *types.HQEntity,
 	hqRenderUseCases *use_cases.HQRenderUseCases,
+	tileMinSize int,
+	mapOffsetX int,
+	mapOffsetY int,
+	mapWidthHeight int,
 ) *RendererAdapter {
 	return &RendererAdapter{
 		mapUseCases:            mapUseCases,
@@ -68,6 +76,10 @@ func NewRendererAdapter(
 		hqRenderUseCases:       hqRenderUseCases,
 		imageCache:             make(map[string]*ebiten.Image),
 		imageService:           services.NewImageService(),
+		tileMinSize:            tileMinSize,
+		mapOffsetX:             mapOffsetX,
+		mapOffsetY:             mapOffsetY,
+		mapWidthHeight:         mapWidthHeight,
 	}
 }
 
@@ -120,8 +132,8 @@ func (r *RendererAdapter) drawTank(screen *ebiten.Image) {
 	}
 
 	// Вычисляем позицию на экране
-	screenX := use_cases.MapOffset + tank.Position.X
-	screenY := use_cases.MapOffset + tank.Position.Y
+	screenX := float64(r.mapOffsetX) + tank.Position.X
+	screenY := float64(r.mapOffsetY) + tank.Position.Y
 
 	// Создаем опции для отрисовки
 	op := &ebiten.DrawImageOptions{}
@@ -205,8 +217,8 @@ func (r *RendererAdapter) drawEnemiesWithoutExplosions(screen *ebiten.Image) {
 
 		op := &ebiten.DrawImageOptions{}
 		op.GeoM.Translate(
-			use_cases.MapOffset+enemy.Position.X,
-			use_cases.MapOffset+enemy.Position.Y,
+			float64(r.mapOffsetX)+enemy.Position.X,
+			float64(r.mapOffsetY)+enemy.Position.Y,
 		)
 
 		screen.DrawImage(rotatedImage, op)
@@ -254,8 +266,8 @@ func (r *RendererAdapter) drawEnemiesExplosions(screen *ebiten.Image) {
 		}
 
 		op.GeoM.Translate(
-			use_cases.MapOffset+enemy.Position.X+offsetX,
-			use_cases.MapOffset+enemy.Position.Y+offsetY,
+			float64(r.mapOffsetX)+enemy.Position.X+offsetX,
+			float64(r.mapOffsetY)+enemy.Position.Y+offsetY,
 		)
 
 		screen.DrawImage(img, op)
@@ -295,8 +307,8 @@ func (r *RendererAdapter) drawEnemySpawnAnimation(
 
 	op := &ebiten.DrawImageOptions{}
 	op.GeoM.Translate(
-		use_cases.MapOffset+enemy.Position.X,
-		use_cases.MapOffset+enemy.Position.Y,
+		float64(r.mapOffsetX)+enemy.Position.X,
+		float64(r.mapOffsetY)+enemy.Position.Y,
 	)
 
 	screen.DrawImage(image, op)
@@ -327,8 +339,8 @@ func (r *RendererAdapter) drawSpawnAnimation(
 	image := ebiten.NewImageFromImage(imageData)
 
 	// Вычисляем позицию на экране (в центре позиции танка)
-	screenX := use_cases.MapOffset + tank.Position.X
-	screenY := use_cases.MapOffset + tank.Position.Y
+	screenX := float64(r.mapOffsetX) + tank.Position.X
+	screenY := float64(r.mapOffsetY) + tank.Position.Y
 
 	// Создаем опции для отрисовки
 	op := &ebiten.DrawImageOptions{}
@@ -373,8 +385,8 @@ func (r *RendererAdapter) drawHQ(screen *ebiten.Image) {
 		}
 
 		img := r.getCachedImage(imageID, imageData)
-		screenX := use_cases.MapOffset + r.hq.Position.X
-		screenY := use_cases.MapOffset + r.hq.Position.Y
+		screenX := float64(r.mapOffsetX) + r.hq.Position.X
+		screenY := float64(r.mapOffsetY) + r.hq.Position.Y
 
 		op := &ebiten.DrawImageOptions{}
 		op.GeoM.Translate(screenX, screenY)
@@ -399,8 +411,8 @@ func (r *RendererAdapter) drawHQ(screen *ebiten.Image) {
 	}
 
 	img := r.getCachedImage(imageID, imageData)
-	screenX := use_cases.MapOffset + r.hq.Position.X
-	screenY := use_cases.MapOffset + r.hq.Position.Y
+	screenX := float64(r.mapOffsetX) + r.hq.Position.X
+	screenY := float64(r.mapOffsetY) + r.hq.Position.Y
 
 	op := &ebiten.DrawImageOptions{}
 	op.GeoM.Translate(screenX, screenY)
@@ -442,8 +454,8 @@ func (r *RendererAdapter) drawHQExplosion(screen *ebiten.Image) {
 	}
 
 	op.GeoM.Translate(
-		use_cases.MapOffset+r.hq.Position.X+offsetX,
-		use_cases.MapOffset+r.hq.Position.Y+offsetY,
+		float64(r.mapOffsetX)+r.hq.Position.X+offsetX,
+		float64(r.mapOffsetY)+r.hq.Position.Y+offsetY,
 	)
 
 	screen.DrawImage(img, op)
@@ -485,8 +497,8 @@ func (r *RendererAdapter) drawBullets(screen *ebiten.Image) {
 			}
 
 			// Вычисляем позицию на экране
-			screenX := use_cases.MapOffset + bullet.Position.X
-			screenY := use_cases.MapOffset + bullet.Position.Y
+			screenX := float64(r.mapOffsetX) + bullet.Position.X
+			screenY := float64(r.mapOffsetY) + bullet.Position.Y
 
 			// Создаем опции для отрисовки
 			op := &ebiten.DrawImageOptions{}
@@ -540,10 +552,10 @@ func (r *RendererAdapter) drawScreenBackground(screen *ebiten.Image) {
 func (r *RendererAdapter) drawMapBackground(screen *ebiten.Image) {
 	vector.FillRect(
 		screen,
-		float32(use_cases.MapOffset),
-		float32(use_cases.MapOffset),
-		float32(use_cases.MapWidthHeight),
-		float32(use_cases.MapWidthHeight),
+		float32(r.mapOffsetX),
+		float32(r.mapOffsetY),
+		float32(r.mapWidthHeight),
+		float32(r.mapWidthHeight),
 		color.Black,
 		false,
 	)
@@ -579,8 +591,8 @@ func (r *RendererAdapter) drawBlocksByAltitude(
 		op := &ebiten.DrawImageOptions{}
 		// Предполагаем, что блоки имеют координаты X, Y в Position
 		op.GeoM.Translate(
-			use_cases.MapOffset+block.Position.X*use_cases.TileMinSize,
-			use_cases.MapOffset+block.Position.Y*use_cases.TileMinSize,
+			float64(r.mapOffsetX)+block.Position.X*float64(r.tileMinSize),
+			float64(r.mapOffsetY)+block.Position.Y*float64(r.tileMinSize),
 		)
 		screen.DrawImage(image, op)
 	}
