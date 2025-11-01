@@ -31,10 +31,20 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
+      - name: Cache Go tools
+        id: cache-go-tools
+        uses: actions/cache@v3
+        with:
+          path: ~/go/bin
+          key: ${{ runner.os }}-go-tools-v1
+          restore-keys: |
+            ${{ runner.os }}-go-tools-
+
       - name: Download dependencies
         run: just deps
 
       - name: Install development tools
+        if: steps.cache-go-tools.outputs.cache-hit != 'true'
         run: just install-tools
 
   format:
@@ -61,10 +71,20 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
+      - name: Cache Go tools
+        id: cache-go-tools
+        uses: actions/cache@v3
+        with:
+          path: ~/go/bin
+          key: ${{ runner.os }}-go-tools-v1
+          restore-keys: |
+            ${{ runner.os }}-go-tools-
+
       - name: Download dependencies
         run: just deps
 
       - name: Install development tools
+        if: steps.cache-go-tools.outputs.cache-hit != 'true'
         run: just install-tools
 
       - name: Check formatting
@@ -94,10 +114,20 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
+      - name: Cache Go tools
+        id: cache-go-tools
+        uses: actions/cache@v3
+        with:
+          path: ~/go/bin
+          key: ${{ runner.os }}-go-tools-v1
+          restore-keys: |
+            ${{ runner.os }}-go-tools-
+
       - name: Download dependencies
         run: just deps
 
       - name: Install development tools
+        if: steps.cache-go-tools.outputs.cache-hit != 'true'
         run: just install-tools
 
       - name: Run linter
