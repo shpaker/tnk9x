@@ -17,7 +17,7 @@ type luaEngineImpl struct {
 func NewLuaEngine() interfaces.ILuaEngine {
 	L := lua.NewState()
 	// Инициализируем генератор случайных чисел
-	L.DoString("math.randomseed(os.time())")
+	_ = L.DoString("math.randomseed(os.time())")
 
 	return &luaEngineImpl{L: L}
 }

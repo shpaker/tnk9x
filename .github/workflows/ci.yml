@@ -19,10 +19,8 @@ jobs:
         with:
           go-version: '1.24.3'
 
-      - name: Install Just
-        run: |
-          curl --proto '=https' --tlsv1.2 -sSf https://just.systems/install.sh | bash -s -- --to ~/.local/bin
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
+      - name: Setup Just
+        uses: extractions/setup-just@v3
 
       - name: Cache Go modules
         id: cache-go-modules
@@ -52,10 +50,8 @@ jobs:
         with:
           go-version: '1.24.3'
 
-      - name: Install Just
-        run: |
-          curl --proto '=https' --tlsv1.2 -sSf https://just.systems/install.sh | bash -s -- --to ~/.local/bin
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
+      - name: Setup Just
+        uses: extractions/setup-just@v3
 
       - name: Cache Go modules
         uses: actions/cache@v3
@@ -87,10 +83,8 @@ jobs:
         with:
           go-version: '1.24.3'
 
-      - name: Install Just
-        run: |
-          curl --proto '=https' --tlsv1.2 -sSf https://just.systems/install.sh | bash -s -- --to ~/.local/bin
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
+      - name: Setup Just
+        uses: extractions/setup-just@v3
 
       - name: Cache Go modules
         uses: actions/cache@v3
@@ -122,6 +116,9 @@ jobs:
         with:
           go-version: '1.24.3'
 
+      - name: Setup Just
+        uses: extractions/setup-just@v3
+
       - name: Cache Go modules
         uses: actions/cache@v3
         with:
@@ -149,10 +146,8 @@ jobs:
         with:
           go-version: '1.24.3'
 
-      - name: Install Just
-        run: |
-          curl --proto '=https' --tlsv1.2 -sSf https://just.systems/install.sh | bash -s -- --to ~/.local/bin
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
+      - name: Setup Just
+        uses: extractions/setup-just@v3
 
       - name: Cache Go modules
         uses: actions/cache@v3

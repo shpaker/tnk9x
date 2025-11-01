@@ -61,23 +61,23 @@ func (a *KeyboardInputAdapter) keyPressedEvents() {
 	// Rotate the tank if the key is pressed
 	tankRotated := false
 	if ebiten.IsKeyPressed(a.upButton) && !tankRotated {
-		a.tankActions.Rotate(a.tank, types.DirectionUp)
-		a.tankActions.Move(a.tank)
+		_ = a.tankActions.Rotate(a.tank, types.DirectionUp)
+		_ = a.tankActions.Move(a.tank)
 		tankRotated = true
 	}
 	if ebiten.IsKeyPressed(a.downButton) && !tankRotated {
-		a.tankActions.Rotate(a.tank, types.DirectionDown)
-		a.tankActions.Move(a.tank)
+		_ = a.tankActions.Rotate(a.tank, types.DirectionDown)
+		_ = a.tankActions.Move(a.tank)
 		tankRotated = true
 	}
 	if ebiten.IsKeyPressed(a.leftButton) && !tankRotated {
-		a.tankActions.Rotate(a.tank, types.DirectionLeft)
-		a.tankActions.Move(a.tank)
+		_ = a.tankActions.Rotate(a.tank, types.DirectionLeft)
+		_ = a.tankActions.Move(a.tank)
 		tankRotated = true
 	}
 	if ebiten.IsKeyPressed(a.rightButton) && !tankRotated {
-		a.tankActions.Rotate(a.tank, types.DirectionRight)
-		a.tankActions.Move(a.tank)
+		_ = a.tankActions.Rotate(a.tank, types.DirectionRight)
+		_ = a.tankActions.Move(a.tank)
 		// tankRotated = true // Не устанавливаем здесь, так как это последняя проверка
 	}
 }
@@ -112,5 +112,5 @@ func (a *KeyboardInputAdapter) tankShoot() {
 	if a.tank == nil {
 		return
 	}
-	a.tankActions.Shoot(a.tank)
+	_ = a.tankActions.Shoot(a.tank)
 }

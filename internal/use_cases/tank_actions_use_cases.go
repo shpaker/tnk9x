@@ -127,8 +127,8 @@ func (uc *TankActionsUseCases) ApplyDecision(
 	decision types.EnemyAIDecision,
 ) {
 	if uc.IsStopped(tank) {
-		uc.Rotate(tank, decision.Direction)
-		uc.Move(tank)
+		_ = uc.Rotate(tank, decision.Direction)
+		_ = uc.Move(tank)
 	}
 }
 

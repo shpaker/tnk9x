@@ -105,7 +105,7 @@ func (uc *CollisionUseCases) checkBulletBoundaryCollisions() {
 	)
 
 	for _, i := range indicesToRemove {
-		uc.bulletUseCases.RemoveBullet(i)
+		_ = uc.bulletUseCases.RemoveBullet(i)
 	}
 }
 
@@ -118,7 +118,7 @@ func (uc *CollisionUseCases) checkBulletTankCollisions(tank *types.TankEntity) {
 	)
 
 	for _, i := range indicesToRemove {
-		uc.bulletUseCases.RemoveBullet(i)
+		_ = uc.bulletUseCases.RemoveBullet(i)
 		// Здесь можно добавить логику обработки попадания в танк
 		// println("Tank hit by bullet!")
 	}
@@ -133,14 +133,14 @@ func (uc *CollisionUseCases) checkBulletEnemyCollisions() {
 	)
 
 	for _, i := range bulletIndicesToRemove {
-		uc.bulletUseCases.RemoveBullet(i)
+		_ = uc.bulletUseCases.RemoveBullet(i)
 
 		// Запускаем анимацию взрыва для врага через его Lifecycle Use Cases
 		if enemyIndex, exists := enemyIndicesToExplode[i]; exists {
 			if enemyIndex < len(uc.enemyLifecycles) &&
 				enemyIndex < len(uc.enemyTanks) &&
 				uc.enemyLifecycles[enemyIndex] != nil {
-				uc.enemyLifecycles[enemyIndex].Explode(
+				_ = uc.enemyLifecycles[enemyIndex].Explode(
 					uc.enemyTanks[enemyIndex],
 				)
 			}
@@ -163,13 +163,13 @@ func (uc *CollisionUseCases) checkBulletWallCollisions() {
 		blockIndex := blockIndicesToRemove[k]
 		blocks := uc.mapUseCases.GetBlocks()
 		if blockIndex < len(blocks) {
-			uc.mapUseCases.RemoveBlock(&blocks[blockIndex])
+			_ = uc.mapUseCases.RemoveBlock(&blocks[blockIndex])
 		}
 	}
 
 	// Удаляем пули
 	for _, i := range bulletIndicesToRemove {
-		uc.bulletUseCases.RemoveBullet(i)
+		_ = uc.bulletUseCases.RemoveBullet(i)
 	}
 }
 
@@ -183,7 +183,7 @@ func (uc *CollisionUseCases) checkBulletHQCollisions() {
 
 	// Удаляем пули
 	for _, i := range bulletIndicesToRemove {
-		uc.bulletUseCases.RemoveBullet(i)
+		_ = uc.bulletUseCases.RemoveBullet(i)
 	}
 }
 

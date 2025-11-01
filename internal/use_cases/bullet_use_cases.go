@@ -99,6 +99,5 @@ func (uc *BulletUseCases) GetBullets() []types.BulletEntity {
 
 // RemoveBullet удаляет пулю по индексу
 func (uc *BulletUseCases) RemoveBullet(index int) error {
-	uc.bulletsRepo.RemoveBullet(index)
-	return nil
+	return uc.bulletsRepo.RemoveBullet(index)
 }

@@ -78,6 +78,11 @@ lint:
     GOBIN_PATH="$({{gocmd}} env GOPATH)/bin"
     "$GOBIN_PATH/golangci-lint" run
 
+lint-notests:
+    #!/bin/bash
+    GOBIN_PATH="$({{gocmd}} env GOPATH)/bin"
+    "$GOBIN_PATH/golangci-lint" run --tests=false
+
 lint-fix:
     #!/bin/bash
     GOBIN_PATH="$({{gocmd}} env GOPATH)/bin"

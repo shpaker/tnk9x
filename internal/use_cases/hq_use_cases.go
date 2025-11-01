@@ -73,7 +73,7 @@ func (uc *HQUseCases) HandleBulletHit() (bulletIndicesToRemove []int, destroyed 
 
 	// Запускаем анимацию взрыва если нужно
 	if destroyed {
-		uc.Explode()
+		_ = uc.Explode()
 	}
 
 	return bulletIndicesToRemove, destroyed

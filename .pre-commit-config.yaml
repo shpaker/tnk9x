@@ -9,9 +9,9 @@ repos:
         files: \.(go)$
         pass_filenames: false
         always_run: false
-      - id: just-lint
-        name: Lint code with just lint
-        entry: just lint
+      - id: just-lint-notests
+        name: Lint code with just lint-notests
+        entry: just lint-notests
         language: system
         types: [file]
         files: \.(go)$

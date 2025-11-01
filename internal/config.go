@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/shpaker/gonflict/internal/types"
 	"gopkg.in/yaml.v3"
+
+	"github.com/shpaker/gonflict/internal/types"
 )
 
 // configSchema структура для парсинга YAML файла

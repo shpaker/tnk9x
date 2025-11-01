@@ -31,6 +31,5 @@ func (uc *MapUseCases) RemoveBlock(block *types.BlockEntity) error {
 	if block == nil {
 		return nil
 	}
-	uc.blocksRepo.RemoveBlockByPointer(block)
-	return nil
+	return uc.blocksRepo.RemoveBlockByPointer(block)
 }

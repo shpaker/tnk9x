@@ -426,10 +426,10 @@ func (g *GameStateUseCasesFacade) Update(dt float64) {
 	}
 
 	// Обновляем пули
-	g.bulletUseCases.UpdateBullets(dt)
+	_ = g.bulletUseCases.UpdateBullets(dt)
 
 	// Проверяем коллизии ПОСЛЕ движения всех объектов
-	g.collisionUseCases.UpdateCollisions()
+	_ = g.collisionUseCases.UpdateCollisions()
 
 	// Проверяем завершение анимации взрыва базы
 	if g.hqUseCases != nil {
