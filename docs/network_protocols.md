@@ -490,6 +490,12 @@ direction := (packet >> 6) & 0x03
 3. **High Performance Browser Networking** - Ilya Grigorik
    - [Сайт](https://hpbn.co/) (EN) - Внутренняя работа сетевых протоколов и оптимизация производительности
 
+4. **TCP/IP Illustrated** - W. Richard Stevens
+   - [Amazon](https://www.amazon.com/TCP-Illustrated-Vol-Addison-Wesley-Professional/dp/0201633469) (EN) - Детальное описание TCP/IP протоколов
+
+5. **Network Programming with Go** - Adam Woodbeck
+   - [Сайт](https://www.networkprogramming.com/) (EN) - Практическое руководство по сетевому программированию на Go
+
 ### Статьи и туториалы
 
 1. **Gaffer on Games - Network Protocol**
@@ -506,6 +512,21 @@ direction := (packet >> 6) & 0x03
 
 5. **Overwatch Gameplay Architecture**
    - [GDC Talk](https://www.youtube.com/watch?v=W3aieHjyNvw) (EN) - Архитектура сети Overwatch от Blizzard
+
+6. **Gaffer on Games - Latency Compensating Methods**
+   - [Статья](https://gafferongames.com/post/latency_compensating_methods/) (EN) - Методы компенсации задержки в сетевых играх
+
+7. **Gaffer on Games - Deterministic Lockstep**
+   - [Статья](https://gafferongames.com/post/deterministic_lockstep/) (EN) - Детерминированный lockstep для сетевых игр
+
+8. **Gaffer on Games - Snapshot Compression**
+   - [Статья](https://gafferongames.com/post/snapshot_compression/) (EN) - Сжатие снимков состояния для сетевых игр
+
+9. **Gaffer on Games - Networked Physics**
+   - [Статья](https://gafferongames.com/post/networked_physics/) (EN) - Синхронизация физики в сетевых играх
+
+10. **Valve - Latency Compensating Methods in Client/Server**
+    - [Статья](https://developer.valvesoftware.com/wiki/Latency_Compensating_Methods_in_Client/Server_In-game_Protocol_Design_and_Optimization) (EN) - Методы компенсации задержки от Valve
 
 ### Инструменты и библиотеки
 
@@ -535,17 +556,30 @@ direction := (packet >> 6) & 0x03
 
 ### Русскоязычные ресурсы
 
-1. **Хабр - Сетевые протоколы в играх**
-   - [Хабр](https://habr.com/ru/hub/gamedev/) (RU) - Статьи по разработке сетевых игр
+#### Статьи
 
-2. **GameDev.ru - Сетевое программирование**
+1. **Хабр - Синхронизация состояний в многопользовательских играх**
+   - [Статья](https://habr.com/ru/articles/328702/) (RU) - Различные способы реализации сетевого соединения, обновление состояния с фиксированным шагом и прогнозирование на стороне клиента
+
+2. **Хабр - Многопользовательские игры. Разработка сетевых приложений**
+   - [Статья](https://habr.com/ru/companies/piter/articles/310680/) (RU) - Обзор книги и ключевых принципов разработки сетевых игр
+
+3. **Хабр - Сетевые протоколы в играх**
+   - [Хабр](https://habr.com/ru/hub/gamedev/) (RU) - Раздел со статьями по разработке сетевых игр
+
+4. **Sky.pro - Основы сетевого программирования для онлайн игр**
+   - [Статья](https://sky.pro/wiki/gamedev/osnovy-setevogo-programmirovaniya-dlya-onlajn-igr/) (RU) - Введение в сетевое программирование для онлайн-игр
+
+5. **GameDev.ru - Сетевое программирование**
    - [Форум](https://www.gamedev.ru/) (RU) - Обсуждения и статьи по сетевому программированию
 
-3. **YouTube каналы**
+#### Видео и каналы
+
+6. **YouTube каналы**
    - [Борис Дворников](https://www.youtube.com/c/BorisDvornikov) (RU) - Туториалы по разработке сетевых игр
    - [GameDev для всех](https://www.youtube.com/@gamedevforall) (RU) - Образовательный контент по геймдеву
 
-4. **Tproger - Сетевые протоколы**
+7. **Tproger - Сетевые протоколы**
    - [Сайт](https://tproger.ru/tag/network-protocols/) (RU) - Статьи по сетевому программированию
 
 ### Онлайн курсы
