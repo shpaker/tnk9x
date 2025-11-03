@@ -126,7 +126,6 @@ Gonflict — это ремейк культовой игры Battle City (Tank 1
   - [ ] Система прогресса и сохранений
 
 - [ ] **Технические улучшения**
-  - [ ] Рефакторинг `GameStateUseCasesFacade` → `GameSession` (упрощение конструктора)
   - [ ] Оптимизация производительности
   - [ ] Расширение тестового покрытия
   - [ ] Документация API
@@ -238,9 +237,11 @@ internal/
 │   ├── bullet_entity.go
 │   ├── block_entity.go
 │   ├── hq_entity.go
-│   ├── tile_animation_entity.go
 │   ├── session_entity.go
-│   └── battle_entity.go
+│   ├── battle_entity.go
+│   └── image_providers/  # Image provider implementations
+│       ├── static_provider.go
+│       └── animation_provider.go
 └── repositories/      # Infrastructure Layer
     ├── game/              # In-memory репозитории
     ├── processed/         # Обработанные данные
@@ -259,24 +260,36 @@ graph TB
     end
 
     subgraph "Application/State Layer"
-        GAME_STATE[internal/states/<br/>GameState<br/>Состояние игры]
-        STATE_FACADE[internal/states/<br/>GameStateUseCasesFacade<br/>Фасад для Use Cases]
+        GAME_STATE[internal/states/<br/>GameState<br/>Состояние игры<br/>Оркестрация Use Cases]
     end
 
     subgraph "Use Cases / Business Logic Layer"
-        TANK_UC[internal/use_cases/<br/>TankUseCases<br/>Логика танков]
+        TANK_COMMON_UC[internal/use_cases/<br/>TankCommonUseCases<br/>Движение танков]
+        TANK_ACTIONS_UC[internal/use_cases/<br/>TankActionsUseCases<br/>Действия танков]
+        TANK_LIFECYCLE_UC[internal/use_cases/<br/>TankLifecycleUseCases<br/>Жизненный цикл танков]
+        TANK_RENDER_UC[internal/use_cases/<br/>TankRenderUseCases<br/>Графика танков]
         BULLET_UC[internal/use_cases/<br/>BulletUseCases<br/>Логика пуль]
         MAP_UC[internal/use_cases/<br/>MapUseCases<br/>Логика карты]
         COLLISION_UC[internal/use_cases/<br/>CollisionUseCases<br/>Логика коллизий]
         TILES_UC[internal/use_cases/<br/>TilesUseCases<br/>Логика тайлов/анимаций]
+        HQ_UC[internal/use_cases/<br/>HQUseCases<br/>Логика базы]
+        AI_UC[internal/use_cases/<br/>AIUseCases<br/>Логика AI]
     end
 
     subgraph "Services Layer"
         BRAKING_SVC[internal/services/<br/>TankBrakingService<br/>Логика торможения]
+        COORD_SVC[internal/services/<br/>CoordinateService<br/>Работа с координатами]
+        BOUNDARY_COLL_SVC[internal/services/<br/>BoundaryCollisionService<br/>Коллизии с границами]
+        WALL_COLL_SVC[internal/services/<br/>WallCollisionService<br/>Коллизии со стенами]
+        BULLET_COLL_SVC[internal/services/<br/>BulletCollisionService<br/>Коллизии пуль]
+        TILE_SVC[internal/services/<br/>TileService<br/>Работа с тайлами]
+        ANIM_SVC[internal/services/<br/>AnimationService<br/>Обновление анимаций]
+        IMAGE_SVC[internal/services/<br/>ImageService<br/>Работа с изображениями]
+        AI_CONVERTER_SVC[internal/services/<br/>AITypeConverter<br/>Конвертация типов AI]
     end
 
     subgraph "Domain / Entities Layer"
-        ENTITIES[internal/types/<br/>TankEntity<br/>BulletEntity<br/>BlockEntity<br/>TileAnimationEntity<br/>Сущности домена]
+        ENTITIES[internal/types/<br/>TankEntity<br/>BulletEntity<br/>BlockEntity<br/>HQEntity<br/>SessionEntity<br/>BattleEntity<br/>Сущности домена]
     end
 
     subgraph "Repository Layer"
@@ -307,25 +320,37 @@ graph TB
     APP --> GAME_STATE
     GAME_STATE --> RENDERER
     GAME_STATE --> INPUT
-    GAME_STATE --> STATE_FACADE
     
-    %% State Facade connections
-    STATE_FACADE --> TANK_UC
-    STATE_FACADE --> BULLET_UC
-    STATE_FACADE --> MAP_UC
-    STATE_FACADE --> COLLISION_UC
-    STATE_FACADE --> TILES_UC
-    STATE_FACADE --> INPUT
+    %% Game State connections
+    GAME_STATE --> TANK_COMMON_UC
+    GAME_STATE --> TANK_ACTIONS_UC
+    GAME_STATE --> TANK_LIFECYCLE_UC
+    GAME_STATE --> TANK_RENDER_UC
+    GAME_STATE --> BULLET_UC
+    GAME_STATE --> MAP_UC
+    GAME_STATE --> COLLISION_UC
+    GAME_STATE --> TILES_UC
+    GAME_STATE --> HQ_UC
+    GAME_STATE --> AI_UC
+    GAME_STATE --> INPUT
     
     %% Use Cases connections
-    TANK_UC --> BRAKING_SVC
-    TANK_UC --> BULLET_UC
-    TANK_UC --> TILES_UC
+    TANK_COMMON_UC --> BRAKING_SVC
+    TANK_ACTIONS_UC --> BRAKING_SVC
+    TANK_ACTIONS_UC --> BULLET_UC
+    TANK_RENDER_UC --> TILES_UC
+    TANK_LIFECYCLE_UC --> TILES_UC
     BULLET_UC --> TILES_UC
+    COLLISION_UC --> BOUNDARY_COLL_SVC
+    COLLISION_UC --> WALL_COLL_SVC
+    COLLISION_UC --> BULLET_COLL_SVC
     COLLISION_UC --> ENTITIES
+    HQ_UC --> BULLET_COLL_SVC
+    AI_UC --> AI_CONVERTER_SVC
     
     %% Repository connections
-    TANK_UC --> TANKS_REPO
+    TANK_ACTIONS_UC --> TANKS_REPO
+    TANK_LIFECYCLE_UC --> TANKS_REPO
     BULLET_UC --> BULLETS_REPO
     MAP_UC --> BLOCKS_REPO
     TILES_UC --> ANIM_REPO
@@ -335,7 +360,7 @@ graph TB
     GAME_REPO --> ANIM_REPO
     
     %% Processed repositories connections
-    STATE_FACADE --> PROCESSED_REPO
+    GAME_STATE --> PROCESSED_REPO
     APP --> PROCESSED_REPO
     PROCESSED_REPO --> RAW_REPO
     
@@ -343,9 +368,13 @@ graph TB
     RAW_REPO --> ASSETS
     
     %% Entities connections
-    TANK_UC --> ENTITIES
+    TANK_COMMON_UC --> ENTITIES
+    TANK_ACTIONS_UC --> ENTITIES
+    TANK_LIFECYCLE_UC --> ENTITIES
+    TANK_RENDER_UC --> ENTITIES
     BULLET_UC --> ENTITIES
     MAP_UC --> ENTITIES
+    HQ_UC --> ENTITIES
     BLOCKS_REPO --> ENTITIES
     BULLETS_REPO --> ENTITIES
     TANKS_REPO --> ENTITIES
@@ -364,9 +393,9 @@ graph TB
     classDef infrastructure fill:#eceff1,stroke:#263238,stroke-width:2px
     
     class MAIN,APP,RENDERER,INPUT presentation
-    class GAME_STATE,STATE_FACADE application
-    class TANK_UC,BULLET_UC,MAP_UC,COLLISION_UC,TILES_UC usecases
-    class BRAKING_SVC services
+    class GAME_STATE application
+    class TANK_COMMON_UC,TANK_ACTIONS_UC,TANK_LIFECYCLE_UC,TANK_RENDER_UC,BULLET_UC,MAP_UC,COLLISION_UC,TILES_UC,HQ_UC,AI_UC usecases
+    class BRAKING_SVC,COORD_SVC,BOUNDARY_COLL_SVC,WALL_COLL_SVC,BULLET_COLL_SVC,TILE_SVC,ANIM_SVC,IMAGE_SVC,AI_CONVERTER_SVC services
     class ENTITIES domain
     class GAME_REPO,BLOCKS_REPO,BULLETS_REPO,TANKS_REPO,ANIM_REPO,PROCESSED_REPO,RAW_REPO repository
     class CONFIG,ASSETS infrastructure
@@ -383,8 +412,7 @@ graph TB
 
 #### 2. Application/State Layer (Слой приложения/состояний)
 **Ответственность:** Управление состояниями приложения и оркестрация Use Cases
-- **internal/states/GameState** — состояние игры, координирует обновление и отрисовку
-- **internal/states/GameStateUseCasesFacade** — фасад для координации Use Cases
+- **internal/states/GameState** — состояние игры, координирует обновление, отрисовку и координацию Use Cases
 
 #### 3. Use Cases / Business Logic Layer (Слой бизнес-логики)
 **Ответственность:** Реализация бизнес-правил и игровой логики
@@ -402,25 +430,26 @@ graph TB
 #### 4. Services Layer (Слой сервисов)
 **Ответственность:** Специализированная бизнес-логика, выделенная из Use Cases
 - **TankBrakingService** — логика торможения танков
-- **CoordinateService** — работа с координатами (округление)
+- **CoordinateService** — работа с координатами (округление до кратного 4)
 - **BoundaryCollisionService** — коллизии с границами карты
-- **WallCollisionService** — коллизии со стенами
-- **BulletCollisionService** — коллизии пуль с объектами
-- **TileService** — работа с тайлами и анимациями
+- **WallCollisionService** — коллизии со стенами и блоками
+- **BulletCollisionService** — коллизии пуль с объектами (стены, танки, база)
+- **TileService** — работа с тайлами и создание анимаций из конфигурации
 - **AnimationService** — обновление анимаций
-- **ImageService** — работа с изображениями (поворот)
+- **ImageService** — работа с изображениями (поворот по направлению)
 - **AITypeConverter** — конвертация типов Go ↔ Lua (Application Service)
-- **LuaEngine** — работа с Lua VM (Infrastructure)
+- **LuaEngine** — работа с Lua VM (Infrastructure, в `adapters/input_adapters/ai/`)
 
 #### 5. Domain / Entities Layer (Слой домена/сущностей)
 **Ответственность:** Представление доменных сущностей и их поведения
 - **TankEntity** — танк (игрок и враги)
 - **BulletEntity** — пуля
 - **BlockEntity** — блок карты
-- **TileAnimationEntity** — анимация тайлов
 - **HQEntity** — база
 - **SessionEntity** — игровая сессия
+- **BattleEntity** — боевая сущность
 - **GameAiContext** — контекст для AI
+- **Image Providers** (`image_providers/`) — статические и анимационные провайдеры изображений
 - Чистый домен без зависимостей от других слоёв
 
 #### 6. Repository Layer (Слой репозиториев)
@@ -443,21 +472,27 @@ graph TB
 
 ### Основные компоненты
 
-**Use Cases:**
+**Use Cases (10 компонентов):**
 - **TankCommonUseCases** — общая логика движения танков
 - **TankActionsUseCases** — логика действий танков (поворот, движение, стрельба)
 - **TankRenderUseCases** — логика графики танков
 - **TankLifecycleUseCases** — логика жизненного цикла танков (спавн, взрыв)
 - **BulletUseCases** — создание и обновление пуль
 - **CollisionUseCases** — обработка коллизий
-- **HQUseCases/HQRenderUseCases** — логика базы (объединены)
+- **HQUseCases** — логика базы (обработка попаданий и взрывов)
 - **AIUseCases** — логика AI врагов
+- **MapUseCases** — логика работы с картой и блоками
 - **TilesUseCases** — управление тайлами и анимациями
 
 **Services:**
 - **TankBrakingService** — логика торможения
-- **CollisionServices** — специализированная логика коллизий
+- **CoordinateService** — работа с координатами
+- **BoundaryCollisionService** — коллизии с границами
+- **WallCollisionService** — коллизии со стенами
+- **BulletCollisionService** — коллизии пуль
 - **TileService** — работа с тайлами
+- **AnimationService** — обновление анимаций
+- **ImageService** — работа с изображениями
 - **AITypeConverter** — конвертация типов Go ↔ Lua
 
 **Repositories:**

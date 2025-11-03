@@ -12,7 +12,7 @@ type HQUseCases struct {
 	bulletUseCases         interfaces.IBulletUseCases
 	bulletCollisionService interfaces.IBulletCollisionService
 	tilesUseCases          *TilesUseCases
-	AnimationGetter        types.IImageProvider // Публичное поле для рендеринга
+	Image                  types.IImageProvider // Публичное поле для рендеринга
 }
 
 // NewHQUseCases создает новый экземпляр HQUseCases
@@ -27,7 +27,7 @@ func NewHQUseCases(
 		bulletUseCases:         bulletUseCases,
 		bulletCollisionService: bulletCollisionService,
 		tilesUseCases:          tilesUseCases,
-		AnimationGetter:        nil,
+		Image:                  nil,
 	}
 }
 
@@ -65,7 +65,7 @@ func (uc *HQUseCases) Explode() error {
 		return err
 	}
 
-	uc.AnimationGetter = explosionAnim
+	uc.Image = explosionAnim
 	uc.hq.State = types.HQStateExploding
 
 	uc.tilesUseCases.StartAnimation(explosionAnim)
@@ -74,12 +74,12 @@ func (uc *HQUseCases) Explode() error {
 
 // IsExplosionAnimationFinished возвращает true если анимация взрыва завершена
 func (uc *HQUseCases) IsExplosionAnimationFinished() bool {
-	if uc.AnimationGetter == nil {
+	if uc.Image == nil {
 		return true
 	}
 
 	// Проверяем, что анимация завершена
-	if tileAnim, ok := uc.AnimationGetter.(*image_providers.AnimationProvider); ok {
+	if tileAnim, ok := uc.Image.(*image_providers.AnimationProvider); ok {
 		return tileAnim.IsFinished()
 	}
 

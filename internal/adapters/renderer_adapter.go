@@ -412,12 +412,12 @@ func (r *GameStateRendererAdapter) drawHQExplosion(screen *ebiten.Image) {
 		return
 	}
 
-	// Получаем HQUseCases как конкретный тип для доступа к AnimationGetter
+	// Получаем HQUseCases как конкретный тип для доступа к Image
 	hqUseCases, ok := r.hqUseCases.(*use_cases.HQUseCases)
-	if !ok || hqUseCases.AnimationGetter == nil {
+	if !ok || hqUseCases.Image == nil {
 		return
 	}
-	imageID, err := hqUseCases.AnimationGetter.GetImageID()
+	imageID, err := hqUseCases.Image.GetImageID()
 	if err != nil {
 		return
 	}
@@ -435,7 +435,7 @@ func (r *GameStateRendererAdapter) drawHQExplosion(screen *ebiten.Image) {
 
 	// Применяем offset если это анимация
 	var offsetX, offsetY float64 = 0, 0
-	if tileAnim, ok := hqUseCases.AnimationGetter.(*image_providers.AnimationProvider); ok {
+	if tileAnim, ok := hqUseCases.Image.(*image_providers.AnimationProvider); ok {
 		offsetX = tileAnim.Offset[0]
 		offsetY = tileAnim.Offset[1]
 	}
