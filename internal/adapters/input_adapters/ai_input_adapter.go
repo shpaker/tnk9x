@@ -47,9 +47,9 @@ func (a *AiInputAdapter) Update(dt float64) {
 		// Используем AIUseCases для выполнения AI логики
 		if a.aiUseCases != nil && a.aiContext != nil {
 			decision, err := a.aiUseCases.ExecuteAI(a.tank, a.aiContext)
-			if err == nil && decision.Direction != 0 {
+			if err == nil && decision.Direction != 0 && a.tank != nil {
 				// Применяем решение
-				a.applyDecision(decision)
+				a.tankActions.ApplyDecision(a.tank, decision)
 			}
 		}
 	}
@@ -58,22 +58,5 @@ func (a *AiInputAdapter) Update(dt float64) {
 
 	if a.tickCounter >= a.updateInterval {
 		a.tickCounter = 0
-	}
-}
-
-// applyDecision применяет решение AI к танку через TankActionsUseCases
-func (a *AiInputAdapter) applyDecision(
-	decision types.EnemyAIDecision,
-) {
-	if a.tank == nil {
-		return
-	}
-	a.tankActions.ApplyDecision(a.tank, decision)
-}
-
-// Close освобождает ресурсы
-func (a *AiInputAdapter) Close() {
-	if a.aiUseCases != nil {
-		a.aiUseCases.Close()
 	}
 }

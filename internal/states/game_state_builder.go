@@ -5,7 +5,6 @@ import (
 
 	"github.com/shpaker/gonflict/internal/adapters"
 	"github.com/shpaker/gonflict/internal/adapters/input_adapters"
-	"github.com/shpaker/gonflict/internal/adapters/input_adapters/ai"
 	"github.com/shpaker/gonflict/internal/interfaces"
 	"github.com/shpaker/gonflict/internal/services"
 	"github.com/shpaker/gonflict/internal/types"
@@ -33,6 +32,9 @@ type GameStateBuilder struct {
 	// Временные адаптеры
 	tempRendererAdapter *adapters.GameStateRendererAdapter
 	tempInputAdapter    interfaces.IInputAdapter
+
+	// Lua Engine для AI (существует весь срок жизни App)
+	luaEngine interfaces.ILuaEngine
 }
 
 // NewGameStateBuilder создает новый builder
@@ -49,6 +51,7 @@ func NewGameStateBuilder(
 	tankBrakingService interfaces.ITankBrakingService,
 	tempRendererAdapter *adapters.GameStateRendererAdapter,
 	tempInputAdapter interfaces.IInputAdapter,
+	luaEngine interfaces.ILuaEngine,
 ) *GameStateBuilder {
 	return &GameStateBuilder{
 		mapsRepo:                 mapsRepo,
@@ -63,6 +66,7 @@ func NewGameStateBuilder(
 		tankBrakingService:       tankBrakingService,
 		tempRendererAdapter:      tempRendererAdapter,
 		tempInputAdapter:         tempInputAdapter,
+		luaEngine:                luaEngine,
 	}
 }
 
@@ -129,12 +133,17 @@ func (b *GameStateBuilder) Build() (*GameState, error) {
 		return nil, err
 	}
 
+	// Выполняем скрипт AI в общем Lua engine (существует весь срок жизни App)
+	if err := b.luaEngine.Execute(enemyScript); err != nil {
+		return nil, err
+	}
+
 	// Создаем врагов
 	enemyInputAdapters, enemyTanksEntities, err := b.buildEnemyComponents(
 		tankLifecycleUseCases,
 		tankActionsUseCases,
 		aiContext,
-		enemyScript,
+		b.luaEngine,
 		baseSizePx,
 	)
 	if err != nil {
@@ -322,7 +331,7 @@ func (b *GameStateBuilder) buildEnemyComponents(
 	tankLifecycleUseCases interfaces.ITankLifecycleUseCases,
 	tankActionsUseCases interfaces.ITankActionsUseCases,
 	aiContext *types.GameAiContext,
-	enemyScript string,
+	luaEngine interfaces.ILuaEngine,
 	baseSizePx uint,
 ) ([]interfaces.IInputAdapter, []*types.TankEntity, error) {
 	updateInterval := 60
@@ -368,13 +377,7 @@ func (b *GameStateBuilder) buildEnemyComponents(
 
 		enemyTanksEntities = append(enemyTanksEntities, enemyTank)
 
-		// Создаем Lua engine для AI
-		luaEngine := ai.NewLuaEngine()
-		if err := luaEngine.Execute(enemyScript); err != nil {
-			luaEngine.Close()
-			return nil, nil, err
-		}
-
+		// Используем общий Lua engine для всех врагов
 		// Создаем тип конвертер для AI
 		typeConverter := services.NewAITypeConverter(luaEngine)
 
@@ -390,7 +393,6 @@ func (b *GameStateBuilder) buildEnemyComponents(
 			aiUseCases,
 		)
 		if err != nil {
-			aiUseCases.Close()
 			return nil, nil, err
 		}
 		enemyInputAdapters = append(enemyInputAdapters, aiInputAdapter)

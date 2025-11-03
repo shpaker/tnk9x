@@ -9,6 +9,8 @@ import (
 
 	"github.com/shpaker/gonflict/internal/adapters"
 	"github.com/shpaker/gonflict/internal/adapters/input_adapters"
+	"github.com/shpaker/gonflict/internal/adapters/input_adapters/ai"
+	"github.com/shpaker/gonflict/internal/interfaces"
 	"github.com/shpaker/gonflict/internal/repositories/game"
 	"github.com/shpaker/gonflict/internal/repositories/processed"
 	"github.com/shpaker/gonflict/internal/repositories/raw"
@@ -19,8 +21,9 @@ import (
 )
 
 type App struct {
-	config *Config
-	states.State
+	config    *Config
+	State     states.State
+	luaEngine interfaces.ILuaEngine // Lua Engine для AI (существует весь срок жизни App)
 }
 
 // ebiten game interface
@@ -66,6 +69,9 @@ func New(cfg *Config) *App {
 
 	// Создаем репозиторий скриптов
 	scriptsRepo := processed.NewScriptsRepository(fileRepo)
+
+	// Создаем Lua engine для AI (общий для всех GameState, существует весь срок жизни App)
+	luaEngine := ai.NewLuaEngine()
 
 	// Создаем репозиторий карт уровней
 	mapsRepo := processed.NewMapsDataRepository(
@@ -178,6 +184,7 @@ func New(cfg *Config) *App {
 		tankBrakingService,
 		tempRendererAdapter,
 		tempInputAdapter,
+		luaEngine,
 	)
 	if err != nil {
 		fmt.Printf("Error creating GameState: %v\n", err)
@@ -229,8 +236,9 @@ func New(cfg *Config) *App {
 	gameStatePtr.RendererAdapter = rendererAdapter
 
 	return &App{
-		config: cfg,
-		State:  gameStatePtr,
+		config:    cfg,
+		State:     gameStatePtr,
+		luaEngine: luaEngine,
 	}
 }
 
@@ -241,9 +249,18 @@ func (app *App) Run(ctx context.Context) error {
 	)
 	ebiten.SetWindowTitle(app.config.Name)
 
-	if err := ebiten.RunGame(app); err != nil {
-		return err
-	}
+	err := ebiten.RunGame(app)
 
-	return nil
+	// Закрываем luaEngine при завершении App
+	app.Close()
+
+	return err
+}
+
+// Close освобождает ресурсы App, включая Lua engine
+func (app *App) Close() {
+	if app.luaEngine != nil {
+		app.luaEngine.Close()
+		app.luaEngine = nil
+	}
 }

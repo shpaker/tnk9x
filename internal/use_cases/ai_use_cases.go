@@ -2,20 +2,19 @@ package use_cases
 
 import (
 	"github.com/shpaker/gonflict/internal/interfaces"
-	"github.com/shpaker/gonflict/internal/services"
 	"github.com/shpaker/gonflict/internal/types"
 )
 
 // AIUseCases представляет Use Case для работы с AI логикой (Application Layer)
 type AIUseCases struct {
 	luaEngine     interfaces.ILuaEngine
-	typeConverter services.IAITypeConverter
+	typeConverter interfaces.IAITypeConverter
 }
 
 // NewAIUseCases создает новый AI Use Case
 func NewAIUseCases(
 	luaEngine interfaces.ILuaEngine,
-	typeConverter services.IAITypeConverter,
+	typeConverter interfaces.IAITypeConverter,
 ) *AIUseCases {
 	return &AIUseCases{
 		luaEngine:     luaEngine,

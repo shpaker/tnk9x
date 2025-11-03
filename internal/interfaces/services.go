@@ -1,6 +1,8 @@
 package interfaces
 
 import (
+	lua "github.com/yuin/gopher-lua"
+
 	"github.com/shpaker/gonflict/internal/types"
 	image_providers "github.com/shpaker/gonflict/internal/types/image_providers"
 )
@@ -92,4 +94,16 @@ type ITileService interface {
 		repo ITilesetRepository,
 		id string,
 	) (*image_providers.AnimationProvider, error)
+}
+
+// IAITypeConverter интерфейс для конвертации типов между Go и Lua (Application Layer)
+type IAITypeConverter interface {
+	// TankToLua конвертирует TankEntity в Lua таблицу
+	TankToLua(tank *types.TankEntity) (*lua.LTable, error)
+
+	// ContextToLua конвертирует GameAiContext в Lua таблицу
+	ContextToLua(context *types.GameAiContext) (*lua.LTable, error)
+
+	// LuaToDecision конвертирует результаты Lua функции в EnemyAIDecision
+	LuaToDecision(results []lua.LValue) (types.EnemyAIDecision, error)
 }

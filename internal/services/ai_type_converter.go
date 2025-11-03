@@ -9,32 +9,22 @@ import (
 	"github.com/shpaker/gonflict/internal/types"
 )
 
-// IAITypeConverter интерфейс для конвертации типов между Go и Lua (Application Layer)
-type IAITypeConverter interface {
-	// TankToLua конвертирует TankEntity в Lua таблицу
-	TankToLua(tank *types.TankEntity) (*lua.LTable, error)
-
-	// ContextToLua конвертирует GameAiContext в Lua таблицу
-	ContextToLua(context *types.GameAiContext) (*lua.LTable, error)
-
-	// LuaToDecision конвертирует результаты Lua функции в EnemyAIDecision
-	LuaToDecision(results []lua.LValue) (types.EnemyAIDecision, error)
-}
-
-// aiTypeConverterImpl реализация IAITypeConverter
-type aiTypeConverterImpl struct {
+// aiTypeConverter реализация IAITypeConverter
+type aiTypeConverter struct {
 	luaEngine interfaces.ILuaEngine
 }
 
 // NewAITypeConverter создает новый конвертер типов AI
-func NewAITypeConverter(luaEngine interfaces.ILuaEngine) IAITypeConverter {
-	return &aiTypeConverterImpl{
+func NewAITypeConverter(
+	luaEngine interfaces.ILuaEngine,
+) interfaces.IAITypeConverter {
+	return &aiTypeConverter{
 		luaEngine: luaEngine,
 	}
 }
 
 // TankToLua конвертирует TankEntity в Lua таблицу
-func (c *aiTypeConverterImpl) TankToLua(
+func (c *aiTypeConverter) TankToLua(
 	tank *types.TankEntity,
 ) (*lua.LTable, error) {
 	if tank == nil {
@@ -51,7 +41,7 @@ func (c *aiTypeConverterImpl) TankToLua(
 }
 
 // ContextToLua конвертирует GameAiContext в Lua таблицу
-func (c *aiTypeConverterImpl) ContextToLua(
+func (c *aiTypeConverter) ContextToLua(
 	context *types.GameAiContext,
 ) (*lua.LTable, error) {
 	if context == nil {
@@ -76,7 +66,7 @@ func (c *aiTypeConverterImpl) ContextToLua(
 }
 
 // LuaToDecision конвертирует результаты Lua функции в EnemyAIDecision
-func (c *aiTypeConverterImpl) LuaToDecision(
+func (c *aiTypeConverter) LuaToDecision(
 	results []lua.LValue,
 ) (types.EnemyAIDecision, error) {
 	if len(results) < 2 {

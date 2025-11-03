@@ -8,8 +8,8 @@ import (
 	"github.com/shpaker/gonflict/internal/interfaces"
 )
 
-// luaEngineImpl реализация interfaces.ILuaEngine
-type luaEngineImpl struct {
+// luaEngine реализация interfaces.ILuaEngine
+type luaEngine struct {
 	L *lua.LState
 }
 
@@ -19,16 +19,16 @@ func NewLuaEngine() interfaces.ILuaEngine {
 	// Инициализируем генератор случайных чисел
 	_ = L.DoString("math.randomseed(os.time())")
 
-	return &luaEngineImpl{L: L}
+	return &luaEngine{L: L}
 }
 
 // Execute выполняет Lua скрипт из строки
-func (e *luaEngineImpl) Execute(script string) error {
+func (e *luaEngine) Execute(script string) error {
 	return e.L.DoString(script)
 }
 
 // CallFunction вызывает Lua функцию с параметрами и возвращает результаты
-func (e *luaEngineImpl) CallFunction(
+func (e *luaEngine) CallFunction(
 	functionName string,
 	args ...lua.LValue,
 ) ([]lua.LValue, error) {
@@ -56,12 +56,12 @@ func (e *luaEngineImpl) CallFunction(
 }
 
 // NewTable создает новую Lua таблицу
-func (e *luaEngineImpl) NewTable() *lua.LTable {
+func (e *luaEngine) NewTable() *lua.LTable {
 	return e.L.NewTable()
 }
 
 // ToBool конвертирует Lua значение в bool
-func (e *luaEngineImpl) ToBool(value lua.LValue) bool {
+func (e *luaEngine) ToBool(value lua.LValue) bool {
 	if value == nil || value == lua.LNil {
 		return false
 	}
@@ -72,7 +72,7 @@ func (e *luaEngineImpl) ToBool(value lua.LValue) bool {
 }
 
 // ToNumber конвертирует Lua значение в число
-func (e *luaEngineImpl) ToNumber(value lua.LValue) lua.LNumber {
+func (e *luaEngine) ToNumber(value lua.LValue) lua.LNumber {
 	if value == nil || value == lua.LNil {
 		return 0
 	}
@@ -83,7 +83,7 @@ func (e *luaEngineImpl) ToNumber(value lua.LValue) lua.LNumber {
 }
 
 // Close освобождает ресурсы Lua VM
-func (e *luaEngineImpl) Close() {
+func (e *luaEngine) Close() {
 	if e.L != nil {
 		e.L.Close()
 	}

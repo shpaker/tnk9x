@@ -55,6 +55,7 @@ func NewGameState(
 	tankBrakingService interfaces.ITankBrakingService,
 	rendererAdapter *adapters.GameStateRendererAdapter,
 	inputAdapter interfaces.IInputAdapter,
+	luaEngine interfaces.ILuaEngine,
 ) (*GameState, error) {
 	builder := NewGameStateBuilder(
 		mapsRepo,
@@ -69,6 +70,7 @@ func NewGameState(
 		tankBrakingService,
 		rendererAdapter,
 		inputAdapter,
+		luaEngine,
 	)
 	return builder.Build()
 }
