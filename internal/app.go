@@ -2,16 +2,17 @@ package internal
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 
-	"github.com/shpaker/gonflict/internal/adapters"
-	"github.com/shpaker/gonflict/internal/adapters/input_adapters"
-	"github.com/shpaker/gonflict/internal/adapters/input_adapters/ai"
+	game "github.com/shpaker/gonflict/internal/adapters/game"
+	"github.com/shpaker/gonflict/internal/adapters/game/input_adapters"
+	"github.com/shpaker/gonflict/internal/adapters/game/input_adapters/ai"
 	"github.com/shpaker/gonflict/internal/interfaces"
-	"github.com/shpaker/gonflict/internal/repositories/game"
+	game_repos "github.com/shpaker/gonflict/internal/repositories/game"
 	"github.com/shpaker/gonflict/internal/repositories/processed"
 	"github.com/shpaker/gonflict/internal/repositories/raw"
 	"github.com/shpaker/gonflict/internal/services"
@@ -24,6 +25,7 @@ type App struct {
 	config    *Config
 	State     states.State
 	luaEngine interfaces.ILuaEngine // Lua Engine для AI (существует весь срок жизни App)
+	session   *types.SessionEntity  // Сессия игры
 }
 
 // ebiten game interface
@@ -32,13 +34,26 @@ func (app *App) Layout(outsideWidth, outsideHeight int) (int, int) {
 }
 
 func (app *App) Update() error {
-	newState, err := app.State.Update()
-	if err != nil {
-		return err
+	// Обработка ESC для выхода из приложения
+	if ebiten.IsKeyPressed(ebiten.KeyEscape) {
+		return errors.New("exit application")
 	}
-	if newState != nil {
-		app.State = newState
+
+	// Обновляем текущее состояние
+	app.State.Update()
+
+	// Проверяем переходы через session.GetTargetState() (автоматически обнуляется)
+	targetState := app.session.GetTargetState()
+	if targetState != nil {
+		newState, err := app.createStateFromTarget(app.session, targetState)
+		if err != nil {
+			return err
+		}
+		if newState != nil {
+			app.State = newState
+		}
 	}
+
 	return nil
 }
 
@@ -58,34 +73,112 @@ func (app *App) Draw(screen *ebiten.Image) {
 
 func New(cfg *Config) *App {
 	// Создаем файловый репозиторий
-	fileRepo := raw.NewFileRepository("assets")
+	fileRepository := raw.NewFileRepository("assets")
 
-	// Создаем реестр всех тайлсетов
-	tilesetRegistry, err := processed.NewTilesetRepositoryRegistry(fileRepo)
-	if err != nil {
-		fmt.Printf("Error creating TilesetRepositoryRegistry: %v\n", err)
-		panic(err)
-	}
-
-	// Создаем репозиторий скриптов
-	scriptsRepo := processed.NewScriptsRepository(fileRepo)
+	// Создаем репозиторий шрифтов
+	fontsRepository := processed.NewFontsRepository(fileRepository)
 
 	// Создаем Lua engine для AI (общий для всех GameState, существует весь срок жизни App)
 	luaEngine := ai.NewLuaEngine()
 
-	// Создаем репозиторий карт уровней
-	mapsRepo := processed.NewMapsDataRepository(
-		fileRepo,
+	// Создаем SessionEntity
+	session := types.NewSessionEntity()
+
+	// Создаем Use Cases для выбор уровня
+	stageSelectorUseCases := use_cases.NewStageSelectorUseCases()
+	stateTransitionUseCases := use_cases.NewStateTransitionUseCases()
+
+	// Создаем StageSelectState как дефолтное состояние
+	stageSelectState, err := states.NewStageSelectState(
+		cfg,
+		stageSelectorUseCases,
+		stateTransitionUseCases,
+		session,
+		fontsRepository,
+	)
+	if err != nil {
+		fmt.Printf("Error creating StageSelectState: %v\n", err)
+		panic(err)
+	}
+
+	return &App{
+		config:    cfg,
+		State:     stageSelectState,
+		luaEngine: luaEngine,
+		session:   session,
+	}
+}
+
+// createStateFromTarget создает состояние на основе TargetState
+func (app *App) createStateFromTarget(
+	session *types.SessionEntity,
+	targetState *types.StateType,
+) (states.State, error) {
+	if targetState == nil {
+		return nil, nil // Нет перехода
+	}
+
+	switch *targetState {
+	case types.StateTypeGame:
+		return app.createGameState(session)
+	case types.StateTypeStageSelect:
+		return app.createStageSelectState(session)
+	default:
+		return nil, nil
+	}
+}
+
+// createGameState создает игровое состояние
+func (app *App) createGameState(
+	session *types.SessionEntity,
+) (states.State, error) {
+	// Создаем все необходимые зависимости для GameState
+	fileRepository := raw.NewFileRepository("assets")
+
+	// Создаем реестр тайлсетов
+	tilesetRegistry, err := processed.NewTilesetRepositoryRegistry(
+		fileRepository,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create tileset registry: %w", err)
+	}
+
+	// Создаем репозиторий скриптов
+	scriptsRepository := processed.NewScriptsRepository(fileRepository)
+
+	// Создаем репозиторий карт
+	mapsRepository := processed.NewMapsDataRepository(
+		fileRepository,
 		tilesetRegistry.Blocks(),
-		cfg.MapBlocksCount.Width,
+		app.config.MapBlocksCount.Width,
 	)
 
 	// Создаем реестр игровых репозиториев
-	gameRepo := game.NewGameRepositoriesRegistry()
+	gameRepository := game_repos.NewGameRepositoriesRegistry()
 
-	// Создаем временный GameStateUseCasesFacade для получения Use Cases (будет пересоздан позже)
-	// Но для создания RendererAdapter нам нужны Use Cases, поэтому создадим их через фасад
-	// Вместо этого создадим TilesUseCases напрямую для RendererAdapter
+	// Создаем сервисы
+	mapWidthHeight := app.config.MapBlocksCount.Width * int(
+		app.config.TileBaseSize,
+	)
+	boundaryCollisionService := services.NewBoundaryCollisionService(
+		mapWidthHeight,
+		int(app.config.BaseSizePx),
+	)
+	wallCollisionService := services.NewWallCollisionService(
+		int(app.config.BaseSizePx),
+		int(app.config.TileBaseSize),
+	)
+	coordinateService := services.NewCoordinateService()
+	tankBrakingService := services.NewTankBrakingService()
+
+	// Создаем временные адаптеры
+	mapOffsetX := int(app.config.MapOffsets[0])
+	mapOffsetY := int(app.config.MapOffsets[1])
+	mapWidthHeightForAdapter := app.config.MapBlocksCount.Width * int(
+		app.config.TileBaseSize,
+	)
+
+	// Создаем временные TilesUseCases для адаптеров
 	mapTileService := services.NewTileService(tilesetRegistry.Blocks())
 	playerTileService := services.NewTileService(tilesetRegistry.Player())
 	bulletTileService := services.NewTileService(tilesetRegistry.Bullet())
@@ -125,73 +218,52 @@ func New(cfg *Config) *App {
 		animationService,
 	)
 
-	// Создаем сервисы коллизий
-	mapWidthHeight := cfg.MapBlocksCount.Width * int(cfg.TileBaseSize)
-	boundaryCollisionService := services.NewBoundaryCollisionService(
-		mapWidthHeight,
-		int(cfg.BaseSizePx),
-	)
-	wallCollisionService := services.NewWallCollisionService(
-		int(cfg.BaseSizePx),
-		int(cfg.TileBaseSize),
-	)
-	coordinateService := services.NewCoordinateService()
-	tankBrakingService := services.NewTankBrakingService()
-
-	// Сначала создаем временный RendererAdapter и InputAdapter
-	// (они нужны для создания GameState, но сам GameState создаст их правильно)
-	mapOffsetX := int(cfg.MapOffsets[0])
-	mapOffsetY := int(cfg.MapOffsets[1])
-	tempRendererAdapter := adapters.NewGameStateRendererAdapter(
-		nil, // mapUseCases
-		nil, // playerTank
-		nil, // tankRenderUseCases
-		nil, // bulletUseCases
-		nil, // enemyTanks
+	tempRendererAdapter := game.NewGameRendererAdapter(
+		nil, nil, nil, nil, nil,
 		mapTilesUseCases,
 		playerTilesUseCases,
 		bulletTilesUseCases,
 		spawnerTilesUseCases,
 		explosionTilesUseCases,
 		hqTilesUseCases,
-		nil, // hq
-		nil, // hqUseCases
-		int(cfg.TileBaseSize),
+		nil, nil,
+		int(app.config.TileBaseSize),
 		mapOffsetX,
 		mapOffsetY,
-		mapWidthHeight,
+		mapWidthHeightForAdapter,
 	)
-	tempInputAdapter := input_adapters.NewKeyboardInputAdapter(
+
+	tempInputAdapter := input_adapters.NewGameKeyboardInputAdapter(
 		nil, nil,
-		ebiten.KeyW,     // up
-		ebiten.KeyS,     // down
-		ebiten.KeyA,     // left
-		ebiten.KeyD,     // right
-		ebiten.KeySpace, // shoot
+		ebiten.KeyW,
+		ebiten.KeyS,
+		ebiten.KeyA,
+		ebiten.KeyD,
+		ebiten.KeySpace,
 	)
 
 	// Создаем GameState
 	gameStatePtr, err := states.NewGameState(
-		mapsRepo,
-		scriptsRepo,
-		cfg.LevelNumber,
+		mapsRepository,
+		scriptsRepository,
+		session.Level,
 		tilesetRegistry,
-		cfg,
-		gameRepo,
+		app.config,
+		gameRepository,
 		boundaryCollisionService,
 		wallCollisionService,
 		coordinateService,
 		tankBrakingService,
 		tempRendererAdapter,
 		tempInputAdapter,
-		luaEngine,
+		app.luaEngine,
+		session,
 	)
 	if err != nil {
-		fmt.Printf("Error creating GameState: %v\n", err)
-		panic(err)
+		return nil, err
 	}
 
-	// Извлекаем срезы из массивов для адаптеров
+	// Обновляем адаптеры с реальными данными
 	enemyTanksSlice := make([]*types.TankEntity, 0, 3)
 	for _, tank := range gameStatePtr.EnemyTanks {
 		if tank != nil {
@@ -199,8 +271,7 @@ func New(cfg *Config) *App {
 		}
 	}
 
-	// Теперь создаем правильный RendererAdapter с реальными данными
-	rendererAdapter := adapters.NewGameStateRendererAdapter(
+	rendererAdapter := game.NewGameRendererAdapter(
 		gameStatePtr.MapUseCases,
 		gameStatePtr.PlayerTank,
 		gameStatePtr.TankRenderUseCases,
@@ -214,32 +285,45 @@ func New(cfg *Config) *App {
 		hqTilesUseCases,
 		gameStatePtr.HQEntity,
 		gameStatePtr.HQUseCases,
-		int(cfg.TileBaseSize),
+		int(app.config.TileBaseSize),
 		mapOffsetX,
 		mapOffsetY,
-		mapWidthHeight,
+		mapWidthHeightForAdapter,
 	)
 
-	// Создаем InputAdapter используя TankActionsUseCases из gameState
-	inputAdapter := input_adapters.NewKeyboardInputAdapter(
+	inputAdapter := input_adapters.NewGameKeyboardInputAdapter(
 		gameStatePtr.TankActionsUseCases,
 		gameStatePtr.PlayerTank,
-		ebiten.KeyW,     // up
-		ebiten.KeyS,     // down
-		ebiten.KeyA,     // left
-		ebiten.KeyD,     // right
-		ebiten.KeySpace, // shoot
+		ebiten.KeyW,
+		ebiten.KeyS,
+		ebiten.KeyA,
+		ebiten.KeyD,
+		ebiten.KeySpace,
 	)
 
-	// Обновляем адаптеры в gameState
 	gameStatePtr.InputAdapter = inputAdapter
 	gameStatePtr.RendererAdapter = rendererAdapter
 
-	return &App{
-		config:    cfg,
-		State:     gameStatePtr,
-		luaEngine: luaEngine,
-	}
+	return gameStatePtr, nil
+}
+
+// createStageSelectState создает состояние выбора уровня
+func (app *App) createStageSelectState(
+	session *types.SessionEntity,
+) (states.State, error) {
+	fileRepository := raw.NewFileRepository("assets")
+	fontsRepository := processed.NewFontsRepository(fileRepository)
+
+	stageSelectorUseCases := use_cases.NewStageSelectorUseCases()
+	stateTransitionUseCases := use_cases.NewStateTransitionUseCases()
+
+	return states.NewStageSelectState(
+		app.config,
+		stageSelectorUseCases,
+		stateTransitionUseCases,
+		session,
+		fontsRepository,
+	)
 }
 
 func (app *App) Run(ctx context.Context) error {

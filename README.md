@@ -8,7 +8,7 @@
 
 ## 📖 Описание
 
-Gonflict — это ремейк культовой игры Battle City (Tank 1990) для NES. Игрок управляет танком, сражается с врагами, разрушает блоки и защищает базу на сетке 26x26.
+Gonflict — это ремейк культовой игры Battle City (Tank 1990) для NES. Игрок управляет танком, сражается с врагами, разрушает блоки и защищает базу на сетке 26x26. Проект реализован с применением принципов Clean Architecture и Domain-Driven Design.
 
 ### Основные особенности
 
@@ -19,9 +19,12 @@ Gonflict — это ремейк культовой игры Battle City (Tank 1
 - ✅ Анимации спавна, движения и взрывов
 - ✅ 35 уровней с различной конфигурацией
 - ✅ Звуковое сопровождение
+- ✅ Экран выбора уровня с навигацией
+- ✅ Переходы между состояниями игры
 - ✅ Clean Architecture с четким разделением слоев
 - ✅ Разделение Use Cases на специализированные компоненты
 - ✅ Интерфейсы для всех Use Cases (Dependency Inversion Principle)
+- ✅ Работа с ресурсами через репозитории
 
 ## 🎯 Текущий статус
 
@@ -93,12 +96,23 @@ Gonflict — это ремейк культовой игры Battle City (Tank 1
   - [x] Загрузка звуковых файлов
   - [x] Воспроизведение звуков (стрельба, взрывы, фон)
 
+- [x] **Управление состояниями**
+  - [x] Система состояний игры (GameState, StageSelectState)
+  - [x] Экран выбора уровня с навигацией
+  - [x] Переходы между состояниями через SessionEntity
+  - [x] Репозиторий для работы со шрифтами (FontsRepository)
+  - [x] Централизованная обработка ESC для выхода из приложения
+
+- [x] **Работа с ресурсами**
+  - [x] Все ресурсы (шрифты, скрипты, карты, тайлсеты) загружаются через репозитории
+  - [x] Запрет прямого обращения к файловой системе
+  - [x] Единый подход к работе с ресурсами
+
 ### 🚧 В процессе
 
 - [ ] Система очков и статистики
-- [ ] Меню и экраны (главное меню, game over, победа)
+- [ ] Меню и экраны (game over, победа)
 - [ ] Бонусы и power-ups
-- [ ] Система жизней игрока
 - [ ] Game Over при уничтожении базы (требуется интеграция)
 
 ### 📋 TODO / Планируется
@@ -112,11 +126,10 @@ Gonflict — это ремейк культовой игры Battle City (Tank 1
 
 - [ ] **UI/UX**
   - [ ] Главное меню
-  - [ ] Экран выбора уровня
   - [ ] HUD с очками, жизнями, уровнем
   - [ ] Экран Game Over
   - [ ] Экран победы
-  - [ ] Пауза (ESC)
+  - [ ] Пауза (ESC - пока только выход)
   - [ ] Настройки (громкость, управление)
 
 - [ ] **Геймплей**
@@ -185,6 +198,8 @@ just check            # Все проверки (fmt-check, lint, test)
 
 ## 🎮 Управление
 
+### В игре
+
 | Клавиша | Действие |
 |---------|----------|
 | `W` | Движение вверх |
@@ -192,7 +207,16 @@ just check            # Все проверки (fmt-check, lint, test)
 | `A` | Движение влево |
 | `D` | Движение вправо |
 | `Space` | Стрельба |
-| `Escape` | Выход (планируется: пауза) |
+| `Escape` | Выход из приложения |
+
+### На экране выбора уровня
+
+| Клавиша | Действие |
+|---------|----------|
+| `W` | Предыдущий уровень |
+| `S` | Следующий уровень |
+| `Enter` | Начать игру с выбранным уровнем |
+| `Escape` | Выход из приложения |
 
 ### Особенности управления
 
@@ -253,33 +277,48 @@ internal/
 ```mermaid
 graph TB
     subgraph "Presentation Layer"
-        PRESENTATION[Адаптеры<br/>Ввод/Вывод<br/>Состояния приложения]
+        ADAPTERS[Адаптеры<br/>Input/Renderer<br/>Game/StageSelect]
+        STATES[Состояния<br/>GameState<br/>StageSelectState]
+        APP[App<br/>Управление состояниями]
     end
 
     subgraph "Application Layer"
-        USECASES[Use Cases<br/>Бизнес-логика]
-        SERVICES[Services<br/>Специализированная логика]
+        USECASES[Use Cases<br/>Бизнес-логика<br/>Stateless компоненты]
+        SERVICES[Services<br/>Специализированная логика<br/>Координация, коллизии, AI]
     end
 
     subgraph "Domain Layer"
-        DOMAIN[Entities<br/>Доменные сущности<br/>Интерфейсы домена]
+        ENTITIES[Entities<br/>Доменные сущности]
+        INTERFACES[Интерфейсы домена<br/>Image Providers]
     end
 
     subgraph "Infrastructure Layer"
-        REPOSITORIES[Repositories<br/>Управление данными]
-        INFRASTRUCTURE[Конфигурация<br/>Ресурсы]
+        REPOSITORIES_PROCESSED[Processed Repositories<br/>Карты, скрипты, шрифты, тайлсеты]
+        REPOSITORIES_GAME[Game Repositories<br/>In-memory хранилища]
+        REPOSITORIES_RAW[Raw Repository<br/>Чтение файлов]
+        INFRASTRUCTURE[Assets & Config<br/>Ресурсы игры]
     end
 
     %% Направление зависимостей
-    PRESENTATION --> USECASES
-    PRESENTATION --> SERVICES
+    APP --> STATES
+    APP --> ADAPTERS
+    STATES --> ADAPTERS
+    STATES --> USECASES
+    ADAPTERS --> USECASES
+    ADAPTERS --> SERVICES
     USECASES --> SERVICES
-    USECASES --> DOMAIN
-    SERVICES --> DOMAIN
-    USECASES --> REPOSITORIES
-    SERVICES --> REPOSITORIES
-    REPOSITORIES --> DOMAIN
-    REPOSITORIES --> INFRASTRUCTURE
+    USECASES --> ENTITIES
+    SERVICES --> ENTITIES
+    USECASES --> INTERFACES
+    SERVICES --> INTERFACES
+    USECASES --> REPOSITORIES_PROCESSED
+    USECASES --> REPOSITORIES_GAME
+    SERVICES --> REPOSITORIES_PROCESSED
+    SERVICES --> REPOSITORIES_GAME
+    REPOSITORIES_PROCESSED --> REPOSITORIES_RAW
+    REPOSITORIES_RAW --> INFRASTRUCTURE
+    REPOSITORIES_PROCESSED --> ENTITIES
+    REPOSITORIES_GAME --> ENTITIES
 
     %% Стилизация
     classDef presentation fill:#e1f5ff,stroke:#01579b,stroke-width:2px
@@ -287,10 +326,10 @@ graph TB
     classDef domain fill:#e8f5e9,stroke:#1b5e20,stroke-width:2px
     classDef infrastructure fill:#eceff1,stroke:#263238,stroke-width:2px
     
-    class PRESENTATION presentation
+    class APP,ADAPTERS,STATES presentation
     class USECASES,SERVICES application
-    class DOMAIN domain
-    class REPOSITORIES,INFRASTRUCTURE infrastructure
+    class ENTITIES,INTERFACES domain
+    class REPOSITORIES_PROCESSED,REPOSITORIES_GAME,REPOSITORIES_RAW,INFRASTRUCTURE infrastructure
 ```
 
 ### Описание слоёв
@@ -298,9 +337,10 @@ graph TB
 #### 1. Presentation Layer (Слой представления)
 **Ответственность:** Взаимодействие с внешним миром (пользователь, графический движок)
 - **cmd/main.go** — точка входа приложения
-- **internal/app.go** — главное приложение, реализует интерфейс Ebiten Game
-- **internal/adapters/RendererAdapter** — адаптер для рендеринга игровых объектов в Ebiten
-- **internal/adapters/input_adapters/** — адаптеры ввода (клавиатура, AI)
+- **internal/app.go** — главное приложение, реализует интерфейс Ebiten Game, управляет переходами между состояниями
+- **internal/adapters/game/** — адаптеры для игрового состояния (Renderer, Input)
+- **internal/adapters/stage_select/** — адаптеры для экрана выбора уровня (Renderer, Input)
+- **internal/states/** — состояния игры (GameState, StageSelectState)
 
 #### 2. Application/State Layer (Слой приложения/состояний)
 **Ответственность:** Управление состояниями приложения и оркестрация Use Cases
@@ -347,8 +387,13 @@ graph TB
 #### 6. Repository Layer (Слой репозиториев)
 **Ответственность:** Управление данными и доступ к хранилищам
 - **Game Repositories** — хранение игровых объектов в памяти (танки, пули, блоки, анимации)
-- **Processed Repositories** — загрузка и обработка карт, тайлсетов, Lua-скриптов
+- **Processed Repositories** — загрузка и обработка карт, тайлсетов, Lua-скриптов, шрифтов
+  - `IMapsDataRepository` — карты уровней
+  - `IScriptsRepository` — Lua скрипты для AI
+  - `IFontsRepository` — шрифты для отрисовки текста
+  - `ITilesetRepository` — тайлсеты с анимациями
 - **Raw Repositories** — низкоуровневое чтение файлов из assets
+- **Важно:** Вся работа с ресурсами должна проходить через репозитории, прямое обращение к файловой системе запрещено
 
 #### 7. Infrastructure Layer (Слой инфраструктуры)
 **Ответственность:** Конфигурация и ресурсы приложения
@@ -391,7 +436,9 @@ graph TB
 - **GameRepositoriesRegistry** — реестр игровых репозиториев
 - **ITilesetRepositoryRegistry** — реестр тайлсетов
 - **IMapsDataRepository** — карты уровней
-- **IFileRepository** — чтение файлов
+- **IScriptsRepository** — Lua скрипты для AI
+- **IFontsRepository** — шрифты для отрисовки текста
+- **IFileRepository** — чтение файлов (низкоуровневый доступ)
 
 ## 🛠️ Технологии
 
@@ -408,17 +455,24 @@ gonflict/
 │   ├── levels/       # 35 уровней
 │   ├── scripts/     # Lua скрипты для AI
 │   ├── sounds/      # Звуковые файлы
+│   ├── fonts/       # Шрифты (PressStart2P.ttf)
 │   └── tiles/       # Тайлсеты и конфигурация
 ├── cmd/             # Точка входа
 ├── dist/            # Собранные файлы
 ├── docs/            # Документация
 ├── internal/        # Внутренний код приложения
-│   ├── adapters/    # Адаптеры
+│   ├── adapters/    # Адаптеры (Input, Renderer)
+│   │   ├── game/          # Адаптеры для игрового состояния
+│   │   └── stage_select/  # Адаптеры для экрана выбора уровня
 │   ├── repositories/# Репозитории
+│   │   ├── game/          # In-memory репозитории
+│   │   ├── processed/     # Обработанные ресурсы
+│   │   └── raw/           # Низкоуровневое чтение файлов
 │   ├── services/    # Сервисы
-│   ├── states/      # Состояния игры
+│   ├── states/      # Состояния игры (GameState, StageSelectState)
 │   ├── types/       # Доменные типы
-│   └── use_cases/   # Use Cases
+│   ├── use_cases/   # Use Cases
+│   └── interfaces/  # Интерфейсы для всех слоев
 ├── config.yml       # Конфигурация игры
 └── justfile         # Команды сборки
 ```
@@ -461,6 +515,14 @@ go tool cover -html=coverage.out
 - Вдохновлено классической игрой Battle City / Tank 1990 для NES
 - Спрайты и ресурсы основаны на оригинальных NES материалах
 - Спасибо сообществу Go и разработчикам Ebiten
+
+## 📚 Документация
+
+Дополнительная документация находится в папке `docs/`:
+
+- **[Управление ресурсами](docs/resource_management.md)** — работа с ресурсами через репозитории
+- **[Лучшие практики AI](docs/ai_best_practices.md)** — реализация AI в играх
+- **[Сетевые протоколы](docs/network_protocols.md)** — реализация сетевых протоколов для игр
 
 ## 📞 Контакты
 

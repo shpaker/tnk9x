@@ -7,19 +7,21 @@ import (
 
 // MapUseCases реализация интерфейса MapUseCases
 type MapUseCases struct {
-	blocksRepo interfaces.IBlocksRepository
+	blocksRepository interfaces.IBlocksRepository
 }
 
 // NewMapUseCases создает новый экземпляр MapUseCases
-func NewMapUseCases(blocksRepo interfaces.IBlocksRepository) *MapUseCases {
+func NewMapUseCases(
+	blocksRepository interfaces.IBlocksRepository,
+) *MapUseCases {
 	return &MapUseCases{
-		blocksRepo: blocksRepo,
+		blocksRepository: blocksRepository,
 	}
 }
 
 // GetBlocks возвращает все блоки карты
 func (uc *MapUseCases) GetBlocks() []types.BlockEntity {
-	blocks := uc.blocksRepo.GetAllBlocks()
+	blocks := uc.blocksRepository.GetAllBlocks()
 	if blocks == nil {
 		return []types.BlockEntity{}
 	}
@@ -31,5 +33,5 @@ func (uc *MapUseCases) RemoveBlock(block *types.BlockEntity) error {
 	if block == nil {
 		return nil
 	}
-	return uc.blocksRepo.RemoveBlockByPointer(block)
+	return uc.blocksRepository.RemoveBlockByPointer(block)
 }

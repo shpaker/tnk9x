@@ -8,8 +8,8 @@ import (
 	"github.com/shpaker/gonflict/internal/types"
 )
 
-// KeyboardInputAdapter адаптер для обработки пользовательского ввода с клавиатуры
-type KeyboardInputAdapter struct {
+// GameKeyboardInputAdapter адаптер для обработки пользовательского ввода с клавиатуры
+type GameKeyboardInputAdapter struct {
 	tankActions interfaces.ITankActionsUseCases
 	tank        *types.TankEntity
 	upButton    ebiten.Key
@@ -19,8 +19,8 @@ type KeyboardInputAdapter struct {
 	shootButton ebiten.Key
 }
 
-// NewKeyboardInputAdapter создает новый экземпляр KeyboardInputAdapter
-func NewKeyboardInputAdapter(
+// NewGameKeyboardInputAdapter создает новый экземпляр GameKeyboardInputAdapter
+func NewGameKeyboardInputAdapter(
 	tankActions interfaces.ITankActionsUseCases,
 	tank *types.TankEntity,
 	upButton ebiten.Key,
@@ -28,8 +28,8 @@ func NewKeyboardInputAdapter(
 	leftButton ebiten.Key,
 	rightButton ebiten.Key,
 	shootButton ebiten.Key,
-) *KeyboardInputAdapter {
-	return &KeyboardInputAdapter{
+) *GameKeyboardInputAdapter {
+	return &GameKeyboardInputAdapter{
 		tankActions: tankActions,
 		tank:        tank,
 		upButton:    upButton,
@@ -41,13 +41,13 @@ func NewKeyboardInputAdapter(
 }
 
 // Update обрабатывает пользовательский ввод
-func (a *KeyboardInputAdapter) Update(dt float64) {
+func (a *GameKeyboardInputAdapter) Update(dt float64) {
 	a.keyPressedEvents()
 	a.keyReleasedEvents()
 }
 
 // keyPressedEvents обрабатывает события нажатия клавиш
-func (a *KeyboardInputAdapter) keyPressedEvents() {
+func (a *GameKeyboardInputAdapter) keyPressedEvents() {
 	// Проверяем нажатие клавиши стрельбы
 	if inpututil.IsKeyJustPressed(a.shootButton) {
 		a.tankShoot()
@@ -83,7 +83,7 @@ func (a *KeyboardInputAdapter) keyPressedEvents() {
 }
 
 // keyReleasedEvents обрабатывает события отпускания клавиш
-func (a *KeyboardInputAdapter) keyReleasedEvents() {
+func (a *GameKeyboardInputAdapter) keyReleasedEvents() {
 	// Stop the tank if the key is released
 	if a.tank == nil {
 		return
@@ -108,7 +108,7 @@ func (a *KeyboardInputAdapter) keyReleasedEvents() {
 }
 
 // tankShoot обрабатывает стрельбу танка
-func (a *KeyboardInputAdapter) tankShoot() {
+func (a *GameKeyboardInputAdapter) tankShoot() {
 	if a.tank == nil {
 		return
 	}

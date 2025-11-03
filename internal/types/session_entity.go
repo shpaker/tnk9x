@@ -3,38 +3,36 @@ package types
 // SessionEntity представляет данные игровой сессии
 // Данные передаются между уровнями и сохраняются на протяжении всей игры
 type SessionEntity struct {
-	PlayerLives int // Количество жизней игрока
-	Score       int // Общий счёт за всю сессию
-	Level       int // Текущий уровень
+	PlayerLives int        // Количество жизней игрока
+	Score       int        // Общий счёт за всю сессию
+	Level       int        // Текущий уровень
+	targetState *StateType // Целевое состояние для перехода (nil если переход не требуется) - приватное поле
 }
 
 // NewSessionEntity создает новую сессию с начальными значениями
 func NewSessionEntity() *SessionEntity {
+	initialState := StateTypeStageSelect // По умолчанию начинаем с выбора уровня
 	return &SessionEntity{
 		PlayerLives: 3, // По умолчанию 3 жизни
 		Score:       0,
 		Level:       1,
+		targetState: &initialState,
 	}
 }
 
-// LoseLife уменьшает количество жизней игрока на 1
-func (s *SessionEntity) LoseLife() {
-	if s.PlayerLives > 0 {
-		s.PlayerLives--
+// GetTargetState возвращает TargetState и обнуляет его после чтения
+func (s *SessionEntity) GetTargetState() *StateType {
+	if s == nil {
+		return nil
 	}
+	result := s.targetState
+	s.targetState = nil // Обнуляем после чтения
+	return result
 }
 
-// AddScore добавляет очки к общему счёту
-func (s *SessionEntity) AddScore(points int) {
-	s.Score += points
-}
-
-// IsGameOver возвращает true если у игрока не осталось жизней
-func (s *SessionEntity) IsGameOver() bool {
-	return s.PlayerLives <= 0
-}
-
-// NextLevel переходит на следующий уровень
-func (s *SessionEntity) NextLevel() {
-	s.Level++
+// SetTargetState устанавливает TargetState
+func (s *SessionEntity) SetTargetState(state *StateType) {
+	if s != nil {
+		s.targetState = state
+	}
 }

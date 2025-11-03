@@ -116,6 +116,12 @@ type IScriptsRepository interface {
 	GetScript(name string) (string, error)
 }
 
+// IFontsRepository определяет интерфейс для работы со шрифтами
+type IFontsRepository interface {
+	// GetFont возвращает данные шрифта по имени (без расширения .ttf)
+	GetFont(name string) ([]byte, error)
+}
+
 // ============================================================================
 // Raw Repositories Interfaces
 // ============================================================================

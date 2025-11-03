@@ -20,20 +20,20 @@ var MapCharsBlocksMapping = map[string]types.BlockType{
 }
 
 type MapsDataRepository struct {
-	fileRepo        interfaces.IFileRepository
-	tilesetRepo     interfaces.ITilesetRepository
-	mapBlocksLength int
+	fileRepository    interfaces.IFileRepository
+	tilesetRepository interfaces.ITilesetRepository
+	mapBlocksLength   int
 }
 
 func NewMapsDataRepository(
-	fileRepo interfaces.IFileRepository,
-	tilesetRepo interfaces.ITilesetRepository,
+	fileRepository interfaces.IFileRepository,
+	tilesetRepository interfaces.ITilesetRepository,
 	mapBlocksLength int,
 ) *MapsDataRepository {
 	return &MapsDataRepository{
-		fileRepo:        fileRepo,
-		tilesetRepo:     tilesetRepo,
-		mapBlocksLength: mapBlocksLength,
+		fileRepository:    fileRepository,
+		tilesetRepository: tilesetRepository,
+		mapBlocksLength:   mapBlocksLength,
 	}
 }
 
@@ -42,7 +42,7 @@ func (mdr *MapsDataRepository) readFile(levelNumber int) ([]string, error) {
 	levelName := "levels/" + strconv.Itoa(levelNumber)
 
 	// Читаем текстовый файл уровня
-	data, err := mdr.fileRepo.ReadFile(levelName)
+	data, err := mdr.fileRepository.ReadFile(levelName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read level %d: %w", levelNumber, err)
 	}

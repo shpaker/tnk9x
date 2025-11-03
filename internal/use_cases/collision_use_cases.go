@@ -10,8 +10,6 @@ type CollisionUseCases struct {
 	bulletUseCases           interfaces.IBulletUseCases
 	tankActions              interfaces.ITankActionsUseCases // Для остановки танка при коллизиях
 	mapUseCases              interfaces.IMapUseCases
-	playerTank               *types.TankEntity
-	enemyTanks               []*types.TankEntity
 	hqUseCases               interfaces.IHQUseCases
 	tankCommonUseCases       interfaces.ITankCommonUseCases    // Общий use case для всех танков
 	tankLifecycleUseCases    interfaces.ITankLifecycleUseCases // Общий lifecycle use case для всех танков
@@ -20,13 +18,11 @@ type CollisionUseCases struct {
 	bulletCollisionService   interfaces.IBulletCollisionService
 }
 
-// NewCollisionUseCasesWithEnemies создает новый экземпляр CollisionUseCases с массивом врагов
-func NewCollisionUseCasesWithEnemies(
+// NewCollisionUseCases создает новый экземпляр CollisionUseCases
+func NewCollisionUseCases(
 	bulletUseCases interfaces.IBulletUseCases,
-	playerTank *types.TankEntity,
 	tankActions interfaces.ITankActionsUseCases,
 	mapUseCases interfaces.IMapUseCases,
-	enemyTanks []*types.TankEntity,
 	tankCommonUseCases interfaces.ITankCommonUseCases,
 	tankLifecycleUseCases interfaces.ITankLifecycleUseCases,
 	boundaryCollisionService interfaces.IBoundaryCollisionService,
@@ -36,10 +32,8 @@ func NewCollisionUseCasesWithEnemies(
 ) *CollisionUseCases {
 	uc := &CollisionUseCases{
 		bulletUseCases:           bulletUseCases,
-		playerTank:               playerTank,
 		tankActions:              tankActions,
 		mapUseCases:              mapUseCases,
-		enemyTanks:               enemyTanks,
 		hqUseCases:               hqUseCases,
 		tankCommonUseCases:       tankCommonUseCases,
 		tankLifecycleUseCases:    tankLifecycleUseCases,
@@ -52,28 +46,34 @@ func NewCollisionUseCasesWithEnemies(
 }
 
 // UpdateCollisions обновляет все коллизии в игре
-func (uc *CollisionUseCases) UpdateCollisions() error {
-	if uc.playerTank == nil {
+func (uc *CollisionUseCases) UpdateCollisions(
+	playerTank *types.TankEntity,
+	enemyTanks []*types.TankEntity,
+	hq *types.HQEntity,
+) error {
+	if playerTank == nil {
 		return nil
 	}
 
 	uc.checkBulletBoundaryCollisions()
-	uc.checkBulletTankCollisions(uc.playerTank)
-	uc.checkBulletEnemyCollisions()
+	uc.checkBulletTankCollisions(playerTank)
+	uc.checkBulletEnemyCollisions(enemyTanks)
 	uc.checkBulletWallCollisions()
-	uc.checkBulletHQCollisions()
-	uc.checkTankBoundaryCollisions(uc.playerTank)
-	uc.checkTankWallCollisions(uc.playerTank)
+	uc.checkBulletHQCollisions(hq)
+	uc.checkTankBoundaryCollisions(playerTank)
+	uc.checkTankWallCollisions(playerTank)
 
 	// Проверяем коллизии врагов (БЕЗ коллизий с игроком)
-	uc.checkEnemyCollisions()
+	uc.checkEnemyCollisions(enemyTanks)
 
 	return nil
 }
 
 // checkEnemyCollisions проверяет коллизии врагов с границами и стенами
-func (uc *CollisionUseCases) checkEnemyCollisions() {
-	for _, enemy := range uc.enemyTanks {
+func (uc *CollisionUseCases) checkEnemyCollisions(
+	enemyTanks []*types.TankEntity,
+) {
+	for _, enemy := range enemyTanks {
 		if enemy == nil || !enemy.IsActive() {
 			continue
 		}
@@ -125,11 +125,13 @@ func (uc *CollisionUseCases) checkBulletTankCollisions(tank *types.TankEntity) {
 }
 
 // checkBulletEnemyCollisions проверяет коллизии пуль с врагами
-func (uc *CollisionUseCases) checkBulletEnemyCollisions() {
+func (uc *CollisionUseCases) checkBulletEnemyCollisions(
+	enemyTanks []*types.TankEntity,
+) {
 	bullets := uc.bulletUseCases.GetBullets()
 	bulletIndicesToRemove, enemyIndicesToExplode := uc.bulletCollisionService.CheckBulletEnemyCollisions(
 		bullets,
-		uc.enemyTanks,
+		enemyTanks,
 	)
 
 	for _, i := range bulletIndicesToRemove {
@@ -137,10 +139,10 @@ func (uc *CollisionUseCases) checkBulletEnemyCollisions() {
 
 		// Запускаем анимацию взрыва для врага через общий Lifecycle Use Cases
 		if enemyIndex, exists := enemyIndicesToExplode[i]; exists {
-			if enemyIndex < len(uc.enemyTanks) &&
-				uc.enemyTanks[enemyIndex] != nil {
+			if enemyIndex < len(enemyTanks) &&
+				enemyTanks[enemyIndex] != nil {
 				_ = uc.tankLifecycleUseCases.Explode(
-					uc.enemyTanks[enemyIndex],
+					enemyTanks[enemyIndex],
 				)
 			}
 		}
@@ -173,12 +175,12 @@ func (uc *CollisionUseCases) checkBulletWallCollisions() {
 }
 
 // checkBulletHQCollisions проверяет коллизии пуль с базой
-func (uc *CollisionUseCases) checkBulletHQCollisions() {
-	if uc.hqUseCases == nil {
+func (uc *CollisionUseCases) checkBulletHQCollisions(hq *types.HQEntity) {
+	if uc.hqUseCases == nil || hq == nil {
 		return
 	}
 
-	bulletIndicesToRemove, _ := uc.hqUseCases.HandleBulletHit()
+	bulletIndicesToRemove, _ := uc.hqUseCases.HandleBulletHit(hq)
 
 	// Удаляем пули
 	for _, i := range bulletIndicesToRemove {

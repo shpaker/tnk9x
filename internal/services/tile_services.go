@@ -10,9 +10,9 @@ import (
 
 // TileService предоставляет логику создания тайлов и анимаций
 type TileService struct {
-	tilesRepository      interfaces.ITilesetRepository
-	spawnerTilesetRepo   interfaces.ITilesetRepository
-	explosionTilesetRepo interfaces.ITilesetRepository
+	tilesRepository            interfaces.ITilesetRepository
+	spawnerTilesetRepository   interfaces.ITilesetRepository
+	explosionTilesetRepository interfaces.ITilesetRepository
 }
 
 // NewTileService создает новый сервис тайлов
@@ -27,13 +27,13 @@ func NewTileService(
 // NewTileServiceWithSpecialRepos создает новый сервис тайлов с репозиториями для специальных анимаций
 func NewTileServiceWithSpecialRepos(
 	tilesRepository interfaces.ITilesetRepository,
-	spawnerTilesetRepo interfaces.ITilesetRepository,
-	explosionTilesetRepo interfaces.ITilesetRepository,
+	spawnerTilesetRepository interfaces.ITilesetRepository,
+	explosionTilesetRepository interfaces.ITilesetRepository,
 ) *TileService {
 	return &TileService{
-		tilesRepository:      tilesRepository,
-		spawnerTilesetRepo:   spawnerTilesetRepo,
-		explosionTilesetRepo: explosionTilesetRepo,
+		tilesRepository:            tilesRepository,
+		spawnerTilesetRepository:   spawnerTilesetRepository,
+		explosionTilesetRepository: explosionTilesetRepository,
 	}
 }
 

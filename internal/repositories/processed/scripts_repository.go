@@ -8,15 +8,15 @@ import (
 
 // ScriptsRepository читает Lua скрипты из файлов
 type ScriptsRepository struct {
-	fileRepo interfaces.IFileRepository
+	fileRepository interfaces.IFileRepository
 }
 
 // NewScriptsRepository создает новый репозиторий для работы с Lua скриптами
 func NewScriptsRepository(
-	fileRepo interfaces.IFileRepository,
+	fileRepository interfaces.IFileRepository,
 ) *ScriptsRepository {
 	return &ScriptsRepository{
-		fileRepo: fileRepo,
+		fileRepository: fileRepository,
 	}
 }
 
@@ -25,7 +25,7 @@ func NewScriptsRepository(
 func (sr *ScriptsRepository) GetScript(name string) (string, error) {
 	// Загружаем скрипт из файла
 	scriptPath := fmt.Sprintf("scripts/%s.lua", name)
-	scriptData, err := sr.fileRepo.ReadFile(scriptPath)
+	scriptData, err := sr.fileRepository.ReadFile(scriptPath)
 	if err != nil {
 		return "", fmt.Errorf("failed to read script '%s': %w", name, err)
 	}

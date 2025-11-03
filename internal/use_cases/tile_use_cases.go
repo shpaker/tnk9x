@@ -11,12 +11,12 @@ import (
 
 // TilesUseCases содержит бизнес-логику для работы с тайлами и анимациями
 type TilesUseCases struct {
-	tilesRepository      interfaces.ITilesetRepository
-	animationsRepo       interfaces.IAnimationsRepository
-	spawnerTilesetRepo   interfaces.ITilesetRepository
-	explosionTilesetRepo interfaces.ITilesetRepository
-	tileService          interfaces.ITileService
-	animationService     interfaces.IAnimationService
+	tilesRepository            interfaces.ITilesetRepository
+	animationsRepository       interfaces.IAnimationsRepository
+	spawnerTilesetRepository   interfaces.ITilesetRepository
+	explosionTilesetRepository interfaces.ITilesetRepository
+	tileService                interfaces.ITileService
+	animationService           interfaces.IAnimationService
 }
 
 // NewTilesUseCases создает новый экземпляр TilesUseCases
@@ -35,19 +35,19 @@ func NewTilesUseCases(
 // NewTilesUseCasesWithAnimations создает новый экземпляр TilesUseCases с поддержкой анимаций
 func NewTilesUseCasesWithAnimations(
 	tilesRepository interfaces.ITilesetRepository,
-	animationsRepo interfaces.IAnimationsRepository,
-	spawnerTilesetRepo interfaces.ITilesetRepository,
-	explosionTilesetRepo interfaces.ITilesetRepository,
+	animationsRepository interfaces.IAnimationsRepository,
+	spawnerTilesetRepository interfaces.ITilesetRepository,
+	explosionTilesetRepository interfaces.ITilesetRepository,
 	tileService interfaces.ITileService,
 	animationService interfaces.IAnimationService,
 ) *TilesUseCases {
 	tuc := &TilesUseCases{
-		tilesRepository:      tilesRepository,
-		animationsRepo:       animationsRepo,
-		spawnerTilesetRepo:   spawnerTilesetRepo,
-		explosionTilesetRepo: explosionTilesetRepo,
-		tileService:          tileService,
-		animationService:     animationService,
+		tilesRepository:            tilesRepository,
+		animationsRepository:       animationsRepository,
+		spawnerTilesetRepository:   spawnerTilesetRepository,
+		explosionTilesetRepository: explosionTilesetRepository,
+		tileService:                tileService,
+		animationService:           animationService,
 	}
 
 	return tuc
@@ -99,18 +99,18 @@ func (tuc *TilesUseCases) CreateAnimationTile(
 func (tuc *TilesUseCases) AddAnimation(
 	animation *image_providers.AnimationProvider,
 ) {
-	if tuc.animationsRepo == nil {
+	if tuc.animationsRepository == nil {
 		return
 	}
-	tuc.animationsRepo.AddAnimation(animation)
+	tuc.animationsRepository.AddAnimation(animation)
 }
 
 // UpdateAnimations обновляет все анимации в репозитории
 func (tuc *TilesUseCases) UpdateAnimations() {
-	if tuc.animationsRepo == nil {
+	if tuc.animationsRepository == nil {
 		return
 	}
-	animations := tuc.animationsRepo.GetAllAnimations()
+	animations := tuc.animationsRepository.GetAllAnimations()
 	for _, animation := range animations {
 		if animation != nil {
 			tuc.animationService.UpdateAnimation(animation)
@@ -145,13 +145,13 @@ func (tuc *TilesUseCases) StopAnimation(
 
 // CreateSpawnAnimation создает анимацию спавна
 func (tuc *TilesUseCases) CreateSpawnAnimation() (*image_providers.AnimationProvider, error) {
-	if tuc.spawnerTilesetRepo == nil {
+	if tuc.spawnerTilesetRepository == nil {
 		return nil, fmt.Errorf("spawner tileset repository not initialized")
 	}
 
 	// Используем tileService для создания анимации из специального репозитория
 	animation, err := tuc.tileService.CreateAnimationTileFromRepo(
-		tuc.spawnerTilesetRepo,
+		tuc.spawnerTilesetRepository,
 		"spawner",
 	)
 	if err != nil {
@@ -164,13 +164,13 @@ func (tuc *TilesUseCases) CreateSpawnAnimation() (*image_providers.AnimationProv
 
 // CreateExplosionAnimation создает анимацию взрыва
 func (tuc *TilesUseCases) CreateExplosionAnimation() (*image_providers.AnimationProvider, error) {
-	if tuc.explosionTilesetRepo == nil {
+	if tuc.explosionTilesetRepository == nil {
 		return nil, fmt.Errorf("explosion tileset repository not initialized")
 	}
 
 	// Используем tileService для создания анимации из специального репозитория
 	animation, err := tuc.tileService.CreateAnimationTileFromRepo(
-		tuc.explosionTilesetRepo,
+		tuc.explosionTilesetRepository,
 		"explosion",
 	)
 	if err != nil {

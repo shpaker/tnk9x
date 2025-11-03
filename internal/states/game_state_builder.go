@@ -3,8 +3,8 @@ package states
 import (
 	"time"
 
-	"github.com/shpaker/gonflict/internal/adapters"
-	"github.com/shpaker/gonflict/internal/adapters/input_adapters"
+	game "github.com/shpaker/gonflict/internal/adapters/game"
+	"github.com/shpaker/gonflict/internal/adapters/game/input_adapters"
 	"github.com/shpaker/gonflict/internal/interfaces"
 	"github.com/shpaker/gonflict/internal/services"
 	"github.com/shpaker/gonflict/internal/types"
@@ -14,10 +14,10 @@ import (
 // GameStateBuilder создает все компоненты GameState
 type GameStateBuilder struct {
 	// Репозитории
-	mapsRepo        interfaces.IMapsDataRepository
-	scriptsRepo     interfaces.IScriptsRepository
-	gameRepo        interfaces.IGameRepositoriesRegistry
-	tilesetRegistry interfaces.ITilesetRepositoryRegistry
+	mapsRepository    interfaces.IMapsDataRepository
+	scriptsRepository interfaces.IScriptsRepository
+	gameRepository    interfaces.IGameRepositoriesRegistry
+	tilesetRegistry   interfaces.ITilesetRepositoryRegistry
 
 	// Конфигурация
 	config      interfaces.IConfigProvider
@@ -30,33 +30,37 @@ type GameStateBuilder struct {
 	tankBrakingService       interfaces.ITankBrakingService
 
 	// Временные адаптеры
-	tempRendererAdapter *adapters.GameStateRendererAdapter
+	tempRendererAdapter *game.GameRendererAdapter
 	tempInputAdapter    interfaces.IInputAdapter
 
 	// Lua Engine для AI (существует весь срок жизни App)
 	luaEngine interfaces.ILuaEngine
+
+	// Сессия
+	session *types.SessionEntity
 }
 
 // NewGameStateBuilder создает новый builder
 func NewGameStateBuilder(
-	mapsRepo interfaces.IMapsDataRepository,
-	scriptsRepo interfaces.IScriptsRepository,
+	mapsRepository interfaces.IMapsDataRepository,
+	scriptsRepository interfaces.IScriptsRepository,
 	levelNumber int,
 	tilesetRegistry interfaces.ITilesetRepositoryRegistry,
 	config interfaces.IConfigProvider,
-	gameRepo interfaces.IGameRepositoriesRegistry,
+	gameRepository interfaces.IGameRepositoriesRegistry,
 	boundaryCollisionService interfaces.IBoundaryCollisionService,
 	wallCollisionService interfaces.IWallCollisionService,
 	coordinateService interfaces.ICoordinateService,
 	tankBrakingService interfaces.ITankBrakingService,
-	tempRendererAdapter *adapters.GameStateRendererAdapter,
+	tempRendererAdapter *game.GameRendererAdapter,
 	tempInputAdapter interfaces.IInputAdapter,
 	luaEngine interfaces.ILuaEngine,
+	session *types.SessionEntity,
 ) *GameStateBuilder {
 	return &GameStateBuilder{
-		mapsRepo:                 mapsRepo,
-		scriptsRepo:              scriptsRepo,
-		gameRepo:                 gameRepo,
+		mapsRepository:           mapsRepository,
+		scriptsRepository:        scriptsRepository,
+		gameRepository:           gameRepository,
 		tilesetRegistry:          tilesetRegistry,
 		config:                   config,
 		levelNumber:              levelNumber,
@@ -67,6 +71,7 @@ func NewGameStateBuilder(
 		tempRendererAdapter:      tempRendererAdapter,
 		tempInputAdapter:         tempInputAdapter,
 		luaEngine:                luaEngine,
+		session:                  session,
 	}
 }
 
@@ -119,16 +124,25 @@ func (b *GameStateBuilder) Build() (*GameState, error) {
 	}
 
 	// Создаем Use Cases для карты
-	mapUseCases := use_cases.NewMapUseCases(b.gameRepo.BlocksRepository())
+	mapUseCases := use_cases.NewMapUseCases(b.gameRepository.BlocksRepository())
+
+	// Создаем HQ TilesUseCases для работы с HQ tileset
+	hqTileService := services.NewTileService(b.tilesetRegistry.HQ())
+	hqAnimationService := services.NewAnimationService()
+	hqTilesUseCases := use_cases.NewTilesUseCases(
+		b.tilesetRegistry.HQ(),
+		hqTileService,
+		hqAnimationService,
+	)
 
 	// Создаем базу
-	hq := b.createHQ(tilesUseCasesWithAnimations, baseSizePx)
+	hq := b.createHQ(hqTilesUseCases, baseSizePx)
 
 	// Создаем AI контекст
 	aiContext := b.createAIContext(mapUseCases)
 
 	// Загружаем скрипт AI для врагов
-	enemyScript, err := b.scriptsRepo.GetScript("enemies")
+	enemyScript, err := b.scriptsRepository.GetScript("enemies")
 	if err != nil {
 		return nil, err
 	}
@@ -195,13 +209,13 @@ func (b *GameStateBuilder) Build() (*GameState, error) {
 
 // loadLevel загружает уровень и заполняет репозиторий блоков
 func (b *GameStateBuilder) loadLevel() error {
-	level, err := b.mapsRepo.GetLevel(b.levelNumber)
+	level, err := b.mapsRepository.GetLevel(b.levelNumber)
 	if err != nil {
 		return err
 	}
 
 	for _, block := range level {
-		b.gameRepo.BlocksRepository().AddBlock(block)
+		b.gameRepository.BlocksRepository().AddBlock(block)
 	}
 	return nil
 }
@@ -217,7 +231,7 @@ func (b *GameStateBuilder) buildTileServices() (*use_cases.TilesUseCases, error)
 
 	tilesUseCasesWithAnimations := use_cases.NewTilesUseCasesWithAnimations(
 		b.tilesetRegistry.Player(),
-		b.gameRepo.AnimationsRepository(),
+		b.gameRepository.AnimationsRepository(),
 		b.tilesetRegistry.Spawner(),
 		b.tilesetRegistry.Explosion(),
 		tileService,
@@ -239,7 +253,7 @@ func (b *GameStateBuilder) buildBulletUseCases() (*use_cases.BulletUseCases, uin
 		bulletAnimationService,
 	)
 	bulletUseCases := use_cases.NewBulletUseCases(
-		b.gameRepo.BulletsRepository(),
+		b.gameRepository.BulletsRepository(),
 		bulletTilesUseCases,
 		baseSizePx,
 	)
@@ -274,7 +288,7 @@ func (b *GameStateBuilder) buildPlayerComponents(
 		Altitude:  types.SURFACE,
 		Size:      types.Size{Width: int(baseSizePx), Height: int(baseSizePx)},
 	}
-	b.gameRepo.TanksRepository().AddTank(playerTank)
+	b.gameRepository.TanksRepository().AddTank(playerTank)
 
 	return playerTank, nil
 }
@@ -368,7 +382,7 @@ func (b *GameStateBuilder) buildEnemyComponents(
 				Height: int(baseSizePx),
 			},
 		}
-		b.gameRepo.TanksRepository().AddTank(enemyTank)
+		b.gameRepository.TanksRepository().AddTank(enemyTank)
 
 		// Запускаем спавн танка врага через общий lifecycle
 		if err := tankLifecycleUseCases.Spawn(enemyTank); err != nil {
@@ -425,7 +439,6 @@ func (b *GameStateBuilder) buildCollisionServices(
 	var tempHQUseCases interfaces.IHQUseCases
 	if hq != nil {
 		tempHQUseCases = use_cases.NewHQUseCases(
-			hq,
 			bulletUseCases,
 			tempBulletCollisionService,
 			tilesUseCasesWithAnimations,
@@ -433,12 +446,10 @@ func (b *GameStateBuilder) buildCollisionServices(
 	}
 
 	// Создаем CollisionUseCases первый раз для получения CheckColliders
-	collisionUseCases := use_cases.NewCollisionUseCasesWithEnemies(
+	collisionUseCases := use_cases.NewCollisionUseCases(
 		bulletUseCases,
-		playerTank,
 		playerTankActions,
 		mapUseCases,
-		enemyTanksEntities,
 		tankCommonUseCases,
 		tankLifecycleUseCases,
 		b.boundaryCollisionService,
@@ -459,7 +470,6 @@ func (b *GameStateBuilder) buildCollisionServices(
 	var hqUseCases interfaces.IHQUseCases
 	if hq != nil {
 		hqUseCases = use_cases.NewHQUseCases(
-			hq,
 			bulletUseCases,
 			bulletCollisionService,
 			tilesUseCasesWithAnimations,
@@ -467,12 +477,10 @@ func (b *GameStateBuilder) buildCollisionServices(
 	}
 
 	// Пересоздаем CollisionUseCases с правильным BulletCollisionService
-	collisionUseCases = use_cases.NewCollisionUseCasesWithEnemies(
+	collisionUseCases = use_cases.NewCollisionUseCases(
 		bulletUseCases,
-		playerTank,
 		playerTankActions,
 		mapUseCases,
-		enemyTanksEntities,
 		tankCommonUseCases,
 		tankLifecycleUseCases,
 		b.boundaryCollisionService,
@@ -532,5 +540,6 @@ func (b *GameStateBuilder) buildGameState(
 		RendererAdapter:       b.tempRendererAdapter,
 		EnemyInputAdapters:    enemyInputAdapters,
 		StartTime:             time.Now(),
+		Session:               b.session,
 	}
 }

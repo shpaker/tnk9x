@@ -15,8 +15,8 @@ import (
 	"github.com/shpaker/gonflict/internal/use_cases"
 )
 
-// GameStateRendererAdapter адаптер для рендеринга игры
-type GameStateRendererAdapter struct {
+// GameRendererAdapter адаптер для рендеринга игры
+type GameRendererAdapter struct {
 	mapUseCases            interfaces.IMapUseCases
 	playerTank             *types.TankEntity
 	tankRenderUseCases     interfaces.ITankRenderUseCases // Общий use case для графики всех танков
@@ -38,8 +38,8 @@ type GameStateRendererAdapter struct {
 	mapWidthHeight         int
 }
 
-// NewGameStateRendererAdapter создает новый экземпляр GameStateRendererAdapter
-func NewGameStateRendererAdapter(
+// NewGameRendererAdapter создает новый экземпляр GameRendererAdapter
+func NewGameRendererAdapter(
 	mapUseCases interfaces.IMapUseCases,
 	playerTank *types.TankEntity,
 	tankRenderUseCases interfaces.ITankRenderUseCases,
@@ -57,8 +57,8 @@ func NewGameStateRendererAdapter(
 	mapOffsetX int,
 	mapOffsetY int,
 	mapWidthHeight int,
-) *GameStateRendererAdapter {
-	return &GameStateRendererAdapter{
+) *GameRendererAdapter {
+	return &GameRendererAdapter{
 		mapUseCases:            mapUseCases,
 		playerTank:             playerTank,
 		tankRenderUseCases:     tankRenderUseCases,
@@ -82,7 +82,7 @@ func NewGameStateRendererAdapter(
 }
 
 // drawTank отрисовывает танк
-func (r *GameStateRendererAdapter) drawTank(screen *ebiten.Image) {
+func (r *GameRendererAdapter) drawTank(screen *ebiten.Image) {
 	tank := r.playerTank
 	if tank == nil {
 		return
@@ -140,7 +140,7 @@ func (r *GameStateRendererAdapter) drawTank(screen *ebiten.Image) {
 }
 
 // getCachedImage возвращает закэшированное ebiten.Image или создает новое
-func (r *GameStateRendererAdapter) getCachedImage(
+func (r *GameRendererAdapter) getCachedImage(
 	imageID string,
 	imageData image.Image,
 ) *ebiten.Image {
@@ -163,7 +163,7 @@ func (r *GameStateRendererAdapter) getCachedImage(
 }
 
 // drawEnemiesWithoutExplosions отрисовывает врагов без взрывов (уровень SURFACE)
-func (r *GameStateRendererAdapter) drawEnemiesWithoutExplosions(
+func (r *GameRendererAdapter) drawEnemiesWithoutExplosions(
 	screen *ebiten.Image,
 ) {
 	for _, enemy := range r.enemyTanks {
@@ -220,7 +220,7 @@ func (r *GameStateRendererAdapter) drawEnemiesWithoutExplosions(
 }
 
 // drawEnemiesExplosions отрисовывает взрывы врагов (уровень AIR)
-func (r *GameStateRendererAdapter) drawEnemiesExplosions(screen *ebiten.Image) {
+func (r *GameRendererAdapter) drawEnemiesExplosions(screen *ebiten.Image) {
 	for _, enemy := range r.enemyTanks {
 		// Пропускаем если врага нет или он не взрывается
 		if enemy == nil || enemy.State != types.TankStateExploding {
@@ -264,7 +264,7 @@ func (r *GameStateRendererAdapter) drawEnemiesExplosions(screen *ebiten.Image) {
 }
 
 // drawEnemySpawnAnimation отрисовывает анимацию спавна врага
-func (r *GameStateRendererAdapter) drawEnemySpawnAnimation(
+func (r *GameRendererAdapter) drawEnemySpawnAnimation(
 	screen *ebiten.Image,
 	enemy *types.TankEntity,
 ) {
@@ -296,7 +296,7 @@ func (r *GameStateRendererAdapter) drawEnemySpawnAnimation(
 }
 
 // drawSpawnAnimation отрисовывает анимацию спавна
-func (r *GameStateRendererAdapter) drawSpawnAnimation(
+func (r *GameRendererAdapter) drawSpawnAnimation(
 	screen *ebiten.Image,
 	tank *types.TankEntity,
 ) {
@@ -346,7 +346,7 @@ func getRotationAngle(direction types.Direction) float64 {
 }
 
 // drawHQ отрисовывает базу
-func (r *GameStateRendererAdapter) drawHQ(screen *ebiten.Image) {
+func (r *GameRendererAdapter) drawHQ(screen *ebiten.Image) {
 	if r.hq == nil {
 		return
 	}
@@ -406,18 +406,14 @@ func (r *GameStateRendererAdapter) drawHQ(screen *ebiten.Image) {
 }
 
 // drawHQExplosion отрисовывает взрыв базы (уровень AIR)
-func (r *GameStateRendererAdapter) drawHQExplosion(screen *ebiten.Image) {
+func (r *GameRendererAdapter) drawHQExplosion(screen *ebiten.Image) {
 	if r.hq == nil || r.hq.State != types.HQStateExploding ||
-		r.hqUseCases == nil {
+		r.hqUseCases == nil || r.hq.Image == nil {
 		return
 	}
 
-	// Получаем HQUseCases как конкретный тип для доступа к Image
-	hqUseCases, ok := r.hqUseCases.(*use_cases.HQUseCases)
-	if !ok || hqUseCases.Image == nil {
-		return
-	}
-	imageID, err := hqUseCases.Image.GetImageID()
+	// Получаем Image из HQEntity (анимация взрыва хранится в entity)
+	imageID, err := r.hq.Image.GetImageID()
 	if err != nil {
 		return
 	}
@@ -435,7 +431,7 @@ func (r *GameStateRendererAdapter) drawHQExplosion(screen *ebiten.Image) {
 
 	// Применяем offset если это анимация
 	var offsetX, offsetY float64 = 0, 0
-	if tileAnim, ok := hqUseCases.Image.(*image_providers.AnimationProvider); ok {
+	if tileAnim, ok := r.hq.Image.(*image_providers.AnimationProvider); ok {
 		offsetX = tileAnim.Offset[0]
 		offsetY = tileAnim.Offset[1]
 	}
@@ -449,7 +445,7 @@ func (r *GameStateRendererAdapter) drawHQExplosion(screen *ebiten.Image) {
 }
 
 // drawBullets отрисовывает пули
-func (r *GameStateRendererAdapter) drawBullets(screen *ebiten.Image) {
+func (r *GameRendererAdapter) drawBullets(screen *ebiten.Image) {
 	bullets := r.bulletUseCases.GetBullets()
 
 	for _, bullet := range bullets {
@@ -497,7 +493,7 @@ func (r *GameStateRendererAdapter) drawBullets(screen *ebiten.Image) {
 }
 
 // DrawAll отрисовывает все элементы игры
-func (r *GameStateRendererAdapter) DrawAll(screen *ebiten.Image) {
+func (r *GameRendererAdapter) DrawAll(screen *ebiten.Image) {
 	// Сначала отрисовываем серый фон экрана
 	r.drawScreenBackground(screen)
 	// Затем отрисовываем черный фон карты
@@ -523,7 +519,7 @@ func (r *GameStateRendererAdapter) DrawAll(screen *ebiten.Image) {
 }
 
 // drawScreenBackground отрисовывает серый фон экрана
-func (r *GameStateRendererAdapter) drawScreenBackground(screen *ebiten.Image) {
+func (r *GameRendererAdapter) drawScreenBackground(screen *ebiten.Image) {
 	vector.FillRect(
 		screen,
 		0,
@@ -536,7 +532,7 @@ func (r *GameStateRendererAdapter) drawScreenBackground(screen *ebiten.Image) {
 }
 
 // drawMapBackground отрисовывает черный фон карты
-func (r *GameStateRendererAdapter) drawMapBackground(screen *ebiten.Image) {
+func (r *GameRendererAdapter) drawMapBackground(screen *ebiten.Image) {
 	vector.FillRect(
 		screen,
 		float32(r.mapOffsetX),
@@ -549,7 +545,7 @@ func (r *GameStateRendererAdapter) drawMapBackground(screen *ebiten.Image) {
 }
 
 // drawBlocksByAltitude отрисовывает блоки на определенном уровне высоты
-func (r *GameStateRendererAdapter) drawBlocksByAltitude(
+func (r *GameRendererAdapter) drawBlocksByAltitude(
 	screen *ebiten.Image,
 	altitude types.Altitude,
 ) {

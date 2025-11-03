@@ -7,21 +7,21 @@ import (
 
 // BulletUseCases реализация интерфейса BulletUseCases
 type BulletUseCases struct {
-	bulletsRepo    interfaces.IBulletsRepository
-	tilesUseCases  interfaces.ITilesUseCases
-	tankSpriteSize uint
+	bulletsRepository interfaces.IBulletsRepository
+	tilesUseCases     interfaces.ITilesUseCases
+	tankSpriteSize    uint
 }
 
 // NewBulletUseCases создает новый экземпляр BulletUseCases
 func NewBulletUseCases(
-	bulletsRepo interfaces.IBulletsRepository,
+	bulletsRepository interfaces.IBulletsRepository,
 	tilesUseCases interfaces.ITilesUseCases,
 	tankSpriteSize uint,
 ) *BulletUseCases {
 	return &BulletUseCases{
-		bulletsRepo:    bulletsRepo,
-		tilesUseCases:  tilesUseCases,
-		tankSpriteSize: tankSpriteSize,
+		bulletsRepository: bulletsRepository,
+		tilesUseCases:     tilesUseCases,
+		tankSpriteSize:    tankSpriteSize,
 	}
 }
 
@@ -67,13 +67,13 @@ func (uc *BulletUseCases) ShootBullet(tank *types.TankEntity) error {
 		Owner:     tank,
 	}
 
-	uc.bulletsRepo.AddBullet(bullet)
+	uc.bulletsRepository.AddBullet(bullet)
 	return nil
 }
 
 // UpdateBullets обновляет позиции всех пуль
 func (uc *BulletUseCases) UpdateBullets(dt float64) error {
-	bullets := uc.bulletsRepo.GetAllBullets()
+	bullets := uc.bulletsRepository.GetAllBullets()
 	for i := len(bullets) - 1; i >= 0; i-- {
 		bullet := &bullets[i]
 
@@ -95,10 +95,10 @@ func (uc *BulletUseCases) UpdateBullets(dt float64) error {
 
 // GetBullets возвращает все активные пули
 func (uc *BulletUseCases) GetBullets() []types.BulletEntity {
-	return uc.bulletsRepo.GetAllBullets()
+	return uc.bulletsRepository.GetAllBullets()
 }
 
 // RemoveBullet удаляет пулю по индексу
 func (uc *BulletUseCases) RemoveBullet(index int) error {
-	return uc.bulletsRepo.RemoveBullet(index)
+	return uc.bulletsRepository.RemoveBullet(index)
 }

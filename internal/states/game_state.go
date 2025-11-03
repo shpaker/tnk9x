@@ -1,12 +1,11 @@
 package states
 
 import (
-	"errors"
 	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
 
-	"github.com/shpaker/gonflict/internal/adapters"
+	game "github.com/shpaker/gonflict/internal/adapters/game"
 	"github.com/shpaker/gonflict/internal/interfaces"
 	"github.com/shpaker/gonflict/internal/types"
 	"github.com/shpaker/gonflict/internal/use_cases"
@@ -34,36 +33,40 @@ type GameState struct {
 
 	// Адаптеры
 	InputAdapter       interfaces.IInputAdapter
-	RendererAdapter    *adapters.GameStateRendererAdapter
+	RendererAdapter    *game.GameRendererAdapter
 	EnemyInputAdapters []interfaces.IInputAdapter // AI адаптеры врагов
 
 	// Метаданные
 	StartTime time.Time
+
+	// Сессия
+	Session *types.SessionEntity
 }
 
 // NewGameState создает новое состояние игры через билдер
 func NewGameState(
-	mapsRepo interfaces.IMapsDataRepository,
-	scriptsRepo interfaces.IScriptsRepository,
+	mapsRepository interfaces.IMapsDataRepository,
+	scriptsRepository interfaces.IScriptsRepository,
 	levelNumber int,
 	tilesetRegistry interfaces.ITilesetRepositoryRegistry,
 	config interfaces.IConfigProvider,
-	gameRepo interfaces.IGameRepositoriesRegistry,
+	gameRepository interfaces.IGameRepositoriesRegistry,
 	boundaryCollisionService interfaces.IBoundaryCollisionService,
 	wallCollisionService interfaces.IWallCollisionService,
 	coordinateService interfaces.ICoordinateService,
 	tankBrakingService interfaces.ITankBrakingService,
-	rendererAdapter *adapters.GameStateRendererAdapter,
+	rendererAdapter *game.GameRendererAdapter,
 	inputAdapter interfaces.IInputAdapter,
 	luaEngine interfaces.ILuaEngine,
+	session *types.SessionEntity,
 ) (*GameState, error) {
 	builder := NewGameStateBuilder(
-		mapsRepo,
-		scriptsRepo,
+		mapsRepository,
+		scriptsRepository,
 		levelNumber,
 		tilesetRegistry,
 		config,
-		gameRepo,
+		gameRepository,
 		boundaryCollisionService,
 		wallCollisionService,
 		coordinateService,
@@ -71,6 +74,7 @@ func NewGameState(
 		rendererAdapter,
 		inputAdapter,
 		luaEngine,
+		session,
 	)
 	return builder.Build()
 }
@@ -87,11 +91,7 @@ func (state *GameState) StartTankSpawn() {
 	}
 }
 
-func (state *GameState) Update() (State, error) {
-	if ebiten.IsKeyPressed(ebiten.KeyEscape) {
-		return nil, errors.New("exit application")
-	}
-
+func (state *GameState) Update() {
 	// Вычисляем delta time из ActualTPS
 	tps := ebiten.ActualTPS()
 	var dt float64
@@ -116,8 +116,6 @@ func (state *GameState) Update() (State, error) {
 
 	// Обновляем все анимации
 	state.UpdateAnimations()
-
-	return nil, nil
 }
 
 func (state *GameState) Draw(screen *ebiten.Image) {
@@ -162,11 +160,23 @@ func (state *GameState) update(dt float64) {
 	_ = state.BulletUseCases.UpdateBullets(dt)
 
 	// Проверяем коллизии ПОСЛЕ движения всех объектов
-	_ = state.CollisionUseCases.UpdateCollisions()
+	// Получаем список врагов из массива
+	enemyTanksSlice := make([]*types.TankEntity, 0, 3)
+	for _, tank := range state.EnemyTanks {
+		if tank != nil {
+			enemyTanksSlice = append(enemyTanksSlice, tank)
+		}
+	}
+
+	_ = state.CollisionUseCases.UpdateCollisions(
+		state.PlayerTank,
+		enemyTanksSlice,
+		state.HQEntity,
+	)
 
 	// Проверяем завершение анимации взрыва базы
 	if state.HQUseCases != nil {
-		state.HQUseCases.IsExplosionFinished()
+		state.HQUseCases.IsExplosionFinished(state.HQEntity)
 	}
 }
 
