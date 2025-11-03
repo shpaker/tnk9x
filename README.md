@@ -253,152 +253,44 @@ internal/
 ```mermaid
 graph TB
     subgraph "Presentation Layer"
-        MAIN[cmd/main.go<br/>Точка входа]
-        APP[internal/app.go<br/>App - Ebiten Game Interface]
-        RENDERER[internal/adapters/<br/>RendererAdapter<br/>Рендеринг в Ebiten]
-        INPUT[internal/adapters/<br/>input_adapters/<br/>KeyboardInputAdapter<br/>AIInputAdapter]
+        PRESENTATION[Адаптеры<br/>Ввод/Вывод<br/>Состояния приложения]
     end
 
-    subgraph "Application/State Layer"
-        GAME_STATE[internal/states/<br/>GameState<br/>Состояние игры<br/>Оркестрация Use Cases]
+    subgraph "Application Layer"
+        USECASES[Use Cases<br/>Бизнес-логика]
+        SERVICES[Services<br/>Специализированная логика]
     end
 
-    subgraph "Use Cases / Business Logic Layer"
-        TANK_COMMON_UC[internal/use_cases/<br/>TankCommonUseCases<br/>Движение танков]
-        TANK_ACTIONS_UC[internal/use_cases/<br/>TankActionsUseCases<br/>Действия танков]
-        TANK_LIFECYCLE_UC[internal/use_cases/<br/>TankLifecycleUseCases<br/>Жизненный цикл танков]
-        TANK_RENDER_UC[internal/use_cases/<br/>TankRenderUseCases<br/>Графика танков]
-        BULLET_UC[internal/use_cases/<br/>BulletUseCases<br/>Логика пуль]
-        MAP_UC[internal/use_cases/<br/>MapUseCases<br/>Логика карты]
-        COLLISION_UC[internal/use_cases/<br/>CollisionUseCases<br/>Логика коллизий]
-        TILES_UC[internal/use_cases/<br/>TilesUseCases<br/>Логика тайлов/анимаций]
-        HQ_UC[internal/use_cases/<br/>HQUseCases<br/>Логика базы]
-        AI_UC[internal/use_cases/<br/>AIUseCases<br/>Логика AI]
-    end
-
-    subgraph "Services Layer"
-        BRAKING_SVC[internal/services/<br/>TankBrakingService<br/>Логика торможения]
-        COORD_SVC[internal/services/<br/>CoordinateService<br/>Работа с координатами]
-        BOUNDARY_COLL_SVC[internal/services/<br/>BoundaryCollisionService<br/>Коллизии с границами]
-        WALL_COLL_SVC[internal/services/<br/>WallCollisionService<br/>Коллизии со стенами]
-        BULLET_COLL_SVC[internal/services/<br/>BulletCollisionService<br/>Коллизии пуль]
-        TILE_SVC[internal/services/<br/>TileService<br/>Работа с тайлами]
-        ANIM_SVC[internal/services/<br/>AnimationService<br/>Обновление анимаций]
-        IMAGE_SVC[internal/services/<br/>ImageService<br/>Работа с изображениями]
-        AI_CONVERTER_SVC[internal/services/<br/>AITypeConverter<br/>Конвертация типов AI]
-    end
-
-    subgraph "Domain / Entities Layer"
-        ENTITIES[internal/types/<br/>TankEntity<br/>BulletEntity<br/>BlockEntity<br/>HQEntity<br/>SessionEntity<br/>BattleEntity<br/>Сущности домена]
-    end
-
-    subgraph "Repository Layer"
-        subgraph "Game Repositories"
-            GAME_REPO[internal/repositories/game/<br/>GameRepositoriesRegistry<br/>IGameRepositoriesRegistry]
-            BLOCKS_REPO[internal/repositories/game/<br/>BlocksRepository<br/>IBlocksRepository]
-            BULLETS_REPO[internal/repositories/game/<br/>BulletsRepository<br/>IBulletsRepository]
-            TANKS_REPO[internal/repositories/game/<br/>TanksRepository<br/>ITanksRepository]
-            ANIM_REPO[internal/repositories/game/<br/>AnimationsRepository<br/>IAnimationsRepository]
-        end
-        
-        subgraph "Processed Repositories"
-            PROCESSED_REPO[internal/repositories/processed/<br/>MapsDataRepository<br/>TilesetRepository<br/>ScriptsRepository]
-        end
-        
-        subgraph "Raw Repositories"
-            RAW_REPO[internal/repositories/raw/<br/>FileRepository<br/>IFileRepository<br/>Чтение файлов]
-        end
+    subgraph "Domain Layer"
+        DOMAIN[Entities<br/>Доменные сущности<br/>Интерфейсы домена]
     end
 
     subgraph "Infrastructure Layer"
-        CONFIG[config.yml<br/>Конфигурация приложения]
-        ASSETS[assets/<br/>levels, tiles, sounds, scripts]
+        REPOSITORIES[Repositories<br/>Управление данными]
+        INFRASTRUCTURE[Конфигурация<br/>Ресурсы]
     end
 
-    %% Presentation Layer connections
-    MAIN --> APP
-    APP --> GAME_STATE
-    GAME_STATE --> RENDERER
-    GAME_STATE --> INPUT
-    
-    %% Game State connections
-    GAME_STATE --> TANK_COMMON_UC
-    GAME_STATE --> TANK_ACTIONS_UC
-    GAME_STATE --> TANK_LIFECYCLE_UC
-    GAME_STATE --> TANK_RENDER_UC
-    GAME_STATE --> BULLET_UC
-    GAME_STATE --> MAP_UC
-    GAME_STATE --> COLLISION_UC
-    GAME_STATE --> TILES_UC
-    GAME_STATE --> HQ_UC
-    GAME_STATE --> AI_UC
-    GAME_STATE --> INPUT
-    
-    %% Use Cases connections
-    TANK_COMMON_UC --> BRAKING_SVC
-    TANK_ACTIONS_UC --> BRAKING_SVC
-    TANK_ACTIONS_UC --> BULLET_UC
-    TANK_RENDER_UC --> TILES_UC
-    TANK_LIFECYCLE_UC --> TILES_UC
-    BULLET_UC --> TILES_UC
-    COLLISION_UC --> BOUNDARY_COLL_SVC
-    COLLISION_UC --> WALL_COLL_SVC
-    COLLISION_UC --> BULLET_COLL_SVC
-    COLLISION_UC --> ENTITIES
-    HQ_UC --> BULLET_COLL_SVC
-    AI_UC --> AI_CONVERTER_SVC
-    
-    %% Repository connections
-    TANK_ACTIONS_UC --> TANKS_REPO
-    TANK_LIFECYCLE_UC --> TANKS_REPO
-    BULLET_UC --> BULLETS_REPO
-    MAP_UC --> BLOCKS_REPO
-    TILES_UC --> ANIM_REPO
-    GAME_REPO --> BLOCKS_REPO
-    GAME_REPO --> BULLETS_REPO
-    GAME_REPO --> TANKS_REPO
-    GAME_REPO --> ANIM_REPO
-    
-    %% Processed repositories connections
-    GAME_STATE --> PROCESSED_REPO
-    APP --> PROCESSED_REPO
-    PROCESSED_REPO --> RAW_REPO
-    
-    %% Raw repository connections
-    RAW_REPO --> ASSETS
-    
-    %% Entities connections
-    TANK_COMMON_UC --> ENTITIES
-    TANK_ACTIONS_UC --> ENTITIES
-    TANK_LIFECYCLE_UC --> ENTITIES
-    TANK_RENDER_UC --> ENTITIES
-    BULLET_UC --> ENTITIES
-    MAP_UC --> ENTITIES
-    HQ_UC --> ENTITIES
-    BLOCKS_REPO --> ENTITIES
-    BULLETS_REPO --> ENTITIES
-    TANKS_REPO --> ENTITIES
-    ANIM_REPO --> ENTITIES
-    
-    %% Infrastructure connections
-    APP --> CONFIG
-    
-    %% Styling
+    %% Направление зависимостей
+    PRESENTATION --> USECASES
+    PRESENTATION --> SERVICES
+    USECASES --> SERVICES
+    USECASES --> DOMAIN
+    SERVICES --> DOMAIN
+    USECASES --> REPOSITORIES
+    SERVICES --> REPOSITORIES
+    REPOSITORIES --> DOMAIN
+    REPOSITORIES --> INFRASTRUCTURE
+
+    %% Стилизация
     classDef presentation fill:#e1f5ff,stroke:#01579b,stroke-width:2px
     classDef application fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
-    classDef usecases fill:#fff3e0,stroke:#e65100,stroke-width:2px
-    classDef services fill:#fff9c4,stroke:#f57f17,stroke-width:2px
     classDef domain fill:#e8f5e9,stroke:#1b5e20,stroke-width:2px
-    classDef repository fill:#fce4ec,stroke:#880e4f,stroke-width:2px
     classDef infrastructure fill:#eceff1,stroke:#263238,stroke-width:2px
     
-    class MAIN,APP,RENDERER,INPUT presentation
-    class GAME_STATE application
-    class TANK_COMMON_UC,TANK_ACTIONS_UC,TANK_LIFECYCLE_UC,TANK_RENDER_UC,BULLET_UC,MAP_UC,COLLISION_UC,TILES_UC,HQ_UC,AI_UC usecases
-    class BRAKING_SVC,COORD_SVC,BOUNDARY_COLL_SVC,WALL_COLL_SVC,BULLET_COLL_SVC,TILE_SVC,ANIM_SVC,IMAGE_SVC,AI_CONVERTER_SVC services
-    class ENTITIES domain
-    class GAME_REPO,BLOCKS_REPO,BULLETS_REPO,TANKS_REPO,ANIM_REPO,PROCESSED_REPO,RAW_REPO repository
-    class CONFIG,ASSETS infrastructure
+    class PRESENTATION presentation
+    class USECASES,SERVICES application
+    class DOMAIN domain
+    class REPOSITORIES,INFRASTRUCTURE infrastructure
 ```
 
 ### Описание слоёв
