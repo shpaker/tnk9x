@@ -24,7 +24,7 @@ func TestAddAndGetBlocks(t *testing.T) {
 
 	// Создаем тестовый блок
 	block := types.BlockEntity{
-		ImageGetter: nil, // Для тестов не используем ImageGetter
+		Image: nil, // Для тестов не используем Image
 		Data: &types.BlockData{
 			Name:     types.Brick,
 			Position: types.Position{X: 0, Y: 0},
@@ -46,7 +46,7 @@ func TestRemoveBlockByPointer(t *testing.T) {
 
 	// Создаем тестовый блок
 	block := types.BlockEntity{
-		ImageGetter: nil, // Для тестов не используем ImageGetter
+		Image: nil, // Для тестов не используем Image
 		Data: &types.BlockData{
 			Name:     types.Brick,
 			Position: types.Position{X: 0, Y: 0},

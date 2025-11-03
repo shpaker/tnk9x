@@ -14,6 +14,7 @@ import (
 	"github.com/shpaker/gonflict/internal/repositories/raw"
 	"github.com/shpaker/gonflict/internal/services"
 	"github.com/shpaker/gonflict/internal/states"
+	"github.com/shpaker/gonflict/internal/types"
 	"github.com/shpaker/gonflict/internal/use_cases"
 )
 
@@ -131,64 +132,31 @@ func New(cfg *Config) *App {
 	coordinateService := services.NewCoordinateService()
 	tankBrakingService := services.NewTankBrakingService()
 
-	// Создаем GameStateUseCasesFacade
-	gameStateServices, err := states.NewGameStateUseCasesFacade(
-		mapsRepo,
-		scriptsRepo,
-		cfg.LevelNumber,
-		tilesetRegistry.Blocks(),
-		tilesetRegistry.Player(),
-		tilesetRegistry.Bullet(),
-		tilesetRegistry.Spawner(),
-		tilesetRegistry.Explosion(),
-		cfg,
-		gameRepo,
-		boundaryCollisionService,
-		wallCollisionService,
-		coordinateService,
-		tankBrakingService,
-	)
-	if err != nil {
-		fmt.Printf("Error creating GameStateUseCasesFacade: %v\n", err)
-		panic(err)
-	}
-
-	// Создаем RendererAdapter
+	// Сначала создаем временный RendererAdapter и InputAdapter
+	// (они нужны для создания GameState, но сам GameState создаст их правильно)
 	mapOffsetX := int(cfg.MapOffsets[0])
 	mapOffsetY := int(cfg.MapOffsets[1])
-	rendererAdapter := adapters.NewRendererAdapter(
-		gameStateServices.MapUseCases(),
-		gameStateServices.GetPlayerTank(),
-		gameStateServices.PlayerRenderUseCases(),
-		gameStateServices.BulletUseCases(),
-		gameStateServices.GetEnemyTanks(),
-		gameStateServices.GetEnemyRenderUseCases(),
+	tempRendererAdapter := adapters.NewGameStateRendererAdapter(
+		nil, // mapUseCases
+		nil, // playerTank
+		nil, // tankRenderUseCases
+		nil, // bulletUseCases
+		nil, // enemyTanks
 		mapTilesUseCases,
 		playerTilesUseCases,
 		bulletTilesUseCases,
 		spawnerTilesUseCases,
 		explosionTilesUseCases,
 		hqTilesUseCases,
-		gameStateServices.GetHQ(),
-		gameStateServices.GetHQRenderUseCases(),
+		nil, // hq
+		nil, // hqUseCases
 		int(cfg.TileBaseSize),
 		mapOffsetX,
 		mapOffsetY,
 		mapWidthHeight,
 	)
-
-	// Создаем TankActionsUseCases для инпут-адаптера
-	playerTankActions := use_cases.NewTankActionsUseCases(
-		tankBrakingService,
-		coordinateService,
-		gameStateServices.BulletUseCases(),
-		gameStateServices.TankUseCases(),
-	)
-
-	// Создаем InputAdapter
-	inputAdapter := input_adapters.NewKeyboardInputAdapter(
-		playerTankActions,
-		gameStateServices.GetPlayerTank(),
+	tempInputAdapter := input_adapters.NewKeyboardInputAdapter(
+		nil, nil,
 		ebiten.KeyW,     // up
 		ebiten.KeyS,     // down
 		ebiten.KeyA,     // left
@@ -196,25 +164,73 @@ func New(cfg *Config) *App {
 		ebiten.KeySpace, // shoot
 	)
 
-	// Создаем GameState с переданными зависимостями
-	gameState, err := states.NewGameState(
+	// Создаем GameState
+	gameStatePtr, err := states.NewGameState(
 		mapsRepo,
 		scriptsRepo,
+		cfg.LevelNumber,
 		tilesetRegistry,
+		cfg,
 		gameRepo,
-		rendererAdapter,
-		inputAdapter,
-		gameStateServices,
+		boundaryCollisionService,
+		wallCollisionService,
+		coordinateService,
+		tankBrakingService,
+		tempRendererAdapter,
+		tempInputAdapter,
 	)
 	if err != nil {
-		// Логируем ошибку и падаем
 		fmt.Printf("Error creating GameState: %v\n", err)
 		panic(err)
 	}
 
+	// Извлекаем срезы из массивов для адаптеров
+	enemyTanksSlice := make([]*types.TankEntity, 0, 3)
+	for _, tank := range gameStatePtr.EnemyTanks {
+		if tank != nil {
+			enemyTanksSlice = append(enemyTanksSlice, tank)
+		}
+	}
+
+	// Теперь создаем правильный RendererAdapter с реальными данными
+	rendererAdapter := adapters.NewGameStateRendererAdapter(
+		gameStatePtr.MapUseCases,
+		gameStatePtr.PlayerTank,
+		gameStatePtr.TankRenderUseCases,
+		gameStatePtr.BulletUseCases,
+		enemyTanksSlice,
+		mapTilesUseCases,
+		playerTilesUseCases,
+		bulletTilesUseCases,
+		spawnerTilesUseCases,
+		explosionTilesUseCases,
+		hqTilesUseCases,
+		gameStatePtr.HQEntity,
+		gameStatePtr.HQUseCases,
+		int(cfg.TileBaseSize),
+		mapOffsetX,
+		mapOffsetY,
+		mapWidthHeight,
+	)
+
+	// Создаем InputAdapter используя TankActionsUseCases из gameState
+	inputAdapter := input_adapters.NewKeyboardInputAdapter(
+		gameStatePtr.TankActionsUseCases,
+		gameStatePtr.PlayerTank,
+		ebiten.KeyW,     // up
+		ebiten.KeyS,     // down
+		ebiten.KeyA,     // left
+		ebiten.KeyD,     // right
+		ebiten.KeySpace, // shoot
+	)
+
+	// Обновляем адаптеры в gameState
+	gameStatePtr.InputAdapter = inputAdapter
+	gameStatePtr.RendererAdapter = rendererAdapter
+
 	return &App{
 		config: cfg,
-		State:  gameState,
+		State:  gameStatePtr,
 	}
 }
 

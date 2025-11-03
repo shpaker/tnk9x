@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/shpaker/gonflict/internal/types"
+	image_providers "github.com/shpaker/gonflict/internal/types/image_providers"
 )
 
 func TestNewAnimationsRepository(t *testing.T) {
@@ -23,7 +24,7 @@ func TestAddAnimation(t *testing.T) {
 	repo := NewAnimationsRepository()
 
 	// Create test animation
-	animation := types.NewTileAnimationEntityWithLoops(
+	animation := image_providers.NewAnimationProviderWithLoops(
 		types.AnimationData{
 			types.AnimationDataFrame{
 				Image:    "frame1",
@@ -55,7 +56,7 @@ func TestAddMultipleAnimations(t *testing.T) {
 	repo := NewAnimationsRepository()
 
 	// Create multiple animations
-	anim1 := types.NewTileAnimationEntityWithLoops(
+	anim1 := image_providers.NewAnimationProviderWithLoops(
 		types.AnimationData{
 			types.AnimationDataFrame{
 				Image:    "frame1",
@@ -65,7 +66,7 @@ func TestAddMultipleAnimations(t *testing.T) {
 		3,
 	)
 
-	anim2 := types.NewTileAnimationEntity(
+	anim2 := image_providers.NewAnimationProvider(
 		types.AnimationData{
 			types.AnimationDataFrame{
 				Image:    "frame1",
@@ -74,7 +75,7 @@ func TestAddMultipleAnimations(t *testing.T) {
 		},
 	)
 
-	anim3 := types.NewTileAnimationEntityWithLoops(
+	anim3 := image_providers.NewAnimationProviderWithLoops(
 		types.AnimationData{
 			types.AnimationDataFrame{
 				Image:    "frame1",
@@ -123,7 +124,7 @@ func TestGetAllAnimations(t *testing.T) {
 	}
 
 	// Create and add animations
-	anim1 := types.NewTileAnimationEntity(
+	anim1 := image_providers.NewAnimationProvider(
 		types.AnimationData{
 			types.AnimationDataFrame{
 				Image:    "frame1",
@@ -132,7 +133,7 @@ func TestGetAllAnimations(t *testing.T) {
 		},
 	)
 
-	anim2 := types.NewTileAnimationEntity(
+	anim2 := image_providers.NewAnimationProvider(
 		types.AnimationData{
 			types.AnimationDataFrame{
 				Image:    "frame2",
@@ -155,7 +156,7 @@ func TestGetAllAnimationsReturnsSliceReference(t *testing.T) {
 	repo := NewAnimationsRepository()
 
 	// Create and add animation
-	anim := types.NewTileAnimationEntity(
+	anim := image_providers.NewAnimationProvider(
 		types.AnimationData{
 			types.AnimationDataFrame{
 				Image:    "frame1",

@@ -4,6 +4,7 @@ import (
 	"image"
 
 	"github.com/shpaker/gonflict/internal/types"
+	image_providers "github.com/shpaker/gonflict/internal/types/image_providers"
 )
 
 // ============================================================================
@@ -48,10 +49,10 @@ type IBlocksRepository interface {
 // IAnimationsRepository определяет интерфейс для работы с анимациями
 type IAnimationsRepository interface {
 	// AddAnimation добавляет анимацию в репозиторий
-	AddAnimation(animation *types.TileAnimationEntity)
+	AddAnimation(animation *image_providers.AnimationProvider)
 
 	// GetAllAnimations возвращает все анимации
-	GetAllAnimations() []*types.TileAnimationEntity
+	GetAllAnimations() []*image_providers.AnimationProvider
 }
 
 // ITanksRepository определяет интерфейс для работы с танками

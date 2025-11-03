@@ -4,25 +4,29 @@ import "errors"
 
 // BulletEntity представляет пулю
 type BulletEntity struct {
-	ImageGetter IImageIDGetter
-	Position    Position
-	Speed       float64
-	Direction   Direction
-	Owner       *TankEntity
-	Altitude    Altitude
+	Position  Position
+	Size      Size
+	Altitude  Altitude
+	Image     IImageProvider
+	Speed     float64
+	Direction Direction
+	Owner     *TankEntity
 }
 
-// GetImageID возвращает ID изображения пули (реализует IImageIDGetter)
+// GetImageID возвращает ID изображения пули (реализует IImageProvider)
 func (b *BulletEntity) GetImageID() (string, error) {
-	if b.ImageGetter == nil {
-		return "", errors.New("ImageGetter is nil")
+	if b.Image == nil {
+		return "", errors.New("image is nil")
 	}
-	return b.ImageGetter.GetImageID()
+	return b.Image.GetImageID()
 }
 
 // GetSize возвращает размер пули
 func (b *BulletEntity) GetSize() Size {
-	return Size{Width: 4, Height: 4}
+	if b.Size.Width == 0 && b.Size.Height == 0 {
+		return Size{Width: 4, Height: 4}
+	}
+	return b.Size
 }
 
 // GetPosition возвращает позицию пули в мире

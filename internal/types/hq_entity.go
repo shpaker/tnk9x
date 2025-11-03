@@ -12,24 +12,18 @@ const (
 // HQEntity представляет базу (headquarters)
 type HQEntity struct {
 	Position Position
+	Size     Size
+	Altitude Altitude
+	Image    IImageProvider
 	State    HQState
-}
-
-// GetImageID возвращает ID изображения базы
-func (h *HQEntity) GetImageID() (string, error) {
-	if h.State == HQStateDestroyed {
-		return "hq_destroyed", nil
-	}
-	if h.State == HQStateExploding {
-		// Во время взрыва используем изображение целой базы (анимация взрыва будет поверх)
-		return "hq_intact", nil
-	}
-	return "hq_intact", nil
 }
 
 // GetSize возвращает размер базы
 func (h *HQEntity) GetSize() Size {
-	return Size{Width: 16, Height: 16}
+	if h.Size.Width == 0 && h.Size.Height == 0 {
+		return Size{Width: 16, Height: 16}
+	}
+	return h.Size
 }
 
 // GetPosition возвращает позицию базы в мире
@@ -43,7 +37,10 @@ func (h *HQEntity) GetAltitude() Altitude {
 	if h.State == HQStateExploding {
 		return AIR
 	}
-	return SURFACE
+	if h.Altitude == 0 {
+		return SURFACE
+	}
+	return h.Altitude
 }
 
 // IsDestroyed возвращает true если база разрушена

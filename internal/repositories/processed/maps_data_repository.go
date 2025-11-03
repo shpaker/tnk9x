@@ -7,6 +7,7 @@ import (
 
 	"github.com/shpaker/gonflict/internal/interfaces"
 	"github.com/shpaker/gonflict/internal/types"
+	image_providers "github.com/shpaker/gonflict/internal/types/image_providers"
 )
 
 // MapCharsBlocksMapping содержит соответствие символов карты типам блоков
@@ -73,8 +74,8 @@ func (mdr *MapsDataRepository) createBlockFromChar(
 		)
 	}
 
-	// Создаем TileStaticEntity для блока напрямую
-	tileEntity := &types.TileStaticEntity{
+	// Создаем StaticProvider для блока напрямую
+	tileEntity := &image_providers.StaticProvider{
 		ImageID: string(blockType),
 	}
 

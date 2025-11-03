@@ -1,0 +1,110 @@
+# Gonflict - CursorAI Rules
+
+## Архитектура проекта
+
+Проект следует принципам **Clean Architecture** с четким разделением на слои:
+
+1. **Domain Layer** (`internal/types/`) - чистый домен без зависимостей
+2. **Application Layer** (`internal/use_cases/`, `internal/services/`)
+3. **Presentation Layer** (`internal/adapters/`, `internal/states/`)
+4. **Infrastructure Layer** (`internal/repositories/`)
+
+## Принципы разработки
+
+### Dependency Inversion Principle
+- ВСЕ зависимости направлены внутрь
+- Внешние слои зависят от внутренних через интерфейсы
+- Domain Layer не зависит ни от чего
+- Use Cases зависят только от интерфейсов, не от конкретных реализаций
+
+### Use Cases
+- Один Use Case = одна ответственность
+- Use Cases должны быть **stateless** (не хранить состояние конкретных сущностей)
+- Передавать entity как параметры методам, а не хранить их в use case
+- Использовать общие экземпляры use cases для всех сущностей одного типа
+
+### Entity
+- Entity находятся в Domain Layer (`internal/types/`)
+- Entity не зависят от других слоев
+- Поля у всех типов entity должны быть унифицированы по порядку и смыслу
+
+### Именование
+
+**Типы:**
+- Entity: `*Entity` (например, `TankEntity`, `BulletEntity`)
+- Use Cases: `*UseCases` (например, `TankCommonUseCases`)
+- Services: `*Service` (например, `TankBrakingService`)
+- Repositories: `*Repository` (например, `BulletsRepository`)
+- Interfaces: `I*` (например, `ITankCommonUseCases`)
+
+**Поля:**
+- Все поля которые могут быть приватными должны быть приватными
+- Используйте короткие, понятные имена: `Image` вместо `ImageGetter`, `ImageProvider`
+
+# Методы
+- Конструкторы: `New*` (например, `NewTankCommonUseCases`)
+
+## Стиль кода
+
+### Go conventions
+- Следуйте стандартным Go conventions
+- Используйте short variable declarations где возможно
+
+### Комментарии
+- Комментарии на русском языке для бизнес-логики
+- Используйте комментарии для описания интерфейсов и публичных методов
+- Указывайте, какие интерфейсы реализует тип
+
+### Тестирование
+- Тесты в файлах `*_test.go`
+- Тесты должны быть предельно простыми и понятными как и моки
+
+## Структура файлов
+
+```
+internal/
+├── types/              # Domain Layer - только типы и интерфейсы домена
+│   ├── image_providers/  # Image provider implementations
+│   └── *.go           # Entity типы
+├── interfaces/        # Интерфейсы для всех слоев
+│   ├── domain.go     # Domain interfaces (алиасы)
+│   ├── use_cases.go  # Use Cases interfaces
+│   ├── services.go   # Services interfaces
+│   ├── repositories.go # Repositories interfaces
+│   └── adapters.go   # Adapters interfaces
+├── use_cases/        # Application Layer - бизнес-логика
+├── services/         # Application Layer - специализированная логика
+├── adapters/         # Presentation Layer - адаптеры внешних систем
+├── states/           # Presentation Layer - состояние приложения
+└── repositories/     # Infrastructure Layer - доступ к данным
+```
+
+## Что НЕ делать
+
+❌ НЕ создавайте entity с зависимостями от других слоев
+❌ НЕ делайте use cases stateful (не храните состояние конкретных entity)
+❌ НЕ используйте прямые зависимости - всегда через интерфейсы
+❌ НЕ создавайте use cases внутри других use cases - передавайте через DI
+❌ НЕ смешивайте ответственности - один use case = одна область
+
+## Что делать
+
+✅ Всегда используйте интерфейсы для зависимостей
+✅ Делайте use cases stateless
+✅ Передавайте entity как параметры методам
+✅ Используйте общие экземпляры use cases для всех сущностей одного типа
+✅ Размещайте новые типы в правильном слое согласно архитектуре
+✅ Следуйте унифицированному порядку полей в entity
+✅ Используйте короткие имена: `Image`, а не `ImageGetter`
+✅ Проверяйте компиляцию после изменений: `just build`
+✅ Перед билдом проекта проверять just fmt и just lint
+✅ Проверяйте линтер: исправляйте все предупреждения
+
+## При рефакторинге
+
+- Всегда проверяйте компиляцию: `go build ./...`
+- Используйте поиск по кодовой базе для нахождения всех использований
+- Обновляйте все использования синхронно
+- Обновляйте тесты вместе с кодом
+- Проверяйте линтер после изменений
+

@@ -6,12 +6,12 @@ import (
 	"github.com/shpaker/gonflict/internal/types"
 )
 
-// MockImageIDGetter для тестирования
-type MockImageIDGetter struct {
+// MockImageProvider для тестирования
+type MockImageProvider struct {
 	id string
 }
 
-func (m *MockImageIDGetter) GetImageID() (string, error) {
+func (m *MockImageProvider) GetImageID() (string, error) {
 	return m.id, nil
 }
 
@@ -31,12 +31,12 @@ func TestNewBulletsRepository(t *testing.T) {
 func TestAddAndGetBullets(t *testing.T) {
 	repo := NewBulletsRepository()
 
-	// Создаем тестовую пулю с ImageGetter
+	// Создаем тестовую пулю с Image
 	bullet := types.BulletEntity{
-		ImageGetter: &MockImageIDGetter{id: "bullet"},
-		Position:    types.Position{X: 100, Y: 100},
-		Speed:       200.0,
-		Direction:   types.DirectionUp,
+		Image:     &MockImageProvider{id: "bullet"},
+		Position:  types.Position{X: 100, Y: 100},
+		Speed:     200.0,
+		Direction: types.DirectionUp,
 	}
 
 	repo.AddBullet(bullet)
@@ -46,12 +46,12 @@ func TestAddAndGetBullets(t *testing.T) {
 		t.Errorf("Ожидалось 1 пуля, получено %d", len(bullets))
 	}
 
-	// Проверяем, что ImageGetter работает корректно
-	if bullets[0].ImageGetter == nil {
-		t.Error("ImageGetter не должен быть nil")
+	// Проверяем, что Image работает корректно
+	if bullets[0].Image == nil {
+		t.Error("Image не должен быть nil")
 	}
 
-	imageID, err := bullets[0].ImageGetter.GetImageID()
+	imageID, err := bullets[0].Image.GetImageID()
 	if err != nil {
 		t.Errorf("Не ожидалась ошибка: %v", err)
 	}
@@ -63,18 +63,18 @@ func TestAddAndGetBullets(t *testing.T) {
 func TestRemoveBullet(t *testing.T) {
 	repo := NewBulletsRepository()
 
-	// Создаем тестовые пули с ImageGetter
+	// Создаем тестовые пули с Image
 	bullet1 := types.BulletEntity{
-		ImageGetter: &MockImageIDGetter{id: "bullet"},
-		Position:    types.Position{X: 100, Y: 100},
-		Speed:       200.0,
-		Direction:   types.DirectionUp,
+		Image:     &MockImageProvider{id: "bullet"},
+		Position:  types.Position{X: 100, Y: 100},
+		Speed:     200.0,
+		Direction: types.DirectionUp,
 	}
 	bullet2 := types.BulletEntity{
-		ImageGetter: &MockImageIDGetter{id: "bullet"},
-		Position:    types.Position{X: 200, Y: 200},
-		Speed:       200.0,
-		Direction:   types.DirectionDown,
+		Image:     &MockImageProvider{id: "bullet"},
+		Position:  types.Position{X: 200, Y: 200},
+		Speed:     200.0,
+		Direction: types.DirectionDown,
 	}
 
 	repo.AddBullet(bullet1)

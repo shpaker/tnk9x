@@ -55,15 +55,16 @@ func (uc *BulletUseCases) ShootBullet(tank *types.TankEntity) error {
 	}
 
 	bullet := types.BulletEntity{
-		ImageGetter: bulletImageGetter,
 		Position: types.Position{
 			X: bulletX,
 			Y: bulletY,
 		},
+		Size:      types.Size{Width: 4, Height: 4},
+		Altitude:  types.SURFACE, // Пули на уровне поверхности
+		Image:     bulletImageGetter,
 		Speed:     120.0, // Скорость пули
 		Direction: tank.Direction,
 		Owner:     tank,
-		Altitude:  types.SURFACE, // Пули на уровне поверхности
 	}
 
 	uc.bulletsRepo.AddBullet(bullet)

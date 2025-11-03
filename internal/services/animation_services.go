@@ -1,6 +1,8 @@
 package services
 
-import "github.com/shpaker/gonflict/internal/types"
+import (
+	image_providers "github.com/shpaker/gonflict/internal/types/image_providers"
+)
 
 // AnimationService предоставляет логику обновления анимаций
 type AnimationService struct{}
@@ -12,7 +14,7 @@ func NewAnimationService() *AnimationService {
 
 // UpdateAnimation обновляет анимацию на основе тиков
 func (s *AnimationService) UpdateAnimation(
-	animation *types.TileAnimationEntity,
+	animation *image_providers.AnimationProvider,
 ) {
 	if animation == nil {
 		return
@@ -42,7 +44,7 @@ func (s *AnimationService) UpdateAnimation(
 
 // ShouldAdvanceFrame проверяет, нужно ли переключать кадр
 func (s *AnimationService) ShouldAdvanceFrame(
-	animation *types.TileAnimationEntity,
+	animation *image_providers.AnimationProvider,
 ) bool {
 	if int(animation.CurrentFrame) >= len(animation.AnimationFrames) {
 		return false
@@ -53,7 +55,7 @@ func (s *AnimationService) ShouldAdvanceFrame(
 
 // CalculateNextFrame вычисляет следующий кадр анимации
 func (s *AnimationService) CalculateNextFrame(
-	animation *types.TileAnimationEntity,
+	animation *image_providers.AnimationProvider,
 ) uint {
 	return (animation.CurrentFrame + 1) % uint(len(animation.AnimationFrames))
 }
@@ -61,7 +63,7 @@ func (s *AnimationService) CalculateNextFrame(
 // CheckAndHandleLoopCompletion проверяет завершение цикла и останавливает анимацию если нужно
 // Возвращает true, если анимация была остановлена
 func (s *AnimationService) CheckAndHandleLoopCompletion(
-	animation *types.TileAnimationEntity,
+	animation *image_providers.AnimationProvider,
 	nextFrame uint,
 ) bool {
 	if nextFrame == 0 && animation.LoopCount != nil {

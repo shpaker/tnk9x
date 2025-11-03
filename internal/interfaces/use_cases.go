@@ -4,6 +4,7 @@ import (
 	"image"
 
 	"github.com/shpaker/gonflict/internal/types"
+	image_providers "github.com/shpaker/gonflict/internal/types/image_providers"
 )
 
 // ============================================================================
@@ -40,14 +41,14 @@ type ICollisionUseCases interface {
 
 // ITilesUseCases интерфейс для работы с тайлами и анимациями
 type ITilesUseCases interface {
-	CreateStaticTile(id string) (IImageIDGetter, error)
-	CreateAnimationTile(id string) (*types.TileAnimationEntity, error)
-	CreateSpawnAnimation() (*types.TileAnimationEntity, error)
-	CreateExplosionAnimation() (*types.TileAnimationEntity, error)
+	CreateStaticTile(id string) (IImageProvider, error)
+	CreateAnimationTile(id string) (*image_providers.AnimationProvider, error)
+	CreateSpawnAnimation() (*image_providers.AnimationProvider, error)
+	CreateExplosionAnimation() (*image_providers.AnimationProvider, error)
 	GetImage(id string) (image.Image, error)
-	AddAnimation(animation *types.TileAnimationEntity)
+	AddAnimation(animation *image_providers.AnimationProvider)
 	UpdateAnimations()
-	StartAnimation(animation *types.TileAnimationEntity)
+	StartAnimation(animation *image_providers.AnimationProvider)
 }
 
 // ============================================================================
@@ -61,8 +62,8 @@ type ITankCommonUseCases interface {
 
 // ITankRenderUseCases интерфейс для графики и рендеринга танка
 type ITankRenderUseCases interface {
-	IsSpawnAnimationFinished() bool
-	IsExplosionAnimationFinished() bool
+	IsSpawnAnimationFinished(tank *types.TankEntity) bool
+	IsExplosionAnimationFinished(tank *types.TankEntity) bool
 }
 
 // ITankLifecycleUseCases интерфейс для жизненного цикла танка

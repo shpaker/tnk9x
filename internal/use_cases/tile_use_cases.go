@@ -6,6 +6,7 @@ import (
 
 	"github.com/shpaker/gonflict/internal/interfaces"
 	"github.com/shpaker/gonflict/internal/types"
+	image_providers "github.com/shpaker/gonflict/internal/types/image_providers"
 )
 
 // TilesUseCases содержит бизнес-логику для работы с тайлами и анимациями
@@ -60,14 +61,14 @@ func (tuc *TilesUseCases) GetImage(id string) (image.Image, error) {
 // CreateStaticTile создает статический тайл по ID изображения
 func (tuc *TilesUseCases) CreateStaticTile(
 	id string,
-) (types.IImageIDGetter, error) {
+) (types.IImageProvider, error) {
 	// Проверяем, что изображение существует
 	_, err := tuc.tilesRepository.GetImage(id)
 	if err != nil {
 		return nil, fmt.Errorf("image '%s' not found: %w", id, err)
 	}
 
-	return &types.TileStaticEntity{
+	return &image_providers.StaticProvider{
 		ImageID: id,
 	}, nil
 }
@@ -75,7 +76,7 @@ func (tuc *TilesUseCases) CreateStaticTile(
 // CreateAnimationTile создает анимированный тайл по ID анимации
 func (tuc *TilesUseCases) CreateAnimationTile(
 	id string,
-) (*types.TileAnimationEntity, error) {
+) (*image_providers.AnimationProvider, error) {
 	config, err := tuc.tileService.GetAnimationConfig(id)
 	if err != nil {
 		return nil, err
@@ -95,7 +96,9 @@ func (tuc *TilesUseCases) CreateAnimationTile(
 // === Методы для работы с анимациями из AnimationUseCases ===
 
 // AddAnimation добавляет анимацию в репозиторий
-func (tuc *TilesUseCases) AddAnimation(animation *types.TileAnimationEntity) {
+func (tuc *TilesUseCases) AddAnimation(
+	animation *image_providers.AnimationProvider,
+) {
 	if tuc.animationsRepo == nil {
 		return
 	}
@@ -116,7 +119,9 @@ func (tuc *TilesUseCases) UpdateAnimations() {
 }
 
 // StartAnimation запускает анимацию объекта
-func (tuc *TilesUseCases) StartAnimation(animation *types.TileAnimationEntity) {
+func (tuc *TilesUseCases) StartAnimation(
+	animation *image_providers.AnimationProvider,
+) {
 	if animation == nil {
 		return
 	}
@@ -129,7 +134,9 @@ func (tuc *TilesUseCases) StartAnimation(animation *types.TileAnimationEntity) {
 }
 
 // StopAnimation останавливает анимацию объекта
-func (tuc *TilesUseCases) StopAnimation(animation *types.TileAnimationEntity) {
+func (tuc *TilesUseCases) StopAnimation(
+	animation *image_providers.AnimationProvider,
+) {
 	if animation == nil {
 		return
 	}
@@ -137,7 +144,7 @@ func (tuc *TilesUseCases) StopAnimation(animation *types.TileAnimationEntity) {
 }
 
 // CreateSpawnAnimation создает анимацию спавна
-func (tuc *TilesUseCases) CreateSpawnAnimation() (*types.TileAnimationEntity, error) {
+func (tuc *TilesUseCases) CreateSpawnAnimation() (*image_providers.AnimationProvider, error) {
 	if tuc.spawnerTilesetRepo == nil {
 		return nil, fmt.Errorf("spawner tileset repository not initialized")
 	}
@@ -156,7 +163,7 @@ func (tuc *TilesUseCases) CreateSpawnAnimation() (*types.TileAnimationEntity, er
 }
 
 // CreateExplosionAnimation создает анимацию взрыва
-func (tuc *TilesUseCases) CreateExplosionAnimation() (*types.TileAnimationEntity, error) {
+func (tuc *TilesUseCases) CreateExplosionAnimation() (*image_providers.AnimationProvider, error) {
 	if tuc.explosionTilesetRepo == nil {
 		return nil, fmt.Errorf("explosion tileset repository not initialized")
 	}

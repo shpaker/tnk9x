@@ -2,9 +2,9 @@ package interfaces
 
 import "github.com/shpaker/gonflict/internal/types"
 
-// IImageIDGetter - алиас для types.IImageIDGetter
+// IImageProvider - алиас для types.IImageProvider
 // Интерфейсы домена определены в types, но доступны через interfaces для удобства
-type IImageIDGetter = types.IImageIDGetter
+type IImageProvider = types.IImageProvider
 
 // IMapObject - алиас для types.IMapObject
 // Интерфейсы домена определены в types, но доступны через interfaces для удобства

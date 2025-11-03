@@ -23,19 +23,19 @@ func (mtr *MockTilesetRepository) GetAnimationData(
 	return AnimationData{}, nil
 }
 
-// MockImageIDGetter для тестирования
-type MockImageIDGetter struct {
+// MockImageProvider для тестирования
+type MockImageProvider struct {
 	id string
 }
 
-func (mig *MockImageIDGetter) GetImageID() (string, error) {
+func (mig *MockImageProvider) GetImageID() (string, error) {
 	return mig.id, nil
 }
 
-func TestBlockEntity_GetImageID_NilImageGetter(t *testing.T) {
-	// Создаем блок с nil ImageGetter
+func TestBlockEntity_GetImageID_NilImage(t *testing.T) {
+	// Создаем блок с nil Image
 	block := &BlockEntity{
-		ImageGetter: nil,
+		Image: nil,
 		Data: &BlockData{
 			Name:     "test",
 			Position: Position{X: 0, Y: 0},
@@ -49,10 +49,10 @@ func TestBlockEntity_GetImageID_NilImageGetter(t *testing.T) {
 
 	// Проверяем, что возвращается ошибка
 	if err == nil {
-		t.Error("Ожидалась ошибка для nil ImageGetter")
+		t.Error("Ожидалась ошибка для nil Image")
 	}
 
-	expectedError := "ImageGetter is nil"
+	expectedError := "image is nil"
 	if err.Error() != expectedError {
 		t.Errorf(
 			"Ожидалась ошибка '%s', получена '%s'",
@@ -63,9 +63,9 @@ func TestBlockEntity_GetImageID_NilImageGetter(t *testing.T) {
 }
 
 func TestBlockEntity_GetImageID_EmptyImageID(t *testing.T) {
-	// Создаем блок с ImageGetter, который возвращает пустой ID
+	// Создаем блок с Image, который возвращает пустой ID
 	block := &BlockEntity{
-		ImageGetter: &MockImageIDGetter{id: ""},
+		Image: &MockImageProvider{id: ""},
 		Data: &BlockData{
 			Name:     "test",
 			Position: Position{X: 0, Y: 0},
@@ -89,9 +89,9 @@ func TestBlockEntity_GetImageID_EmptyImageID(t *testing.T) {
 }
 
 func TestBlockEntity_GetImageID_ValidImageID(t *testing.T) {
-	// Создаем блок с валидным ImageGetter
+	// Создаем блок с валидным Image
 	block := &BlockEntity{
-		ImageGetter: &MockImageIDGetter{id: "valid"},
+		Image: &MockImageProvider{id: "valid"},
 		Data: &BlockData{
 			Name:     "test",
 			Position: Position{X: 0, Y: 0},

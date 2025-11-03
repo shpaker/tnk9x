@@ -5,6 +5,7 @@ import (
 
 	"github.com/shpaker/gonflict/internal/interfaces"
 	"github.com/shpaker/gonflict/internal/types"
+	image_providers "github.com/shpaker/gonflict/internal/types/image_providers"
 )
 
 // TileService предоставляет логику создания тайлов и анимаций
@@ -62,29 +63,29 @@ func (s *TileService) GetAnimationConfig(
 func (s *TileService) CreateAnimationFromConfig(
 	animationFrames types.AnimationData,
 	config types.AnimationConfig,
-) *types.TileAnimationEntity {
+) *image_providers.AnimationProvider {
 	hasOffset := s.HasOffset(config.Offset)
 	hasRepeats := config.Repeats != nil
 
 	switch {
 	case hasRepeats && hasOffset:
-		return types.NewTileAnimationEntityWithLoopsAndOffset(
+		return image_providers.NewAnimationProviderWithLoopsAndOffset(
 			animationFrames,
 			*config.Repeats,
 			config.Offset,
 		)
 	case hasRepeats:
-		return types.NewTileAnimationEntityWithLoops(
+		return image_providers.NewAnimationProviderWithLoops(
 			animationFrames,
 			*config.Repeats,
 		)
 	case hasOffset:
-		return types.NewTileAnimationEntityWithOffset(
+		return image_providers.NewAnimationProviderWithOffset(
 			animationFrames,
 			config.Offset,
 		)
 	default:
-		return types.NewTileAnimationEntity(animationFrames)
+		return image_providers.NewAnimationProvider(animationFrames)
 	}
 }
 
@@ -97,7 +98,7 @@ func (s *TileService) HasOffset(offset [2]float64) bool {
 func (s *TileService) CreateAnimationTileFromRepo(
 	repo interfaces.ITilesetRepository,
 	id string,
-) (*types.TileAnimationEntity, error) {
+) (*image_providers.AnimationProvider, error) {
 	if repo == nil {
 		return nil, fmt.Errorf("repository is nil")
 	}

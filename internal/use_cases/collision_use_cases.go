@@ -13,8 +13,8 @@ type CollisionUseCases struct {
 	playerTank               *types.TankEntity
 	enemyTanks               []*types.TankEntity
 	hqUseCases               interfaces.IHQUseCases
-	enemyUseCases            []interfaces.ITankCommonUseCases    // Use cases для врагов
-	enemyLifecycles          []interfaces.ITankLifecycleUseCases // Для Explode врагов
+	tankCommonUseCases       interfaces.ITankCommonUseCases    // Общий use case для всех танков
+	tankLifecycleUseCases    interfaces.ITankLifecycleUseCases // Общий lifecycle use case для всех танков
 	boundaryCollisionService interfaces.IBoundaryCollisionService
 	wallCollisionService     interfaces.IWallCollisionService
 	bulletCollisionService   interfaces.IBulletCollisionService
@@ -27,8 +27,8 @@ func NewCollisionUseCasesWithEnemies(
 	tankActions interfaces.ITankActionsUseCases,
 	mapUseCases interfaces.IMapUseCases,
 	enemyTanks []*types.TankEntity,
-	enemyUseCases []interfaces.ITankCommonUseCases,
-	enemyLifecycles []interfaces.ITankLifecycleUseCases,
+	tankCommonUseCases interfaces.ITankCommonUseCases,
+	tankLifecycleUseCases interfaces.ITankLifecycleUseCases,
 	boundaryCollisionService interfaces.IBoundaryCollisionService,
 	wallCollisionService interfaces.IWallCollisionService,
 	bulletCollisionService interfaces.IBulletCollisionService,
@@ -41,8 +41,8 @@ func NewCollisionUseCasesWithEnemies(
 		mapUseCases:              mapUseCases,
 		enemyTanks:               enemyTanks,
 		hqUseCases:               hqUseCases,
-		enemyUseCases:            enemyUseCases,
-		enemyLifecycles:          enemyLifecycles,
+		tankCommonUseCases:       tankCommonUseCases,
+		tankLifecycleUseCases:    tankLifecycleUseCases,
 		boundaryCollisionService: boundaryCollisionService,
 		wallCollisionService:     wallCollisionService,
 		bulletCollisionService:   bulletCollisionService,
@@ -135,12 +135,11 @@ func (uc *CollisionUseCases) checkBulletEnemyCollisions() {
 	for _, i := range bulletIndicesToRemove {
 		_ = uc.bulletUseCases.RemoveBullet(i)
 
-		// Запускаем анимацию взрыва для врага через его Lifecycle Use Cases
+		// Запускаем анимацию взрыва для врага через общий Lifecycle Use Cases
 		if enemyIndex, exists := enemyIndicesToExplode[i]; exists {
-			if enemyIndex < len(uc.enemyLifecycles) &&
-				enemyIndex < len(uc.enemyTanks) &&
-				uc.enemyLifecycles[enemyIndex] != nil {
-				_ = uc.enemyLifecycles[enemyIndex].Explode(
+			if enemyIndex < len(uc.enemyTanks) &&
+				uc.enemyTanks[enemyIndex] != nil {
+				_ = uc.tankLifecycleUseCases.Explode(
 					uc.enemyTanks[enemyIndex],
 				)
 			}

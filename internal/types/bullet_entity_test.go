@@ -7,25 +7,25 @@ import (
 func TestBulletEntity_GetImageID(t *testing.T) {
 	tests := []struct {
 		name        string
-		imageGetter IImageIDGetter
+		imageGetter IImageProvider
 		expected    string
 		expectError bool
 	}{
 		{
-			name:        "Valid ImageGetter",
-			imageGetter: &MockImageIDGetter{id: "bullet"},
+			name:        "Valid Image",
+			imageGetter: &MockImageProvider{id: "bullet"},
 			expected:    "bullet",
 			expectError: false,
 		},
 		{
-			name:        "Nil ImageGetter",
+			name:        "Nil Image",
 			imageGetter: nil,
 			expected:    "",
 			expectError: true,
 		},
 		{
 			name:        "Empty ID",
-			imageGetter: &MockImageIDGetter{id: ""},
+			imageGetter: &MockImageProvider{id: ""},
 			expected:    "",
 			expectError: false,
 		},
@@ -34,7 +34,7 @@ func TestBulletEntity_GetImageID(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			bullet := &BulletEntity{
-				ImageGetter: tt.imageGetter,
+				Image: tt.imageGetter,
 			}
 
 			result, err := bullet.GetImageID()

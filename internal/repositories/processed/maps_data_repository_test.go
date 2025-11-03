@@ -28,12 +28,12 @@ func (mtr *MockTilesetRepository) GetAnimationConfig(
 	return types.AnimationConfig{}, nil
 }
 
-// MockImageIDGetter - мок для тестирования
-type MockImageIDGetter struct {
+// MockImageProvider - мок для тестирования
+type MockImageProvider struct {
 	id string
 }
 
-func (mig *MockImageIDGetter) GetImageID() (string, error) {
+func (mig *MockImageProvider) GetImageID() (string, error) {
 	return mig.id, nil
 }
 

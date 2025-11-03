@@ -1,6 +1,9 @@
 package interfaces
 
-import "github.com/shpaker/gonflict/internal/types"
+import (
+	"github.com/shpaker/gonflict/internal/types"
+	image_providers "github.com/shpaker/gonflict/internal/types/image_providers"
+)
 
 // ============================================================================
 // Services Interfaces
@@ -74,7 +77,7 @@ type ILogger interface {
 
 // IAnimationService интерфейс для сервиса обновления анимаций
 type IAnimationService interface {
-	UpdateAnimation(animation *types.TileAnimationEntity)
+	UpdateAnimation(animation *image_providers.AnimationProvider)
 }
 
 // ITileService интерфейс для сервиса работы с тайлами
@@ -84,9 +87,9 @@ type ITileService interface {
 	CreateAnimationFromConfig(
 		animationFrames types.AnimationData,
 		config types.AnimationConfig,
-	) *types.TileAnimationEntity
+	) *image_providers.AnimationProvider
 	CreateAnimationTileFromRepo(
 		repo ITilesetRepository,
 		id string,
-	) (*types.TileAnimationEntity, error)
+	) (*image_providers.AnimationProvider, error)
 }

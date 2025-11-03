@@ -29,9 +29,7 @@ func (uc *TankLifecycleUseCases) Spawn(tank *types.TankEntity) error {
 		return err
 	}
 
-	if tankRender, ok := uc.renderUseCases.(*TankRenderUseCases); ok {
-		tankRender.AnimationGetter = spawnAnimation
-	}
+	tank.Image = spawnAnimation
 	tank.State = types.TankStateSpawning
 	tank.Altitude = types.SURFACE
 
@@ -46,9 +44,7 @@ func (uc *TankLifecycleUseCases) Explode(tank *types.TankEntity) error {
 		return err
 	}
 
-	if tankRender, ok := uc.renderUseCases.(*TankRenderUseCases); ok {
-		tankRender.AnimationGetter = explosionAnim
-	}
+	tank.Image = explosionAnim
 	tank.State = types.TankStateExploding
 	tank.Altitude = types.AIR
 
@@ -62,7 +58,7 @@ func (uc *TankLifecycleUseCases) IsSpawnFinished(
 	currentTime float64,
 ) {
 	if tank.State == types.TankStateSpawning {
-		if uc.renderUseCases.IsSpawnAnimationFinished() {
+		if uc.renderUseCases.IsSpawnAnimationFinished(tank) {
 			uc.finishSpawnAnimation(tank, currentTime)
 		}
 	}
@@ -71,7 +67,7 @@ func (uc *TankLifecycleUseCases) IsSpawnFinished(
 // IsExplosionFinished проверяет завершение анимации взрыва танка
 func (uc *TankLifecycleUseCases) IsExplosionFinished(tank *types.TankEntity) {
 	if tank.State == types.TankStateExploding {
-		if uc.renderUseCases.IsExplosionAnimationFinished() {
+		if uc.renderUseCases.IsExplosionAnimationFinished(tank) {
 			tank.State = types.TankStateExploded
 		}
 	}
@@ -84,9 +80,7 @@ func (uc *TankLifecycleUseCases) finishSpawnAnimation(
 ) {
 	tankAnimation, err := uc.tilesUseCases.CreateAnimationTile("base_tank")
 	if err == nil {
-		if tankRender, ok := uc.renderUseCases.(*TankRenderUseCases); ok {
-			tankRender.AnimationGetter = tankAnimation
-		}
+		tank.Image = tankAnimation
 		uc.tilesUseCases.AddAnimation(tankAnimation)
 		// Анимация будет запущена автоматически когда танк начнет двигаться
 		// Сейчас танк стоит, поэтому анимация должна быть остановлена

@@ -15,13 +15,14 @@ const (
 // TankEntity представляет танк (игрока или врага)
 type TankEntity struct {
 	Position      Position
+	Size          Size
+	Altitude      Altitude
+	Image         IImageProvider
 	Speed         float64
 	Direction     Direction
-	State         TankState // Состояние танка
-	SpawnedAt     float64   // Время спавна танка
-	Altitude      Altitude
-	NextDirection *Direction // Следующее направление (используется во время Stops)
-	Size          Size       // Размер танка
+	State         TankState
+	SpawnedAt     float64
+	NextDirection *Direction
 }
 
 // GetSize возвращает размер танка

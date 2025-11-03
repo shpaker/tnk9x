@@ -3,41 +3,16 @@ package use_cases
 import (
 	"github.com/shpaker/gonflict/internal/interfaces"
 	"github.com/shpaker/gonflict/internal/types"
+	image_providers "github.com/shpaker/gonflict/internal/types/image_providers"
 )
 
-// HQRenderUseCases отвечает за графику и рендеринг базы
-type HQRenderUseCases struct {
-	AnimationGetter types.IImageIDGetter
-}
-
-// NewHQRenderUseCases создает новый экземпляр HQRenderUseCases
-func NewHQRenderUseCases() *HQRenderUseCases {
-	return &HQRenderUseCases{
-		AnimationGetter: nil,
-	}
-}
-
-// IsExplosionAnimationFinished возвращает true если анимация взрыва завершена
-func (r *HQRenderUseCases) IsExplosionAnimationFinished() bool {
-	if r.AnimationGetter == nil {
-		return true
-	}
-
-	// Проверяем, что анимация завершена
-	if tileAnim, ok := r.AnimationGetter.(*types.TileAnimationEntity); ok {
-		return tileAnim.IsFinished()
-	}
-
-	return true
-}
-
-// HQUseCases отвечает за обработку действий базы
+// HQUseCases отвечает за обработку действий базы и рендеринг
 type HQUseCases struct {
 	hq                     *types.HQEntity
 	bulletUseCases         interfaces.IBulletUseCases
 	bulletCollisionService interfaces.IBulletCollisionService
 	tilesUseCases          *TilesUseCases
-	renderUseCases         *HQRenderUseCases
+	AnimationGetter        types.IImageProvider // Публичное поле для рендеринга
 }
 
 // NewHQUseCases создает новый экземпляр HQUseCases
@@ -46,14 +21,13 @@ func NewHQUseCases(
 	bulletUseCases interfaces.IBulletUseCases,
 	bulletCollisionService interfaces.IBulletCollisionService,
 	tilesUseCases *TilesUseCases,
-	renderUseCases *HQRenderUseCases,
 ) *HQUseCases {
 	return &HQUseCases{
 		hq:                     hq,
 		bulletUseCases:         bulletUseCases,
 		bulletCollisionService: bulletCollisionService,
 		tilesUseCases:          tilesUseCases,
-		renderUseCases:         renderUseCases,
+		AnimationGetter:        nil,
 	}
 }
 
@@ -91,17 +65,31 @@ func (uc *HQUseCases) Explode() error {
 		return err
 	}
 
-	uc.renderUseCases.AnimationGetter = explosionAnim
+	uc.AnimationGetter = explosionAnim
 	uc.hq.State = types.HQStateExploding
 
 	uc.tilesUseCases.StartAnimation(explosionAnim)
 	return nil
 }
 
+// IsExplosionAnimationFinished возвращает true если анимация взрыва завершена
+func (uc *HQUseCases) IsExplosionAnimationFinished() bool {
+	if uc.AnimationGetter == nil {
+		return true
+	}
+
+	// Проверяем, что анимация завершена
+	if tileAnim, ok := uc.AnimationGetter.(*image_providers.AnimationProvider); ok {
+		return tileAnim.IsFinished()
+	}
+
+	return true
+}
+
 // IsExplosionFinished проверяет завершение анимации взрыва базы
 func (uc *HQUseCases) IsExplosionFinished() {
 	if uc.hq != nil && uc.hq.State == types.HQStateExploding {
-		if uc.renderUseCases.IsExplosionAnimationFinished() {
+		if uc.IsExplosionAnimationFinished() {
 			uc.hq.State = types.HQStateDestroyed
 		}
 	}

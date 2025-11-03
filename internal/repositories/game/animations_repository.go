@@ -1,27 +1,27 @@
 package game
 
 import (
-	"github.com/shpaker/gonflict/internal/types"
+	image_providers "github.com/shpaker/gonflict/internal/types/image_providers"
 )
 
 type AnimationsRepository struct {
-	animations []*types.TileAnimationEntity
+	animations []*image_providers.AnimationProvider
 }
 
 func NewAnimationsRepository() *AnimationsRepository {
 	return &AnimationsRepository{
-		animations: make([]*types.TileAnimationEntity, 0),
+		animations: make([]*image_providers.AnimationProvider, 0),
 	}
 }
 
 // AddAnimation добавляет анимацию в репозиторий
 func (ar *AnimationsRepository) AddAnimation(
-	animation *types.TileAnimationEntity,
+	animation *image_providers.AnimationProvider,
 ) {
 	ar.animations = append(ar.animations, animation)
 }
 
 // GetAllAnimations возвращает все анимации
-func (ar *AnimationsRepository) GetAllAnimations() []*types.TileAnimationEntity {
+func (ar *AnimationsRepository) GetAllAnimations() []*image_providers.AnimationProvider {
 	return ar.animations
 }
