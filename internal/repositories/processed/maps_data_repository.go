@@ -39,7 +39,7 @@ func NewMapsDataRepository(
 
 // readFile читает файл уровня
 func (mdr *MapsDataRepository) readFile(levelNumber int) ([]string, error) {
-	levelName := "levels/" + strconv.Itoa(levelNumber)
+	levelName := "levels/" + strconv.Itoa(levelNumber) + ".bcmap"
 
 	// Читаем текстовый файл уровня
 	data, err := mdr.fileRepository.ReadFile(levelName)
@@ -155,4 +155,9 @@ func (mdr *MapsDataRepository) GetLevel(
 	}
 
 	return level, nil
+}
+
+// GetLevelsCount возвращает количество доступных карт (файлы вида *.bcmap)
+func (mdr *MapsDataRepository) GetLevelsCount() (int, error) {
+	return mdr.fileRepository.CountFiles("levels", "*.bcmap")
 }

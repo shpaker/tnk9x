@@ -46,6 +46,14 @@ func (m *MockTilesetFileRepository) AddImage(name string, img image.Image) {
 	m.images[name] = img
 }
 
+func (m *MockTilesetFileRepository) CountFiles(
+	dirPath string,
+	pattern string,
+) (int, error) {
+	// Простая реализация для тестов
+	return 0, nil
+}
+
 // Создаем тестовое изображение
 func createTestImage(width, height int) image.Image {
 	return image.NewRGBA(image.Rect(0, 0, width, height))

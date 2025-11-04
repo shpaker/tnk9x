@@ -28,6 +28,7 @@ func NewStageSelectState(
 	transitionUseCases *use_cases.StateTransitionUseCases,
 	session *types.SessionEntity,
 	fontsRepository interfaces.IFontsRepository,
+	mapsRepository interfaces.IMapsDataRepository,
 ) (*StageSelectState, error) {
 	// Получаем размеры экрана через type assertion к конкретному типу Config
 	// (в интерфейсе нет этих методов, но они есть в реализации)
@@ -45,8 +46,12 @@ func NewStageSelectState(
 		screenHeight = 600
 	}
 
-	// Определяем максимальное количество уровней
-	maxStages := uint(35) // Можно получить из конфига или другого источника
+	// Получаем максимальное количество уровней из репозитория карт
+	levelsCount, err := mapsRepository.GetLevelsCount()
+	if err != nil {
+		return nil, err
+	}
+	maxStages := uint(levelsCount)
 
 	// Создаем селектор уровней
 	selector := types.NewStageSelector(maxStages)

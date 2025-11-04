@@ -3,6 +3,7 @@ package processed
 import (
 	"errors"
 	"image"
+	"strings"
 	"testing"
 
 	"github.com/shpaker/gonflict/internal/interfaces"
@@ -61,6 +62,26 @@ func (m *MockFileRepository) ReadImage(name string) (image.Image, error) {
 
 func (m *MockFileRepository) AddFile(name string, data []byte) {
 	m.files[name] = data
+}
+
+func (m *MockFileRepository) CountFiles(
+	dirPath string,
+	pattern string,
+) (int, error) {
+	count := 0
+	// Простая реализация для тестов - считаем файлы с нужным расширением
+	patternExt := ""
+	if strings.HasPrefix(pattern, "*") {
+		patternExt = pattern[1:]
+	}
+	for name := range m.files {
+		if strings.HasPrefix(name, dirPath+"/") {
+			if patternExt != "" && strings.HasSuffix(name, patternExt) {
+				count++
+			}
+		}
+	}
+	return count, nil
 }
 
 func TestGetLevel_Success(t *testing.T) {

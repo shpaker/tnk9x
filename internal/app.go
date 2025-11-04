@@ -75,6 +75,22 @@ func New(cfg *Config) *App {
 	// Создаем файловый репозиторий
 	fileRepository := raw.NewFileRepository("assets")
 
+	// Создаем реестр тайлсетов
+	tilesetRegistry, err := processed.NewTilesetRepositoryRegistry(
+		fileRepository,
+	)
+	if err != nil {
+		fmt.Printf("Error creating tileset registry: %v\n", err)
+		panic(err)
+	}
+
+	// Создаем репозиторий карт
+	mapsRepository := processed.NewMapsDataRepository(
+		fileRepository,
+		tilesetRegistry.Blocks(),
+		cfg.MapBlocksCount.Width,
+	)
+
 	// Создаем репозиторий шрифтов
 	fontsRepository := processed.NewFontsRepository(fileRepository)
 
@@ -95,6 +111,7 @@ func New(cfg *Config) *App {
 		stateTransitionUseCases,
 		session,
 		fontsRepository,
+		mapsRepository,
 	)
 	if err != nil {
 		fmt.Printf("Error creating StageSelectState: %v\n", err)
@@ -312,6 +329,22 @@ func (app *App) createStageSelectState(
 	session *types.SessionEntity,
 ) (states.State, error) {
 	fileRepository := raw.NewFileRepository("assets")
+
+	// Создаем реестр тайлсетов
+	tilesetRegistry, err := processed.NewTilesetRepositoryRegistry(
+		fileRepository,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create tileset registry: %w", err)
+	}
+
+	// Создаем репозиторий карт
+	mapsRepository := processed.NewMapsDataRepository(
+		fileRepository,
+		tilesetRegistry.Blocks(),
+		app.config.MapBlocksCount.Width,
+	)
+
 	fontsRepository := processed.NewFontsRepository(fileRepository)
 
 	stageSelectorUseCases := use_cases.NewStageSelectorUseCases()
@@ -323,6 +356,7 @@ func (app *App) createStageSelectState(
 		stateTransitionUseCases,
 		session,
 		fontsRepository,
+		mapsRepository,
 	)
 }
 

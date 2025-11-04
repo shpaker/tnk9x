@@ -93,6 +93,8 @@ type ITilesetRepository interface {
 type IMapsDataRepository interface {
 	// GetLevel загружает уровень по номеру и возвращает его данные
 	GetLevel(num int) ([]types.BlockEntity, error)
+	// GetLevelsCount возвращает количество доступных карт (файлы вида *.bcmap)
+	GetLevelsCount() (int, error)
 }
 
 // ITilesetRepositoryRegistry определяет интерфейс для реестра тайлсетов
@@ -134,4 +136,7 @@ type IFileRepository interface {
 
 	// ReadImage читает изображение (добавляет расширение .png автоматически)
 	ReadImage(name string) (image.Image, error)
+
+	// CountFiles возвращает количество файлов в указанной директории по маске (например, "*.bcmap")
+	CountFiles(dirPath string, pattern string) (int, error)
 }

@@ -6,6 +6,7 @@ import (
 	_ "image/png"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -51,6 +52,52 @@ func (fr *FileRepository) ReadImage(name string) (image.Image, error) {
 		return nil, err
 	}
 	return img, nil
+}
+
+// CountFiles возвращает количество файлов в указанной директории по маске (например, "*.bcmap")
+func (fr *FileRepository) CountFiles(
+	dirPath string,
+	pattern string,
+) (int, error) {
+	fullPath, err := fr.getPath(dirPath)
+	if err != nil {
+		return 0, err
+	}
+
+	entries, err := os.ReadDir(fullPath)
+	if err != nil {
+		return 0, err
+	}
+
+	count := 0
+	// Извлекаем расширение из паттерна (например, ".bcmap" из "*.bcmap")
+	patternExt := ""
+	if strings.HasPrefix(pattern, "*") {
+		patternExt = pattern[1:]
+	}
+
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		// Проверяем, соответствует ли файл паттерну
+		if patternExt != "" {
+			if strings.HasSuffix(entry.Name(), patternExt) {
+				count++
+			}
+		} else {
+			// Если паттерн не содержит *, используем filepath.Match
+			matched, err := filepath.Match(pattern, entry.Name())
+			if err != nil {
+				return 0, err
+			}
+			if matched {
+				count++
+			}
+		}
+	}
+
+	return count, nil
 }
 
 func ReadConfig[T any](repo *FileRepository, name string) (T, error) {
