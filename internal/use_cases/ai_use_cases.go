@@ -1,6 +1,10 @@
 package use_cases
 
 import (
+	"errors"
+
+	lua "github.com/yuin/gopher-lua"
+
 	"github.com/shpaker/gonflict/internal/interfaces"
 	"github.com/shpaker/gonflict/internal/types"
 )
@@ -28,28 +32,36 @@ func (uc *AIUseCases) ExecuteAI(
 	tank *types.TankEntity,
 	context *types.GameAiContext,
 ) (types.EnemyAIDecision, error) {
-	// 1. Конвертируем входные данные в Lua типы
-	tankTable, err := uc.typeConverter.TankToLua(tank)
-	if err != nil {
-		return types.EnemyAIDecision{}, err
+	if tank == nil {
+		return types.EnemyAIDecision{}, errors.New("tank is nil")
 	}
 
+	// Конвертируем контекст в Lua таблицу (если нужен)
 	contextTable, err := uc.typeConverter.ContextToLua(context)
 	if err != nil {
 		return types.EnemyAIDecision{}, err
 	}
 
-	// 2. Вызываем Lua функцию через engine
+	// Подготавливаем параметры танка как отдельные значения
+	x := lua.LNumber(tank.Position.X)
+	y := lua.LNumber(tank.Position.Y)
+	direction := lua.LNumber(int(tank.Direction))
+	state := lua.LNumber(int(tank.State))
+
+	// Вызываем Lua функцию через engine с явными параметрами
 	results, err := uc.luaEngine.CallFunction(
 		"updateEnemyAI",
-		tankTable,
+		x,
+		y,
+		direction,
+		state,
 		contextTable,
 	)
 	if err != nil {
 		return types.EnemyAIDecision{}, err
 	}
 
-	// 3. Конвертируем результат обратно в доменный тип
+	// Конвертируем результат обратно в доменный тип
 	return uc.typeConverter.LuaToDecision(results)
 }
 

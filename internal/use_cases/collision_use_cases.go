@@ -79,7 +79,12 @@ func (uc *CollisionUseCases) checkEnemyCollisions(
 		}
 
 		// Проверяем коллизии с границами
-		uc.boundaryCollisionService.CheckEnemyBoundaryCollisions(enemy)
+		hadBoundaryCollision := uc.boundaryCollisionService.CheckEnemyBoundaryCollisions(
+			enemy,
+		)
+		if hadBoundaryCollision {
+			uc.tankActions.Stop(enemy, true)
+		}
 
 		// Проверяем коллизии со стенами
 		level := uc.mapUseCases.GetBlocks()
@@ -93,6 +98,7 @@ func (uc *CollisionUseCases) checkEnemyCollisions(
 				enemy,
 				collidingBlock,
 			)
+			uc.tankActions.Stop(enemy, true)
 		}
 	}
 }

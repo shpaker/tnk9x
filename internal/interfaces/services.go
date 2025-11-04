@@ -25,7 +25,7 @@ type ICoordinateService interface {
 // IBoundaryCollisionService интерфейс для сервиса коллизий с границами
 type IBoundaryCollisionService interface {
 	CheckTankBoundaryCollisions(tank *types.TankEntity, stopAndRound bool) bool
-	CheckEnemyBoundaryCollisions(enemy *types.TankEntity)
+	CheckEnemyBoundaryCollisions(enemy *types.TankEntity) bool
 	CheckBulletBoundaryCollisions(bullets []types.BulletEntity) []int
 }
 

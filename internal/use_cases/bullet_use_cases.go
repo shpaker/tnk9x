@@ -67,7 +67,8 @@ func (uc *BulletUseCases) ShootBullet(tank *types.TankEntity) error {
 		Owner:     tank,
 	}
 
-	uc.bulletsRepository.AddBullet(bullet)
+	// Игнорируем ошибку от AddBullet (если пуля не добавлена - просто не стреляем)
+	_ = uc.bulletsRepository.AddBullet(bullet)
 	return nil
 }
 

@@ -50,3 +50,8 @@ func (t *TankEntity) IsActive() bool {
 		t.State != TankStateExploding &&
 		t.State != TankStateExploded
 }
+
+// IsStopped возвращает true если танк остановлен (по скорости или по состоянию)
+func (t *TankEntity) IsStopped() bool {
+	return t.Speed == 0 || t.State == TankStateStopped
+}

@@ -21,9 +21,8 @@ func NewBoundaryCollisionService(
 	}
 }
 
-// CheckTankBoundaryCollisions проверяет коллизии танка/врага с границами экрана
-// Корректирует позицию при выходе за границы
-// stopAndRound: если true, останавливает (Speed = 0) и округляет координаты до кратного 4
+// CheckTankBoundaryCollisions проверяет коллизии танка с границами экрана
+// stopAndRound: если true, округляет координаты до кратного 4
 // Возвращает true, если была коллизия
 func (s *BoundaryCollisionService) CheckTankBoundaryCollisions(
 	tank *types.TankEntity,
@@ -35,34 +34,22 @@ func (s *BoundaryCollisionService) CheckTankBoundaryCollisions(
 	if tank.Position.X < 0 {
 		tank.Position.X = 0
 		collision = true
-		if stopAndRound {
-			tank.Speed = 0
-		}
 	}
 	if tank.Position.Y < 0 {
 		tank.Position.Y = 0
 		collision = true
-		if stopAndRound {
-			tank.Speed = 0
-		}
 	}
 	if tank.Position.X > float64(s.mapWidthHeight-s.tankSpriteSize) {
 		tank.Position.X = float64(s.mapWidthHeight - s.tankSpriteSize)
 		collision = true
-		if stopAndRound {
-			tank.Speed = 0
-		}
 	}
 	if tank.Position.Y > float64(s.mapWidthHeight-s.tankSpriteSize) {
 		tank.Position.Y = float64(s.mapWidthHeight - s.tankSpriteSize)
 		collision = true
-		if stopAndRound {
-			tank.Speed = 0
-		}
 	}
 
-	// Округляем координаты до ближайшего кратного 4 (для врагов или если остановлен)
-	if stopAndRound && tank.Speed == 0 {
+	// Округляем координаты до ближайшего кратного 4 (если stopAndRound = true)
+	if stopAndRound && collision {
 		tank.Position.X = s.coordinateService.RoundToNearestMultipleOf4(
 			tank.Position.X,
 		)
@@ -75,10 +62,11 @@ func (s *BoundaryCollisionService) CheckTankBoundaryCollisions(
 }
 
 // CheckEnemyBoundaryCollisions проверяет коллизии врага с границами экрана
+// Возвращает true, если была коллизия
 func (s *BoundaryCollisionService) CheckEnemyBoundaryCollisions(
 	enemy *types.TankEntity,
-) {
-	s.CheckTankBoundaryCollisions(enemy, true)
+) bool {
+	return s.CheckTankBoundaryCollisions(enemy, true)
 }
 
 // CheckBulletBoundaryCollisions проверяет коллизии пуль с границами экрана

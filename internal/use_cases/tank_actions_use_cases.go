@@ -108,11 +108,6 @@ func (uc *TankActionsUseCases) Stop(tank *types.TankEntity, byCollision bool) {
 	// Анимация продолжается при торможении (ничего не делаем, анимация уже идет)
 }
 
-// IsStopped возвращает true если танк остановлен
-func (uc *TankActionsUseCases) IsStopped(tank *types.TankEntity) bool {
-	return tank.Speed == 0
-}
-
 // Shoot создает пулю от танка
 func (uc *TankActionsUseCases) Shoot(tank *types.TankEntity) error {
 	if !tank.IsActive() {
@@ -126,7 +121,8 @@ func (uc *TankActionsUseCases) ApplyDecision(
 	tank *types.TankEntity,
 	decision types.EnemyAIDecision,
 ) {
-	if uc.IsStopped(tank) {
+	// Применяем решение если танк остановлен
+	if tank.IsStopped() {
 		_ = uc.Rotate(tank, decision.Direction)
 		_ = uc.Move(tank)
 	}

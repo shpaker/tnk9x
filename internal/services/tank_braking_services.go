@@ -95,7 +95,7 @@ func (s *TankBrakingService) checkAndHandleHalfStepBack(
 	diff := *ctx.currentCoord - ctx.targetMultipleOf4
 	if diff > 0 && diff <= 0.5 {
 		*ctx.currentCoord = ctx.targetMultipleOf4 - 0.5
-		tank.Speed = 0
+		// Устанавливаем состояние остановки - это часть логики торможения
 		tank.State = types.TankStateStopped
 		tank.NextDirection = nil
 		return true

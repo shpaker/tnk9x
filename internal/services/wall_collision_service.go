@@ -56,6 +56,8 @@ func (s *WallCollisionService) CheckEnemyWallCollision(
 }
 
 // HandleEnemyWallCollision обрабатывает коллизию врага со стеной
+// Корректирует позицию врага при столкновении со стеной
+// Остановка танка должна выполняться через tankActions.Stop в use case
 func (s *WallCollisionService) HandleEnemyWallCollision(
 	enemy *types.TankEntity,
 	block *types.BlockEntity,
@@ -76,9 +78,6 @@ func (s *WallCollisionService) HandleEnemyWallCollision(
 	case types.DirectionRight:
 		enemy.Position.X = blockWorldX - float64(s.tankSpriteSize)
 	}
-
-	// Останавливаем врага
-	enemy.Speed = 0
 
 	// Округляем координаты врага до ближайшего кратного 4
 	enemy.Position.X = s.coordinateService.RoundToNearestMultipleOf4(

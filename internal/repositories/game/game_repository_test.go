@@ -57,16 +57,25 @@ func TestGameRepositoriesRegistryBlocks(t *testing.T) {
 func TestGameRepositoriesRegistryBullets(t *testing.T) {
 	gameRepo := game.NewGameRepositoriesRegistry()
 
+	// Создаем тестовый танк
+	tank := &types.TankEntity{
+		Position: types.Position{X: 0, Y: 0},
+	}
+
 	// Создаем пулю с минимальными данными
 	bullet := types.BulletEntity{
 		Position:  types.Position{X: 10, Y: 20},
 		Direction: types.DirectionUp,
 		Speed:     100,
 		Altitude:  types.SURFACE,
+		Owner:     tank,
 	}
 
 	// Добавляем пулю
-	gameRepo.BulletsRepository().AddBullet(bullet)
+	err := gameRepo.BulletsRepository().AddBullet(bullet)
+	if err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	}
 
 	// Проверяем, что пуля добавлена
 	bullets := gameRepo.BulletsRepository().GetAllBullets()
@@ -158,8 +167,12 @@ func TestGetGameContext(t *testing.T) {
 		Direction: types.DirectionUp,
 		Speed:     100,
 		Altitude:  types.SURFACE,
+		Owner:     playerTank,
 	}
-	gameRepo.BulletsRepository().AddBullet(bullet)
+	err := gameRepo.BulletsRepository().AddBullet(bullet)
+	if err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	}
 
 	// Добавляем блок
 	block := types.BlockEntity{

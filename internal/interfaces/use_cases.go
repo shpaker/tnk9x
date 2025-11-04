@@ -84,7 +84,6 @@ type ITankActionsUseCases interface {
 	Rotate(tank *types.TankEntity, direction types.Direction) error
 	Move(tank *types.TankEntity) error
 	Stop(tank *types.TankEntity, byCollision bool)
-	IsStopped(tank *types.TankEntity) bool
 	Shoot(tank *types.TankEntity) error
 	ApplyDecision(tank *types.TankEntity, decision types.EnemyAIDecision)
 }

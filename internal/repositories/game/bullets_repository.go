@@ -17,8 +17,22 @@ func NewBulletsRepository() *BulletsRepository {
 }
 
 // AddBullet добавляет пулю в репозиторий
-func (br *BulletsRepository) AddBullet(bullet types.BulletEntity) {
+// Возвращает ошибку если у пули нет owner или если у этого owner уже есть пуля
+func (br *BulletsRepository) AddBullet(bullet types.BulletEntity) error {
+	// Проверяем наличие owner
+	if bullet.Owner == nil {
+		return fmt.Errorf("bullet owner is nil")
+	}
+
+	// Проверяем, есть ли уже пуля от этого owner
+	for _, existingBullet := range br.bullets {
+		if existingBullet.Owner == bullet.Owner {
+			return fmt.Errorf("tank already has a bullet")
+		}
+	}
+
 	br.bullets = append(br.bullets, bullet)
+	return nil
 }
 
 // GetAllBullets возвращает все пули

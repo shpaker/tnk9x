@@ -31,15 +31,24 @@ func TestNewBulletsRepository(t *testing.T) {
 func TestAddAndGetBullets(t *testing.T) {
 	repo := NewBulletsRepository()
 
-	// Создаем тестовую пулю с Image
+	// Создаем тестовый танк
+	tank := &types.TankEntity{
+		Position: types.Position{X: 0, Y: 0},
+	}
+
+	// Создаем тестовую пулю с Image и Owner
 	bullet := types.BulletEntity{
 		Image:     &MockImageProvider{id: "bullet"},
 		Position:  types.Position{X: 100, Y: 100},
 		Speed:     200.0,
 		Direction: types.DirectionUp,
+		Owner:     tank,
 	}
 
-	repo.AddBullet(bullet)
+	err := repo.AddBullet(bullet)
+	if err != nil {
+		t.Errorf("Не ожидалась ошибка: %v", err)
+	}
 
 	bullets := repo.GetAllBullets()
 	if len(bullets) != 1 {
@@ -60,25 +69,101 @@ func TestAddAndGetBullets(t *testing.T) {
 	}
 }
 
-func TestRemoveBullet(t *testing.T) {
+func TestAddBulletWithoutOwner(t *testing.T) {
 	repo := NewBulletsRepository()
 
-	// Создаем тестовые пули с Image
+	// Создаем пулю без owner
+	bullet := types.BulletEntity{
+		Image:     &MockImageProvider{id: "bullet"},
+		Position:  types.Position{X: 100, Y: 100},
+		Speed:     200.0,
+		Direction: types.DirectionUp,
+		Owner:     nil,
+	}
+
+	err := repo.AddBullet(bullet)
+	if err == nil {
+		t.Error("Ожидалась ошибка для пули без owner")
+	}
+}
+
+func TestAddBulletDuplicateOwner(t *testing.T) {
+	repo := NewBulletsRepository()
+
+	// Создаем тестовый танк
+	tank := &types.TankEntity{
+		Position: types.Position{X: 0, Y: 0},
+	}
+
+	// Создаем первую пулю
 	bullet1 := types.BulletEntity{
 		Image:     &MockImageProvider{id: "bullet"},
 		Position:  types.Position{X: 100, Y: 100},
 		Speed:     200.0,
 		Direction: types.DirectionUp,
+		Owner:     tank,
+	}
+
+	err := repo.AddBullet(bullet1)
+	if err != nil {
+		t.Errorf("Не ожидалась ошибка: %v", err)
+	}
+
+	// Пытаемся добавить вторую пулю от того же owner
+	bullet2 := types.BulletEntity{
+		Image:     &MockImageProvider{id: "bullet"},
+		Position:  types.Position{X: 200, Y: 200},
+		Speed:     200.0,
+		Direction: types.DirectionDown,
+		Owner:     tank,
+	}
+
+	err = repo.AddBullet(bullet2)
+	if err == nil {
+		t.Error("Ожидалась ошибка для второй пули от того же owner")
+	}
+
+	bullets := repo.GetAllBullets()
+	if len(bullets) != 1 {
+		t.Errorf("Ожидалось 1 пуля, получено %d", len(bullets))
+	}
+}
+
+func TestRemoveBullet(t *testing.T) {
+	repo := NewBulletsRepository()
+
+	// Создаем тестовые танки
+	tank1 := &types.TankEntity{
+		Position: types.Position{X: 0, Y: 0},
+	}
+	tank2 := &types.TankEntity{
+		Position: types.Position{X: 10, Y: 10},
+	}
+
+	// Создаем тестовые пули с Image и Owner
+	bullet1 := types.BulletEntity{
+		Image:     &MockImageProvider{id: "bullet"},
+		Position:  types.Position{X: 100, Y: 100},
+		Speed:     200.0,
+		Direction: types.DirectionUp,
+		Owner:     tank1,
 	}
 	bullet2 := types.BulletEntity{
 		Image:     &MockImageProvider{id: "bullet"},
 		Position:  types.Position{X: 200, Y: 200},
 		Speed:     200.0,
 		Direction: types.DirectionDown,
+		Owner:     tank2,
 	}
 
-	repo.AddBullet(bullet1)
-	repo.AddBullet(bullet2)
+	err := repo.AddBullet(bullet1)
+	if err != nil {
+		t.Errorf("Не ожидалась ошибка: %v", err)
+	}
+	err = repo.AddBullet(bullet2)
+	if err != nil {
+		t.Errorf("Не ожидалась ошибка: %v", err)
+	}
 
 	bullets := repo.GetAllBullets()
 	if len(bullets) != 2 {
@@ -86,7 +171,7 @@ func TestRemoveBullet(t *testing.T) {
 	}
 
 	// Удаляем первую пулю
-	err := repo.RemoveBullet(0)
+	err = repo.RemoveBullet(0)
 	if err != nil {
 		t.Errorf("Неожиданная ошибка при удалении: %v", err)
 	}

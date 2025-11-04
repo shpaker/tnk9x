@@ -25,7 +25,8 @@ type IGameRepositoriesRegistry interface {
 // IBulletsRepository определяет интерфейс для работы с пулями
 type IBulletsRepository interface {
 	// AddBullet добавляет пулю в репозиторий
-	AddBullet(bullet types.BulletEntity)
+	// Возвращает ошибку если у пули нет owner или если у этого owner уже есть пуля
+	AddBullet(bullet types.BulletEntity) error
 
 	// GetAllBullets возвращает все пули
 	GetAllBullets() []types.BulletEntity

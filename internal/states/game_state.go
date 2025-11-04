@@ -139,13 +139,6 @@ func (state *GameState) update(dt float64) {
 		state.AIContext.Bullets = bullets
 	}
 
-	// Обновляем AI input адаптеры врагов
-	for _, adapter := range state.EnemyInputAdapters {
-		if adapter != nil {
-			adapter.Update(dt)
-		}
-	}
-
 	// Обновляем движение врагов
 	for i := range state.EnemyTanks {
 		if state.TankCommonUseCases != nil &&
@@ -173,6 +166,14 @@ func (state *GameState) update(dt float64) {
 		enemyTanksSlice,
 		state.HQEntity,
 	)
+
+	// Обновляем AI input адаптеры врагов ПОСЛЕ коллизий
+	// чтобы AI видел актуальное состояние танка после столкновений
+	for _, adapter := range state.EnemyInputAdapters {
+		if adapter != nil {
+			adapter.Update(dt)
+		}
+	}
 
 	// Проверяем завершение анимации взрыва базы
 	if state.HQUseCases != nil {

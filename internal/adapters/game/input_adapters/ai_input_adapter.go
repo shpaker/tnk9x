@@ -47,8 +47,8 @@ func (a *AiInputAdapter) Update(dt float64) {
 		// Используем AIUseCases для выполнения AI логики
 		if a.aiUseCases != nil && a.aiContext != nil {
 			decision, err := a.aiUseCases.ExecuteAI(a.tank, a.aiContext)
-			if err == nil && decision.Direction != 0 && a.tank != nil {
-				// Применяем решение
+			if err == nil && a.tank != nil {
+				// Применяем решение (даже если Direction == 0, это валидное направление UP)
 				a.tankActions.ApplyDecision(a.tank, decision)
 			}
 		}
