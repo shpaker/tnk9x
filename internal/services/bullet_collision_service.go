@@ -84,72 +84,82 @@ func (s *BulletCollisionService) checkCollisionRectangles(
 		y1+h1 > y2
 }
 
-// CheckBulletTankCollision проверяет коллизию пуль с танком
-// Возвращает список индексов пуль для удаления
-func (s *BulletCollisionService) CheckBulletTankCollision(
+// CheckBulletTanksCollisions проверяет коллизии пуль со всеми танками (игрок + враги)
+// Возвращает карту индекс_пули -> танк для обработки взрыва
+// Пули врагов проходят сквозь других врагов
+// Пули игрока попадают во врагов
+// Пули врагов попадают в игрока
+func (s *BulletCollisionService) CheckBulletTanksCollisions(
 	bullets []types.BulletEntity,
-	tank *types.TankEntity,
-) []int {
-	var indicesToRemove []int
+	allTanks []*types.TankEntity,
+	enemyTanks []*types.TankEntity,
+) (bulletIndicesToRemove []int, tanksToExplode map[int]*types.TankEntity) {
+	tanksToExplode = make(map[int]*types.TankEntity)
 
-	for i := len(bullets) - 1; i >= 0; i-- {
-		bullet := &bullets[i]
-
-		// Проверяем коллизию между пулей и танком
-		if bullet.Owner != tank && s.checkColliders(bullet, tank) {
-			indicesToRemove = append(indicesToRemove, i)
+	// Создаем карту для быстрой проверки, является ли танк врагом
+	enemySet := make(map[*types.TankEntity]bool)
+	for _, enemy := range enemyTanks {
+		if enemy != nil {
+			enemySet[enemy] = true
 		}
 	}
 
-	return indicesToRemove
-}
-
-// CheckBulletEnemyCollisions проверяет коллизии пуль с врагами
-// Возвращает карту индекс_пули -> индекс_врага для обработки взрыва
-func (s *BulletCollisionService) CheckBulletEnemyCollisions(
-	bullets []types.BulletEntity,
-	enemies []*types.TankEntity,
-) (bulletIndicesToRemove []int, enemyIndicesToExplode map[int]int) {
-	enemyIndicesToExplode = make(map[int]int)
-
 	for i := len(bullets) - 1; i >= 0; i-- {
 		bullet := &bullets[i]
+		if bullet.Owner == nil {
+			continue
+		}
 
-		// Проверяем коллизию с каждым врагом
-		for enemyIndex, enemy := range enemies {
-			// Пропускаем если врага нет
-			if enemy == nil {
+		// Определяем, является ли пуля вражеской
+		isEnemyBullet := enemySet[bullet.Owner]
+
+		// Проверяем коллизию с каждым танком
+		for _, tank := range allTanks {
+			if tank == nil || !tank.IsActive() {
 				continue
 			}
 
 			// Проверяем, что пуля не принадлежит этому танку (избегаем самоуничтожения)
-			if bullet.Owner == enemy {
+			if bullet.Owner == tank {
 				continue
 			}
 
-			// Если враг активен и есть коллизия
-			if enemy.IsActive() && s.checkColliders(bullet, enemy) {
-				// Удаляем пулю
+			// Пули врагов проходят сквозь других врагов
+			if isEnemyBullet && enemySet[tank] {
+				continue
+			}
+
+			// Проверяем коллизию между пулей и танком
+			if s.checkColliders(bullet, tank) {
 				bulletIndicesToRemove = append(bulletIndicesToRemove, i)
-				// Запоминаем врага для взрыва
-				enemyIndicesToExplode[i] = enemyIndex
-				// Выходим из цикла врагов, так как пуля уже обработана
+				tanksToExplode[i] = tank
+				// Выходим из цикла танков, так как пуля уже обработана
 				break
 			}
 		}
 	}
 
-	return bulletIndicesToRemove, enemyIndicesToExplode
+	return bulletIndicesToRemove, tanksToExplode
 }
 
 // CheckBulletHQCollision проверяет коллизию пуль с базой
 // Возвращает список индексов пуль для удаления и true если база была уничтожена
+// Базу могут разрушать только пули врагов (определяется по списку enemyTanks)
 func (s *BulletCollisionService) CheckBulletHQCollision(
 	bullets []types.BulletEntity,
 	hq *types.HQEntity,
+	enemyTanks []*types.TankEntity,
 ) (bulletIndicesToRemove []int, hqDestroyed bool) {
 	if hq == nil || hq.IsDestroyed() {
 		return nil, false
+	}
+
+	// Создаем карту для быстрой проверки, является ли пуля вражеской
+	enemySet := make(map[*types.TankEntity]bool)
+	for _, enemy := range enemyTanks {
+		if enemy != nil {
+			enemySet[enemy] = true
+		}
 	}
 
 	for i := len(bullets) - 1; i >= 0; i-- {
@@ -157,6 +167,11 @@ func (s *BulletCollisionService) CheckBulletHQCollision(
 
 		// Проверяем, что пуля существует и имеет владельца
 		if bullet.Owner == nil {
+			continue
+		}
+
+		// Базу могут разрушать только пули врагов (не пули игрока)
+		if !enemySet[bullet.Owner] {
 			continue
 		}
 

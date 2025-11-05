@@ -1,53 +1,22 @@
 package use_cases
 
 import (
-	"github.com/shpaker/gonflict/internal/interfaces"
 	"github.com/shpaker/gonflict/internal/types"
 	image_providers "github.com/shpaker/gonflict/internal/types/image_providers"
 )
 
 // HQUseCases отвечает за обработку действий базы и рендеринг
 type HQUseCases struct {
-	bulletUseCases         interfaces.IBulletUseCases
-	bulletCollisionService interfaces.IBulletCollisionService
-	tilesUseCases          *TilesUseCases
+	tilesUseCases *TilesUseCases
 }
 
 // NewHQUseCases создает новый экземпляр HQUseCases
 func NewHQUseCases(
-	bulletUseCases interfaces.IBulletUseCases,
-	bulletCollisionService interfaces.IBulletCollisionService,
 	tilesUseCases *TilesUseCases,
 ) *HQUseCases {
 	return &HQUseCases{
-		bulletUseCases:         bulletUseCases,
-		bulletCollisionService: bulletCollisionService,
-		tilesUseCases:          tilesUseCases,
+		tilesUseCases: tilesUseCases,
 	}
-}
-
-// HandleBulletHit обрабатывает попадание пули в базу
-// Возвращает индексы пуль для удаления и true если база была уничтожена
-func (uc *HQUseCases) HandleBulletHit(
-	hq *types.HQEntity,
-) (bulletIndicesToRemove []int, destroyed bool) {
-	if hq == nil || hq.IsDestroyed() ||
-		hq.State == types.HQStateExploding {
-		return nil, false
-	}
-
-	bullets := uc.bulletUseCases.GetBullets()
-	bulletIndicesToRemove, destroyed = uc.bulletCollisionService.CheckBulletHQCollision(
-		bullets,
-		hq,
-	)
-
-	// Запускаем анимацию взрыва если нужно
-	if destroyed {
-		_ = uc.Explode(hq)
-	}
-
-	return bulletIndicesToRemove, destroyed
 }
 
 // Explode запускает анимацию взрыва базы

@@ -49,17 +49,15 @@ type IBulletCollisionService interface {
 		bullets []types.BulletEntity,
 		level []types.BlockEntity,
 	) (bulletIndicesToRemove []int, blockIndicesToRemove []int)
-	CheckBulletTankCollision(
+	CheckBulletTanksCollisions(
 		bullets []types.BulletEntity,
-		tank *types.TankEntity,
-	) []int
-	CheckBulletEnemyCollisions(
-		bullets []types.BulletEntity,
-		enemies []*types.TankEntity,
-	) (bulletIndicesToRemove []int, enemyIndicesToExplode map[int]int)
+		allTanks []*types.TankEntity,
+		enemyTanks []*types.TankEntity,
+	) (bulletIndicesToRemove []int, tanksToExplode map[int]*types.TankEntity)
 	CheckBulletHQCollision(
 		bullets []types.BulletEntity,
 		hq *types.HQEntity,
+		enemyTanks []*types.TankEntity,
 	) (bulletIndicesToRemove []int, hqDestroyed bool)
 }
 

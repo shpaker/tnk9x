@@ -28,19 +28,11 @@ type IMapUseCases interface {
 // ICollisionUseCases интерфейс для операций с коллизиями
 type ICollisionUseCases interface {
 	UpdateCollisions(
-		playerTank *types.TankEntity,
+		allTanks []*types.TankEntity,
 		enemyTanks []*types.TankEntity,
 		hq *types.HQEntity,
 	) error
 	CheckColliders(obj1 IMapObject, obj2 IMapObject) bool
-	CheckCollidersWithArray(
-		obj IMapObject,
-		objects []IMapObject,
-	) []IMapObject
-	CheckCollidersWithArrayFirst(
-		obj IMapObject,
-		objects []IMapObject,
-	) IMapObject
 }
 
 // ITilesUseCases интерфейс для работы с тайлами и анимациями
@@ -99,9 +91,6 @@ type IAIUseCases interface {
 
 // IHQUseCases интерфейс для операций с базой
 type IHQUseCases interface {
-	HandleBulletHit(
-		hq *types.HQEntity,
-	) (bulletIndicesToRemove []int, destroyed bool)
 	Explode(hq *types.HQEntity) error
 	IsExplosionFinished(hq *types.HQEntity)
 }

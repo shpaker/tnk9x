@@ -62,17 +62,13 @@ type ITanksRepository interface {
 	SetPlayer(player *types.TankEntity)
 	GetPlayer() *types.TankEntity
 	HasPlayer() bool
-	ClearPlayer()
 
 	// === Методы для работы с врагами ===
 	AddEnemy(enemy *types.TankEntity)
 	GetAllEnemies() []*types.TankEntity
-	RemoveEnemy(index int) error
 
 	// === Методы для обратной совместимости ===
 	AddTank(tank *types.TankEntity)
-	GetAllTanks() []*types.TankEntity
-	RemoveTank(tank *types.TankEntity) error
 }
 
 // ============================================================================

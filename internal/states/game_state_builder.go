@@ -459,8 +459,6 @@ func (b *GameStateBuilder) buildCollisionServices(
 	var tempHQUseCases interfaces.IHQUseCases
 	if hq != nil {
 		tempHQUseCases = use_cases.NewHQUseCases(
-			bulletUseCases,
-			tempBulletCollisionService,
 			hqTilesUseCases,
 		)
 	}
@@ -486,12 +484,10 @@ func (b *GameStateBuilder) buildCollisionServices(
 		},
 	)
 
-	// Создаем HQUseCases с правильным BulletCollisionService и hqTilesUseCases
+	// Создаем HQUseCases с hqTilesUseCases
 	var hqUseCases interfaces.IHQUseCases
 	if hq != nil {
 		hqUseCases = use_cases.NewHQUseCases(
-			bulletUseCases,
-			bulletCollisionService,
 			hqTilesUseCases,
 		)
 	}
