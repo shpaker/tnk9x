@@ -1,6 +1,7 @@
 package states
 
 import (
+	"fmt"
 	"time"
 
 	lua "github.com/yuin/gopher-lua"
@@ -9,6 +10,7 @@ import (
 	"github.com/shpaker/gonflict/internal/adapters/game/input_adapters"
 	"github.com/shpaker/gonflict/internal/interfaces"
 	"github.com/shpaker/gonflict/internal/services"
+	collision_services "github.com/shpaker/gonflict/internal/services/collision_services"
 	"github.com/shpaker/gonflict/internal/types"
 	"github.com/shpaker/gonflict/internal/use_cases"
 )
@@ -24,6 +26,9 @@ type GameStateBuilder struct {
 	// Конфигурация
 	config      interfaces.IConfigProvider
 	levelNumber int
+
+	// Карта уровня
+	mapEntity *types.MapEntity
 
 	// Сервисы
 	boundaryCollisionService interfaces.IBoundaryCollisionService
@@ -109,11 +114,17 @@ func (b *GameStateBuilder) Build() (*GameState, error) {
 		b.coordinateService,
 		tankRenderUseCases,
 	)
+	// Создаем Use Cases для карты
+	mapUseCases := use_cases.NewMapUseCases(
+		b.mapEntity,
+	)
+
 	tankActionsUseCases := use_cases.NewTankActionsUseCases(
 		b.tankBrakingService,
 		b.coordinateService,
 		bulletUseCases,
 		tankCommonUseCases,
+		mapUseCases,
 	)
 
 	// Создаем компоненты игрока
@@ -124,9 +135,6 @@ func (b *GameStateBuilder) Build() (*GameState, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	// Создаем Use Cases для карты
-	mapUseCases := use_cases.NewMapUseCases(b.gameRepository.BlocksRepository())
 
 	// Создаем HQ TilesUseCases для работы с HQ tileset и анимациями взрыва
 	hqTileService := services.NewTileServiceWithSpecialRepos(
@@ -150,12 +158,18 @@ func (b *GameStateBuilder) Build() (*GameState, error) {
 	// Создаем AI контекст
 	aiContext := b.createAIContext(mapUseCases)
 
-	// Получаем размеры карты (в блоках)
-	mapSize := b.mapsRepository.GetSize()
+	// Получаем размеры карты (в блоках) из MapEntity
+	if b.mapEntity == nil {
+		return nil, fmt.Errorf("map entity is nil")
+	}
+	sizePx := b.mapEntity.GetSizePx()
+	tileBaseSize := int(b.config.GetTileBaseSize())
+	mapBlocksWidth := sizePx.Width / tileBaseSize
+	mapBlocksHeight := sizePx.Height / tileBaseSize
 
 	// Устанавливаем глобальные переменные размера карты и базового размера в Lua
-	b.luaEngine.SetGlobal("MAP_X_BLOCKS_COUNT", lua.LNumber(mapSize[0]))
-	b.luaEngine.SetGlobal("MAP_Y_BLOCKS_COUNT", lua.LNumber(mapSize[1]))
+	b.luaEngine.SetGlobal("MAP_X_BLOCKS_COUNT", lua.LNumber(mapBlocksWidth))
+	b.luaEngine.SetGlobal("MAP_Y_BLOCKS_COUNT", lua.LNumber(mapBlocksHeight))
 	b.luaEngine.SetGlobal("TANK_SIZE_PX", lua.LNumber(baseSizePx))
 	b.luaEngine.SetGlobal("BLOCK_SIZE_PX", lua.LNumber(baseSizePx/2))
 
@@ -228,14 +242,13 @@ func (b *GameStateBuilder) Build() (*GameState, error) {
 
 // loadLevel загружает уровень и заполняет репозиторий блоков
 func (b *GameStateBuilder) loadLevel() error {
-	level, err := b.mapsRepository.GetLevel(b.levelNumber)
+	tileBaseSize := int(b.config.GetTileBaseSize())
+	mapEntity, err := b.mapsRepository.GetLevel(b.levelNumber, tileBaseSize)
 	if err != nil {
 		return err
 	}
 
-	for _, block := range level {
-		b.gameRepository.BlocksRepository().AddBlock(block)
-	}
+	b.mapEntity = mapEntity
 	return nil
 }
 
@@ -447,41 +460,13 @@ func (b *GameStateBuilder) buildCollisionServices(
 	hqTilesUseCases *use_cases.TilesUseCases,
 	hq *types.HQEntity,
 ) (*use_cases.CollisionUseCases, interfaces.IHQUseCases, error) {
-	// Создаем временный BulletCollisionService с заглушкой для CheckColliders
-	tempBulletCollisionService := services.NewBulletCollisionService(
+	// Создаем сервис проверки коллизий между сущностями
+	entitiesCollisionService := collision_services.NewEntitiesCollisionService()
+
+	// Создаем BulletCollisionService с EntitiesCollisionService
+	bulletCollisionService := collision_services.NewBulletCollisionService(
 		int(b.config.GetTileBaseSize()),
-		func(obj1 types.IMapObject, obj2 types.IMapObject) bool {
-			return false // Временная заглушка
-		},
-	)
-
-	// Создаем временный HQUseCases для первого создания CollisionUseCases
-	var tempHQUseCases interfaces.IHQUseCases
-	if hq != nil {
-		tempHQUseCases = use_cases.NewHQUseCases(
-			hqTilesUseCases,
-		)
-	}
-
-	// Создаем CollisionUseCases первый раз для получения CheckColliders
-	collisionUseCases := use_cases.NewCollisionUseCases(
-		bulletUseCases,
-		playerTankActions,
-		mapUseCases,
-		tankCommonUseCases,
-		tankLifecycleUseCases,
-		b.boundaryCollisionService,
-		b.wallCollisionService,
-		tempBulletCollisionService,
-		tempHQUseCases,
-	)
-
-	// Создаем правильный BulletCollisionService с реальным CheckColliders из CollisionUseCases
-	bulletCollisionService := services.NewBulletCollisionService(
-		int(b.config.GetTileBaseSize()),
-		func(obj1 types.IMapObject, obj2 types.IMapObject) bool {
-			return collisionUseCases.CheckColliders(obj1, obj2)
-		},
+		entitiesCollisionService,
 	)
 
 	// Создаем HQUseCases с hqTilesUseCases
@@ -492,8 +477,8 @@ func (b *GameStateBuilder) buildCollisionServices(
 		)
 	}
 
-	// Пересоздаем CollisionUseCases с правильным BulletCollisionService
-	collisionUseCases = use_cases.NewCollisionUseCases(
+	// Создаем CollisionUseCases с правильным BulletCollisionService
+	collisionUseCases := use_cases.NewCollisionUseCases(
 		bulletUseCases,
 		playerTankActions,
 		mapUseCases,
@@ -502,6 +487,7 @@ func (b *GameStateBuilder) buildCollisionServices(
 		b.boundaryCollisionService,
 		b.wallCollisionService,
 		bulletCollisionService,
+		entitiesCollisionService,
 		hqUseCases,
 	)
 

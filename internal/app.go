@@ -16,6 +16,7 @@ import (
 	"github.com/shpaker/gonflict/internal/repositories/processed"
 	"github.com/shpaker/gonflict/internal/repositories/raw"
 	"github.com/shpaker/gonflict/internal/services"
+	collision_services "github.com/shpaker/gonflict/internal/services/collision_services"
 	"github.com/shpaker/gonflict/internal/states"
 	"github.com/shpaker/gonflict/internal/types"
 	"github.com/shpaker/gonflict/internal/use_cases"
@@ -175,15 +176,16 @@ func (app *App) createGameState(
 	mapWidthHeight := app.config.MapBlocksCount.Width * int(
 		app.config.TileBaseSize,
 	)
-	boundaryCollisionService := services.NewBoundaryCollisionService(
+	boundaryCollisionService := collision_services.NewBoundaryCollisionService(
 		mapWidthHeight,
 		int(app.config.BaseSizePx),
 	)
-	wallCollisionService := services.NewWallCollisionService(
+	coordinateService := services.NewCoordinateService()
+	wallCollisionService := collision_services.NewWallCollisionService(
 		int(app.config.BaseSizePx),
 		int(app.config.TileBaseSize),
+		coordinateService,
 	)
-	coordinateService := services.NewCoordinateService()
 	tankBrakingService := services.NewTankBrakingService()
 
 	// Создаем временные адаптеры

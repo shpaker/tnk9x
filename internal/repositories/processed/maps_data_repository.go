@@ -148,29 +148,33 @@ func (mdr *MapsDataRepository) parseLevelLines(
 
 func (mdr *MapsDataRepository) GetLevel(
 	levelNumber int,
-) ([]types.BlockEntity, error) {
+	tileBaseSize int,
+) (*types.MapEntity, error) {
 	// Читаем файл уровня
 	lines, err := mdr.readFile(levelNumber)
 	if err != nil {
-		return []types.BlockEntity{}, err
+		return nil, err
 	}
 
 	// Парсим строки и создаем блоки
-	level, err := mdr.parseLevelLines(lines)
+	blocks, err := mdr.parseLevelLines(lines)
 	if err != nil {
-		return []types.BlockEntity{}, err
+		return nil, err
 	}
 
-	return level, nil
+	// Вычисляем размер карты в пикселях
+	sizePx := types.Size{
+		Width:  int(mdr.width) * tileBaseSize,
+		Height: int(mdr.height) * tileBaseSize,
+	}
+
+	// Создаем MapEntity
+	mapEntity := types.NewMapEntity(sizePx, blocks)
+
+	return mapEntity, nil
 }
 
 // GetLevelsCount возвращает количество доступных карт (файлы вида *.bcmap)
 func (mdr *MapsDataRepository) GetLevelsCount() (int, error) {
 	return mdr.fileRepository.CountFiles("levels", "*.bcmap")
-}
-
-// GetSize возвращает размеры карты [width, height]
-// Размеры вычисляются при загрузке уровня через GetLevel
-func (mdr *MapsDataRepository) GetSize() [2]uint {
-	return [2]uint{mdr.width, mdr.height}
 }

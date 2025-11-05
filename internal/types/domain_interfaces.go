@@ -5,8 +5,8 @@ type IImageProvider interface {
 	GetImageID() (string, error)
 }
 
-// IMapObject определяет интерфейс для объектов карты
-type IMapObject interface {
+// IEntityCollider определяет интерфейс для сущностей, которые могут участвовать в коллизиях
+type IEntityCollider interface {
 	GetSize() Size
 	GetPosition() Position
 	GetAltitude() Altitude

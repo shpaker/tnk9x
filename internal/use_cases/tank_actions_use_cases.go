@@ -13,6 +13,7 @@ type TankActionsUseCases struct {
 	coordinateService interfaces.ICoordinateService
 	bulletUseCases    interfaces.IBulletUseCases
 	commonUseCases    interfaces.ITankCommonUseCases // Для управления анимацией через TankCommonUseCases
+	mapUseCases       interfaces.IMapUseCases
 }
 
 // NewTankActionsUseCases создает новый экземпляр TankActionsUseCases
@@ -21,12 +22,14 @@ func NewTankActionsUseCases(
 	coordinateService interfaces.ICoordinateService,
 	bulletUseCases interfaces.IBulletUseCases,
 	commonUseCases interfaces.ITankCommonUseCases,
+	mapUseCases interfaces.IMapUseCases,
 ) *TankActionsUseCases {
 	return &TankActionsUseCases{
 		brakingService:    brakingService,
 		coordinateService: coordinateService,
 		bulletUseCases:    bulletUseCases,
 		commonUseCases:    commonUseCases,
+		mapUseCases:       mapUseCases,
 	}
 }
 
@@ -129,6 +132,30 @@ func (uc *TankActionsUseCases) ApplyDecision(
 }
 
 // Приватные вспомогательные методы
+
+// SetMinXPosition устанавливает минимальную координату X для танка
+func (uc *TankActionsUseCases) SetMinXPosition(tank *types.TankEntity) {
+	tank.Position.X = 0
+}
+
+// SetMaxXPosition устанавливает максимальную координату X для танка
+func (uc *TankActionsUseCases) SetMaxXPosition(tank *types.TankEntity) {
+	mapSizePx := uc.mapUseCases.GetSizePx()
+	maxX := float64(mapSizePx.Width - tank.Size.Width)
+	tank.Position.X = maxX
+}
+
+// SetMinYPosition устанавливает минимальную координату Y для танка
+func (uc *TankActionsUseCases) SetMinYPosition(tank *types.TankEntity) {
+	tank.Position.Y = 0
+}
+
+// SetMaxYPosition устанавливает максимальную координату Y для танка
+func (uc *TankActionsUseCases) SetMaxYPosition(tank *types.TankEntity) {
+	mapSizePx := uc.mapUseCases.GetSizePx()
+	maxY := float64(mapSizePx.Height - tank.Size.Height)
+	tank.Position.Y = maxY
+}
 
 // handleStopByCollision обрабатывает остановку танка при коллизии
 func (uc *TankActionsUseCases) handleStopByCollision(tank *types.TankEntity) {

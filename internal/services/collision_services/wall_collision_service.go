@@ -1,23 +1,27 @@
-package services
+package collision_services
 
-import "github.com/shpaker/gonflict/internal/types"
+import (
+	"github.com/shpaker/gonflict/internal/interfaces"
+	"github.com/shpaker/gonflict/internal/types"
+)
 
 // WallCollisionService предоставляет логику обработки коллизий со стенами
 type WallCollisionService struct {
 	tankSpriteSize    int
 	tileMinSize       int
-	coordinateService *CoordinateService
+	coordinateService interfaces.ICoordinateService
 }
 
 // NewWallCollisionService создает новый сервис коллизий со стенами
 func NewWallCollisionService(
 	tankSpriteSize int,
 	tileMinSize int,
+	coordinateService interfaces.ICoordinateService,
 ) *WallCollisionService {
 	return &WallCollisionService{
 		tankSpriteSize:    tankSpriteSize,
 		tileMinSize:       tileMinSize,
-		coordinateService: NewCoordinateService(),
+		coordinateService: coordinateService,
 	}
 }
 

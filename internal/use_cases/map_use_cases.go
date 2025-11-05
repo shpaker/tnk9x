@@ -1,37 +1,43 @@
 package use_cases
 
 import (
-	"github.com/shpaker/gonflict/internal/interfaces"
 	"github.com/shpaker/gonflict/internal/types"
 )
 
 // MapUseCases реализация интерфейса MapUseCases
 type MapUseCases struct {
-	blocksRepository interfaces.IBlocksRepository
+	mapEntity *types.MapEntity
 }
 
 // NewMapUseCases создает новый экземпляр MapUseCases
 func NewMapUseCases(
-	blocksRepository interfaces.IBlocksRepository,
+	mapEntity *types.MapEntity,
 ) *MapUseCases {
 	return &MapUseCases{
-		blocksRepository: blocksRepository,
+		mapEntity: mapEntity,
 	}
 }
 
 // GetBlocks возвращает все блоки карты
 func (uc *MapUseCases) GetBlocks() []types.BlockEntity {
-	blocks := uc.blocksRepository.GetAllBlocks()
-	if blocks == nil {
+	if uc.mapEntity == nil {
 		return []types.BlockEntity{}
 	}
-	return *blocks
+	return uc.mapEntity.GetBlocks()
 }
 
 // RemoveBlock удаляет блок по указателю
 func (uc *MapUseCases) RemoveBlock(block *types.BlockEntity) error {
-	if block == nil {
+	if uc.mapEntity == nil {
 		return nil
 	}
-	return uc.blocksRepository.RemoveBlockByPointer(block)
+	return uc.mapEntity.RemoveBlock(block)
+}
+
+// GetSizePx возвращает размер карты в пикселях
+func (uc *MapUseCases) GetSizePx() types.Size {
+	if uc.mapEntity == nil {
+		return types.Size{}
+	}
+	return uc.mapEntity.GetSizePx()
 }

@@ -6,6 +6,6 @@ import "github.com/shpaker/gonflict/internal/types"
 // Интерфейсы домена определены в types, но доступны через interfaces для удобства
 type IImageProvider = types.IImageProvider
 
-// IMapObject - алиас для types.IMapObject
+// IEntityCollider - алиас для types.IEntityCollider
 // Интерфейсы домена определены в types, но доступны через interfaces для удобства
-type IMapObject = types.IMapObject
+type IEntityCollider = types.IEntityCollider

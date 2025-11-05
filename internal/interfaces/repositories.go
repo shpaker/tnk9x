@@ -13,13 +13,9 @@ import (
 
 // IGameRepositoriesRegistry определяет интерфейс для реестра игровых репозиториев
 type IGameRepositoriesRegistry interface {
-	BlocksRepository() IBlocksRepository
 	BulletsRepository() IBulletsRepository
 	AnimationsRepository() IAnimationsRepository
 	TanksRepository() ITanksRepository
-
-	// Метод для получения контекста игры для AI
-	GetGameContext() *types.GameAiContext
 }
 
 // IBulletsRepository определяет интерфейс для работы с пулями
@@ -33,18 +29,6 @@ type IBulletsRepository interface {
 
 	// RemoveBullet удаляет пулю по индексу
 	RemoveBullet(index int) error
-}
-
-// IBlocksRepository определяет интерфейс для работы с блоками
-type IBlocksRepository interface {
-	// AddBlock добавляет блок в репозиторий
-	AddBlock(block types.BlockEntity)
-
-	// GetAllBlocks возвращает все блоки
-	GetAllBlocks() *[]types.BlockEntity
-
-	// RemoveBlockByPointer удаляет блок по указателю
-	RemoveBlockByPointer(block *types.BlockEntity) error
 }
 
 // IAnimationsRepository определяет интерфейс для работы с анимациями
@@ -88,12 +72,9 @@ type ITilesetRepository interface {
 // IMapsDataRepository определяет интерфейс для работы с картами уровней
 type IMapsDataRepository interface {
 	// GetLevel загружает уровень по номеру и возвращает его данные
-	GetLevel(num int) ([]types.BlockEntity, error)
+	GetLevel(num int, tileBaseSize int) (*types.MapEntity, error)
 	// GetLevelsCount возвращает количество доступных карт (файлы вида *.bcmap)
 	GetLevelsCount() (int, error)
-	// GetSize возвращает размеры карты [width, height]
-	// Ширина - количество символов в первой строке, высота - количество строк
-	GetSize() [2]uint
 }
 
 // ITilesetRepositoryRegistry определяет интерфейс для реестра тайлсетов

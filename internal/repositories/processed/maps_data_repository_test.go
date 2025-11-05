@@ -125,13 +125,19 @@ func TestGetLevel_Success(t *testing.T) {
 	mapsService := NewMapsDataRepository(mockFileRepo, mockTilesetRepo)
 
 	// Вызываем функцию
-	level, err := mapsService.GetLevel(1)
+	tileBaseSize := 8
+	mapEntity, err := mapsService.GetLevel(1, tileBaseSize)
 	// Проверяем результат
 	if err != nil {
 		t.Fatalf("GetLevel вернул ошибку: %v", err)
 	}
 
-	if len(level) == 0 {
+	if mapEntity == nil {
+		t.Fatal("MapEntity равен nil")
+	}
+
+	blocks := mapEntity.GetBlocks()
+	if len(blocks) == 0 {
 		t.Fatal("Уровень пустой")
 	}
 }
@@ -176,7 +182,8 @@ func TestGetLevel_InvalidSize(t *testing.T) {
 	mapsService := NewMapsDataRepository(mockFileRepo, mockTilesetRepo)
 
 	// Вызываем функцию
-	_, err := mapsService.GetLevel(1)
+	tileBaseSize := 8
+	_, err := mapsService.GetLevel(1, tileBaseSize)
 
 	// Проверяем, что получили ошибку (неправильная длина строки)
 	if err == nil {

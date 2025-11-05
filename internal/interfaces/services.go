@@ -24,9 +24,10 @@ type ICoordinateService interface {
 
 // IBoundaryCollisionService интерфейс для сервиса коллизий с границами
 type IBoundaryCollisionService interface {
-	CheckTankBoundaryCollisions(tank *types.TankEntity, stopAndRound bool) bool
-	CheckEnemyBoundaryCollisions(enemy *types.TankEntity) bool
-	CheckBulletBoundaryCollisions(bullets []types.BulletEntity) []int
+	CheckLeftBoundaryCollision(entity types.IEntityCollider) bool
+	CheckRightBoundaryCollision(entity types.IEntityCollider) bool
+	CheckTopBoundaryCollision(entity types.IEntityCollider) bool
+	CheckBottomBoundaryCollision(entity types.IEntityCollider) bool
 }
 
 // IWallCollisionService интерфейс для сервиса коллизий со стенами
@@ -49,16 +50,19 @@ type IBulletCollisionService interface {
 		bullets []types.BulletEntity,
 		level []types.BlockEntity,
 	) (bulletIndicesToRemove []int, blockIndicesToRemove []int)
-	CheckBulletTanksCollisions(
-		bullets []types.BulletEntity,
-		allTanks []*types.TankEntity,
-		enemyTanks []*types.TankEntity,
-	) (bulletIndicesToRemove []int, tanksToExplode map[int]*types.TankEntity)
-	CheckBulletHQCollision(
-		bullets []types.BulletEntity,
+	CheckTank(
+		tank *types.TankEntity,
+		bullet *types.BulletEntity,
+	) bool
+	CheckHQ(
 		hq *types.HQEntity,
-		enemyTanks []*types.TankEntity,
-	) (bulletIndicesToRemove []int, hqDestroyed bool)
+		bullets []types.BulletEntity,
+	) bool
+}
+
+// IEntitiesCollisionService интерфейс для сервиса проверки коллизий между сущностями
+type IEntitiesCollisionService interface {
+	CheckColliders(obj1 types.IEntityCollider, obj2 types.IEntityCollider) bool
 }
 
 // IImageService интерфейс для сервиса работы с изображениями

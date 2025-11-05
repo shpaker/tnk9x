@@ -23,6 +23,7 @@ type IBulletUseCases interface {
 type IMapUseCases interface {
 	GetBlocks() []types.BlockEntity
 	RemoveBlock(block *types.BlockEntity) error
+	GetSizePx() types.Size
 }
 
 // ICollisionUseCases интерфейс для операций с коллизиями
@@ -32,7 +33,6 @@ type ICollisionUseCases interface {
 		enemyTanks []*types.TankEntity,
 		hq *types.HQEntity,
 	) error
-	CheckColliders(obj1 IMapObject, obj2 IMapObject) bool
 }
 
 // ITilesUseCases интерфейс для работы с тайлами и анимациями
@@ -78,6 +78,10 @@ type ITankActionsUseCases interface {
 	Stop(tank *types.TankEntity, byCollision bool)
 	Shoot(tank *types.TankEntity) error
 	ApplyDecision(tank *types.TankEntity, decision types.EnemyAIDecision)
+	SetMinXPosition(tank *types.TankEntity)
+	SetMaxXPosition(tank *types.TankEntity)
+	SetMinYPosition(tank *types.TankEntity)
+	SetMaxYPosition(tank *types.TankEntity)
 }
 
 // IAIUseCases интерфейс для операций с AI логикой
