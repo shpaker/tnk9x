@@ -88,7 +88,16 @@ func (uc *HQUseCases) IsExplosionAnimationFinished(hq *types.HQEntity) bool {
 func (uc *HQUseCases) IsExplosionFinished(hq *types.HQEntity) {
 	if hq != nil && hq.State == types.HQStateExploding {
 		if uc.IsExplosionAnimationFinished(hq) {
+			// Создаем статическое изображение разрушенной базы
+			destroyedImage, err := uc.tilesUseCases.CreateStaticTile(
+				"hq_destroyed",
+			)
+			if err == nil {
+				hq.Image = destroyedImage
+			}
+			// Устанавливаем состояние на разрушенное и высоту на SURFACE (как у танков)
 			hq.State = types.HQStateDestroyed
+			hq.Altitude = types.SURFACE
 		}
 	}
 }

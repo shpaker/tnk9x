@@ -116,13 +116,13 @@ func TestGetLevel_Success(t *testing.T) {
 ...........#..#...........
 ...........#..#...........`)
 
-	mockFileRepo.AddFile("levels/1", levelData)
+	mockFileRepo.AddFile("levels/1.bcmap", levelData)
 
 	// Создаем сервис уровней
 	mockTilesetRepo := &MockTilesetRepository{}
 	// Проверяем, что мок реализует интерфейс
 	var _ interfaces.ITilesetRepository = mockTilesetRepo
-	mapsService := NewMapsDataRepository(mockFileRepo, mockTilesetRepo, 26)
+	mapsService := NewMapsDataRepository(mockFileRepo, mockTilesetRepo)
 
 	// Вызываем функцию
 	level, err := mapsService.GetLevel(1)
@@ -140,7 +140,7 @@ func TestGetLevel_InvalidSize(t *testing.T) {
 	// Создаем мок репозитория
 	mockFileRepo := NewMockFileRepository()
 
-	// Создаем карту с неправильным размером (25 строк)
+	// Создаем карту с неправильным размером строки (последняя строка короче)
 	levelData := []byte(`..........................
 ..........................
 ..##..##..##..##..##..##..
@@ -165,20 +165,20 @@ func TestGetLevel_InvalidSize(t *testing.T) {
 ..##..##..........##..##..
 ..##..##..........##..##..
 ..##..##...####...##..##..
-...........#..#...........`)
+...........#..#`)
 
-	mockFileRepo.AddFile("levels/1", levelData)
+	mockFileRepo.AddFile("levels/1.bcmap", levelData)
 
 	// Создаем сервис уровней
 	mockTilesetRepo := &MockTilesetRepository{}
 	// Проверяем, что мок реализует интерфейс
 	var _ interfaces.ITilesetRepository = mockTilesetRepo
-	mapsService := NewMapsDataRepository(mockFileRepo, mockTilesetRepo, 26)
+	mapsService := NewMapsDataRepository(mockFileRepo, mockTilesetRepo)
 
 	// Вызываем функцию
 	_, err := mapsService.GetLevel(1)
 
-	// Проверяем, что получили ошибку
+	// Проверяем, что получили ошибку (неправильная длина строки)
 	if err == nil {
 		t.Fatal("Ожидалась ошибка для неправильного размера")
 	}

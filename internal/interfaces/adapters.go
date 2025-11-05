@@ -34,6 +34,9 @@ type ILuaEngine interface {
 	// NewTable создает новую Lua таблицу
 	NewTable() *lua.LTable
 
+	// SetGlobal устанавливает глобальную переменную в Lua
+	SetGlobal(name string, value lua.LValue)
+
 	// ToBool конвертирует Lua значение в bool
 	ToBool(value lua.LValue) bool
 

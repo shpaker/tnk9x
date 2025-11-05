@@ -155,6 +155,11 @@ func (s *BulletCollisionService) CheckBulletHQCollision(
 	for i := len(bullets) - 1; i >= 0; i-- {
 		bullet := &bullets[i]
 
+		// Проверяем, что пуля существует и имеет владельца
+		if bullet.Owner == nil {
+			continue
+		}
+
 		// Проверяем коллизию между пулей и базой
 		if s.checkColliders(bullet, hq) {
 			bulletIndicesToRemove = append(bulletIndicesToRemove, i)

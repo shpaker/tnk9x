@@ -22,18 +22,19 @@ var MapCharsBlocksMapping = map[string]types.BlockType{
 type MapsDataRepository struct {
 	fileRepository    interfaces.IFileRepository
 	tilesetRepository interfaces.ITilesetRepository
-	mapBlocksLength   int
+	width             uint
+	height            uint
 }
 
 func NewMapsDataRepository(
 	fileRepository interfaces.IFileRepository,
 	tilesetRepository interfaces.ITilesetRepository,
-	mapBlocksLength int,
 ) *MapsDataRepository {
 	return &MapsDataRepository{
 		fileRepository:    fileRepository,
 		tilesetRepository: tilesetRepository,
-		mapBlocksLength:   mapBlocksLength,
+		width:             0,
+		height:            0,
 	}
 }
 
@@ -91,30 +92,36 @@ func (mdr *MapsDataRepository) createBlockFromChar(
 }
 
 // parseLevelLines парсит строки карты и создает блоки
+// Вычисляет width (длина первой строки) и height (количество строк)
 func (mdr *MapsDataRepository) parseLevelLines(
 	lines []string,
 ) ([]types.BlockEntity, error) {
 	var level []types.BlockEntity
 
-	// Проверяем количество строк (должно быть 26)
-	if len(lines) != mdr.mapBlocksLength {
-		return level, fmt.Errorf(
-			"invalid row count: expected %d, got %d",
-			mdr.mapBlocksLength,
-			len(lines),
-		)
+	if len(lines) == 0 {
+		return level, fmt.Errorf("empty level file")
 	}
+
+	// Вычисляем высоту (количество строк)
+	mdr.height = uint(len(lines))
+
+	// Вычисляем ширину (длина первой строки)
+	firstLine := strings.TrimSpace(lines[0])
+	if len(firstLine) == 0 {
+		return level, fmt.Errorf("first line is empty")
+	}
+	mdr.width = uint(len(firstLine))
 
 	// Парсим каждую строку
 	for y, line := range lines {
 		line = strings.TrimSpace(line)
 
-		// Проверяем длину строки (должна быть 26)
-		if len(line) != mdr.mapBlocksLength {
+		// Проверяем длину строки (должна совпадать с первой строкой)
+		if len(line) != int(mdr.width) {
 			return level, fmt.Errorf(
 				"invalid row %d length: expected %d, got %d",
 				y+1,
-				mdr.mapBlocksLength,
+				mdr.width,
 				len(line),
 			)
 		}
@@ -160,4 +167,10 @@ func (mdr *MapsDataRepository) GetLevel(
 // GetLevelsCount возвращает количество доступных карт (файлы вида *.bcmap)
 func (mdr *MapsDataRepository) GetLevelsCount() (int, error) {
 	return mdr.fileRepository.CountFiles("levels", "*.bcmap")
+}
+
+// GetSize возвращает размеры карты [width, height]
+// Размеры вычисляются при загрузке уровня через GetLevel
+func (mdr *MapsDataRepository) GetSize() [2]uint {
+	return [2]uint{mdr.width, mdr.height}
 }

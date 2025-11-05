@@ -3,6 +3,8 @@ package states
 import (
 	"time"
 
+	lua "github.com/yuin/gopher-lua"
+
 	game "github.com/shpaker/gonflict/internal/adapters/game"
 	"github.com/shpaker/gonflict/internal/adapters/game/input_adapters"
 	"github.com/shpaker/gonflict/internal/interfaces"
@@ -126,11 +128,18 @@ func (b *GameStateBuilder) Build() (*GameState, error) {
 	// Создаем Use Cases для карты
 	mapUseCases := use_cases.NewMapUseCases(b.gameRepository.BlocksRepository())
 
-	// Создаем HQ TilesUseCases для работы с HQ tileset
-	hqTileService := services.NewTileService(b.tilesetRegistry.HQ())
+	// Создаем HQ TilesUseCases для работы с HQ tileset и анимациями взрыва
+	hqTileService := services.NewTileServiceWithSpecialRepos(
+		b.tilesetRegistry.Player(),
+		b.tilesetRegistry.Spawner(),
+		b.tilesetRegistry.Explosion(),
+	)
 	hqAnimationService := services.NewAnimationService()
-	hqTilesUseCases := use_cases.NewTilesUseCases(
+	hqTilesUseCases := use_cases.NewTilesUseCasesWithAnimations(
 		b.tilesetRegistry.HQ(),
+		b.gameRepository.AnimationsRepository(),
+		b.tilesetRegistry.Spawner(),
+		b.tilesetRegistry.Explosion(), // Необходимо для CreateExplosionAnimation
 		hqTileService,
 		hqAnimationService,
 	)
@@ -140,6 +149,15 @@ func (b *GameStateBuilder) Build() (*GameState, error) {
 
 	// Создаем AI контекст
 	aiContext := b.createAIContext(mapUseCases)
+
+	// Получаем размеры карты (в блоках)
+	mapSize := b.mapsRepository.GetSize()
+
+	// Устанавливаем глобальные переменные размера карты и базового размера в Lua
+	b.luaEngine.SetGlobal("MAP_X_BLOCKS_COUNT", lua.LNumber(mapSize[0]))
+	b.luaEngine.SetGlobal("MAP_Y_BLOCKS_COUNT", lua.LNumber(mapSize[1]))
+	b.luaEngine.SetGlobal("TANK_SIZE_PX", lua.LNumber(baseSizePx))
+	b.luaEngine.SetGlobal("BLOCK_SIZE_PX", lua.LNumber(baseSizePx/2))
 
 	// Загружаем скрипт AI для врагов
 	enemyScript, err := b.scriptsRepository.GetScript("enemies")
@@ -174,6 +192,7 @@ func (b *GameStateBuilder) Build() (*GameState, error) {
 		tankCommonUseCases,
 		tankLifecycleUseCases,
 		tilesUseCasesWithAnimations,
+		hqTilesUseCases,
 		hq,
 	)
 	if err != nil {
@@ -425,6 +444,7 @@ func (b *GameStateBuilder) buildCollisionServices(
 	tankCommonUseCases interfaces.ITankCommonUseCases,
 	tankLifecycleUseCases interfaces.ITankLifecycleUseCases,
 	tilesUseCasesWithAnimations *use_cases.TilesUseCases,
+	hqTilesUseCases *use_cases.TilesUseCases,
 	hq *types.HQEntity,
 ) (*use_cases.CollisionUseCases, interfaces.IHQUseCases, error) {
 	// Создаем временный BulletCollisionService с заглушкой для CheckColliders
@@ -441,7 +461,7 @@ func (b *GameStateBuilder) buildCollisionServices(
 		tempHQUseCases = use_cases.NewHQUseCases(
 			bulletUseCases,
 			tempBulletCollisionService,
-			tilesUseCasesWithAnimations,
+			hqTilesUseCases,
 		)
 	}
 
@@ -466,13 +486,13 @@ func (b *GameStateBuilder) buildCollisionServices(
 		},
 	)
 
-	// Создаем HQUseCases с правильным BulletCollisionService
+	// Создаем HQUseCases с правильным BulletCollisionService и hqTilesUseCases
 	var hqUseCases interfaces.IHQUseCases
 	if hq != nil {
 		hqUseCases = use_cases.NewHQUseCases(
 			bulletUseCases,
 			bulletCollisionService,
-			tilesUseCasesWithAnimations,
+			hqTilesUseCases,
 		)
 	}
 

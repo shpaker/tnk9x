@@ -37,6 +37,10 @@ func (h *HQEntity) GetAltitude() Altitude {
 	if h.State == HQStateExploding {
 		return AIR
 	}
+	// Разрушенная база на уровне поверхности (как танки)
+	if h.State == HQStateDestroyed {
+		return SURFACE
+	}
 	if h.Altitude == 0 {
 		return SURFACE
 	}

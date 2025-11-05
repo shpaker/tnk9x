@@ -95,6 +95,9 @@ type IMapsDataRepository interface {
 	GetLevel(num int) ([]types.BlockEntity, error)
 	// GetLevelsCount возвращает количество доступных карт (файлы вида *.bcmap)
 	GetLevelsCount() (int, error)
+	// GetSize возвращает размеры карты [width, height]
+	// Ширина - количество символов в первой строке, высота - количество строк
+	GetSize() [2]uint
 }
 
 // ITilesetRepositoryRegistry определяет интерфейс для реестра тайлсетов

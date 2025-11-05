@@ -55,11 +55,12 @@ func (uc *CollisionUseCases) UpdateCollisions(
 		return nil
 	}
 
+	// Проверяем коллизии с HQ ПЕРВЫМИ, чтобы пули не удалялись другими проверками
+	uc.checkBulletHQCollisions(hq)
 	uc.checkBulletBoundaryCollisions()
 	uc.checkBulletTankCollisions(playerTank)
 	uc.checkBulletEnemyCollisions(enemyTanks)
 	uc.checkBulletWallCollisions()
-	uc.checkBulletHQCollisions(hq)
 	uc.checkTankBoundaryCollisions(playerTank)
 	uc.checkTankWallCollisions(playerTank)
 

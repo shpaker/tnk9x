@@ -88,7 +88,6 @@ func New(cfg *Config) *App {
 	mapsRepository := processed.NewMapsDataRepository(
 		fileRepository,
 		tilesetRegistry.Blocks(),
-		cfg.MapBlocksCount.Width,
 	)
 
 	// Создаем репозиторий шрифтов
@@ -167,7 +166,6 @@ func (app *App) createGameState(
 	mapsRepository := processed.NewMapsDataRepository(
 		fileRepository,
 		tilesetRegistry.Blocks(),
-		app.config.MapBlocksCount.Width,
 	)
 
 	// Создаем реестр игровых репозиториев
@@ -342,7 +340,6 @@ func (app *App) createStageSelectState(
 	mapsRepository := processed.NewMapsDataRepository(
 		fileRepository,
 		tilesetRegistry.Blocks(),
-		app.config.MapBlocksCount.Width,
 	)
 
 	fontsRepository := processed.NewFontsRepository(fileRepository)

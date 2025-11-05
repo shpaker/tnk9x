@@ -60,6 +60,11 @@ func (e *luaEngine) NewTable() *lua.LTable {
 	return e.L.NewTable()
 }
 
+// SetGlobal устанавливает глобальную переменную в Lua
+func (e *luaEngine) SetGlobal(name string, value lua.LValue) {
+	e.L.SetGlobal(name, value)
+}
+
 // ToBool конвертирует Lua значение в bool
 func (e *luaEngine) ToBool(value lua.LValue) bool {
 	if value == nil || value == lua.LNil {
