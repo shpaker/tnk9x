@@ -51,6 +51,9 @@ type ITanksRepository interface {
 	AddEnemy(enemy *types.TankEntity)
 	GetAllEnemies() []*types.TankEntity
 
+	// === Методы для работы со всеми танками ===
+	GetAllTanks() []*types.TankEntity
+
 	// === Методы для обратной совместимости ===
 	AddTank(tank *types.TankEntity)
 }

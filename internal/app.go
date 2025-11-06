@@ -180,11 +180,13 @@ func (app *App) createGameState(
 		mapWidthHeight,
 		int(app.config.BaseSizePx),
 	)
+	entitiesCollisionService := collision_services.NewEntitiesCollisionService()
 	coordinateService := services.NewCoordinateService()
 	wallCollisionService := collision_services.NewWallCollisionService(
 		int(app.config.BaseSizePx),
 		int(app.config.TileBaseSize),
 		coordinateService,
+		entitiesCollisionService,
 	)
 	tankBrakingService := services.NewTankBrakingService()
 

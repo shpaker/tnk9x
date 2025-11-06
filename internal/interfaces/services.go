@@ -32,37 +32,36 @@ type IBoundaryCollisionService interface {
 
 // IWallCollisionService интерфейс для сервиса коллизий со стенами
 type IWallCollisionService interface {
-	CheckEnemyWallCollision(
-		enemy *types.TankEntity,
-		level []types.BlockEntity,
-	) *types.BlockEntity
-	HandleEnemyWallCollision(enemy *types.TankEntity, block *types.BlockEntity)
 	CheckTankWallCollision(
 		tank *types.TankEntity,
-		level []types.BlockEntity,
-	) *types.BlockEntity
-	HandleTankWallCollision(tank *types.TankEntity, block *types.BlockEntity)
+		block *types.BlockEntity,
+	) bool
 }
 
 // IBulletCollisionService интерфейс для сервиса коллизий пуль
 type IBulletCollisionService interface {
-	CheckBulletWallCollisions(
-		bullets []types.BulletEntity,
-		level []types.BlockEntity,
-	) (bulletIndicesToRemove []int, blockIndicesToRemove []int)
-	CheckTank(
-		tank *types.TankEntity,
+	CheckBulletBlockCollision(
 		bullet *types.BulletEntity,
+		block *types.BlockEntity,
 	) bool
-	CheckHQ(
+	CheckBulletTankCollision(
+		bullet *types.BulletEntity,
+		tank *types.TankEntity,
+	) bool
+	CheckBulletHQCollision(
+		bullet *types.BulletEntity,
 		hq *types.HQEntity,
-		bullets []types.BulletEntity,
 	) bool
 }
 
 // IEntitiesCollisionService интерфейс для сервиса проверки коллизий между сущностями
 type IEntitiesCollisionService interface {
 	CheckColliders(obj1 types.IEntityCollider, obj2 types.IEntityCollider) bool
+	ResolveCollisionPosition(
+		entity types.IEntityCollider,
+		obstacle types.IEntityCollider,
+		direction types.Direction,
+	) types.Position
 }
 
 // IImageService интерфейс для сервиса работы с изображениями

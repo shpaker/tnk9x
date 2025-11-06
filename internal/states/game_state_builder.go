@@ -113,6 +113,7 @@ func (b *GameStateBuilder) Build() (*GameState, error) {
 		b.tankBrakingService,
 		b.coordinateService,
 		tankRenderUseCases,
+		b.gameRepository.TanksRepository(),
 	)
 	// Создаем Use Cases для карты
 	mapUseCases := use_cases.NewMapUseCases(
@@ -319,6 +320,7 @@ func (b *GameStateBuilder) buildPlayerComponents(
 		State:     types.TankStateSpawning,
 		Altitude:  types.SURFACE,
 		Size:      types.Size{Width: int(baseSizePx), Height: int(baseSizePx)},
+		IsEnemy:   false,
 	}
 	b.gameRepository.TanksRepository().AddTank(playerTank)
 
@@ -413,6 +415,7 @@ func (b *GameStateBuilder) buildEnemyComponents(
 				Width:  int(baseSizePx),
 				Height: int(baseSizePx),
 			},
+			IsEnemy: true,
 		}
 		b.gameRepository.TanksRepository().AddTank(enemyTank)
 
@@ -474,6 +477,7 @@ func (b *GameStateBuilder) buildCollisionServices(
 	if hq != nil {
 		hqUseCases = use_cases.NewHQUseCases(
 			hqTilesUseCases,
+			hq,
 		)
 	}
 

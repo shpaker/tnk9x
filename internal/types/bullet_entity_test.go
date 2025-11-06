@@ -33,9 +33,15 @@ func TestBulletEntity_GetImageID(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			bullet := &BulletEntity{
-				Image: tt.imageGetter,
-			}
+			bullet := NewBulletEntity(
+				Position{},
+				Size{},
+				SURFACE,
+				tt.imageGetter,
+				0,
+				DirectionUp,
+				nil,
+			)
 
 			result, err := bullet.GetImageID()
 
@@ -56,7 +62,15 @@ func TestBulletEntity_GetImageID(t *testing.T) {
 }
 
 func TestBulletEntity_GetSize(t *testing.T) {
-	bullet := &BulletEntity{}
+	bullet := NewBulletEntity(
+		Position{},
+		Size{},
+		SURFACE,
+		nil,
+		0,
+		DirectionUp,
+		nil,
+	)
 	size := bullet.GetSize()
 
 	expectedWidth := 4
@@ -73,9 +87,15 @@ func TestBulletEntity_GetSize(t *testing.T) {
 
 func TestBulletEntity_GetPosition(t *testing.T) {
 	expectedPos := Position{X: 100, Y: 200}
-	bullet := &BulletEntity{
-		Position: expectedPos,
-	}
+	bullet := NewBulletEntity(
+		expectedPos,
+		Size{},
+		SURFACE,
+		nil,
+		0,
+		DirectionUp,
+		nil,
+	)
 
 	result := bullet.GetPosition()
 	if result != expectedPos {

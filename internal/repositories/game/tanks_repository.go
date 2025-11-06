@@ -45,6 +45,23 @@ func (tr *TanksRepository) GetAllEnemies() []*types.TankEntity {
 	return tr.enemies
 }
 
+// === Методы для работы со всеми танками ===
+
+// GetAllTanks возвращает все танки (игрок + враги)
+func (tr *TanksRepository) GetAllTanks() []*types.TankEntity {
+	var allTanks []*types.TankEntity
+
+	// Добавляем игрока, если он есть
+	if tr.player != nil {
+		allTanks = append(allTanks, tr.player)
+	}
+
+	// Добавляем всех врагов
+	allTanks = append(allTanks, tr.enemies...)
+
+	return allTanks
+}
+
 // === Методы для обратной совместимости ===
 
 // AddTank добавляет танк (по умолчанию как врага)

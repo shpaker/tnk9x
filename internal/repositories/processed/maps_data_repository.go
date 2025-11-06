@@ -58,6 +58,7 @@ func (mdr *MapsDataRepository) readFile(levelNumber int) ([]string, error) {
 func (mdr *MapsDataRepository) createBlockFromChar(
 	charStr string,
 	x, y int,
+	tileBaseSize int,
 ) (*types.BlockEntity, error) {
 	// Пропускаем пустые места
 	if charStr == "." {
@@ -80,11 +81,16 @@ func (mdr *MapsDataRepository) createBlockFromChar(
 		ImageID: string(blockType),
 	}
 
-	// Создаем полный объект блока используя конструктор
+	// Преобразуем позицию из тайлов в пиксели
+	positionX := float64(x) * float64(tileBaseSize)
+	positionY := float64(y) * float64(tileBaseSize)
+
+	// Создаем полный объект блока используя конструктор с размерами в пикселях
 	block := types.NewBlockEntity(
 		string(blockType),
-		float64(x),
-		float64(y),
+		positionX,
+		positionY,
+		tileBaseSize,
 		tileEntity,
 	)
 
@@ -95,8 +101,9 @@ func (mdr *MapsDataRepository) createBlockFromChar(
 // Вычисляет width (длина первой строки) и height (количество строк)
 func (mdr *MapsDataRepository) parseLevelLines(
 	lines []string,
-) ([]types.BlockEntity, error) {
-	var level []types.BlockEntity
+	tileBaseSize int,
+) (types.MapBlocks, error) {
+	var level types.MapBlocks
 
 	if len(lines) == 0 {
 		return level, fmt.Errorf("empty level file")
@@ -130,15 +137,15 @@ func (mdr *MapsDataRepository) parseLevelLines(
 		for x, char := range line {
 			charStr := string(char)
 
-			// Создаем блок из символа
-			block, err := mdr.createBlockFromChar(charStr, x, y)
+			// Создаем блок из символа с преобразованием позиции в пиксели
+			block, err := mdr.createBlockFromChar(charStr, x, y, tileBaseSize)
 			if err != nil {
 				return level, err
 			}
 
 			// Добавляем блок в уровень (если он не nil)
 			if block != nil {
-				level = append(level, *block)
+				level = append(level, block)
 			}
 		}
 	}
@@ -156,8 +163,8 @@ func (mdr *MapsDataRepository) GetLevel(
 		return nil, err
 	}
 
-	// Парсим строки и создаем блоки
-	blocks, err := mdr.parseLevelLines(lines)
+	// Парсим строки и создаем блоки с позициями в пикселях
+	blocks, err := mdr.parseLevelLines(lines, tileBaseSize)
 	if err != nil {
 		return nil, err
 	}

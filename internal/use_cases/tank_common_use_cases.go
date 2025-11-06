@@ -15,6 +15,7 @@ type TankCommonUseCases struct {
 	bulletUseCases    interfaces.IBulletUseCases
 	tilesUseCases     *TilesUseCases
 	renderUseCases    interfaces.ITankRenderUseCases // Для управления анимацией танка
+	tanksRepository   interfaces.ITanksRepository    // Репозиторий танков
 }
 
 // ============================================================================
@@ -28,6 +29,7 @@ func NewTankCommonUseCases(
 	brakingService interfaces.ITankBrakingService,
 	coordinateService interfaces.ICoordinateService,
 	renderUseCases interfaces.ITankRenderUseCases,
+	tanksRepository interfaces.ITanksRepository,
 ) *TankCommonUseCases {
 	uc := &TankCommonUseCases{
 		brakingService:    brakingService,
@@ -35,6 +37,7 @@ func NewTankCommonUseCases(
 		bulletUseCases:    bulletUseCases,
 		tilesUseCases:     tilesUseCases,
 		renderUseCases:    renderUseCases,
+		tanksRepository:   tanksRepository,
 	}
 
 	return uc
@@ -124,4 +127,12 @@ func (uc *TankCommonUseCases) syncAnimationWithState(
 	} else if !shouldAnimate && anim.IsAnimating {
 		uc.tilesUseCases.StopAnimation(anim)
 	}
+}
+
+// GetAllTanks возвращает все танки (игрок + враги) из репозитория
+func (uc *TankCommonUseCases) GetAllTanks() []*types.TankEntity {
+	if uc.tanksRepository == nil {
+		return []*types.TankEntity{}
+	}
+	return uc.tanksRepository.GetAllTanks()
 }

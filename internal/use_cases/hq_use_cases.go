@@ -8,14 +8,17 @@ import (
 // HQUseCases отвечает за обработку действий базы и рендеринг
 type HQUseCases struct {
 	tilesUseCases *TilesUseCases
+	hq            *types.HQEntity
 }
 
 // NewHQUseCases создает новый экземпляр HQUseCases
 func NewHQUseCases(
 	tilesUseCases *TilesUseCases,
+	hq *types.HQEntity,
 ) *HQUseCases {
 	return &HQUseCases{
 		tilesUseCases: tilesUseCases,
+		hq:            hq,
 	}
 }
 
@@ -69,4 +72,9 @@ func (uc *HQUseCases) IsExplosionFinished(hq *types.HQEntity) {
 			hq.Altitude = types.SURFACE
 		}
 	}
+}
+
+// GetHQ возвращает HQ entity
+func (uc *HQUseCases) GetHQ() *types.HQEntity {
+	return uc.hq
 }

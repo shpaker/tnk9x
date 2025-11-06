@@ -37,13 +37,15 @@ func TestAddAndGetBullets(t *testing.T) {
 	}
 
 	// Создаем тестовую пулю с Image и Owner
-	bullet := types.BulletEntity{
-		Image:     &MockImageProvider{id: "bullet"},
-		Position:  types.Position{X: 100, Y: 100},
-		Speed:     200.0,
-		Direction: types.DirectionUp,
-		Owner:     tank,
-	}
+	bullet := *types.NewBulletEntity(
+		types.Position{X: 100, Y: 100},
+		types.Size{Width: 4, Height: 4},
+		types.SURFACE,
+		&MockImageProvider{id: "bullet"},
+		200.0,
+		types.DirectionUp,
+		tank,
+	)
 
 	err := repo.AddBullet(bullet)
 	if err != nil {
@@ -73,13 +75,15 @@ func TestAddBulletWithoutOwner(t *testing.T) {
 	repo := NewBulletsRepository()
 
 	// Создаем пулю без owner
-	bullet := types.BulletEntity{
-		Image:     &MockImageProvider{id: "bullet"},
-		Position:  types.Position{X: 100, Y: 100},
-		Speed:     200.0,
-		Direction: types.DirectionUp,
-		Owner:     nil,
-	}
+	bullet := *types.NewBulletEntity(
+		types.Position{X: 100, Y: 100},
+		types.Size{Width: 4, Height: 4},
+		types.SURFACE,
+		&MockImageProvider{id: "bullet"},
+		200.0,
+		types.DirectionUp,
+		nil, // Owner остается nil
+	)
 
 	err := repo.AddBullet(bullet)
 	if err == nil {
@@ -96,13 +100,15 @@ func TestAddBulletDuplicateOwner(t *testing.T) {
 	}
 
 	// Создаем первую пулю
-	bullet1 := types.BulletEntity{
-		Image:     &MockImageProvider{id: "bullet"},
-		Position:  types.Position{X: 100, Y: 100},
-		Speed:     200.0,
-		Direction: types.DirectionUp,
-		Owner:     tank,
-	}
+	bullet1 := *types.NewBulletEntity(
+		types.Position{X: 100, Y: 100},
+		types.Size{Width: 4, Height: 4},
+		types.SURFACE,
+		&MockImageProvider{id: "bullet"},
+		200.0,
+		types.DirectionUp,
+		tank,
+	)
 
 	err := repo.AddBullet(bullet1)
 	if err != nil {
@@ -110,13 +116,15 @@ func TestAddBulletDuplicateOwner(t *testing.T) {
 	}
 
 	// Пытаемся добавить вторую пулю от того же owner
-	bullet2 := types.BulletEntity{
-		Image:     &MockImageProvider{id: "bullet"},
-		Position:  types.Position{X: 200, Y: 200},
-		Speed:     200.0,
-		Direction: types.DirectionDown,
-		Owner:     tank,
-	}
+	bullet2 := *types.NewBulletEntity(
+		types.Position{X: 200, Y: 200},
+		types.Size{Width: 4, Height: 4},
+		types.SURFACE,
+		&MockImageProvider{id: "bullet"},
+		200.0,
+		types.DirectionDown,
+		tank,
+	)
 
 	err = repo.AddBullet(bullet2)
 	if err == nil {
@@ -141,20 +149,24 @@ func TestRemoveBullet(t *testing.T) {
 	}
 
 	// Создаем тестовые пули с Image и Owner
-	bullet1 := types.BulletEntity{
-		Image:     &MockImageProvider{id: "bullet"},
-		Position:  types.Position{X: 100, Y: 100},
-		Speed:     200.0,
-		Direction: types.DirectionUp,
-		Owner:     tank1,
-	}
-	bullet2 := types.BulletEntity{
-		Image:     &MockImageProvider{id: "bullet"},
-		Position:  types.Position{X: 200, Y: 200},
-		Speed:     200.0,
-		Direction: types.DirectionDown,
-		Owner:     tank2,
-	}
+	bullet1 := *types.NewBulletEntity(
+		types.Position{X: 100, Y: 100},
+		types.Size{Width: 4, Height: 4},
+		types.SURFACE,
+		&MockImageProvider{id: "bullet"},
+		200.0,
+		types.DirectionUp,
+		tank1,
+	)
+	bullet2 := *types.NewBulletEntity(
+		types.Position{X: 200, Y: 200},
+		types.Size{Width: 4, Height: 4},
+		types.SURFACE,
+		&MockImageProvider{id: "bullet"},
+		200.0,
+		types.DirectionDown,
+		tank2,
+	)
 
 	err := repo.AddBullet(bullet1)
 	if err != nil {

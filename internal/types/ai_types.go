@@ -10,5 +10,5 @@ type GameAiContext struct {
 	Player  *TankEntity    // Игрок
 	Enemies []*TankEntity  // Враги
 	Bullets []BulletEntity // Пули
-	Blocks  []BlockEntity  // Блоки/стены
+	Blocks  MapBlocks      // Блоки/стены
 }

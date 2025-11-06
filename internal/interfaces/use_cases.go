@@ -21,18 +21,14 @@ type IBulletUseCases interface {
 
 // IMapUseCases интерфейс для операций с картой
 type IMapUseCases interface {
-	GetBlocks() []types.BlockEntity
+	GetBlocks() types.MapBlocks
 	RemoveBlock(block *types.BlockEntity) error
 	GetSizePx() types.Size
 }
 
 // ICollisionUseCases интерфейс для операций с коллизиями
 type ICollisionUseCases interface {
-	UpdateCollisions(
-		allTanks []*types.TankEntity,
-		enemyTanks []*types.TankEntity,
-		hq *types.HQEntity,
-	) error
+	UpdateCollisions()
 }
 
 // ITilesUseCases интерфейс для работы с тайлами и анимациями
@@ -54,6 +50,7 @@ type ITilesUseCases interface {
 // ITankCommonUseCases интерфейс для общих операций с танком (движение)
 type ITankCommonUseCases interface {
 	Update(tank *types.TankEntity, dt float64) error
+	GetAllTanks() []*types.TankEntity
 }
 
 // ITankRenderUseCases интерфейс для графики и рендеринга танка
@@ -95,6 +92,7 @@ type IAIUseCases interface {
 
 // IHQUseCases интерфейс для операций с базой
 type IHQUseCases interface {
+	GetHQ() *types.HQEntity
 	Explode(hq *types.HQEntity) error
 	IsExplosionFinished(hq *types.HQEntity)
 }

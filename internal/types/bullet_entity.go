@@ -10,7 +10,7 @@ type BulletEntity struct {
 	Image     IImageProvider
 	Speed     float64
 	Direction Direction
-	Owner     *TankEntity
+	owner     *TankEntity
 }
 
 // GetImageID возвращает ID изображения пули (реализует IImageProvider)
@@ -37,4 +37,30 @@ func (b *BulletEntity) GetPosition() Position {
 // GetAltitude возвращает высоту пули
 func (b *BulletEntity) GetAltitude() Altitude {
 	return b.Altitude
+}
+
+// GetOwner возвращает владельца пули
+func (b *BulletEntity) GetOwner() *TankEntity {
+	return b.owner
+}
+
+// NewBulletEntity создает новую пулю
+func NewBulletEntity(
+	position Position,
+	size Size,
+	altitude Altitude,
+	image IImageProvider,
+	speed float64,
+	direction Direction,
+	owner *TankEntity,
+) *BulletEntity {
+	return &BulletEntity{
+		Position:  position,
+		Size:      size,
+		Altitude:  altitude,
+		Image:     image,
+		Speed:     speed,
+		Direction: direction,
+		owner:     owner,
+	}
 }

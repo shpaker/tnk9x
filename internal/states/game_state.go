@@ -153,24 +153,7 @@ func (state *GameState) update(dt float64) {
 	_ = state.BulletUseCases.UpdateBullets(dt)
 
 	// Проверяем коллизии ПОСЛЕ движения всех объектов
-	// Формируем список всех танков (игрок + враги) унифицированно
-	allTanks := make([]*types.TankEntity, 0, 4)
-	if state.PlayerTank != nil {
-		allTanks = append(allTanks, state.PlayerTank)
-	}
-	enemyTanksSlice := make([]*types.TankEntity, 0, 3)
-	for _, tank := range state.EnemyTanks {
-		if tank != nil {
-			allTanks = append(allTanks, tank)
-			enemyTanksSlice = append(enemyTanksSlice, tank)
-		}
-	}
-
-	_ = state.CollisionUseCases.UpdateCollisions(
-		allTanks,
-		enemyTanksSlice,
-		state.HQEntity,
-	)
+	state.CollisionUseCases.UpdateCollisions()
 
 	// Обновляем AI input адаптеры врагов ПОСЛЕ коллизий
 	// чтобы AI видел актуальное состояние танка после столкновений

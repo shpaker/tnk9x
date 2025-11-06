@@ -31,13 +31,15 @@ func TestGameRepositoriesRegistryBullets(t *testing.T) {
 	}
 
 	// Создаем пулю с минимальными данными
-	bullet := types.BulletEntity{
-		Position:  types.Position{X: 10, Y: 20},
-		Direction: types.DirectionUp,
-		Speed:     100,
-		Altitude:  types.SURFACE,
-		Owner:     tank,
-	}
+	bullet := *types.NewBulletEntity(
+		types.Position{X: 10, Y: 20},
+		types.Size{Width: 4, Height: 4},
+		types.SURFACE,
+		nil,
+		100.0,
+		types.DirectionUp,
+		tank,
+	)
 
 	// Добавляем пулю
 	err := gameRepo.BulletsRepository().AddBullet(bullet)

@@ -19,9 +19,9 @@ func NewMapUseCases(
 }
 
 // GetBlocks возвращает все блоки карты
-func (uc *MapUseCases) GetBlocks() []types.BlockEntity {
+func (uc *MapUseCases) GetBlocks() types.MapBlocks {
 	if uc.mapEntity == nil {
-		return []types.BlockEntity{}
+		return types.MapBlocks{}
 	}
 	return uc.mapEntity.GetBlocks()
 }
@@ -32,6 +32,16 @@ func (uc *MapUseCases) RemoveBlock(block *types.BlockEntity) error {
 		return nil
 	}
 	return uc.mapEntity.RemoveBlock(block)
+}
+
+func (uc *MapUseCases) RemoveBlocks(blocks []*types.BlockEntity) error {
+	if uc.mapEntity == nil {
+		return nil
+	}
+	for _, block := range blocks {
+		_ = uc.mapEntity.RemoveBlock(block)
+	}
+	return nil
 }
 
 // GetSizePx возвращает размер карты в пикселях

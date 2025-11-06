@@ -54,21 +54,21 @@ func (uc *BulletUseCases) ShootBullet(tank *types.TankEntity) error {
 		bulletX = tank.Position.X + float64(uc.tankSpriteSize)/2
 	}
 
-	bullet := types.BulletEntity{
-		Position: types.Position{
+	bullet := types.NewBulletEntity(
+		types.Position{
 			X: bulletX,
 			Y: bulletY,
 		},
-		Size:      types.Size{Width: 4, Height: 4},
-		Altitude:  types.SURFACE, // Пули на уровне поверхности
-		Image:     bulletImageGetter,
-		Speed:     120.0, // Скорость пули
-		Direction: tank.Direction,
-		Owner:     tank,
-	}
+		types.Size{Width: 4, Height: 4},
+		types.SURFACE, // Пули на уровне поверхности
+		bulletImageGetter,
+		120.0, // Скорость пули
+		tank.Direction,
+		tank,
+	)
 
 	// Игнорируем ошибку от AddBullet (если пуля не добавлена - просто не стреляем)
-	_ = uc.bulletsRepository.AddBullet(bullet)
+	_ = uc.bulletsRepository.AddBullet(*bullet)
 	return nil
 }
 

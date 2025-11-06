@@ -31,3 +31,37 @@ func (s *EntitiesCollisionService) CheckColliders(
 		pos1.Y < pos2.Y+float64(size2.Height) &&
 		pos1.Y+float64(size1.Height) > pos2.Y
 }
+
+// ResolveCollisionPosition вычисляет скорректированную позицию сущности
+// при столкновении с препятствием
+// Возвращает новую позицию с учетом направления движения
+func (s *EntitiesCollisionService) ResolveCollisionPosition(
+	entity types.IEntityCollider,
+	obstacle types.IEntityCollider,
+	direction types.Direction,
+) types.Position {
+	entityPos := entity.GetPosition()
+	entitySize := entity.GetSize()
+	obstaclePos := obstacle.GetPosition()
+	obstacleSize := obstacle.GetSize()
+
+	// Инициализируем позицию текущей позицией сущности
+	updatedPosition := entityPos
+
+	switch direction {
+	case types.DirectionUp:
+		// верх сущности упирается в низ препятствия
+		updatedPosition.Y = obstaclePos.Y + float64(obstacleSize.Height)
+	case types.DirectionDown:
+		// низ сущности упирается в верх препятствия
+		updatedPosition.Y = obstaclePos.Y - float64(entitySize.Height)
+	case types.DirectionLeft:
+		// левая сторона сущности упирается в правую сторону препятствия
+		updatedPosition.X = obstaclePos.X + float64(obstacleSize.Width)
+	case types.DirectionRight:
+		// правая сторона сущности упирается в левую сторону препятствия
+		updatedPosition.X = obstaclePos.X - float64(entitySize.Width)
+	}
+
+	return updatedPosition
+}

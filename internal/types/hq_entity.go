@@ -49,5 +49,5 @@ func (h *HQEntity) GetAltitude() Altitude {
 
 // IsDestroyed возвращает true если база разрушена
 func (h *HQEntity) IsDestroyed() bool {
-	return h.State == HQStateDestroyed
+	return h.State == HQStateDestroyed || h.State == HQStateExploding
 }

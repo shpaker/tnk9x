@@ -47,10 +47,13 @@ func (b *BlockEntity) GetAltitude() Altitude {
 }
 
 // NewBlockEntity создает новый BlockEntity с указанными параметрами
+// positionX, positionY - позиция в пикселях
+// size - размер блока в пикселях
 func NewBlockEntity(
 	blockType string,
 	positionX,
 	positionY float64,
+	size int,
 	imageGetter IImageProvider,
 ) *BlockEntity {
 	altitude := SURFACE // По умолчанию блоки на уровне поверхности
@@ -61,7 +64,7 @@ func NewBlockEntity(
 
 	return &BlockEntity{
 		Position: Position{X: positionX, Y: positionY},
-		Size:     Size{Width: 8, Height: 8},
+		Size:     Size{Width: size, Height: size},
 		Altitude: altitude,
 		Image:    imageGetter,
 		Data: &BlockData{

@@ -572,10 +572,10 @@ func (r *GameRendererAdapter) drawBlocksByAltitude(
 		image := ebiten.NewImageFromImage(imageData)
 
 		op := &ebiten.DrawImageOptions{}
-		// Предполагаем, что блоки имеют координаты X, Y в Position
+		// Блоки уже хранят позиции в пикселях, используем их напрямую
 		op.GeoM.Translate(
-			float64(r.mapOffsetX)+block.Position.X*float64(r.tileMinSize),
-			float64(r.mapOffsetY)+block.Position.Y*float64(r.tileMinSize),
+			float64(r.mapOffsetX)+block.Position.X,
+			float64(r.mapOffsetY)+block.Position.Y,
 		)
 		screen.DrawImage(image, op)
 	}

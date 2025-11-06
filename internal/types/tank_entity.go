@@ -23,6 +23,7 @@ type TankEntity struct {
 	State         TankState
 	SpawnedAt     float64
 	NextDirection *Direction
+	IsEnemy       bool
 }
 
 // GetSize возвращает размер танка

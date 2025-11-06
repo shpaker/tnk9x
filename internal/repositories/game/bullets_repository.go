@@ -20,13 +20,13 @@ func NewBulletsRepository() *BulletsRepository {
 // Возвращает ошибку если у пули нет owner или если у этого owner уже есть пуля
 func (br *BulletsRepository) AddBullet(bullet types.BulletEntity) error {
 	// Проверяем наличие owner
-	if bullet.Owner == nil {
+	if bullet.GetOwner() == nil {
 		return fmt.Errorf("bullet owner is nil")
 	}
 
 	// Проверяем, есть ли уже пуля от этого owner
 	for _, existingBullet := range br.bullets {
-		if existingBullet.Owner == bullet.Owner {
+		if existingBullet.GetOwner() == bullet.GetOwner() {
 			return fmt.Errorf("tank already has a bullet")
 		}
 	}

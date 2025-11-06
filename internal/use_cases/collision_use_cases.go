@@ -49,80 +49,85 @@ func NewCollisionUseCases(
 }
 
 // UpdateCollisions обновляет все коллизии в игре
-// allTanks - все танки (игрок + враги) без разделения
-// enemyTanks - список врагов, используется только для определения принадлежности пули (пули врагов проходят сквозь врагов)
-func (uc *CollisionUseCases) UpdateCollisions(
-	allTanks []*types.TankEntity,
-	enemyTanks []*types.TankEntity,
-	hq *types.HQEntity,
-) error {
-	if len(allTanks) == 0 {
-		return nil
-	}
+func (uc *CollisionUseCases) UpdateCollisions() {
+	// Получаем все танки из репозитория через use cases
+	allTanks := uc.tankCommonUseCases.GetAllTanks()
 
-	// Проверяем коллизии с HQ ПЕРВЫМИ, чтобы пули не удалялись другими проверками
-	uc.checkBulletHQCollisions(hq, enemyTanks)
-
-	// Проверяем коллизии пуль с границами экрана
+	// Получаем все пули из репозитория
 	bullets := uc.bulletUseCases.GetBullets()
 
-	uc.checkBulletWallCollisions()
+	// Получаем HQ из use cases
+	hq := uc.hqUseCases.GetHQ()
 
-	uc.checkBulletsCollisions(bullets)
-	uc.checkTanksCollisions(allTanks, bullets)
+	// Получаем блоки карты из use cases
+	mapBlocks := uc.mapUseCases.GetBlocks()
 
-	return nil
+	// Проверяем коллизии с HQ ПЕРВЫМИ, чтобы пули не удалялись другими проверками
+	uc.checkBulletsCollisions(bullets, hq, mapBlocks)
+	uc.checkTanksCollisions(allTanks, bullets, mapBlocks)
 }
 
 // checkTanksCollisions проверяет коллизии всех танков с границами и стенами унифицированно
 func (uc *CollisionUseCases) checkTanksCollisions(
 	allTanks []*types.TankEntity,
 	bullets []types.BulletEntity,
+	mapBlocks types.MapBlocks,
 ) {
-	level := uc.mapUseCases.GetBlocks()
-
 	for _, tank := range allTanks {
-		if tank == nil || !tank.IsActive() {
+		// Проверяем коллизии с границами карты
+		if !tank.IsActive() {
 			continue
 		}
-
-		// Проверяем коллизии с границами карты
-		uc.checkTankBoundaryCollisions(tank)
+		uc.checkTankBoundaryCollision(tank)
 
 		for index, bullet := range bullets {
-			if uc.bulletCollisionService.CheckTank(tank, &bullet) {
+			if uc.bulletCollisionService.CheckBulletTankCollision(
+				&bullet,
+				tank,
+			) {
 				_ = uc.bulletUseCases.RemoveBullet(index)
-				_ = uc.tankLifecycleUseCases.Explode(tank)
+				if tank.IsActive() {
+					_ = uc.tankLifecycleUseCases.Explode(tank)
+				}
 				continue
 			}
 		}
 
 		// Проверяем коллизии со стенами
-		collidingBlock := uc.wallCollisionService.CheckTankWallCollision(
-			tank,
-			level,
-		)
-
-		if collidingBlock != nil {
-			uc.wallCollisionService.HandleTankWallCollision(
-				tank,
-				collidingBlock,
-			)
-			uc.tankActions.Stop(tank, true)
+		for _, block := range mapBlocks {
+			if uc.wallCollisionService.CheckTankWallCollision(tank, block) {
+				// Вычисляем скорректированную позицию через EntitiesCollisionService
+				correctedPos := uc.entitiesCollisionService.ResolveCollisionPosition(
+					tank,
+					block,
+					tank.Direction,
+				)
+				// Применяем скорректированную позицию
+				tank.Position = correctedPos
+				uc.tankActions.Stop(tank, true)
+				break
+			}
 		}
+
 	}
 }
 
 func (uc *CollisionUseCases) checkBulletsCollisions(
 	bullets []types.BulletEntity,
+	hq *types.HQEntity,
+	mapBlocks types.MapBlocks,
 ) {
 	for index, bullet := range bullets {
-		uc.checkBulletBoundaryCollisions(&bullet, index)
+		if uc.checkBulletBoundaryCollision(&bullet) ||
+			uc.checkBulletHQCollision(&bullet, hq) ||
+			uc.checkBulletWallCollision(&bullet, mapBlocks) {
+			_ = uc.bulletUseCases.RemoveBullet(index)
+		}
 	}
 }
 
-// checkTankBoundaryCollisions проверяет коллизию танка с краями карты
-func (uc *CollisionUseCases) checkTankBoundaryCollisions(
+// checkTankBoundaryCollision проверяет коллизию танка с краями карты
+func (uc *CollisionUseCases) checkTankBoundaryCollision(
 	tank *types.TankEntity,
 ) {
 	if uc.boundaryCollisionService.CheckLeftBoundaryCollision(tank) {
@@ -139,87 +144,59 @@ func (uc *CollisionUseCases) checkTankBoundaryCollisions(
 	}
 }
 
-// checkBulletBoundaryCollisions проверяет коллизии пуль с границами экрана
-// nolint:unused // Метод оставлен для возможного использования в будущем
-func (uc *CollisionUseCases) checkBulletBoundaryCollisions(
+// checkBulletBoundaryCollision проверяет коллизию пули с границами экрана
+func (uc *CollisionUseCases) checkBulletBoundaryCollision(
 	bullet *types.BulletEntity,
-	index int,
-) {
+) bool {
 	if uc.boundaryCollisionService.CheckLeftBoundaryCollision(bullet) ||
 		uc.boundaryCollisionService.CheckRightBoundaryCollision(bullet) ||
 		uc.boundaryCollisionService.CheckTopBoundaryCollision(bullet) ||
 		uc.boundaryCollisionService.CheckBottomBoundaryCollision(bullet) {
-		_ = uc.bulletUseCases.RemoveBullet(index)
+		return true
 	}
+	return false
 }
 
-// checkBulletWallCollisions проверяет коллизии пуль со стенами
-func (uc *CollisionUseCases) checkBulletWallCollisions() {
-	bullets := uc.bulletUseCases.GetBullets()
-	level := uc.mapUseCases.GetBlocks()
-
-	bulletIndicesToRemove, blockIndicesToRemove := uc.bulletCollisionService.CheckBulletWallCollisions(
-		bullets,
-		level,
-	)
-
-	// Удаляем блоки в обратном порядке (чтобы индексы не сдвигались)
-	for k := len(blockIndicesToRemove) - 1; k >= 0; k-- {
-		blockIndex := blockIndicesToRemove[k]
-		blocks := uc.mapUseCases.GetBlocks()
-		if blockIndex < len(blocks) {
-			_ = uc.mapUseCases.RemoveBlock(&blocks[blockIndex])
-		}
-	}
-
-	// Удаляем пули
-	for _, i := range bulletIndicesToRemove {
-		_ = uc.bulletUseCases.RemoveBullet(i)
-	}
-}
-
-// checkBulletHQCollisions проверяет коллизии пуль с базой
-func (uc *CollisionUseCases) checkBulletHQCollisions(
-	hq *types.HQEntity,
-	enemyTanks []*types.TankEntity,
-) {
-	if hq == nil || hq.IsDestroyed() || hq.State == types.HQStateExploding {
-		return
-	}
-
-	bullets := uc.bulletUseCases.GetBullets()
-
-	// Создаем карту для быстрой проверки, является ли пуля вражеской
-	enemySet := make(map[*types.TankEntity]bool)
-	for _, enemy := range enemyTanks {
-		if enemy != nil {
-			enemySet[enemy] = true
-		}
-	}
-
-	// Проверяем коллизию пуль с базой
-	// Базу могут разрушать только пули врагов (не пули игрока)
-	for i := len(bullets) - 1; i >= 0; i-- {
-		bullet := &bullets[i]
-
-		// Проверяем, что пуля существует и является вражеской
-		if bullet.Owner == nil || !enemySet[bullet.Owner] {
-			continue
-		}
-
-		// Проверяем коллизию конкретной пули с базой
-		singleBulletList := []types.BulletEntity{bullets[i]}
-		if uc.bulletCollisionService.CheckHQ(hq, singleBulletList) {
-			// Удаляем пулю
-			_ = uc.bulletUseCases.RemoveBullet(i)
-
-			// Запускаем анимацию взрыва базы
-			if uc.hqUseCases != nil {
-				_ = uc.hqUseCases.Explode(hq)
+// checkBulletWallCollision проверяет коллизию пули со стенами
+// Возвращает true, если пуля попала в блок и должна быть удалена
+func (uc *CollisionUseCases) checkBulletWallCollision(
+	bullet *types.BulletEntity,
+	mapBlocks types.MapBlocks,
+) bool {
+	// Проверяем коллизию пули с каждым блоком
+	for _, block := range mapBlocks {
+		if uc.bulletCollisionService.CheckBulletBlockCollision(
+			bullet,
+			block,
+		) {
+			// Если блок - кирпичная стена, удаляем его
+			if block.Data != nil && block.Data.Name == types.Brick {
+				_ = uc.mapUseCases.RemoveBlock(block)
 			}
 
-			// Останавливаем после первого попадания (база умирает от одного попадания)
-			break
+			// Пуля попала в блок, нужно удалить пулю
+			return true
 		}
 	}
+
+	// Коллизии не было
+	return false
+}
+
+// checkBulletHQCollision проверяет коллизию пули с базой
+// Возвращает true, если пуля попала в базу и должна быть удалена
+func (uc *CollisionUseCases) checkBulletHQCollision(
+	bullet *types.BulletEntity,
+	hq *types.HQEntity,
+) bool {
+	// Проверяем коллизию пули с базой
+	// Базу могут разрушать только пули врагов (не пули игрока)
+	if uc.bulletCollisionService.CheckBulletHQCollision(bullet, hq) {
+		// Запускаем анимацию взрыва базы
+		if uc.hqUseCases != nil && !hq.IsDestroyed() {
+			_ = uc.hqUseCases.Explode(hq)
+		}
+		return true
+	}
+	return false
 }
