@@ -90,6 +90,14 @@
   - Анимация взрыва базы
   - База настраивается через `config.yml`
 
+### Унификация рендеринга
+
+- ✅ **GameRendererAdapter унифицирован**:
+  - Использует `ITankCommonUseCases.GetAllTanks()` вместо отдельных полей `playerTank` и `enemyTanks`
+  - Получает HQ через `IHQUseCases.GetHQ()` вместо поля `hq`
+  - Унифицированные методы `drawTanks()` и `drawExplosions()` для всех танков (игрок и враги) и HQ
+  - Единообразное именование методов: `drawHeadquarters()`, `drawTanks()`, `drawExplosions()`, `drawBullets()`
+
 ---
 
 ## 🎯 Архитектурные принципы

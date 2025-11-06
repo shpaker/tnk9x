@@ -231,8 +231,10 @@ just check            # Все проверки (fmt-check, lint, test)
 ```
 internal/
 ├── adapters/          # Presentation Layer
-│   ├── input_adapters/    # Адаптеры ввода
-│   └── renderer_adapter.go # Адаптер отрисовки
+│   ├── game/              # Адаптеры для игрового состояния
+│   │   └── game_renderer_adapter.go # Универсальный адаптер отрисовки
+│   ├── stage_select/      # Адаптеры для экрана выбора уровня
+│   └── input_adapters/    # Адаптеры ввода
 ├── states/            # Presentation Layer
 │   └── game_state.go      # Управление состоянием игры
 ├── use_cases/         # Application Layer
@@ -249,9 +251,11 @@ internal/
 ├── services/          # Application Layer
 │   ├── tank_braking_services.go
 │   ├── coordinate_services.go
-│   ├── boundary_collision_service.go
-│   ├── wall_collision_service.go
-│   ├── bullet_collision_service.go
+│   ├── collision_services/  # Сервисы коллизий
+│   │   ├── boundary_collision_service.go
+│   │   ├── wall_collision_service.go
+│   │   ├── bullet_collision_service.go
+│   │   └── entities_collision_service.go
 │   ├── tile_services.go
 │   ├── animation_services.go
 │   ├── image_services.go
@@ -277,24 +281,24 @@ internal/
 ```mermaid
 graph TB
     subgraph "Presentation Layer"
-        ADAPTERS[Адаптеры<br/>Input/Renderer<br/>Game/StageSelect]
+        ADAPTERS[Адаптеры<br/>Input/Renderer<br/>Game/StageSelect<br/>Получают данные через Use Cases]
         STATES[Состояния<br/>GameState<br/>StageSelectState]
         APP[App<br/>Управление состояниями]
     end
 
     subgraph "Application Layer"
-        USECASES[Use Cases<br/>Бизнес-логика<br/>Stateless компоненты]
-        SERVICES[Services<br/>Специализированная логика<br/>Координация, коллизии, AI]
+        USECASES[Use Cases<br/>Бизнес-логика<br/>Stateless компоненты<br/>TankCommon, HQUseCases, etc.]
+        SERVICES[Services<br/>Специализированная логика<br/>Координация, коллизии, AI<br/>EntitiesCollisionService]
     end
 
     subgraph "Domain Layer"
-        ENTITIES[Entities<br/>Доменные сущности]
-        INTERFACES[Интерфейсы домена<br/>Image Providers]
+        ENTITIES[Entities<br/>Доменные сущности<br/>TankEntity, BulletEntity, HQEntity]
+        INTERFACES[Интерфейсы домена<br/>Image Providers<br/>IEntityCollider]
     end
 
     subgraph "Infrastructure Layer"
         REPOSITORIES_PROCESSED[Processed Repositories<br/>Карты, скрипты, шрифты, тайлсеты]
-        REPOSITORIES_GAME[Game Repositories<br/>In-memory хранилища]
+        REPOSITORIES_GAME[Game Repositories<br/>In-memory хранилища<br/>TanksRepository, BulletsRepository]
         REPOSITORIES_RAW[Raw Repository<br/>Чтение файлов]
         INFRASTRUCTURE[Assets & Config<br/>Ресурсы игры]
     end
@@ -339,12 +343,16 @@ graph TB
 - **cmd/main.go** — точка входа приложения
 - **internal/app.go** — главное приложение, реализует интерфейс Ebiten Game, управляет переходами между состояниями
 - **internal/adapters/game/** — адаптеры для игрового состояния (Renderer, Input)
+  - **GameRendererAdapter** — универсальный адаптер отрисовки, работает с танками через `ITankCommonUseCases.GetAllTanks()` и HQ через `IHQUseCases.GetHQ()`
 - **internal/adapters/stage_select/** — адаптеры для экрана выбора уровня (Renderer, Input)
 - **internal/states/** — состояния игры (GameState, StageSelectState)
 
 #### 2. Application/State Layer (Слой приложения/состояний)
 **Ответственность:** Управление состояниями приложения и оркестрация Use Cases
 - **internal/states/GameState** — состояние игры, координирует обновление, отрисовку и координацию Use Cases
+- **GameRendererAdapter** получает данные через Use Cases:
+  - Танки: `ITankCommonUseCases.GetAllTanks()` (универсальный метод для всех танков)
+  - HQ: `IHQUseCases.GetHQ()` (получение базы через use case)
 
 #### 3. Use Cases / Business Logic Layer (Слой бизнес-логики)
 **Ответственность:** Реализация бизнес-правил и игровой логики
@@ -366,6 +374,7 @@ graph TB
 - **BoundaryCollisionService** — коллизии с границами карты
 - **WallCollisionService** — коллизии со стенами и блоками
 - **BulletCollisionService** — коллизии пуль с объектами (стены, танки, база)
+- **EntitiesCollisionService** — универсальная проверка коллизий между сущностями
 - **TileService** — работа с тайлами и создание анимаций из конфигурации
 - **AnimationService** — обновление анимаций
 - **ImageService** — работа с изображениями (поворот по направлению)
@@ -427,10 +436,17 @@ graph TB
 - **BoundaryCollisionService** — коллизии с границами
 - **WallCollisionService** — коллизии со стенами
 - **BulletCollisionService** — коллизии пуль
+- **EntitiesCollisionService** — универсальная проверка коллизий между сущностями
 - **TileService** — работа с тайлами
 - **AnimationService** — обновление анимаций
 - **ImageService** — работа с изображениями
 - **AITypeConverter** — конвертация типов Go ↔ Lua
+
+**Adapters:**
+- **GameRendererAdapter** — универсальный адаптер отрисовки:
+  - Работает с танками через `ITankCommonUseCases.GetAllTanks()` (не различает игрока и врагов)
+  - Получает HQ через `IHQUseCases.GetHQ()`
+  - Унифицированные методы: `drawTanks()`, `drawExplosions()`, `drawHeadquarters()`, `drawBullets()`
 
 **Repositories:**
 - **GameRepositoriesRegistry** — реестр игровых репозиториев

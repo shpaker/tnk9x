@@ -79,36 +79,9 @@ func (uc *CollisionUseCases) checkTanksCollisions(
 			continue
 		}
 		uc.checkTankBoundaryCollision(tank)
-
-		for index, bullet := range bullets {
-			if uc.bulletCollisionService.CheckBulletTankCollision(
-				&bullet,
-				tank,
-			) {
-				_ = uc.bulletUseCases.RemoveBullet(index)
-				if tank.IsActive() {
-					_ = uc.tankLifecycleUseCases.Explode(tank)
-				}
-				continue
-			}
-		}
-
-		// Проверяем коллизии со стенами
-		for _, block := range mapBlocks {
-			if uc.wallCollisionService.CheckTankWallCollision(tank, block) {
-				// Вычисляем скорректированную позицию через EntitiesCollisionService
-				correctedPos := uc.entitiesCollisionService.ResolveCollisionPosition(
-					tank,
-					block,
-					tank.Direction,
-				)
-				// Применяем скорректированную позицию
-				tank.Position = correctedPos
-				uc.tankActions.Stop(tank, true)
-				break
-			}
-		}
-
+		uc.checkTankBlockCollisions(tank, mapBlocks)
+		uc.checkTankTankCollision(tank, allTanks)
+		uc.checkTankBulletCollisions(tank, bullets)
 	}
 }
 
@@ -122,6 +95,73 @@ func (uc *CollisionUseCases) checkBulletsCollisions(
 			uc.checkBulletHQCollision(&bullet, hq) ||
 			uc.checkBulletWallCollision(&bullet, mapBlocks) {
 			_ = uc.bulletUseCases.RemoveBullet(index)
+		}
+	}
+}
+
+// checkTankBulletCollisions проверяет коллизии танка с пулями
+func (uc *CollisionUseCases) checkTankBulletCollisions(
+	tank *types.TankEntity,
+	bullets []types.BulletEntity,
+) {
+	for index, bullet := range bullets {
+		if uc.bulletCollisionService.CheckBulletTankCollision(
+			&bullet,
+			tank,
+		) {
+			_ = uc.bulletUseCases.RemoveBullet(index)
+			if tank.IsActive() {
+				_ = uc.tankLifecycleUseCases.Explode(tank)
+			}
+			return
+		}
+	}
+}
+
+// checkTankBlockCollisions проверяет коллизии танка с блоками карты
+func (uc *CollisionUseCases) checkTankBlockCollisions(
+	tank *types.TankEntity,
+	mapBlocks types.MapBlocks,
+) {
+	for _, block := range mapBlocks {
+		if uc.wallCollisionService.CheckTankWallCollision(tank, block) {
+			// Вычисляем скорректированную позицию через EntitiesCollisionService
+			correctedPos := uc.entitiesCollisionService.ResolveCollisionPosition(
+				tank,
+				block,
+				tank.Direction,
+			)
+			// Применяем скорректированную позицию
+			tank.Position = correctedPos
+			uc.tankActions.Stop(tank, true)
+			return
+		}
+	}
+}
+
+// checkTankTankCollision проверяет коллизию танка с другими танками
+func (uc *CollisionUseCases) checkTankTankCollision(
+	tank *types.TankEntity,
+	allTanks []*types.TankEntity,
+) {
+	for _, otherTank := range allTanks {
+		// Пропускаем проверку с самим собой и неактивными танками
+		if tank == otherTank || !otherTank.IsActive() {
+			continue
+		}
+
+		// Проверяем коллизию
+		if uc.entitiesCollisionService.CheckColliders(tank, otherTank) {
+			// Вычисляем скорректированную позицию
+			correctedPos := uc.entitiesCollisionService.ResolveCollisionPosition(
+				tank,
+				otherTank,
+				tank.Direction,
+			)
+			// Применяем скорректированную позицию
+			tank.Position = correctedPos
+			uc.tankActions.Stop(tank, true)
+			return
 		}
 	}
 }

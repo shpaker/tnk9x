@@ -238,14 +238,14 @@ func (app *App) createGameState(
 	)
 
 	tempRendererAdapter := game.NewGameRendererAdapter(
-		nil, nil, nil, nil, nil,
+		nil, nil, nil, nil,
 		mapTilesUseCases,
 		playerTilesUseCases,
 		bulletTilesUseCases,
 		spawnerTilesUseCases,
 		explosionTilesUseCases,
 		hqTilesUseCases,
-		nil, nil,
+		nil,
 		int(app.config.TileBaseSize),
 		mapOffsetX,
 		mapOffsetY,
@@ -283,26 +283,17 @@ func (app *App) createGameState(
 	}
 
 	// Обновляем адаптеры с реальными данными
-	enemyTanksSlice := make([]*types.TankEntity, 0, 3)
-	for _, tank := range gameStatePtr.EnemyTanks {
-		if tank != nil {
-			enemyTanksSlice = append(enemyTanksSlice, tank)
-		}
-	}
-
 	rendererAdapter := game.NewGameRendererAdapter(
 		gameStatePtr.MapUseCases,
-		gameStatePtr.PlayerTank,
+		gameStatePtr.TankCommonUseCases,
 		gameStatePtr.TankRenderUseCases,
 		gameStatePtr.BulletUseCases,
-		enemyTanksSlice,
 		mapTilesUseCases,
 		playerTilesUseCases,
 		bulletTilesUseCases,
 		spawnerTilesUseCases,
 		explosionTilesUseCases,
 		hqTilesUseCases,
-		gameStatePtr.HQEntity,
 		gameStatePtr.HQUseCases,
 		int(app.config.TileBaseSize),
 		mapOffsetX,
