@@ -1,6 +1,10 @@
 package collision_services
 
-import "github.com/shpaker/gonflict/internal/types"
+import (
+	"errors"
+
+	"github.com/shpaker/gonflict/internal/types"
+)
 
 // EntitiesCollisionService предоставляет логику проверки коллизий между сущностями
 type EntitiesCollisionService struct{}
@@ -32,10 +36,37 @@ func (s *EntitiesCollisionService) CheckColliders(
 		pos1.Y+float64(size1.Height) > pos2.Y
 }
 
-// ResolveCollisionPosition вычисляет скорректированную позицию сущности
-// при столкновении с препятствием
-// Возвращает новую позицию с учетом направления движения
-func (s *EntitiesCollisionService) ResolveCollisionPosition(
+// isObstacleInDirection проверяет, находится ли препятствие по направлению движения сущности
+// Возвращает true, если препятствие находится по направлению движения
+func (s *EntitiesCollisionService) isObstacleInDirection(
+	entity types.IEntityCollider,
+	obstacle types.IEntityCollider,
+	direction types.Direction,
+) bool {
+	entityPos := entity.GetPosition()
+	obstaclePos := obstacle.GetPosition()
+
+	switch direction {
+	case types.DirectionUp:
+		// При движении вверх препятствие должно быть выше сущности
+		return obstaclePos.Y <= entityPos.Y
+	case types.DirectionDown:
+		// При движении вниз препятствие должно быть ниже сущности
+		return obstaclePos.Y >= entityPos.Y
+	case types.DirectionLeft:
+		// При движении влево препятствие должно быть левее сущности
+		return obstaclePos.X <= entityPos.X
+	case types.DirectionRight:
+		// При движении вправо препятствие должно быть правее сущности
+		return obstaclePos.X >= entityPos.X
+	}
+
+	return false
+}
+
+// calculateCorrectedPosition вычисляет скорректированную позицию сущности
+// при столкновении с препятствием с учетом направления движения
+func (s *EntitiesCollisionService) calculateCorrectedPosition(
 	entity types.IEntityCollider,
 	obstacle types.IEntityCollider,
 	direction types.Direction,
@@ -64,4 +95,24 @@ func (s *EntitiesCollisionService) ResolveCollisionPosition(
 	}
 
 	return updatedPosition
+}
+
+// ResolveCollisionPosition вычисляет скорректированную позицию сущности
+// при столкновении с препятствием
+// Возвращает новую позицию с учетом направления движения
+// Если препятствие не находится по направлению движения, возвращает ошибку
+func (s *EntitiesCollisionService) ResolveCollisionPosition(
+	entity types.IEntityCollider,
+	obstacle types.IEntityCollider,
+	direction types.Direction,
+) (types.Position, error) {
+	// Проверяем, находится ли препятствие по направлению движения
+	if !s.isObstacleInDirection(entity, obstacle, direction) {
+		return entity.GetPosition(), errors.New(
+			"препятствие не по направлению движения",
+		)
+	}
+
+	// Вычисляем скорректированную позицию
+	return s.calculateCorrectedPosition(entity, obstacle, direction), nil
 }

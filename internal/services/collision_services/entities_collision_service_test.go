@@ -69,18 +69,24 @@ func TestEntitiesCollisionService_ResolveCollisionPosition(t *testing.T) {
 		}
 
 		obstacle := &types.BlockEntity{
-			Position: types.Position{X: 20, Y: 20},
+			Position: types.Position{
+				X: 30,
+				Y: 10,
+			}, // Препятствие справа от сущности
 			Size:     types.Size{Width: 16, Height: 16},
 			Altitude: types.SURFACE,
 		}
 
-		result := service.ResolveCollisionPosition(
+		result, err := service.ResolveCollisionPosition(
 			entity,
 			obstacle,
 			types.DirectionRight,
 		)
-		if result.X != 4.0 {
-			t.Errorf("ожидалась X=4.0, но получили X=%f", result.X)
+		if err != nil {
+			t.Errorf("не ожидалась ошибка, но получили: %v", err)
+		}
+		if result.X != 14.0 {
+			t.Errorf("ожидалась X=14.0, но получили X=%f", result.X)
 		}
 		if result.Y != 10.0 {
 			t.Errorf("ожидалась Y=10.0, но получили Y=%f", result.Y)
@@ -95,22 +101,291 @@ func TestEntitiesCollisionService_ResolveCollisionPosition(t *testing.T) {
 		}
 
 		obstacle := &types.BlockEntity{
-			Position: types.Position{X: 20, Y: 20},
+			Position: types.Position{X: 10, Y: 0}, // Препятствие выше сущности
 			Size:     types.Size{Width: 16, Height: 16},
 			Altitude: types.SURFACE,
 		}
 
-		result := service.ResolveCollisionPosition(
+		result, err := service.ResolveCollisionPosition(
 			entity,
 			obstacle,
 			types.DirectionUp,
 		)
+		if err != nil {
+			t.Errorf("не ожидалась ошибка, но получили: %v", err)
+		}
 		// При движении вверх позиция Y должна быть скорректирована
-		if result.Y != 36.0 {
-			t.Errorf("ожидалась Y=36.0, но получили Y=%f", result.Y)
+		if result.Y != 16.0 {
+			t.Errorf("ожидалась Y=16.0, но получили Y=%f", result.Y)
 		}
 		if result.X != 10.0 {
 			t.Errorf("ожидалась X=10.0, но получили X=%f", result.X)
 		}
 	})
+
+	t.Run("препятствие не по направлению движения", func(t *testing.T) {
+		entity := &types.TankEntity{
+			Position: types.Position{X: 10, Y: 10},
+			Size:     types.Size{Width: 16, Height: 16},
+			Altitude: types.SURFACE,
+		}
+
+		obstacle := &types.BlockEntity{
+			Position: types.Position{
+				X: 0,
+				Y: 10,
+			}, // Препятствие слева от сущности
+			Size:     types.Size{Width: 16, Height: 16},
+			Altitude: types.SURFACE,
+		}
+
+		// Движение вправо, но препятствие слева - должна быть ошибка
+		_, err := service.ResolveCollisionPosition(
+			entity,
+			obstacle,
+			types.DirectionRight,
+		)
+		if err == nil {
+			t.Errorf("ожидалась ошибка, но получили nil")
+		}
+	})
+}
+
+func TestEntitiesCollisionService_IsObstacleInDirection(t *testing.T) {
+	service := NewEntitiesCollisionService()
+
+	t.Run("препятствие по направлению движения", func(t *testing.T) {
+		entity := &types.TankEntity{
+			Position: types.Position{X: 10, Y: 10},
+			Size:     types.Size{Width: 16, Height: 16},
+			Altitude: types.SURFACE,
+		}
+
+		obstacle := &types.BlockEntity{
+			Position: types.Position{
+				X: 30,
+				Y: 10,
+			}, // Препятствие справа от сущности
+			Size:     types.Size{Width: 16, Height: 16},
+			Altitude: types.SURFACE,
+		}
+
+		result := service.isObstacleInDirection(
+			entity,
+			obstacle,
+			types.DirectionRight,
+		)
+		if !result {
+			t.Errorf("ожидалось true, но получили false")
+		}
+	})
+
+	t.Run("препятствие не по направлению движения", func(t *testing.T) {
+		entity := &types.TankEntity{
+			Position: types.Position{X: 10, Y: 10},
+			Size:     types.Size{Width: 16, Height: 16},
+			Altitude: types.SURFACE,
+		}
+
+		obstacle := &types.BlockEntity{
+			Position: types.Position{
+				X: 0,
+				Y: 10,
+			}, // Препятствие слева от сущности
+			Size:     types.Size{Width: 16, Height: 16},
+			Altitude: types.SURFACE,
+		}
+
+		result := service.isObstacleInDirection(
+			entity,
+			obstacle,
+			types.DirectionRight,
+		)
+		if result {
+			t.Errorf("ожидалось false, но получили true")
+		}
+	})
+
+	t.Run("препятствие по направлению движения вверх", func(t *testing.T) {
+		entity := &types.TankEntity{
+			Position: types.Position{X: 10, Y: 10},
+			Size:     types.Size{Width: 16, Height: 16},
+			Altitude: types.SURFACE,
+		}
+
+		obstacle := &types.BlockEntity{
+			Position: types.Position{X: 10, Y: 0}, // Препятствие выше сущности
+			Size:     types.Size{Width: 16, Height: 16},
+			Altitude: types.SURFACE,
+		}
+
+		result := service.isObstacleInDirection(
+			entity,
+			obstacle,
+			types.DirectionUp,
+		)
+		if !result {
+			t.Errorf("ожидалось true, но получили false")
+		}
+	})
+
+	t.Run("препятствие не по направлению движения вверх", func(t *testing.T) {
+		entity := &types.TankEntity{
+			Position: types.Position{X: 10, Y: 10},
+			Size:     types.Size{Width: 16, Height: 16},
+			Altitude: types.SURFACE,
+		}
+
+		obstacle := &types.BlockEntity{
+			Position: types.Position{X: 10, Y: 30}, // Препятствие ниже сущности
+			Size:     types.Size{Width: 16, Height: 16},
+			Altitude: types.SURFACE,
+		}
+
+		result := service.isObstacleInDirection(
+			entity,
+			obstacle,
+			types.DirectionUp,
+		)
+		if result {
+			t.Errorf("ожидалось false, но получили true")
+		}
+	})
+}
+
+func TestEntitiesCollisionService_CalculateCorrectedPosition(t *testing.T) {
+	service := NewEntitiesCollisionService()
+
+	t.Run("корректировка позиции вправо", func(t *testing.T) {
+		entity := &types.TankEntity{
+			Position: types.Position{X: 10, Y: 10},
+			Size:     types.Size{Width: 16, Height: 16},
+			Altitude: types.SURFACE,
+		}
+
+		obstacle := &types.BlockEntity{
+			Position: types.Position{
+				X: 30,
+				Y: 10,
+			}, // Препятствие справа от сущности
+			Size:     types.Size{Width: 16, Height: 16},
+			Altitude: types.SURFACE,
+		}
+
+		result := service.calculateCorrectedPosition(
+			entity,
+			obstacle,
+			types.DirectionRight,
+		)
+		if result.X != 14.0 {
+			t.Errorf("ожидалась X=14.0, но получили X=%f", result.X)
+		}
+		if result.Y != 10.0 {
+			t.Errorf("ожидалась Y=10.0, но получили Y=%f", result.Y)
+		}
+	})
+
+	t.Run("корректировка позиции вверх", func(t *testing.T) {
+		entity := &types.TankEntity{
+			Position: types.Position{X: 10, Y: 10},
+			Size:     types.Size{Width: 16, Height: 16},
+			Altitude: types.SURFACE,
+		}
+
+		obstacle := &types.BlockEntity{
+			Position: types.Position{X: 10, Y: 0}, // Препятствие выше сущности
+			Size:     types.Size{Width: 16, Height: 16},
+			Altitude: types.SURFACE,
+		}
+
+		result := service.calculateCorrectedPosition(
+			entity,
+			obstacle,
+			types.DirectionUp,
+		)
+		if result.Y != 16.0 {
+			t.Errorf("ожидалась Y=16.0, но получили Y=%f", result.Y)
+		}
+		if result.X != 10.0 {
+			t.Errorf("ожидалась X=10.0, но получили X=%f", result.X)
+		}
+	})
+
+	t.Run(
+		"не изменяет неправильную координату при движении вправо",
+		func(t *testing.T) {
+			entity := &types.TankEntity{
+				Position: types.Position{X: 10, Y: 10},
+				Size:     types.Size{Width: 16, Height: 16},
+				Altitude: types.SURFACE,
+			}
+
+			obstacle := &types.BlockEntity{
+				Position: types.Position{
+					X: 30,
+					Y: 10,
+				}, // Препятствие справа от сущности
+				Size:     types.Size{Width: 16, Height: 16},
+				Altitude: types.SURFACE,
+			}
+
+			result := service.calculateCorrectedPosition(
+				entity,
+				obstacle,
+				types.DirectionRight,
+			)
+			// При движении вправо Y координата не должна изменяться
+			if result.Y != 10.0 {
+				t.Errorf(
+					"Y координата не должна изменяться при движении вправо, ожидалась Y=10.0, но получили Y=%f",
+					result.Y,
+				)
+			}
+			// X координата должна быть скорректирована
+			if result.X == 10.0 {
+				t.Errorf(
+					"X координата должна быть скорректирована, но осталась X=10.0",
+				)
+			}
+		},
+	)
+
+	t.Run(
+		"не изменяет неправильную координату при движении вверх",
+		func(t *testing.T) {
+			entity := &types.TankEntity{
+				Position: types.Position{X: 10, Y: 10},
+				Size:     types.Size{Width: 16, Height: 16},
+				Altitude: types.SURFACE,
+			}
+
+			obstacle := &types.BlockEntity{
+				Position: types.Position{
+					X: 10,
+					Y: 0,
+				}, // Препятствие выше сущности
+				Size:     types.Size{Width: 16, Height: 16},
+				Altitude: types.SURFACE,
+			}
+
+			result := service.calculateCorrectedPosition(
+				entity,
+				obstacle,
+				types.DirectionUp,
+			)
+			// При движении вверх X координата не должна изменяться
+			if result.X != 10.0 {
+				t.Errorf(
+					"X координата не должна изменяться при движении вверх, ожидалась X=10.0, но получили X=%f",
+					result.X,
+				)
+			}
+			// Y координата должна быть скорректирована
+			if result.Y == 10.0 {
+				t.Errorf(
+					"Y координата должна быть скорректирована, но осталась Y=10.0",
+				)
+			}
+		},
+	)
 }

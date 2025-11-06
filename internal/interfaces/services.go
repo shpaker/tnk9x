@@ -61,7 +61,7 @@ type IEntitiesCollisionService interface {
 		entity types.IEntityCollider,
 		obstacle types.IEntityCollider,
 		direction types.Direction,
-	) types.Position
+	) (types.Position, error)
 }
 
 // IImageService интерфейс для сервиса работы с изображениями

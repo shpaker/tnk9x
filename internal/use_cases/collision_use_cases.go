@@ -126,11 +126,15 @@ func (uc *CollisionUseCases) checkTankBlockCollisions(
 	for _, block := range mapBlocks {
 		if uc.wallCollisionService.CheckTankWallCollision(tank, block) {
 			// Вычисляем скорректированную позицию через EntitiesCollisionService
-			correctedPos := uc.entitiesCollisionService.ResolveCollisionPosition(
+			correctedPos, err := uc.entitiesCollisionService.ResolveCollisionPosition(
 				tank,
 				block,
 				tank.Direction,
 			)
+			// Если препятствие не по направлению движения, пропускаем резолв
+			if err != nil {
+				continue
+			}
 			// Применяем скорректированную позицию
 			tank.Position = correctedPos
 			uc.tankActions.Stop(tank, true)
@@ -153,14 +157,19 @@ func (uc *CollisionUseCases) checkTankTankCollision(
 		// Проверяем коллизию
 		if uc.entitiesCollisionService.CheckColliders(tank, otherTank) {
 			// Вычисляем скорректированную позицию
-			correctedPos := uc.entitiesCollisionService.ResolveCollisionPosition(
+			correctedPos, err := uc.entitiesCollisionService.ResolveCollisionPosition(
 				tank,
 				otherTank,
 				tank.Direction,
 			)
+			// Если препятствие не по направлению движения, пропускаем резолв
+			if err != nil {
+				continue
+			}
 			// Применяем скорректированную позицию
 			tank.Position = correctedPos
 			uc.tankActions.Stop(tank, true)
+			uc.tankActions.Stop(otherTank, true)
 			return
 		}
 	}
