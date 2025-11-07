@@ -71,13 +71,6 @@ type IImageService interface {
 	RotateImageByAngle(image interface{}, angle float64) (interface{}, error)
 }
 
-// ILogger интерфейс для логирования
-type ILogger interface {
-	Printf(format string, v ...interface{})
-	Debugf(format string, v ...interface{})
-	Errorf(format string, v ...interface{})
-}
-
 // IAnimationService интерфейс для сервиса обновления анимаций
 type IAnimationService interface {
 	UpdateAnimation(animation *image_providers.AnimationProvider)
@@ -101,9 +94,6 @@ type ITileService interface {
 type IAITypeConverter interface {
 	// TankToLua конвертирует TankEntity в Lua таблицу
 	TankToLua(tank *types.TankEntity) (*lua.LTable, error)
-
-	// ContextToLua конвертирует GameAiContext в Lua таблицу
-	ContextToLua(context *types.GameAiContext) (*lua.LTable, error)
 
 	// LuaToDecision конвертирует результаты Lua функции в EnemyAIDecision
 	LuaToDecision(results []lua.LValue) (types.EnemyAIDecision, error)

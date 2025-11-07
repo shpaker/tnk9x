@@ -238,10 +238,11 @@ internal/
 ├── states/            # Presentation Layer
 │   └── game_state.go      # Управление состоянием игры
 ├── use_cases/         # Application Layer
-│   ├── tank_common_use_cases.go
-│   ├── tank_actions_use_cases.go
-│   ├── tank_lifecycle_use_cases.go
-│   ├── tank_render_use_cases.go
+│   ├── tank_use_cases/    # Use Cases для танков
+│   │   ├── tank_common_use_cases.go
+│   │   ├── tank_actions_use_cases.go
+│   │   ├── tank_lifecycle_use_cases.go
+│   │   └── tank_render_use_cases.go
 │   ├── bullet_use_cases.go
 │   ├── collision_use_cases.go
 │   ├── hq_use_cases.go
@@ -389,7 +390,6 @@ graph TB
 - **HQEntity** — база
 - **SessionEntity** — игровая сессия
 - **BattleEntity** — боевая сущность
-- **GameAiContext** — контекст для AI
 - **Image Providers** (`image_providers/`) — статические и анимационные провайдеры изображений
 - Чистый домен без зависимостей от других слоёв
 
@@ -488,6 +488,7 @@ gonflict/
 │   ├── states/      # Состояния игры (GameState, StageSelectState)
 │   ├── types/       # Доменные типы
 │   ├── use_cases/   # Use Cases
+│   │   └── tank_use_cases/  # Use Cases для танков
 │   └── interfaces/  # Интерфейсы для всех слоев
 ├── config.yml       # Конфигурация игры
 └── justfile         # Команды сборки

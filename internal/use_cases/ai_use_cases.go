@@ -30,16 +30,9 @@ func NewAIUseCases(
 // Это бизнес-операция, которая скрывает детали работы с Lua
 func (uc *AIUseCases) ExecuteAI(
 	tank *types.TankEntity,
-	context *types.GameAiContext,
 ) (types.EnemyAIDecision, error) {
 	if tank == nil {
 		return types.EnemyAIDecision{}, errors.New("tank is nil")
-	}
-
-	// Конвертируем контекст в Lua таблицу (если нужен)
-	contextTable, err := uc.typeConverter.ContextToLua(context)
-	if err != nil {
-		return types.EnemyAIDecision{}, err
 	}
 
 	// Подготавливаем параметры танка как отдельные значения
@@ -55,7 +48,6 @@ func (uc *AIUseCases) ExecuteAI(
 		y,
 		direction,
 		state,
-		contextTable,
 	)
 	if err != nil {
 		return types.EnemyAIDecision{}, err

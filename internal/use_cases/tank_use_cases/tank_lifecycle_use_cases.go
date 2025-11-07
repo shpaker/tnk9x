@@ -1,24 +1,28 @@
-package use_cases
+package tank_use_cases
 
 import (
 	"github.com/shpaker/gonflict/internal/interfaces"
 	"github.com/shpaker/gonflict/internal/types"
+	"github.com/shpaker/gonflict/internal/use_cases"
 )
 
 // TankLifecycleUseCases отвечает за жизненный цикл танка (спавн, взрыв, анимации)
 type TankLifecycleUseCases struct {
-	tilesUseCases  *TilesUseCases
-	renderUseCases interfaces.ITankRenderUseCases
+	tilesUseCases      *use_cases.TilesUseCases
+	renderUseCases     interfaces.ITankRenderUseCases
+	tankCommonUseCases interfaces.ITankCommonUseCases
 }
 
 // NewTankLifecycleUseCases создает новый экземпляр TankLifecycleUseCases
 func NewTankLifecycleUseCases(
-	tilesUseCases *TilesUseCases,
+	tilesUseCases *use_cases.TilesUseCases,
 	renderUseCases interfaces.ITankRenderUseCases,
+	tankCommonUseCases interfaces.ITankCommonUseCases,
 ) *TankLifecycleUseCases {
 	return &TankLifecycleUseCases{
-		tilesUseCases:  tilesUseCases,
-		renderUseCases: renderUseCases,
+		tilesUseCases:      tilesUseCases,
+		renderUseCases:     renderUseCases,
+		tankCommonUseCases: tankCommonUseCases,
 	}
 }
 
@@ -59,7 +63,7 @@ func (uc *TankLifecycleUseCases) IsSpawnFinished(
 ) {
 	if tank.State == types.TankStateSpawning {
 		if uc.renderUseCases.IsSpawnAnimationFinished(tank) {
-			uc.finishSpawnAnimation(tank, currentTime)
+			uc.finishSpawnAnimation(tank)
 		}
 	}
 }
@@ -76,7 +80,6 @@ func (uc *TankLifecycleUseCases) IsExplosionFinished(tank *types.TankEntity) {
 // finishSpawnAnimation завершает анимацию спавна и устанавливает анимацию танка
 func (uc *TankLifecycleUseCases) finishSpawnAnimation(
 	tank *types.TankEntity,
-	currentTime float64,
 ) {
 	tankAnimation, err := uc.tilesUseCases.CreateAnimationTile("base_tank")
 	if err == nil {
@@ -88,5 +91,50 @@ func (uc *TankLifecycleUseCases) finishSpawnAnimation(
 	}
 
 	tank.State = types.TankStateStopped
-	tank.SpawnedAt = currentTime
+}
+
+// UpdateAllTanksLifecycle обновляет жизненный цикл всех танков (спавн и взрыв)
+func (uc *TankLifecycleUseCases) UpdateAllTanksLifecycle() error {
+	if uc.tankCommonUseCases == nil {
+		return nil
+	}
+
+	allTanks := uc.tankCommonUseCases.GetAllTanks()
+	for _, tank := range allTanks {
+		if tank != nil {
+			uc.updateTankSpawn(tank)
+			uc.updateTankExplosion(tank)
+		}
+	}
+	return nil
+}
+
+// updateTankSpawn проверяет и обновляет процесс спавна танка
+func (uc *TankLifecycleUseCases) updateTankSpawn(tank *types.TankEntity) {
+	if tank.State != types.TankStateSpawning {
+		return
+	}
+
+	if uc.renderUseCases == nil {
+		return
+	}
+
+	if uc.renderUseCases.IsSpawnAnimationFinished(tank) {
+		uc.finishSpawnAnimation(tank)
+	}
+}
+
+// updateTankExplosion проверяет завершение анимации взрыва танка
+func (uc *TankLifecycleUseCases) updateTankExplosion(tank *types.TankEntity) {
+	if tank.State != types.TankStateExploding {
+		return
+	}
+
+	if uc.renderUseCases == nil {
+		return
+	}
+
+	if uc.renderUseCases.IsExplosionAnimationFinished(tank) {
+		tank.State = types.TankStateExploded
+	}
 }

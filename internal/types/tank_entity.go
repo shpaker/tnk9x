@@ -21,7 +21,6 @@ type TankEntity struct {
 	Speed         float64
 	Direction     Direction
 	State         TankState
-	SpawnedAt     float64
 	NextDirection *Direction
 	IsEnemy       bool
 }

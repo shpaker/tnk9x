@@ -24,7 +24,7 @@ import (
 
 type App struct {
 	config    *Config
-	State     states.State
+	State     interfaces.IState
 	luaEngine interfaces.ILuaEngine // Lua Engine для AI (существует весь срок жизни App)
 	session   *types.SessionEntity  // Сессия игры
 }
@@ -130,7 +130,7 @@ func New(cfg *Config) *App {
 func (app *App) createStateFromTarget(
 	session *types.SessionEntity,
 	targetState *types.StateType,
-) (states.State, error) {
+) (interfaces.IState, error) {
 	if targetState == nil {
 		return nil, nil // Нет перехода
 	}
@@ -148,7 +148,7 @@ func (app *App) createStateFromTarget(
 // createGameState создает игровое состояние
 func (app *App) createGameState(
 	session *types.SessionEntity,
-) (states.State, error) {
+) (interfaces.IState, error) {
 	// Создаем все необходимые зависимости для GameState
 	fileRepository := raw.NewFileRepository("assets")
 
@@ -320,7 +320,7 @@ func (app *App) createGameState(
 // createStageSelectState создает состояние выбора уровня
 func (app *App) createStageSelectState(
 	session *types.SessionEntity,
-) (states.State, error) {
+) (interfaces.IState, error) {
 	fileRepository := raw.NewFileRepository("assets")
 
 	// Создаем реестр тайлсетов
@@ -362,7 +362,7 @@ func (app *App) Run(ctx context.Context) error {
 	err := ebiten.RunGame(app)
 
 	// Закрываем luaEngine при завершении App
-	app.Close()
+	defer app.Close()
 
 	return err
 }

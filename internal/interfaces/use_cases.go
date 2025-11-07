@@ -50,6 +50,7 @@ type ITilesUseCases interface {
 // ITankCommonUseCases интерфейс для общих операций с танком (движение)
 type ITankCommonUseCases interface {
 	Update(tank *types.TankEntity, dt float64) error
+	UpdateAllTanks(dt float64) error
 	GetAllTanks() []*types.TankEntity
 }
 
@@ -65,6 +66,12 @@ type ITankLifecycleUseCases interface {
 	Explode(tank *types.TankEntity) error
 	IsSpawnFinished(tank *types.TankEntity, currentTime float64)
 	IsExplosionFinished(tank *types.TankEntity)
+	UpdateAllTanksLifecycle() error
+}
+
+// ITankSpawnUseCases интерфейс для операций спавна танков на уровне
+type ITankSpawnUseCases interface {
+	StageSetUp() error
 }
 
 // ITankActionsUseCases интерфейс для действий танка
@@ -83,10 +90,7 @@ type ITankActionsUseCases interface {
 
 // IAIUseCases интерфейс для операций с AI логикой
 type IAIUseCases interface {
-	ExecuteAI(
-		tank *types.TankEntity,
-		context *types.GameAiContext,
-	) (types.EnemyAIDecision, error)
+	ExecuteAI(tank *types.TankEntity) (types.EnemyAIDecision, error)
 	Close()
 }
 

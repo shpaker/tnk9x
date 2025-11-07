@@ -13,7 +13,6 @@ import (
 type AiInputAdapter struct {
 	tankActions    interfaces.ITankActionsUseCases
 	tank           *types.TankEntity
-	aiContext      *types.GameAiContext
 	updateInterval int
 	tickCounter    int
 	aiUseCases     *use_cases.AIUseCases
@@ -25,14 +24,12 @@ type AiInputAdapter struct {
 func NewAiInputAdapter(
 	tankActions interfaces.ITankActionsUseCases,
 	tank *types.TankEntity,
-	aiContext *types.GameAiContext,
 	updateInterval int,
 	aiUseCases *use_cases.AIUseCases,
 ) (*AiInputAdapter, error) {
 	return &AiInputAdapter{
 		tankActions:    tankActions,
 		tank:           tank,
-		aiContext:      aiContext,
 		updateInterval: updateInterval,
 		tickCounter:    0,
 		aiUseCases:     aiUseCases,
@@ -66,8 +63,8 @@ func (a *AiInputAdapter) Update(dt float64) {
 // updateAI выполняет AI логику и применяет решение к танку
 func (a *AiInputAdapter) updateAI() {
 	// Используем AIUseCases для выполнения AI логики
-	if a.aiUseCases != nil && a.aiContext != nil {
-		decision, err := a.aiUseCases.ExecuteAI(a.tank, a.aiContext)
+	if a.aiUseCases != nil {
+		decision, err := a.aiUseCases.ExecuteAI(a.tank)
 		if err == nil && a.tank != nil {
 			// Применяем решение (даже если Direction == 0, это валидное направление UP)
 			a.tankActions.ApplyDecision(a.tank, decision)

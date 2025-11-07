@@ -13,6 +13,7 @@ import (
 	collision_services "github.com/shpaker/gonflict/internal/services/collision_services"
 	"github.com/shpaker/gonflict/internal/types"
 	"github.com/shpaker/gonflict/internal/use_cases"
+	tank_use_cases "github.com/shpaker/gonflict/internal/use_cases/tank_use_cases"
 )
 
 // GameStateBuilder создает все компоненты GameState
@@ -102,12 +103,8 @@ func (b *GameStateBuilder) Build() (*GameState, error) {
 	}
 
 	// Создаем общие use cases для всех танков
-	tankRenderUseCases := use_cases.NewTankRenderUseCases()
-	tankLifecycleUseCases := use_cases.NewTankLifecycleUseCases(
-		tilesUseCasesWithAnimations,
-		tankRenderUseCases,
-	)
-	tankCommonUseCases := use_cases.NewTankCommonUseCases(
+	tankRenderUseCases := tank_use_cases.NewTankRenderUseCases()
+	tankCommonUseCases := tank_use_cases.NewTankCommonUseCases(
 		bulletUseCases,
 		tilesUseCasesWithAnimations,
 		b.tankBrakingService,
@@ -115,12 +112,17 @@ func (b *GameStateBuilder) Build() (*GameState, error) {
 		tankRenderUseCases,
 		b.gameRepository.TanksRepository(),
 	)
+	tankLifecycleUseCases := tank_use_cases.NewTankLifecycleUseCases(
+		tilesUseCasesWithAnimations,
+		tankRenderUseCases,
+		tankCommonUseCases,
+	)
 	// Создаем Use Cases для карты
 	mapUseCases := use_cases.NewMapUseCases(
 		b.mapEntity,
 	)
 
-	tankActionsUseCases := use_cases.NewTankActionsUseCases(
+	tankActionsUseCases := tank_use_cases.NewTankActionsUseCases(
 		b.tankBrakingService,
 		b.coordinateService,
 		bulletUseCases,
@@ -156,9 +158,6 @@ func (b *GameStateBuilder) Build() (*GameState, error) {
 	// Создаем базу
 	hq := b.createHQ(hqTilesUseCases, baseSizePx)
 
-	// Создаем AI контекст
-	aiContext := b.createAIContext(mapUseCases)
-
 	// Получаем размеры карты (в блоках) из MapEntity
 	if b.mapEntity == nil {
 		return nil, fmt.Errorf("map entity is nil")
@@ -186,16 +185,20 @@ func (b *GameStateBuilder) Build() (*GameState, error) {
 	}
 
 	// Создаем врагов
-	enemyInputAdapters, enemyTanksEntities, err := b.buildEnemyComponents(
-		tankLifecycleUseCases,
+	enemyInputAdapters, enemyTanksEntities, enemySpawnPositions, err := b.buildEnemyComponents(
 		tankActionsUseCases,
-		aiContext,
 		b.luaEngine,
 		baseSizePx,
 	)
 	if err != nil {
 		return nil, err
 	}
+
+	tankSpawnUseCases := tank_use_cases.NewTankSpawnUseCases(
+		b.gameRepository.TanksRepository(),
+		tankLifecycleUseCases,
+		enemySpawnPositions,
+	)
 
 	// Создаем сервисы коллизий
 	collisionUseCases, hqUseCases, err := b.buildCollisionServices(
@@ -227,16 +230,13 @@ func (b *GameStateBuilder) Build() (*GameState, error) {
 		tankCommonUseCases,
 		tankRenderUseCases,
 		tankLifecycleUseCases,
+		tankSpawnUseCases,
 		bulletUseCases,
 		mapUseCases,
 		collisionUseCases,
 		tilesUseCasesWithAnimations,
-		aiContext,
 		enemyInputAdapters,
 	)
-
-	// Запускаем спавн танка на старте
-	gameState.StartTankSpawn()
 
 	return gameState, nil
 }
@@ -322,7 +322,7 @@ func (b *GameStateBuilder) buildPlayerComponents(
 		Size:      types.Size{Width: int(baseSizePx), Height: int(baseSizePx)},
 		IsEnemy:   false,
 	}
-	b.gameRepository.TanksRepository().AddTank(playerTank)
+	b.gameRepository.TanksRepository().SetPlayer(playerTank)
 
 	return playerTank, nil
 }
@@ -361,27 +361,12 @@ func (b *GameStateBuilder) createHQ(
 	}
 }
 
-// createAIContext создает AI контекст
-func (b *GameStateBuilder) createAIContext(
-	mapUseCases *use_cases.MapUseCases,
-) *types.GameAiContext {
-	blocks := mapUseCases.GetBlocks()
-	return &types.GameAiContext{
-		Player:  nil, // Будет обновляться в Update
-		Enemies: nil, // Будет обновляться в Update
-		Bullets: nil, // Будет обновляться в Update
-		Blocks:  blocks,
-	}
-}
-
 // buildEnemyComponents создает все компоненты врагов
 func (b *GameStateBuilder) buildEnemyComponents(
-	tankLifecycleUseCases interfaces.ITankLifecycleUseCases,
 	tankActionsUseCases interfaces.ITankActionsUseCases,
-	aiContext *types.GameAiContext,
 	luaEngine interfaces.ILuaEngine,
 	baseSizePx uint,
-) ([]interfaces.IInputAdapter, []*types.TankEntity, error) {
+) ([]interfaces.IInputAdapter, []*types.TankEntity, [3]types.Position, error) {
 	updateInterval := 60
 	if b.config.GetAIUpdateIntervalTicks() > 0 {
 		updateInterval = b.config.GetAIUpdateIntervalTicks()
@@ -389,6 +374,7 @@ func (b *GameStateBuilder) buildEnemyComponents(
 
 	enemyInputAdapters := make([]interfaces.IInputAdapter, 0, 3)
 	enemyTanksEntities := make([]*types.TankEntity, 0, 3)
+	enemySpawnPositions := [3]types.Position{}
 
 	for i, spawner := range b.config.GetEnemySpawners() {
 		if i >= 3 { // Максимум 3 врага
@@ -403,6 +389,7 @@ func (b *GameStateBuilder) buildEnemyComponents(
 			X: float64(spawner[0]) * float64(baseSizePx),
 			Y: float64(spawner[1]) * float64(baseSizePx),
 		}
+		enemySpawnPositions[i] = position
 
 		// Создаем танк врага
 		enemyTank := &types.TankEntity{
@@ -419,11 +406,6 @@ func (b *GameStateBuilder) buildEnemyComponents(
 		}
 		b.gameRepository.TanksRepository().AddTank(enemyTank)
 
-		// Запускаем спавн танка врага через общий lifecycle
-		if err := tankLifecycleUseCases.Spawn(enemyTank); err != nil {
-			return nil, nil, err
-		}
-
 		enemyTanksEntities = append(enemyTanksEntities, enemyTank)
 
 		// Используем общий Lua engine для всех врагов
@@ -437,17 +419,16 @@ func (b *GameStateBuilder) buildEnemyComponents(
 		aiInputAdapter, err := input_adapters.NewAiInputAdapter(
 			tankActionsUseCases,
 			enemyTank,
-			aiContext,
 			updateInterval,
 			aiUseCases,
 		)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, [3]types.Position{}, err
 		}
 		enemyInputAdapters = append(enemyInputAdapters, aiInputAdapter)
 	}
 
-	return enemyInputAdapters, enemyTanksEntities, nil
+	return enemyInputAdapters, enemyTanksEntities, enemySpawnPositions, nil
 }
 
 // buildCollisionServices создает сервисы коллизий
@@ -521,11 +502,11 @@ func (b *GameStateBuilder) buildGameState(
 	tankCommonUseCases interfaces.ITankCommonUseCases,
 	tankRenderUseCases interfaces.ITankRenderUseCases,
 	tankLifecycleUseCases interfaces.ITankLifecycleUseCases,
+	tankSpawnUseCases interfaces.ITankSpawnUseCases,
 	bulletUseCases *use_cases.BulletUseCases,
 	mapUseCases *use_cases.MapUseCases,
 	collisionUseCases *use_cases.CollisionUseCases,
 	tilesUseCasesWithAnimations *use_cases.TilesUseCases,
-	aiContext *types.GameAiContext,
 	enemyInputAdapters []interfaces.IInputAdapter,
 ) *GameState {
 	return &GameState{
@@ -537,11 +518,11 @@ func (b *GameStateBuilder) buildGameState(
 		TankCommonUseCases:    tankCommonUseCases,
 		TankRenderUseCases:    tankRenderUseCases,
 		TankLifecycleUseCases: tankLifecycleUseCases,
+		TankSpawnUseCases:     tankSpawnUseCases,
 		BulletUseCases:        bulletUseCases,
 		MapUseCases:           mapUseCases,
 		CollisionUseCases:     collisionUseCases,
 		TilesUseCases:         tilesUseCasesWithAnimations,
-		AIContext:             aiContext,
 		InputAdapter:          b.tempInputAdapter,
 		RendererAdapter:       b.tempRendererAdapter,
 		EnemyInputAdapters:    enemyInputAdapters,

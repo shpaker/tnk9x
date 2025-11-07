@@ -130,13 +130,12 @@ function randomAllowedDirection(x, y, currentDirection)
 end
 
 -- Основная функция AI
--- Параметры: x, y, direction, state, context
+-- Параметры: x, y, direction, state
 function updateEnemyAI(
     x,        -- Позиция X танка
     y,        -- Позиция Y танка
     direction, -- Направление танка
-    state,    -- Состояние танка
-    context   -- Контекст игры
+    state     -- Состояние танка
 )
     -- В одном из 8 случаев выбираем случайное направление из разрешенных
     -- Обратное направление в 2 раза реже, чем боковое

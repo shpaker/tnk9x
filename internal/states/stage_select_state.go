@@ -19,6 +19,7 @@ type StageSelectState struct {
 	session            *types.SessionEntity
 	inputAdapter       *stage_select.StageSelectKeyboardInputAdapter
 	rendererAdapter    *stage_select.StageSelectRendererAdapter
+	isSetUp            bool // Флаг для отслеживания, был ли вызван SetUp
 }
 
 // NewStageSelectState создает новое состояние выбора уровня
@@ -89,8 +90,19 @@ func NewStageSelectState(
 	return state, nil
 }
 
+// SetUp запускается один раз на старте состояния
+func (s *StageSelectState) SetUp() {
+	// Метод для инициализации состояния при первом вызове Update
+}
+
 // Update обновляет состояние выбора уровня
 func (s *StageSelectState) Update() {
+	// Вызываем SetUp один раз на старте состояния
+	if !s.isSetUp {
+		s.SetUp()
+		s.isSetUp = true
+	}
+
 	// Обрабатываем ввод
 	s.inputAdapter.Update(0)
 

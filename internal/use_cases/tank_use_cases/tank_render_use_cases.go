@@ -1,4 +1,4 @@
-package use_cases
+package tank_use_cases
 
 import (
 	"github.com/shpaker/gonflict/internal/types"

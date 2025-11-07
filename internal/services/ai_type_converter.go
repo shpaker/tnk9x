@@ -40,31 +40,6 @@ func (c *aiTypeConverter) TankToLua(
 	return t, nil
 }
 
-// ContextToLua конвертирует GameAiContext в Lua таблицу
-func (c *aiTypeConverter) ContextToLua(
-	context *types.GameAiContext,
-) (*lua.LTable, error) {
-	if context == nil {
-		return nil, errors.New("context is nil")
-	}
-
-	ctx := c.luaEngine.NewTable()
-
-	// Добавляем игрока если есть
-	if context.Player != nil {
-		playerTable, err := c.TankToLua(context.Player)
-		if err != nil {
-			return nil, err
-		}
-		ctx.RawSetString("player", playerTable)
-	}
-
-	// Можно добавить другие поля контекста
-	// Например, enemies, bullets, blocks и т.д.
-
-	return ctx, nil
-}
-
 // LuaToDecision конвертирует результаты Lua функции в EnemyAIDecision
 func (c *aiTypeConverter) LuaToDecision(
 	results []lua.LValue,

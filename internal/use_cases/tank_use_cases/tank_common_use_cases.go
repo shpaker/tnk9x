@@ -1,4 +1,4 @@
-package use_cases
+package tank_use_cases
 
 import (
 	"errors"
@@ -6,6 +6,7 @@ import (
 	"github.com/shpaker/gonflict/internal/interfaces"
 	"github.com/shpaker/gonflict/internal/types"
 	image_providers "github.com/shpaker/gonflict/internal/types/image_providers"
+	"github.com/shpaker/gonflict/internal/use_cases"
 )
 
 // TankCommonUseCases фасад для работы с танками, объединяющий два компонента
@@ -13,7 +14,7 @@ type TankCommonUseCases struct {
 	brakingService    interfaces.ITankBrakingService
 	coordinateService interfaces.ICoordinateService
 	bulletUseCases    interfaces.IBulletUseCases
-	tilesUseCases     *TilesUseCases
+	tilesUseCases     *use_cases.TilesUseCases
 	renderUseCases    interfaces.ITankRenderUseCases // Для управления анимацией танка
 	tanksRepository   interfaces.ITanksRepository    // Репозиторий танков
 }
@@ -25,7 +26,7 @@ type TankCommonUseCases struct {
 // NewTankCommonUseCases создает новый экземпляр TankCommonUseCases
 func NewTankCommonUseCases(
 	bulletUseCases interfaces.IBulletUseCases,
-	tilesUseCases *TilesUseCases,
+	tilesUseCases *use_cases.TilesUseCases,
 	brakingService interfaces.ITankBrakingService,
 	coordinateService interfaces.ICoordinateService,
 	renderUseCases interfaces.ITankRenderUseCases,
@@ -88,6 +89,20 @@ func (uc *TankCommonUseCases) Update(tank *types.TankEntity, dt float64) error {
 	// Дополнительная синхронизация после обновления позиции
 	uc.syncAnimationWithState(tank, tank.State)
 
+	return nil
+}
+
+// UpdateAllTanks обновляет все танки (игрок + враги) из репозитория
+func (uc *TankCommonUseCases) UpdateAllTanks(dt float64) error {
+	allTanks := uc.GetAllTanks()
+	for _, tank := range allTanks {
+		if tank != nil {
+			if err := uc.Update(tank, dt); err != nil {
+				// Продолжаем обновление остальных танков даже при ошибке
+				_ = err
+			}
+		}
+	}
 	return nil
 }
 

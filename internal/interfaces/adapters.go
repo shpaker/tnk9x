@@ -3,6 +3,8 @@ package interfaces
 import (
 	lua "github.com/yuin/gopher-lua"
 
+	"github.com/hajimehoshi/ebiten/v2"
+
 	"github.com/shpaker/gonflict/internal/types"
 )
 
@@ -45,4 +47,11 @@ type ILuaEngine interface {
 
 	// Close освобождает ресурсы Lua VM
 	Close()
+}
+
+// IState интерфейс для состояний игры
+type IState interface {
+	SetUp()
+	Update()
+	Draw(screen *ebiten.Image)
 }

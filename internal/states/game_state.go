@@ -25,11 +25,11 @@ type GameState struct {
 	TankCommonUseCases    interfaces.ITankCommonUseCases    // Общий use case для движения танков
 	TankRenderUseCases    interfaces.ITankRenderUseCases    // Общий use case для рендеринга танков
 	TankLifecycleUseCases interfaces.ITankLifecycleUseCases // Общий use case для жизненного цикла танков
+	TankSpawnUseCases     interfaces.ITankSpawnUseCases     // Use case для спавна танков уровня
 	BulletUseCases        *use_cases.BulletUseCases
 	MapUseCases           *use_cases.MapUseCases
 	CollisionUseCases     *use_cases.CollisionUseCases
 	TilesUseCases         *use_cases.TilesUseCases
-	AIContext             *types.GameAiContext
 
 	// Адаптеры
 	InputAdapter       interfaces.IInputAdapter
@@ -38,6 +38,7 @@ type GameState struct {
 
 	// Метаданные
 	StartTime time.Time
+	isSetUp   bool // Флаг для отслеживания, был ли вызван SetUp
 
 	// Сессия
 	Session *types.SessionEntity
@@ -79,19 +80,24 @@ func NewGameState(
 	return builder.Build()
 }
 
-// StartTankSpawn запускает спавн танка игрока
-func (state *GameState) StartTankSpawn() {
-	spawnStartTime := 0.0
-	if state.TankLifecycleUseCases != nil && state.PlayerTank != nil {
-		err := state.TankLifecycleUseCases.Spawn(state.PlayerTank)
-		if err != nil {
-			panic(err)
-		}
-		state.PlayerTank.SpawnedAt = spawnStartTime
+// SetUp запускается один раз на старте состояния
+func (state *GameState) SetUp() {
+	if state.TankSpawnUseCases == nil {
+		return
+	}
+	if err := state.TankSpawnUseCases.StageSetUp(); err != nil {
+		_ = err
 	}
 }
 
+// Update обновляет состояние игры (вызывается Ebiten каждый кадр)
 func (state *GameState) Update() {
+	// Вызываем SetUp один раз на старте состояния
+	if !state.isSetUp {
+		state.SetUp()
+		state.isSetUp = true
+	}
+
 	// Вычисляем delta time из ActualTPS
 	tps := ebiten.ActualTPS()
 	var dt float64
@@ -101,51 +107,35 @@ func (state *GameState) Update() {
 		dt = 1.0 / 60.0 // Fallback если TPS равен 0
 	}
 
-	// Обновляем спавн танка
-	elapsedTime := time.Since(state.StartTime).Seconds()
-	state.UpdateTankSpawn(elapsedTime)
+	// Обновляем жизненный цикл танков (спавн и взрыв)
+	if state.TankLifecycleUseCases != nil {
+		if err := state.TankLifecycleUseCases.UpdateAllTanksLifecycle(); err != nil {
+			_ = err
+		}
+	}
 
-	// Обновляем спавн врагов
-	state.UpdateEnemiesSpawn(elapsedTime)
-
-	// Обновляем input
+	// Обновляем ввод
 	state.InputAdapter.Update(dt)
 
-	// Обновляем игровое состояние
-	state.update(dt)
+	// Обновляем игровые объекты (танки, пули, коллизии, AI)
+	state.updateGameObjects(dt)
 
 	// Обновляем все анимации
-	state.UpdateAnimations()
+	if state.TilesUseCases != nil {
+		state.TilesUseCases.UpdateAnimations()
+	}
 }
 
 func (state *GameState) Draw(screen *ebiten.Image) {
 	state.RendererAdapter.DrawAll(screen)
 }
 
-// Update обновляет игровое состояние
-func (state *GameState) update(dt float64) {
-	// Обновляем игрока
-	if state.TankCommonUseCases != nil && state.PlayerTank != nil {
-		if err := state.TankCommonUseCases.Update(state.PlayerTank, dt); err != nil {
+// updateGameObjects обновляет игровые объекты (танки, пули, коллизии, AI)
+func (state *GameState) updateGameObjects(dt float64) {
+	// Обновляем все танки (игрок + враги) через use cases
+	if state.TankCommonUseCases != nil {
+		if err := state.TankCommonUseCases.UpdateAllTanks(dt); err != nil {
 			_ = err
-		}
-	}
-
-	// Обновляем контекст AI с данными об игроке, врагах и пулях
-	if state.AIContext != nil {
-		bullets := state.BulletUseCases.GetBullets()
-		state.AIContext.Player = state.PlayerTank
-		state.AIContext.Enemies = state.getEnemyTanks()
-		state.AIContext.Bullets = bullets
-	}
-
-	// Обновляем движение врагов
-	for i := range state.EnemyTanks {
-		if state.TankCommonUseCases != nil &&
-			state.EnemyTanks[i] != nil {
-			if err := state.TankCommonUseCases.Update(state.EnemyTanks[i], dt); err != nil {
-				_ = err
-			}
 		}
 	}
 
@@ -155,11 +145,11 @@ func (state *GameState) update(dt float64) {
 	// Проверяем коллизии ПОСЛЕ движения всех объектов
 	state.CollisionUseCases.UpdateCollisions()
 
-	// Обновляем AI input адаптеры врагов ПОСЛЕ коллизий
+	// Обновляем AI адаптеры ввода врагов ПОСЛЕ коллизий
 	// чтобы AI видел актуальное состояние танка после столкновений
-	for _, adapter := range state.EnemyInputAdapters {
-		if adapter != nil {
-			adapter.Update(dt)
+	for _, enemyInputAdapter := range state.EnemyInputAdapters {
+		if enemyInputAdapter != nil {
+			enemyInputAdapter.Update(dt)
 		}
 	}
 
@@ -167,47 +157,4 @@ func (state *GameState) update(dt float64) {
 	if state.HQUseCases != nil {
 		state.HQUseCases.IsExplosionFinished(state.HQEntity)
 	}
-}
-
-// UpdateAnimations обновляет все анимации из репозитория
-func (state *GameState) UpdateAnimations() {
-	if state.TilesUseCases != nil {
-		state.TilesUseCases.UpdateAnimations()
-	}
-}
-
-// UpdateTankSpawn обновляет процесс спавна танка
-func (state *GameState) UpdateTankSpawn(currentTime float64) {
-	if state.TankLifecycleUseCases != nil && state.PlayerTank != nil {
-		state.TankLifecycleUseCases.IsSpawnFinished(
-			state.PlayerTank,
-			currentTime,
-		)
-		state.TankLifecycleUseCases.IsExplosionFinished(state.PlayerTank)
-	}
-}
-
-// UpdateEnemiesSpawn обновляет процесс спавна врагов
-func (state *GameState) UpdateEnemiesSpawn(currentTime float64) {
-	for i := range state.EnemyTanks {
-		if state.TankLifecycleUseCases != nil &&
-			state.EnemyTanks[i] != nil {
-			state.TankLifecycleUseCases.IsSpawnFinished(
-				state.EnemyTanks[i],
-				currentTime,
-			)
-			state.TankLifecycleUseCases.IsExplosionFinished(state.EnemyTanks[i])
-		}
-	}
-}
-
-// getEnemyTanks возвращает список не-nil врагов для AI контекста
-func (state *GameState) getEnemyTanks() []*types.TankEntity {
-	result := make([]*types.TankEntity, 0, 3)
-	for _, tank := range state.EnemyTanks {
-		if tank != nil {
-			result = append(result, tank)
-		}
-	}
-	return result
 }
