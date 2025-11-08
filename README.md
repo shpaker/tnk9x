@@ -13,6 +13,7 @@ Gonflict — ремейк Battle City на Go с использованием Eb
 - Lua-скрипты для поведения врагов
 - Отрисовка, анимации, звук и экран выбора уровня
 - Все ресурсы и состояния обслуживаются через репозитории и use cases
+- Сессии игры и уровня (`GameSessionEntity`, `stageSessionEntity`) единообразно управляют прогрессом и проверкой победы
 
 ## Статус разработки
 
@@ -69,7 +70,8 @@ internal/
 ├── states/         # Presentation (StageSelect, GameState)
 ├── use_cases/      # Application (stateless бизнес-логика)
 ├── services/       # Application services (коллизии, анимации, координаты)
-├── types/          # Domain entities (танки, пули, HQ, карта)
+├── types/          # Domain types (танки, пули, HQ, карта)
+│   ├── session_entities/ # Сессии игры и уровней
 ├── repositories/   # Infrastructure (in-memory, processed, raw)
 └── interfaces/     # Контракты между слоями
 ```
