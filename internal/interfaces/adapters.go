@@ -10,10 +10,11 @@ import (
 
 // IConfigProvider интерфейс для получения данных конфигурации
 type IConfigProvider interface {
-	GetEnemySpawners() [][2]int
-	GetPlayerSpawners() [][2]int
+	GetEnemySpawners() []types.Position
+	GetPlayerSpawners() []types.Position
 	GetHQPosition() [2]int
 	GetAIUpdateIntervalTicks() int
+	GetEnemyRespawnDelayTicks() uint
 	GetBaseSizePx() uint
 	GetMapBlocksCount() types.Size
 	GetMapOffsets() [2]uint
@@ -23,6 +24,13 @@ type IConfigProvider interface {
 // IInputAdapter интерфейс для адаптеров ввода
 type IInputAdapter interface {
 	Update(dt float64)
+}
+
+// IAiInputAdapter интерфейс для AI адаптера танков
+type IAiInputAdapter interface {
+	IInputAdapter
+	AddTank(tank *types.TankEntity)
+	RemoveTank(tank *types.TankEntity)
 }
 
 // ILuaEngine интерфейс для работы с Lua VM (Infrastructure Layer)

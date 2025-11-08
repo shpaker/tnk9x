@@ -25,6 +25,22 @@ type TankEntity struct {
 	IsEnemy       bool
 }
 
+// NewDefaultTankEntity создает TankEntity с базовыми значениями
+func NewDefaultTankEntity(isEnemy bool, direction Direction) TankEntity {
+	return TankEntity{
+		Position: Position{},
+		Size: Size{
+			Width:  16,
+			Height: 16,
+		},
+		Altitude:  SURFACE,
+		Speed:     0,
+		Direction: direction,
+		State:     TankStateSpawning,
+		IsEnemy:   isEnemy,
+	}
+}
+
 // GetSize возвращает размер танка
 func (t *TankEntity) GetSize() Size {
 	return t.Size
@@ -49,6 +65,10 @@ func (t *TankEntity) IsActive() bool {
 	return t.State != TankStateSpawning &&
 		t.State != TankStateExploding &&
 		t.State != TankStateExploded
+}
+
+func (t *TankEntity) IsDestroyed() bool {
+	return t.State == TankStateExploding || t.State == TankStateExploded
 }
 
 // IsStopped возвращает true если танк остановлен (по скорости или по состоянию)

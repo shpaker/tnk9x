@@ -303,7 +303,7 @@ func (app *App) createGameState(
 
 	inputAdapter := input_adapters.NewGameKeyboardInputAdapter(
 		gameStatePtr.TankActionsUseCases,
-		gameStatePtr.PlayerTank,
+		nil,
 		ebiten.KeyW,
 		ebiten.KeyS,
 		ebiten.KeyA,

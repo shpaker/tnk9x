@@ -19,6 +19,11 @@ type GameKeyboardInputAdapter struct {
 	shootButton ebiten.Key
 }
 
+// SetPlayerTank назначает танк игрока для управления клавиатурой
+func (a *GameKeyboardInputAdapter) SetPlayerTank(tank *types.TankEntity) {
+	a.tank = tank
+}
+
 // NewGameKeyboardInputAdapter создает новый экземпляр GameKeyboardInputAdapter
 func NewGameKeyboardInputAdapter(
 	tankActions interfaces.ITankActionsUseCases,

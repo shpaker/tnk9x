@@ -17,5 +17,6 @@ game:
 
   # Игровые константы
   base_size_px: 16
+  enemy_respawn_delay_ticks: 120  # Задержка между спавнами врагов в тиках (3 секунды при 60 FPS)
   map_blocks_count: [26, 26]  # Размер карты в блоках [width, height]
   map_offsets_px: [16, 16]  # [x, y] оффсеты игровой карты от угла экрана

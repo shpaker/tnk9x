@@ -24,10 +24,11 @@ type appConfigSchema struct {
 
 // gameConfigSchema для парсинга game секции из YAML
 type gameConfigSchema struct {
-	EnemySpawners         [][2]int `yaml:"enemy_spawners"`
-	PlayerSpawners        [][2]int `yaml:"players_spawners"`
-	HQPosition            [2]int   `yaml:"hq_position"`              // Позиция базы [x, y]
-	AIUpdateIntervalTicks int      `yaml:"ai_update_interval_ticks"` // Интервал обновления AI в тиках (по умолчанию 60 тиков = 1000мс)
+	EnemySpawners          [][2]int `yaml:"enemy_spawners"`
+	PlayerSpawners         [][2]int `yaml:"players_spawners"`
+	HQPosition             [2]int   `yaml:"hq_position"`               // Позиция базы [x, y]
+	AIUpdateIntervalTicks  int      `yaml:"ai_update_interval_ticks"`  // Интервал обновления AI в тиках (по умолчанию 60 тиков = 1000мс)
+	EnemyRespawnDelayTicks uint     `yaml:"enemy_respawn_delay_ticks"` // Задержка между спавнами врагов в тиках
 
 	// Игровые константы
 	BaseSizePx     uint    `yaml:"base_size_px"`
@@ -43,10 +44,11 @@ type Config struct {
 	ScreenPx    types.Size
 
 	// Game settings
-	EnemySpawners         [][2]int
-	PlayerSpawners        [][2]int
-	HQPosition            [2]int
-	AIUpdateIntervalTicks int
+	EnemySpawners          []types.Position
+	PlayerSpawners         []types.Position
+	HQPosition             [2]int
+	AIUpdateIntervalTicks  int
+	EnemyRespawnDelayTicks uint
 
 	// Game constants
 	BaseSizePx     uint
@@ -88,10 +90,15 @@ func LoadConfig() (*Config, error) {
 			Height: int(schema.App.ScreenPx[1]),
 		},
 
-		EnemySpawners:         schema.Game.EnemySpawners,
-		PlayerSpawners:        schema.Game.PlayerSpawners,
-		HQPosition:            schema.Game.HQPosition,
-		AIUpdateIntervalTicks: schema.Game.AIUpdateIntervalTicks,
+		EnemySpawners: convertCoordsToPositions(
+			schema.Game.EnemySpawners,
+		),
+		PlayerSpawners: convertCoordsToPositions(
+			schema.Game.PlayerSpawners,
+		),
+		HQPosition:             schema.Game.HQPosition,
+		AIUpdateIntervalTicks:  schema.Game.AIUpdateIntervalTicks,
+		EnemyRespawnDelayTicks: schema.Game.EnemyRespawnDelayTicks,
 
 		BaseSizePx: schema.Game.BaseSizePx,
 		MapBlocksCount: types.Size{
@@ -104,16 +111,31 @@ func LoadConfig() (*Config, error) {
 	// Вычисляем TileBaseSize как base_size_px / 2
 	cfg.TileBaseSize = cfg.BaseSizePx / 2
 
+	if cfg.EnemyRespawnDelayTicks == 0 {
+		cfg.EnemyRespawnDelayTicks = 3 * 60
+	}
+
 	return cfg, nil
+}
+
+func convertCoordsToPositions(coords [][2]int) []types.Position {
+	positions := make([]types.Position, len(coords))
+	for i, coord := range coords {
+		positions[i] = types.Position{
+			X: float64(coord[0]),
+			Y: float64(coord[1]),
+		}
+	}
+	return positions
 }
 
 // Геттеры для интерфейса IConfigProvider
 
-func (c *Config) GetEnemySpawners() [][2]int {
+func (c *Config) GetEnemySpawners() []types.Position {
 	return c.EnemySpawners
 }
 
-func (c *Config) GetPlayerSpawners() [][2]int {
+func (c *Config) GetPlayerSpawners() []types.Position {
 	return c.PlayerSpawners
 }
 
@@ -123,6 +145,10 @@ func (c *Config) GetHQPosition() [2]int {
 
 func (c *Config) GetAIUpdateIntervalTicks() int {
 	return c.AIUpdateIntervalTicks
+}
+
+func (c *Config) GetEnemyRespawnDelayTicks() uint {
+	return c.EnemyRespawnDelayTicks
 }
 
 func (c *Config) GetBaseSizePx() uint {

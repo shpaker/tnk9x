@@ -118,6 +118,60 @@ func (uc *CollisionUseCases) checkTankBulletCollisions(
 	}
 }
 
+// HasTankCollision проверяет, пересекается ли переданный танк с любым другим танком
+func (uc *CollisionUseCases) HasTankCollision(
+	candidate *types.TankEntity,
+) bool {
+	if candidate == nil {
+		return false
+	}
+
+	allTanks := uc.tankCommonUseCases.GetAllTanks()
+	for _, otherTank := range allTanks {
+		if otherTank == nil {
+			continue
+		}
+
+		if uc.entitiesCollisionService.CheckColliders(candidate, otherTank) {
+			return true
+		}
+	}
+
+	return false
+}
+
+// IsSpawnerBlocked проверяет, занята ли позиция спавнера другим танком
+func (uc *CollisionUseCases) IsSpawnerBlocked(
+	position types.Position,
+	size types.Size,
+) bool {
+	if uc.entitiesCollisionService == nil ||
+		uc.tankCommonUseCases == nil ||
+		size.Width == 0 ||
+		size.Height == 0 {
+		return false
+	}
+
+	candidate := types.NewDefaultTankEntity(true, types.DirectionUp)
+	candidate.Size = size
+	candidate.Position = types.Position{
+		X: position.X * float64(size.Width),
+		Y: position.Y * float64(size.Height),
+	}
+
+	for _, otherTank := range uc.tankCommonUseCases.GetAllTanks() {
+		if otherTank == nil {
+			continue
+		}
+
+		if uc.entitiesCollisionService.CheckColliders(&candidate, otherTank) {
+			return true
+		}
+	}
+
+	return false
+}
+
 // checkTankBlockCollisions проверяет коллизии танка с блоками карты
 func (uc *CollisionUseCases) checkTankBlockCollisions(
 	tank *types.TankEntity,
@@ -150,7 +204,7 @@ func (uc *CollisionUseCases) checkTankTankCollision(
 ) {
 	for _, otherTank := range allTanks {
 		// Пропускаем проверку с самим собой и неактивными танками
-		if tank == otherTank || !otherTank.IsActive() {
+		if tank == otherTank || !otherTank.IsDestroyed() {
 			continue
 		}
 

@@ -112,10 +112,15 @@ func (b *GameStateBuilder) Build() (*GameState, error) {
 		tankRenderUseCases,
 		b.gameRepository.TanksRepository(),
 	)
+	entitiesCollisionService := collision_services.NewEntitiesCollisionService()
+
+	enemyRespawnDelay := b.config.GetEnemyRespawnDelayTicks()
+
 	tankLifecycleUseCases := tank_use_cases.NewTankLifecycleUseCases(
 		tilesUseCasesWithAnimations,
 		tankRenderUseCases,
 		tankCommonUseCases,
+		enemyRespawnDelay,
 	)
 	// Создаем Use Cases для карты
 	mapUseCases := use_cases.NewMapUseCases(
@@ -129,15 +134,6 @@ func (b *GameStateBuilder) Build() (*GameState, error) {
 		tankCommonUseCases,
 		mapUseCases,
 	)
-
-	// Создаем компоненты игрока
-	playerTank, err := b.buildPlayerComponents(
-		tilesUseCasesWithAnimations,
-		baseSizePx,
-	)
-	if err != nil {
-		return nil, err
-	}
 
 	// Создаем HQ TilesUseCases для работы с HQ tileset и анимациями взрыва
 	hqTileService := services.NewTileServiceWithSpecialRepos(
@@ -184,58 +180,68 @@ func (b *GameStateBuilder) Build() (*GameState, error) {
 		return nil, err
 	}
 
-	// Создаем врагов
-	enemyInputAdapters, enemyTanksEntities, enemySpawnPositions, err := b.buildEnemyComponents(
+	updateInterval := 60
+	if b.config.GetAIUpdateIntervalTicks() > 0 {
+		updateInterval = b.config.GetAIUpdateIntervalTicks()
+	}
+
+	typeConverter := services.NewAITypeConverter(b.luaEngine)
+	aiUseCases := use_cases.NewAIUseCases(b.luaEngine, typeConverter)
+	enemyInputAdapter, err := input_adapters.NewAiInputAdapter(
 		tankActionsUseCases,
-		b.luaEngine,
-		baseSizePx,
+		nil,
+		updateInterval,
+		aiUseCases,
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	tankSpawnUseCases := tank_use_cases.NewTankSpawnUseCases(
+	enemySpawners := b.config.GetEnemySpawners()
+	playerSpawners := b.config.GetPlayerSpawners()
+	playerSpawner := types.Position{X: 12, Y: 24}
+	if len(playerSpawners) > 0 {
+		playerSpawner = playerSpawners[0]
+	}
+	baseSize := types.Size{Width: int(baseSizePx), Height: int(baseSizePx)}
+
+	tankLifecycleUseCases.SetSpawnConfiguration(
 		b.gameRepository.TanksRepository(),
-		tankLifecycleUseCases,
-		enemySpawnPositions,
+		enemySpawners,
+		playerSpawner,
+		baseSize,
 	)
 
 	// Создаем сервисы коллизий
 	collisionUseCases, hqUseCases, err := b.buildCollisionServices(
 		bulletUseCases,
-		playerTank,
 		tankActionsUseCases,
 		mapUseCases,
-		enemyTanksEntities,
 		tankCommonUseCases,
 		tankLifecycleUseCases,
-		tilesUseCasesWithAnimations,
 		hqTilesUseCases,
 		hq,
+		entitiesCollisionService,
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	// Подготовим массив врагов
-	enemyTanksArray := b.buildEnemyTanksArray(enemyTanksEntities)
+	tankLifecycleUseCases.SetCollisionUseCases(collisionUseCases)
 
 	// Собираем финальный GameState
 	gameState := b.buildGameState(
-		playerTank,
-		enemyTanksArray,
 		hq,
 		hqUseCases,
 		tankActionsUseCases,
 		tankCommonUseCases,
 		tankRenderUseCases,
 		tankLifecycleUseCases,
-		tankSpawnUseCases,
 		bulletUseCases,
 		mapUseCases,
 		collisionUseCases,
 		tilesUseCasesWithAnimations,
-		enemyInputAdapters,
+		enemyInputAdapter,
 	)
 
 	return gameState, nil
@@ -294,39 +300,6 @@ func (b *GameStateBuilder) buildBulletUseCases() (*use_cases.BulletUseCases, uin
 	return bulletUseCases, baseSizePx, nil
 }
 
-// buildPlayerComponents создает танк игрока
-func (b *GameStateBuilder) buildPlayerComponents(
-	tilesUseCasesWithAnimations *use_cases.TilesUseCases,
-	baseSizePx uint,
-) (*types.TankEntity, error) {
-	// Берем позицию спавна игрока из конфига
-	var playerSpawner types.Position
-	playerSpawners := b.config.GetPlayerSpawners()
-	if len(playerSpawners) > 0 && len(playerSpawners[0]) == 2 {
-		playerSpawner = types.Position{
-			X: float64(playerSpawners[0][0]) * float64(baseSizePx),
-			Y: float64(playerSpawners[0][1]) * float64(baseSizePx),
-		}
-	} else {
-		// Значение по умолчанию
-		playerSpawner = types.Position{X: float64(12 * baseSizePx), Y: float64(24 * baseSizePx)}
-	}
-
-	// Создаем танк игрока
-	playerTank := &types.TankEntity{
-		Position:  playerSpawner,
-		Speed:     0,
-		Direction: types.DirectionUp,
-		State:     types.TankStateSpawning,
-		Altitude:  types.SURFACE,
-		Size:      types.Size{Width: int(baseSizePx), Height: int(baseSizePx)},
-		IsEnemy:   false,
-	}
-	b.gameRepository.TanksRepository().SetPlayer(playerTank)
-
-	return playerTank, nil
-}
-
 // createHQ создает базу из конфига
 func (b *GameStateBuilder) createHQ(
 	tilesUseCases *use_cases.TilesUseCases,
@@ -361,92 +334,17 @@ func (b *GameStateBuilder) createHQ(
 	}
 }
 
-// buildEnemyComponents создает все компоненты врагов
-func (b *GameStateBuilder) buildEnemyComponents(
-	tankActionsUseCases interfaces.ITankActionsUseCases,
-	luaEngine interfaces.ILuaEngine,
-	baseSizePx uint,
-) ([]interfaces.IInputAdapter, []*types.TankEntity, [3]types.Position, error) {
-	updateInterval := 60
-	if b.config.GetAIUpdateIntervalTicks() > 0 {
-		updateInterval = b.config.GetAIUpdateIntervalTicks()
-	}
-
-	enemyInputAdapters := make([]interfaces.IInputAdapter, 0, 3)
-	enemyTanksEntities := make([]*types.TankEntity, 0, 3)
-	enemySpawnPositions := [3]types.Position{}
-
-	for i, spawner := range b.config.GetEnemySpawners() {
-		if i >= 3 { // Максимум 3 врага
-			break
-		}
-		if len(spawner) != 2 {
-			continue
-		}
-
-		// Конвертируем координаты в пиксели
-		position := types.Position{
-			X: float64(spawner[0]) * float64(baseSizePx),
-			Y: float64(spawner[1]) * float64(baseSizePx),
-		}
-		enemySpawnPositions[i] = position
-
-		// Создаем танк врага
-		enemyTank := &types.TankEntity{
-			Position:  position,
-			Speed:     0,
-			Direction: types.DirectionDown,
-			State:     types.TankStateSpawning,
-			Altitude:  types.SURFACE,
-			Size: types.Size{
-				Width:  int(baseSizePx),
-				Height: int(baseSizePx),
-			},
-			IsEnemy: true,
-		}
-		b.gameRepository.TanksRepository().AddTank(enemyTank)
-
-		enemyTanksEntities = append(enemyTanksEntities, enemyTank)
-
-		// Используем общий Lua engine для всех врагов
-		// Создаем тип конвертер для AI
-		typeConverter := services.NewAITypeConverter(luaEngine)
-
-		// Создаем AI Use Cases
-		aiUseCases := use_cases.NewAIUseCases(luaEngine, typeConverter)
-
-		// Создаем AI input адаптер для этого врага
-		aiInputAdapter, err := input_adapters.NewAiInputAdapter(
-			tankActionsUseCases,
-			enemyTank,
-			updateInterval,
-			aiUseCases,
-		)
-		if err != nil {
-			return nil, nil, [3]types.Position{}, err
-		}
-		enemyInputAdapters = append(enemyInputAdapters, aiInputAdapter)
-	}
-
-	return enemyInputAdapters, enemyTanksEntities, enemySpawnPositions, nil
-}
-
 // buildCollisionServices создает сервисы коллизий
 func (b *GameStateBuilder) buildCollisionServices(
 	bulletUseCases *use_cases.BulletUseCases,
-	playerTank *types.TankEntity,
 	playerTankActions interfaces.ITankActionsUseCases,
 	mapUseCases *use_cases.MapUseCases,
-	enemyTanksEntities []*types.TankEntity,
 	tankCommonUseCases interfaces.ITankCommonUseCases,
 	tankLifecycleUseCases interfaces.ITankLifecycleUseCases,
-	tilesUseCasesWithAnimations *use_cases.TilesUseCases,
 	hqTilesUseCases *use_cases.TilesUseCases,
 	hq *types.HQEntity,
+	entitiesCollisionService interfaces.IEntitiesCollisionService,
 ) (*use_cases.CollisionUseCases, interfaces.IHQUseCases, error) {
-	// Создаем сервис проверки коллизий между сущностями
-	entitiesCollisionService := collision_services.NewEntitiesCollisionService()
-
 	// Создаем BulletCollisionService с EntitiesCollisionService
 	bulletCollisionService := collision_services.NewBulletCollisionService(
 		int(b.config.GetTileBaseSize()),
@@ -479,53 +377,34 @@ func (b *GameStateBuilder) buildCollisionServices(
 	return collisionUseCases, hqUseCases, nil
 }
 
-// buildEnemyTanksArray создает массив врагов
-func (b *GameStateBuilder) buildEnemyTanksArray(
-	enemyTanksEntities []*types.TankEntity,
-) [3]*types.TankEntity {
-	enemyTanksArray := [3]*types.TankEntity{}
-	for i := range enemyTanksEntities {
-		if i < 3 {
-			enemyTanksArray[i] = enemyTanksEntities[i]
-		}
-	}
-	return enemyTanksArray
-}
-
 // buildGameState собирает финальный GameState
 func (b *GameStateBuilder) buildGameState(
-	playerTank *types.TankEntity,
-	enemyTanksArray [3]*types.TankEntity,
 	hq *types.HQEntity,
 	hqUseCases interfaces.IHQUseCases,
 	tankActionsUseCases interfaces.ITankActionsUseCases,
 	tankCommonUseCases interfaces.ITankCommonUseCases,
 	tankRenderUseCases interfaces.ITankRenderUseCases,
 	tankLifecycleUseCases interfaces.ITankLifecycleUseCases,
-	tankSpawnUseCases interfaces.ITankSpawnUseCases,
 	bulletUseCases *use_cases.BulletUseCases,
 	mapUseCases *use_cases.MapUseCases,
 	collisionUseCases *use_cases.CollisionUseCases,
 	tilesUseCasesWithAnimations *use_cases.TilesUseCases,
-	enemyInputAdapters []interfaces.IInputAdapter,
+	enemyInputAdapter interfaces.IAiInputAdapter,
 ) *GameState {
 	return &GameState{
-		PlayerTank:            playerTank,
-		EnemyTanks:            enemyTanksArray,
 		HQEntity:              hq,
 		HQUseCases:            hqUseCases,
 		TankActionsUseCases:   tankActionsUseCases,
 		TankCommonUseCases:    tankCommonUseCases,
 		TankRenderUseCases:    tankRenderUseCases,
 		TankLifecycleUseCases: tankLifecycleUseCases,
-		TankSpawnUseCases:     tankSpawnUseCases,
 		BulletUseCases:        bulletUseCases,
 		MapUseCases:           mapUseCases,
 		CollisionUseCases:     collisionUseCases,
 		TilesUseCases:         tilesUseCasesWithAnimations,
 		InputAdapter:          b.tempInputAdapter,
 		RendererAdapter:       b.tempRendererAdapter,
-		EnemyInputAdapters:    enemyInputAdapters,
+		EnemyInputAdapter:     enemyInputAdapter,
 		StartTime:             time.Now(),
 		Session:               b.session,
 	}

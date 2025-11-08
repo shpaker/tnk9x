@@ -29,6 +29,8 @@ type IMapUseCases interface {
 // ICollisionUseCases интерфейс для операций с коллизиями
 type ICollisionUseCases interface {
 	UpdateCollisions()
+	HasTankCollision(candidate *types.TankEntity) bool
+	IsSpawnerBlocked(position types.Position, size types.Size) bool
 }
 
 // ITilesUseCases интерфейс для работы с тайлами и анимациями
@@ -62,16 +64,13 @@ type ITankRenderUseCases interface {
 
 // ITankLifecycleUseCases интерфейс для жизненного цикла танка
 type ITankLifecycleUseCases interface {
-	Spawn(tank *types.TankEntity) error
+	OnStageSetUpEnemiesSpawn() ([3]*types.TankEntity, error)
+	SpawnEnemy(index *int, ignoreRespawnDelay bool) (*types.TankEntity, error)
+	SpawnPlayer1() (*types.TankEntity, error)
 	Explode(tank *types.TankEntity) error
 	IsSpawnFinished(tank *types.TankEntity, currentTime float64)
 	IsExplosionFinished(tank *types.TankEntity)
-	UpdateAllTanksLifecycle() error
-}
-
-// ITankSpawnUseCases интерфейс для операций спавна танков на уровне
-type ITankSpawnUseCases interface {
-	StageSetUp() error
+	UpdateAllTanksLifecycle() (*types.TankEntity, error)
 }
 
 // ITankActionsUseCases интерфейс для действий танка
