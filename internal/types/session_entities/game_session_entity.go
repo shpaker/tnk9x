@@ -10,7 +10,7 @@ type GameSessionEntity struct {
 	Score        int              // Общий счёт за всю сессию
 	Level        int              // Текущий уровень
 	targetState  *types.StateType // Целевое состояние для перехода (nil если переход не требуется) - приватное поле
-	stageSession stageSessionEntity
+	stageSession *StageSessionEntity
 }
 
 // NewGameSessionEntity создает новую сессию с начальными значениями
@@ -46,6 +46,9 @@ func (s *GameSessionEntity) IsCompleted() bool {
 	return s.stageSession.IsCompleted() && s.PlayerLives <= 0
 }
 
-func (s *GameSessionEntity) OnStageStarted() {
-	s.stageSession.Reset()
+func (s *GameSessionEntity) StageSession() *StageSessionEntity {
+	if s == nil {
+		return nil
+	}
+	return s.stageSession
 }

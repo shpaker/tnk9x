@@ -8,9 +8,8 @@ import (
 	game "github.com/shpaker/gonflict/internal/adapters/game"
 	"github.com/shpaker/gonflict/internal/interfaces"
 	"github.com/shpaker/gonflict/internal/types"
-	"github.com/shpaker/gonflict/internal/use_cases"
-
 	"github.com/shpaker/gonflict/internal/types/session_entities"
+	"github.com/shpaker/gonflict/internal/use_cases"
 )
 
 // StageState представляет состояние уровня
@@ -38,9 +37,6 @@ type StageState struct {
 	// Метаданные
 	StartTime time.Time
 	isSetUp   bool // Флаг для отслеживания, был ли вызван SetUp
-
-	// Сессия
-	Session *session_entities.GameSessionEntity
 
 	// Use cases
 	stageUseCases interfaces.IStageUseCases
@@ -93,7 +89,15 @@ func (state *StageState) SetUp() {
 			keyboardAdapter.SetPlayerTank(playerTank)
 		}
 	}
-	state.stageUseCases.SpawnEnemyTanks()
+	enemies := state.stageUseCases.SpawnInitialEnemyTanks()
+	for _, enemy := range enemies {
+		if enemy == nil {
+			continue
+		}
+		if state.EnemyInputAdapter != nil {
+			state.EnemyInputAdapter.AddTank(enemy)
+		}
+	}
 }
 
 // Update обновляет состояние игры (вызывается Ebiten каждый кадр)
@@ -122,15 +126,23 @@ func (state *StageState) Update() {
 
 	// Обновляем жизненный цикл танков (спавн и взрыв)
 	if state.TankLifecycleUseCases != nil && !paused {
-		spawned, _ := state.TankLifecycleUseCases.UpdateAllTanksLifecycle()
-		if spawned != nil && state.EnemyInputAdapter != nil {
-			state.EnemyInputAdapter.AddTank(spawned)
-		}
+		_ = state.TankLifecycleUseCases.UpdateAllTanksLifecycle()
 	}
 
 	// Обновляем игровые объекты (танки, пули, коллизии, AI)
 	if state.stageUseCases != nil {
 		state.stageUseCases.UpdateGameObjects(dt)
+		// if !paused {
+		if spawned := state.stageUseCases.TrySpawnEnemy(); spawned != nil {
+			if state.EnemyInputAdapter != nil {
+				state.EnemyInputAdapter.AddTank(spawned)
+			}
+		}
+		// }
+	}
+
+	if state.EnemyInputAdapter != nil && !paused {
+		state.EnemyInputAdapter.Update(dt)
 	}
 
 	// Обновляем все анимации

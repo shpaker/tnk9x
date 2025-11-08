@@ -3,7 +3,7 @@ package session_entities
 import "testing"
 
 func TestStageSessionEntity_IsCompleted(t *testing.T) {
-	session := &stageSessionEntity{
+	session := &StageSessionEntity{
 		totalEnemies:     2,
 		spawnedEnemies:   2,
 		destroyedEnemies: 2,
@@ -17,7 +17,7 @@ func TestStageSessionEntity_IsCompleted(t *testing.T) {
 }
 
 func TestStageSessionEntity_GetNextEnemyNumber(t *testing.T) {
-	session := &stageSessionEntity{
+	session := &StageSessionEntity{
 		totalEnemies:   5,
 		spawnedEnemies: 2,
 	}
@@ -30,7 +30,7 @@ func TestStageSessionEntity_GetNextEnemyNumber(t *testing.T) {
 }
 
 func TestStageSessionEntity_IncrementSpawnedEnemies(t *testing.T) {
-	session := &stageSessionEntity{
+	session := &StageSessionEntity{
 		totalEnemies:   10,
 		spawnedEnemies: 3,
 	}
@@ -46,7 +46,7 @@ func TestStageSessionEntity_IncrementSpawnedEnemies(t *testing.T) {
 }
 
 func TestStageSessionEntity_IncrementDestroyedEnemies(t *testing.T) {
-	session := &stageSessionEntity{
+	session := &StageSessionEntity{
 		totalEnemies:     10,
 		destroyedEnemies: 6,
 	}

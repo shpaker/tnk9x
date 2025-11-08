@@ -11,16 +11,14 @@ import (
 
 // TankLifecycleUseCases отвечает за жизненный цикл танка (спавн, взрыв, анимации)
 type TankLifecycleUseCases struct {
-	tilesUseCases            *use_cases.TilesUseCases
-	renderUseCases           interfaces.ITankRenderUseCases
-	tankCommonUseCases       interfaces.ITankCommonUseCases
-	tanksRepository          interfaces.ITanksRepository
-	collisionUseCases        interfaces.ICollisionUseCases
-	enemySpawners            []types.Position
-	player1Spawner           types.Position
-	baseSize                 types.Size
-	enemySpawnTicksRemaining uint // количество тиков до следующего респавна (после респавна равно respawnDelay и уменьшается до 0)
-	enemyRespawnDelay        uint // интервал до респавна в тиках
+	tilesUseCases      *use_cases.TilesUseCases
+	renderUseCases     interfaces.ITankRenderUseCases
+	tankCommonUseCases interfaces.ITankCommonUseCases
+	tanksRepository    interfaces.ITanksRepository
+	collisionUseCases  interfaces.ICollisionUseCases
+	enemySpawners      []types.Position
+	player1Spawner     types.Position
+	baseSize           types.Size
 }
 
 // ============================================================================
@@ -34,15 +32,10 @@ func NewTankLifecycleUseCases(
 	tankCommonUseCases interfaces.ITankCommonUseCases,
 	enemyRespawnDelay uint,
 ) *TankLifecycleUseCases {
-	if enemyRespawnDelay == 0 {
-		enemyRespawnDelay = 3 * 60
-	}
-
 	return &TankLifecycleUseCases{
 		tilesUseCases:      tilesUseCases,
 		renderUseCases:     renderUseCases,
 		tankCommonUseCases: tankCommonUseCases,
-		enemyRespawnDelay:  enemyRespawnDelay,
 		player1Spawner:     types.Position{X: 12, Y: 24},
 	}
 }
@@ -123,7 +116,7 @@ func (uc *TankLifecycleUseCases) SpawnEnemy(
 		)
 	}
 
-	if !ignoreRespawnDelay && !(uc.enemyCanSpawn() && !spawnerBlocked) {
+	if !ignoreRespawnDelay && spawnerBlocked {
 		return nil, nil
 	}
 
@@ -133,7 +126,6 @@ func (uc *TankLifecycleUseCases) SpawnEnemy(
 	}
 
 	uc.tanksRepository.AddEnemy(&tank)
-	uc.enemyResetSpawnCountdown()
 
 	return &tank, nil
 }
@@ -242,12 +234,10 @@ func (uc *TankLifecycleUseCases) finishSpawnAnimation(
 // ============================================================================
 
 // UpdateAllTanksLifecycle обновляет жизненный цикл всех танков (спавн и взрыв)
-func (uc *TankLifecycleUseCases) UpdateAllTanksLifecycle() (*types.TankEntity, error) {
+func (uc *TankLifecycleUseCases) UpdateAllTanksLifecycle() error {
 	if uc.tankCommonUseCases == nil {
-		return nil, nil
+		return nil
 	}
-	uc.enemyUpdateSpawnCountdown()
-
 	allTanks := uc.tankCommonUseCases.GetAllTanks()
 	for _, tank := range allTanks {
 		if tank != nil {
@@ -255,10 +245,7 @@ func (uc *TankLifecycleUseCases) UpdateAllTanksLifecycle() (*types.TankEntity, e
 			uc.updateTankExplosion(tank)
 		}
 	}
-	if uc.enemyCanSpawn() {
-		return uc.SpawnEnemy(nil, false)
-	}
-	return nil, nil
+	return nil
 }
 
 // updateTankSpawn проверяет и обновляет процесс спавна танка
@@ -289,21 +276,4 @@ func (uc *TankLifecycleUseCases) updateTankExplosion(tank *types.TankEntity) {
 	if uc.renderUseCases.IsExplosionAnimationFinished(tank) {
 		tank.State = types.TankStateExploded
 	}
-}
-
-// ============================================================================
-// RESPAWN
-// ============================================================================
-func (uc *TankLifecycleUseCases) enemyResetSpawnCountdown() {
-	uc.enemySpawnTicksRemaining = uc.enemyRespawnDelay
-}
-
-func (uc *TankLifecycleUseCases) enemyUpdateSpawnCountdown() {
-	if !uc.enemyCanSpawn() {
-		uc.enemySpawnTicksRemaining -= 1
-	}
-}
-
-func (uc *TankLifecycleUseCases) enemyCanSpawn() bool {
-	return uc.enemySpawnTicksRemaining <= 0
 }

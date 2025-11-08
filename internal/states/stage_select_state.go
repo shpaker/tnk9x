@@ -20,7 +20,7 @@ type StageSelectState struct {
 	selector           *types.StageSelectorEntity
 	selectorUseCases   *use_cases.StageSelectorUseCases
 	transitionUseCases *use_cases.StateTransitionUseCases
-	session            *session_entities.GameSessionEntity
+	Session            *session_entities.GameSessionEntity
 	inputAdapter       *stage_select.StageSelectKeyboardInputAdapter
 	rendererAdapter    *stage_select.StageSelectRendererAdapter
 	isSetUp            bool // Флаг для отслеживания, был ли вызван SetUp
@@ -101,7 +101,7 @@ func NewStageSelectState(
 		selector:           selector,
 		selectorUseCases:   selectorUseCases,
 		transitionUseCases: transitionUseCases,
-		session:            session,
+		Session:            session,
 		inputAdapter:       inputAdapter,
 		rendererAdapter:    rendererAdapter,
 	}
@@ -128,7 +128,7 @@ func (s *StageSelectState) Update() {
 	// Обрабатываем переход к игре по Enter
 	if inpututil.IsKeyJustPressed(ebiten.KeyEnter) {
 		selectedLevel := s.selectorUseCases.Select(s.selector)
-		s.transitionUseCases.ToGame(s.session, selectedLevel)
+		s.transitionUseCases.ToGame(s.Session, selectedLevel)
 	}
 }
 

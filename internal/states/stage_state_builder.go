@@ -230,14 +230,20 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 
 	tankLifecycleUseCases.SetCollisionUseCases(collisionUseCases)
 
+	var stageSession *session_entities.StageSessionEntity
+	if b.session != nil {
+		stageSession = b.session.StageSession()
+	}
+
 	stageUseCasesValue := stateusecases.NewStageUseCases(
 		tankLifecycleUseCases,
 		tankCommonUseCases,
 		bulletUseCases,
 		collisionUseCases,
-		enemyInputAdapter,
 		hqUseCases,
 		hq,
+		stageSession,
+		enemyRespawnDelay,
 	)
 	stageUseCases := &stageUseCasesValue
 
@@ -495,7 +501,6 @@ func (b *StageStateBuilder) buildStageState(
 		RendererAdapter:       nil,
 		EnemyInputAdapter:     enemyInputAdapter,
 		StartTime:             time.Now(),
-		Session:               b.session,
 		stageUseCases:         nil,
 	}
 }

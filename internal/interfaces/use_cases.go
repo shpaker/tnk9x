@@ -72,7 +72,7 @@ type ITankLifecycleUseCases interface {
 	Explode(tank *types.TankEntity) error
 	IsSpawnFinished(tank *types.TankEntity, currentTime float64)
 	IsExplosionFinished(tank *types.TankEntity)
-	UpdateAllTanksLifecycle() (*types.TankEntity, error)
+	UpdateAllTanksLifecycle() error
 }
 
 // ITankActionsUseCases интерфейс для действий танка
@@ -110,7 +110,8 @@ type IFontUseCases interface {
 // IStageUseCases интерфейс для операций с состоянием уровня
 type IStageUseCases interface {
 	SpawnPlayerTank() *types.TankEntity
-	SpawnEnemyTanks() []*types.TankEntity
+	SpawnInitialEnemyTanks() []*types.TankEntity
+	TrySpawnEnemy() *types.TankEntity
 	UpdateGameObjects(dt float64)
 	TogglePause()
 	IsPaused() bool
