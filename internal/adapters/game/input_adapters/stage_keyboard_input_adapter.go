@@ -8,51 +8,73 @@ import (
 	"github.com/shpaker/gonflict/internal/types"
 )
 
-// GameKeyboardInputAdapter адаптер для обработки пользовательского ввода с клавиатуры
-type GameKeyboardInputAdapter struct {
-	tankActions interfaces.ITankActionsUseCases
-	tank        *types.TankEntity
+// StageKeyboardInputAdapter адаптер для обработки пользовательского ввода с клавиатуры
+type StageKeyboardInputAdapter struct {
+	tankActions   interfaces.ITankActionsUseCases
+	stageUseCases interfaces.IStageUseCases
+
+	tank *types.TankEntity
+
 	upButton    ebiten.Key
 	downButton  ebiten.Key
 	leftButton  ebiten.Key
 	rightButton ebiten.Key
 	shootButton ebiten.Key
+	pauseButton ebiten.Key
 }
 
 // SetPlayerTank назначает танк игрока для управления клавиатурой
-func (a *GameKeyboardInputAdapter) SetPlayerTank(tank *types.TankEntity) {
+func (a *StageKeyboardInputAdapter) SetPlayerTank(tank *types.TankEntity) {
 	a.tank = tank
 }
 
-// NewGameKeyboardInputAdapter создает новый экземпляр GameKeyboardInputAdapter
-func NewGameKeyboardInputAdapter(
+// NewStageKeyboardInputAdapter создает новый экземпляр StageKeyboardInputAdapter
+func NewStageKeyboardInputAdapter(
 	tankActions interfaces.ITankActionsUseCases,
 	tank *types.TankEntity,
+	stageUseCases interfaces.IStageUseCases,
 	upButton ebiten.Key,
 	downButton ebiten.Key,
 	leftButton ebiten.Key,
 	rightButton ebiten.Key,
 	shootButton ebiten.Key,
-) *GameKeyboardInputAdapter {
-	return &GameKeyboardInputAdapter{
-		tankActions: tankActions,
-		tank:        tank,
-		upButton:    upButton,
-		downButton:  downButton,
-		leftButton:  leftButton,
-		rightButton: rightButton,
-		shootButton: shootButton,
+	pauseButton ebiten.Key,
+) *StageKeyboardInputAdapter {
+	return &StageKeyboardInputAdapter{
+		tankActions:   tankActions,
+		tank:          tank,
+		stageUseCases: stageUseCases,
+		upButton:      upButton,
+		downButton:    downButton,
+		leftButton:    leftButton,
+		rightButton:   rightButton,
+		shootButton:   shootButton,
+		pauseButton:   pauseButton,
 	}
 }
 
 // Update обрабатывает пользовательский ввод
-func (a *GameKeyboardInputAdapter) Update(dt float64) {
+func (a *StageKeyboardInputAdapter) Update(dt float64) {
+	a.handlePauseToggle()
 	a.keyPressedEvents()
 	a.keyReleasedEvents()
 }
 
+func (a *StageKeyboardInputAdapter) handlePauseToggle() {
+	if a.stageUseCases == nil {
+		return
+	}
+	if inpututil.IsKeyJustPressed(a.pauseButton) {
+		a.stageUseCases.TogglePause()
+	}
+}
+
 // keyPressedEvents обрабатывает события нажатия клавиш
-func (a *GameKeyboardInputAdapter) keyPressedEvents() {
+func (a *StageKeyboardInputAdapter) keyPressedEvents() {
+	if a.stageUseCases != nil && a.stageUseCases.IsPaused() {
+		return
+	}
+
 	// Проверяем нажатие клавиши стрельбы
 	if inpututil.IsKeyJustPressed(a.shootButton) {
 		a.tankShoot()
@@ -88,9 +110,14 @@ func (a *GameKeyboardInputAdapter) keyPressedEvents() {
 }
 
 // keyReleasedEvents обрабатывает события отпускания клавиш
-func (a *GameKeyboardInputAdapter) keyReleasedEvents() {
+func (a *StageKeyboardInputAdapter) keyReleasedEvents() {
 	// Stop the tank if the key is released
 	if a.tank == nil {
+		return
+	}
+
+	if a.stageUseCases != nil && a.stageUseCases.IsPaused() {
+		a.tankActions.Stop(a.tank, false)
 		return
 	}
 
@@ -113,7 +140,7 @@ func (a *GameKeyboardInputAdapter) keyReleasedEvents() {
 }
 
 // tankShoot обрабатывает стрельбу танка
-func (a *GameKeyboardInputAdapter) tankShoot() {
+func (a *StageKeyboardInputAdapter) tankShoot() {
 	if a.tank == nil {
 		return
 	}

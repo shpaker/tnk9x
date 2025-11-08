@@ -66,19 +66,38 @@ just test
 
 ```text
 internal/
-├── adapters/       # Presentation (графика, ввод, AI-движок)
-├── states/         # Presentation (StageSelect, GameState)
+├── adapters/       # Presentation (реализация вывода/ввода через адаптеры)
+│   ├── game/       # Уровень: StageRendererAdapter, StageKeyboardInputAdapter, AI adapters
+│   └── stage_select/ # Экран выбора уровня: отрисовка и ввод меню
+├── states/         # Presentation (StageSelectState, StageState и т.д.)
 ├── use_cases/      # Application (stateless бизнес-логика)
 ├── services/       # Application services (коллизии, анимации, координаты)
 ├── types/          # Domain types (танки, пули, HQ, карта)
-│   ├── session_entities/ # Сессии игры и уровней
+│   └── session_entities/ # Сессии игры и уровней
 ├── repositories/   # Infrastructure (in-memory, processed, raw)
 └── interfaces/     # Контракты между слоями
+```
+
+Взаимодействие слоев (зависимости направлены внутрь):
+
+```
+[ Presentation ]  adapters + states
+        │   (реализация IState, IInputAdapter, IRendererAdapter)
+        ▼
+[ Application ]   use_cases + services (через interfaces.*)
+        │   (манипулируют Domain, обращаются к инфраструктуре через интерфейсы)
+        ▼
+[ Domain ]        types (entity, value objects, session entities)
+        ▲
+        │   (репозитории читают/пишут данные, реализуя интерфейсы Application)
+[ Infrastructure ] repositories/raw/processed/game
 ```
 
 Основные правила:
 
 - Use cases stateless, принимают сущности как параметры
+- Отрисовка и ввод осуществляются только через адаптеры (`*renderer_adapter`, `*input_adapter`)
+- Не использовать устаревшие (deprecated) API движка и стандартной библиотеки
 - Сервисы коллизий только проверяют, use cases вносят изменения
 - Сырые ресурсы доступны только через `IFileRepository`; обработанные — через специализированные репозитории
 - Все зависимости внедряются через конструкторы (`New*`)

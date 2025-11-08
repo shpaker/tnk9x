@@ -3,6 +3,8 @@ package interfaces
 import (
 	"image"
 
+	"golang.org/x/image/font/opentype"
+
 	"github.com/shpaker/gonflict/internal/types"
 	image_providers "github.com/shpaker/gonflict/internal/types/image_providers"
 )
@@ -98,4 +100,18 @@ type IHQUseCases interface {
 	GetHQ() *types.HQEntity
 	Explode(hq *types.HQEntity) error
 	IsExplosionFinished(hq *types.HQEntity)
+}
+
+// IFontUseCases интерфейс для работы со шрифтами
+type IFontUseCases interface {
+	GetFont() (*opentype.Font, error)
+}
+
+// IStageUseCases интерфейс для операций с состоянием уровня
+type IStageUseCases interface {
+	SpawnPlayerTank() *types.TankEntity
+	SpawnEnemyTanks() []*types.TankEntity
+	UpdateGameObjects(dt float64)
+	TogglePause()
+	IsPaused() bool
 }

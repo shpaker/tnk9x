@@ -3,6 +3,8 @@ package states
 import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
+	"github.com/hajimehoshi/ebiten/v2/text/v2"
+	"golang.org/x/image/font/opentype"
 
 	stage_select "github.com/shpaker/gonflict/internal/adapters/stage_select"
 	"github.com/shpaker/gonflict/internal/interfaces"
@@ -30,7 +32,7 @@ func NewStageSelectState(
 	selectorUseCases *use_cases.StageSelectorUseCases,
 	transitionUseCases *use_cases.StateTransitionUseCases,
 	session *session_entities.GameSessionEntity,
-	fontsRepository interfaces.IFontsRepository,
+	fontUseCases interfaces.IFontUseCases,
 	mapsRepository interfaces.IMapsDataRepository,
 ) (*StageSelectState, error) {
 	// Получаем размеры экрана через type assertion к конкретному типу Config
@@ -59,11 +61,26 @@ func NewStageSelectState(
 	// Создаем селектор уровней
 	selector := types.NewStageSelector(maxStages)
 
+	baseFont, err := fontUseCases.GetFont()
+	if err != nil {
+		return nil, err
+	}
+
+	fontFace, err := opentype.NewFace(baseFont, &opentype.FaceOptions{
+		Size: 32,
+		DPI:  72,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	textFace := text.NewGoXFace(fontFace)
+
 	// Создаем адаптер рендеринга (вся работа с графикой, включая загрузку шрифта, в адаптере)
 	rendererAdapter, err := stage_select.NewStageSelectRendererAdapter(
 		selector,
 		selectorUseCases,
-		fontsRepository,
+		textFace,
 		screenWidth,
 		screenHeight,
 	)

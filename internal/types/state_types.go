@@ -4,6 +4,6 @@ package types
 type StateType int
 
 const (
-	StateTypeGame StateType = iota
+	StateTypeStage StateType = iota
 	StateTypeStageSelect
 )

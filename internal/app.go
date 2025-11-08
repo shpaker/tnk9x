@@ -8,8 +8,6 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 
-	game "github.com/shpaker/gonflict/internal/adapters/game"
-	"github.com/shpaker/gonflict/internal/adapters/game/input_adapters"
 	"github.com/shpaker/gonflict/internal/adapters/game/input_adapters/ai"
 	"github.com/shpaker/gonflict/internal/interfaces"
 	game_repos "github.com/shpaker/gonflict/internal/repositories/game"
@@ -25,10 +23,11 @@ import (
 )
 
 type App struct {
-	config    *Config
-	State     interfaces.IState
-	luaEngine interfaces.ILuaEngine               // Lua Engine для AI (существует весь срок жизни App)
-	session   *session_entities.GameSessionEntity // Сессия игры
+	config       *Config
+	State        interfaces.IState
+	luaEngine    interfaces.ILuaEngine               // Lua Engine для AI (существует весь срок жизни App)
+	session      *session_entities.GameSessionEntity // Сессия игры
+	fontUseCases interfaces.IFontUseCases
 }
 
 // ebiten game interface
@@ -92,11 +91,10 @@ func New(cfg *Config) *App {
 		fileRepository,
 		tilesetRegistry.Blocks(),
 	)
-
-	// Создаем репозиторий шрифтов
 	fontsRepository := processed.NewFontsRepository(fileRepository)
+	fontUseCases := use_cases.NewFontUseCases(fontsRepository)
 
-	// Создаем Lua engine для AI (общий для всех GameState, существует весь срок жизни App)
+	// Создаем Lua engine для AI (общий для всех StageState, существует весь срок жизни App)
 	luaEngine := ai.NewLuaEngine()
 
 	// Создаем GameSessionEntity
@@ -112,7 +110,7 @@ func New(cfg *Config) *App {
 		stageSelectorUseCases,
 		stateTransitionUseCases,
 		session,
-		fontsRepository,
+		fontUseCases,
 		mapsRepository,
 	)
 	if err != nil {
@@ -121,10 +119,11 @@ func New(cfg *Config) *App {
 	}
 
 	return &App{
-		config:    cfg,
-		State:     stageSelectState,
-		luaEngine: luaEngine,
-		session:   session,
+		config:       cfg,
+		State:        stageSelectState,
+		luaEngine:    luaEngine,
+		session:      session,
+		fontUseCases: fontUseCases,
 	}
 }
 
@@ -138,8 +137,8 @@ func (app *App) createStateFromTarget(
 	}
 
 	switch *targetState {
-	case types.StateTypeGame:
-		return app.createGameState(session)
+	case types.StateTypeStage:
+		return app.createStageState(session)
 	case types.StateTypeStageSelect:
 		return app.createStageSelectState(session)
 	default:
@@ -147,11 +146,11 @@ func (app *App) createStateFromTarget(
 	}
 }
 
-// createGameState создает игровое состояние
-func (app *App) createGameState(
+// createStageState создает игровое состояние
+func (app *App) createStageState(
 	session *session_entities.GameSessionEntity,
 ) (interfaces.IState, error) {
-	// Создаем все необходимые зависимости для GameState
+	// Создаем все необходимые зависимости для StageState
 	fileRepository := raw.NewFileRepository("assets")
 
 	// Создаем реестр тайлсетов
@@ -170,7 +169,6 @@ func (app *App) createGameState(
 		fileRepository,
 		tilesetRegistry.Blocks(),
 	)
-
 	// Создаем реестр игровых репозиториев
 	gameRepository := game_repos.NewGameRepositoriesRegistry()
 
@@ -192,91 +190,26 @@ func (app *App) createGameState(
 	)
 	tankBrakingService := services.NewTankBrakingService()
 
-	// Создаем временные адаптеры
-	mapOffsetX := int(app.config.MapOffsets[0])
-	mapOffsetY := int(app.config.MapOffsets[1])
-	mapWidthHeightForAdapter := app.config.MapBlocksCount.Width * int(
-		app.config.TileBaseSize,
-	)
+	fontUseCases := app.fontUseCases
+	if fontUseCases == nil {
+		fontUseCases = use_cases.NewFontUseCases(
+			processed.NewFontsRepository(fileRepository),
+		)
+	}
 
-	// Создаем временные TilesUseCases для адаптеров
-	mapTileService := services.NewTileService(tilesetRegistry.Blocks())
-	playerTileService := services.NewTileService(tilesetRegistry.Player())
-	bulletTileService := services.NewTileService(tilesetRegistry.Bullet())
-	spawnerTileService := services.NewTileService(tilesetRegistry.Spawner())
-	explosionTileService := services.NewTileService(tilesetRegistry.Explosion())
-	hqTileService := services.NewTileService(tilesetRegistry.HQ())
-	animationService := services.NewAnimationService()
-
-	mapTilesUseCases := use_cases.NewTilesUseCases(
-		tilesetRegistry.Blocks(),
-		mapTileService,
-		animationService,
-	)
-	playerTilesUseCases := use_cases.NewTilesUseCases(
-		tilesetRegistry.Player(),
-		playerTileService,
-		animationService,
-	)
-	bulletTilesUseCases := use_cases.NewTilesUseCases(
-		tilesetRegistry.Bullet(),
-		bulletTileService,
-		animationService,
-	)
-	spawnerTilesUseCases := use_cases.NewTilesUseCases(
-		tilesetRegistry.Spawner(),
-		spawnerTileService,
-		animationService,
-	)
-	explosionTilesUseCases := use_cases.NewTilesUseCases(
-		tilesetRegistry.Explosion(),
-		explosionTileService,
-		animationService,
-	)
-	hqTilesUseCases := use_cases.NewTilesUseCases(
-		tilesetRegistry.HQ(),
-		hqTileService,
-		animationService,
-	)
-
-	tempRendererAdapter := game.NewGameRendererAdapter(
-		nil, nil, nil, nil,
-		mapTilesUseCases,
-		playerTilesUseCases,
-		bulletTilesUseCases,
-		spawnerTilesUseCases,
-		explosionTilesUseCases,
-		hqTilesUseCases,
-		nil,
-		int(app.config.TileBaseSize),
-		mapOffsetX,
-		mapOffsetY,
-		mapWidthHeightForAdapter,
-	)
-
-	tempInputAdapter := input_adapters.NewGameKeyboardInputAdapter(
-		nil, nil,
-		ebiten.KeyW,
-		ebiten.KeyS,
-		ebiten.KeyA,
-		ebiten.KeyD,
-		ebiten.KeySpace,
-	)
-
-	// Создаем GameState
-	gameStatePtr, err := states.NewGameState(
+	// Создаем StageState
+	stageStatePtr, err := states.NewStageState(
 		mapsRepository,
 		scriptsRepository,
 		session.Level,
 		tilesetRegistry,
 		app.config,
+		fontUseCases,
 		gameRepository,
 		boundaryCollisionService,
 		wallCollisionService,
 		coordinateService,
 		tankBrakingService,
-		tempRendererAdapter,
-		tempInputAdapter,
 		app.luaEngine,
 		session,
 	)
@@ -284,39 +217,7 @@ func (app *App) createGameState(
 		return nil, err
 	}
 
-	// Обновляем адаптеры с реальными данными
-	rendererAdapter := game.NewGameRendererAdapter(
-		gameStatePtr.MapUseCases,
-		gameStatePtr.TankCommonUseCases,
-		gameStatePtr.TankRenderUseCases,
-		gameStatePtr.BulletUseCases,
-		mapTilesUseCases,
-		playerTilesUseCases,
-		bulletTilesUseCases,
-		spawnerTilesUseCases,
-		explosionTilesUseCases,
-		hqTilesUseCases,
-		gameStatePtr.HQUseCases,
-		int(app.config.TileBaseSize),
-		mapOffsetX,
-		mapOffsetY,
-		mapWidthHeightForAdapter,
-	)
-
-	inputAdapter := input_adapters.NewGameKeyboardInputAdapter(
-		gameStatePtr.TankActionsUseCases,
-		nil,
-		ebiten.KeyW,
-		ebiten.KeyS,
-		ebiten.KeyA,
-		ebiten.KeyD,
-		ebiten.KeySpace,
-	)
-
-	gameStatePtr.InputAdapter = inputAdapter
-	gameStatePtr.RendererAdapter = rendererAdapter
-
-	return gameStatePtr, nil
+	return stageStatePtr, nil
 }
 
 // createStageSelectState создает состояние выбора уровня
@@ -339,7 +240,13 @@ func (app *App) createStageSelectState(
 		tilesetRegistry.Blocks(),
 	)
 
-	fontsRepository := processed.NewFontsRepository(fileRepository)
+	fontUseCases := app.fontUseCases
+	if fontUseCases == nil {
+		fontUseCases = use_cases.NewFontUseCases(
+			processed.NewFontsRepository(fileRepository),
+		)
+		app.fontUseCases = fontUseCases
+	}
 
 	stageSelectorUseCases := use_cases.NewStageSelectorUseCases()
 	stateTransitionUseCases := use_cases.NewStateTransitionUseCases()
@@ -349,7 +256,7 @@ func (app *App) createStageSelectState(
 		stageSelectorUseCases,
 		stateTransitionUseCases,
 		session,
-		fontsRepository,
+		fontUseCases,
 		mapsRepository,
 	)
 }

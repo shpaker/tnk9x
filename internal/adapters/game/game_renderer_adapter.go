@@ -6,7 +6,9 @@ import (
 	"math"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/text/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
+	"golang.org/x/image/font/opentype"
 
 	"github.com/shpaker/gonflict/internal/interfaces"
 	"github.com/shpaker/gonflict/internal/services"
@@ -15,8 +17,8 @@ import (
 	"github.com/shpaker/gonflict/internal/use_cases"
 )
 
-// GameRendererAdapter адаптер для рендеринга игры
-type GameRendererAdapter struct {
+// StageRendererAdapter адаптер для рендеринга уровня игры
+type StageRendererAdapter struct {
 	mapUseCases            interfaces.IMapUseCases
 	tankCommonUseCases     interfaces.ITankCommonUseCases // Для получения всех танков
 	tankRenderUseCases     interfaces.ITankRenderUseCases // Общий use case для графики всех танков
@@ -30,14 +32,16 @@ type GameRendererAdapter struct {
 	hqUseCases             interfaces.IHQUseCases
 	imageCache             map[string]*ebiten.Image // Кэш ebiten.Image
 	imageService           *services.ImageService   // Сервис для работы с изображениями
+	fontUseCases           interfaces.IFontUseCases
+	pauseFontFace          text.Face
 	tileMinSize            int
 	mapOffsetX             int
 	mapOffsetY             int
 	mapWidthHeight         int
 }
 
-// NewGameRendererAdapter создает новый экземпляр GameRendererAdapter
-func NewGameRendererAdapter(
+// NewStageRendererAdapter создает новый экземпляр StageRendererAdapter
+func NewStageRendererAdapter(
 	mapUseCases interfaces.IMapUseCases,
 	tankCommonUseCases interfaces.ITankCommonUseCases,
 	tankRenderUseCases interfaces.ITankRenderUseCases,
@@ -49,12 +53,13 @@ func NewGameRendererAdapter(
 	explosionTilesUseCases *use_cases.TilesUseCases,
 	hqTilesUseCases *use_cases.TilesUseCases,
 	hqUseCases interfaces.IHQUseCases,
+	fontUseCases interfaces.IFontUseCases,
 	tileMinSize int,
 	mapOffsetX int,
 	mapOffsetY int,
 	mapWidthHeight int,
-) *GameRendererAdapter {
-	return &GameRendererAdapter{
+) *StageRendererAdapter {
+	return &StageRendererAdapter{
 		mapUseCases:            mapUseCases,
 		tankCommonUseCases:     tankCommonUseCases,
 		tankRenderUseCases:     tankRenderUseCases,
@@ -66,6 +71,7 @@ func NewGameRendererAdapter(
 		explosionTilesUseCases: explosionTilesUseCases,
 		hqTilesUseCases:        hqTilesUseCases,
 		hqUseCases:             hqUseCases,
+		fontUseCases:           fontUseCases,
 		imageCache:             make(map[string]*ebiten.Image),
 		imageService:           services.NewImageService(),
 		tileMinSize:            tileMinSize,
@@ -76,7 +82,7 @@ func NewGameRendererAdapter(
 }
 
 // drawTanks отрисовывает все танки без взрывов (уровень SURFACE)
-func (r *GameRendererAdapter) drawTanks(screen *ebiten.Image) {
+func (r *StageRendererAdapter) drawTanks(screen *ebiten.Image) {
 	allTanks := r.tankCommonUseCases.GetAllTanks()
 	for _, tank := range allTanks {
 		if tank == nil {
@@ -131,7 +137,7 @@ func (r *GameRendererAdapter) drawTanks(screen *ebiten.Image) {
 }
 
 // getCachedImage возвращает закэшированное ebiten.Image или создает новое
-func (r *GameRendererAdapter) getCachedImage(
+func (r *StageRendererAdapter) getCachedImage(
 	imageID string,
 	imageData image.Image,
 ) *ebiten.Image {
@@ -154,7 +160,7 @@ func (r *GameRendererAdapter) getCachedImage(
 }
 
 // drawSpawnAnimation отрисовывает анимацию спавна
-func (r *GameRendererAdapter) drawSpawnAnimation(
+func (r *StageRendererAdapter) drawSpawnAnimation(
 	screen *ebiten.Image,
 	tank *types.TankEntity,
 ) {
@@ -204,7 +210,7 @@ func getRotationAngle(direction types.Direction) float64 {
 }
 
 // drawHeadquarters отрисовывает базу
-func (r *GameRendererAdapter) drawHeadquarters(screen *ebiten.Image) {
+func (r *StageRendererAdapter) drawHeadquarters(screen *ebiten.Image) {
 	hq := r.hqUseCases.GetHQ()
 	if hq == nil {
 		return
@@ -265,7 +271,7 @@ func (r *GameRendererAdapter) drawHeadquarters(screen *ebiten.Image) {
 }
 
 // drawExplosions отрисовывает взрывы всех сущностей (танки и HQ, уровень AIR)
-func (r *GameRendererAdapter) drawExplosions(screen *ebiten.Image) {
+func (r *StageRendererAdapter) drawExplosions(screen *ebiten.Image) {
 	// Отрисовываем взрывы танков
 	allTanks := r.tankCommonUseCases.GetAllTanks()
 	for _, tank := range allTanks {
@@ -341,7 +347,7 @@ func (r *GameRendererAdapter) drawExplosions(screen *ebiten.Image) {
 }
 
 // drawBullets отрисовывает пули
-func (r *GameRendererAdapter) drawBullets(screen *ebiten.Image) {
+func (r *StageRendererAdapter) drawBullets(screen *ebiten.Image) {
 	bullets := r.bulletUseCases.GetBullets()
 
 	for _, bullet := range bullets {
@@ -389,7 +395,7 @@ func (r *GameRendererAdapter) drawBullets(screen *ebiten.Image) {
 }
 
 // DrawAll отрисовывает все элементы игры
-func (r *GameRendererAdapter) DrawAll(screen *ebiten.Image) {
+func (r *StageRendererAdapter) DrawAll(screen *ebiten.Image) {
 	// Сначала отрисовываем серый фон экрана
 	r.drawScreenBackground(screen)
 	// Затем отрисовываем черный фон карты
@@ -410,8 +416,66 @@ func (r *GameRendererAdapter) DrawAll(screen *ebiten.Image) {
 	r.drawBlocksByAltitude(screen, types.AIR)
 }
 
+// DrawPauseOverlay отрисовывает экранную заставку паузы
+func (r *StageRendererAdapter) DrawPauseOverlay(screen *ebiten.Image) {
+	bounds := screen.Bounds()
+	width := float32(bounds.Dx())
+	height := float32(bounds.Dy())
+
+	vector.FillRect(
+		screen,
+		0,
+		0,
+		width,
+		height,
+		color.NRGBA{R: 0, G: 0, B: 0, A: 180},
+		false,
+	)
+
+	pauseFace := r.ensurePauseFontFace()
+	if pauseFace == nil {
+		return
+	}
+
+	message := "PAUSED"
+	textWidth, textHeight := text.Measure(message, pauseFace, 0)
+	x := (float64(bounds.Dx()) - textWidth) / 2
+	y := float64(bounds.Dy())/2 - textHeight/2
+
+	op := &text.DrawOptions{}
+	op.GeoM.Translate(x, y)
+	op.ColorScale.ScaleWithColor(color.White)
+
+	text.Draw(screen, message, pauseFace, op)
+}
+
+func (r *StageRendererAdapter) ensurePauseFontFace() text.Face {
+	if r.pauseFontFace != nil {
+		return r.pauseFontFace
+	}
+	if r.fontUseCases == nil {
+		return nil
+	}
+
+	baseFont, err := r.fontUseCases.GetFont()
+	if err != nil || baseFont == nil {
+		return nil
+	}
+
+	face, err := opentype.NewFace(baseFont, &opentype.FaceOptions{
+		Size: 32,
+		DPI:  72,
+	})
+	if err != nil {
+		return nil
+	}
+
+	r.pauseFontFace = text.NewGoXFace(face)
+	return r.pauseFontFace
+}
+
 // drawScreenBackground отрисовывает серый фон экрана
-func (r *GameRendererAdapter) drawScreenBackground(screen *ebiten.Image) {
+func (r *StageRendererAdapter) drawScreenBackground(screen *ebiten.Image) {
 	vector.FillRect(
 		screen,
 		0,
@@ -424,7 +488,7 @@ func (r *GameRendererAdapter) drawScreenBackground(screen *ebiten.Image) {
 }
 
 // drawMapBackground отрисовывает черный фон карты
-func (r *GameRendererAdapter) drawMapBackground(screen *ebiten.Image) {
+func (r *StageRendererAdapter) drawMapBackground(screen *ebiten.Image) {
 	vector.FillRect(
 		screen,
 		float32(r.mapOffsetX),
@@ -437,7 +501,7 @@ func (r *GameRendererAdapter) drawMapBackground(screen *ebiten.Image) {
 }
 
 // drawBlocksByAltitude отрисовывает блоки на определенном уровне высоты
-func (r *GameRendererAdapter) drawBlocksByAltitude(
+func (r *StageRendererAdapter) drawBlocksByAltitude(
 	screen *ebiten.Image,
 	altitude types.Altitude,
 ) {

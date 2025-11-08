@@ -6,9 +6,7 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
-	"golang.org/x/image/font/opentype"
 
-	"github.com/shpaker/gonflict/internal/interfaces"
 	"github.com/shpaker/gonflict/internal/types"
 	"github.com/shpaker/gonflict/internal/use_cases"
 )
@@ -17,48 +15,27 @@ import (
 type StageSelectRendererAdapter struct {
 	selector         *types.StageSelectorEntity
 	selectorUseCases *use_cases.StageSelectorUseCases
-	fontsRepository  interfaces.IFontsRepository
 	fontFace         text.Face
 	screenWidth      int
 	screenHeight     int
 }
 
 // NewStageSelectRendererAdapter создает новый экземпляр StageSelectRendererAdapter
-// Загружает шрифт PressStart2P через репозиторий и инициализирует адаптер
 func NewStageSelectRendererAdapter(
 	selector *types.StageSelectorEntity,
 	selectorUseCases *use_cases.StageSelectorUseCases,
-	fontsRepository interfaces.IFontsRepository,
+	fontFace text.Face,
 	screenWidth int,
 	screenHeight int,
 ) (*StageSelectRendererAdapter, error) {
-	// Загружаем шрифт PressStart2P через репозиторий
-	fontData, err := fontsRepository.GetFont("PressStart2P")
-	if err != nil {
-		return nil, fmt.Errorf("failed to get font from repository: %w", err)
+	if fontFace == nil {
+		return nil, fmt.Errorf("font face is nil")
 	}
-
-	tt, err := opentype.Parse(fontData)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse font: %w", err)
-	}
-
-	fontFace, err := opentype.NewFace(tt, &opentype.FaceOptions{
-		Size: 32,
-		DPI:  72,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to create font face: %w", err)
-	}
-
-	// Создаем text/v2 Face из font.Face
-	textFace := text.NewGoXFace(fontFace)
 
 	return &StageSelectRendererAdapter{
 		selector:         selector,
 		selectorUseCases: selectorUseCases,
-		fontsRepository:  fontsRepository,
-		fontFace:         textFace,
+		fontFace:         fontFace,
 		screenWidth:      screenWidth,
 		screenHeight:     screenHeight,
 	}, nil

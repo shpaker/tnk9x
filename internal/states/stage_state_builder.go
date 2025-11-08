@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/hajimehoshi/ebiten/v2"
 	lua "github.com/yuin/gopher-lua"
 
 	game "github.com/shpaker/gonflict/internal/adapters/game"
@@ -13,13 +14,14 @@ import (
 	collision_services "github.com/shpaker/gonflict/internal/services/collision_services"
 	"github.com/shpaker/gonflict/internal/types"
 	"github.com/shpaker/gonflict/internal/use_cases"
+	stateusecases "github.com/shpaker/gonflict/internal/use_cases/state_use_cases"
 	tank_use_cases "github.com/shpaker/gonflict/internal/use_cases/tank_use_cases"
 
 	"github.com/shpaker/gonflict/internal/types/session_entities"
 )
 
-// GameStateBuilder создает все компоненты GameState
-type GameStateBuilder struct {
+// StageStateBuilder создает все компоненты StageState
+type StageStateBuilder struct {
 	// Репозитории
 	mapsRepository    interfaces.IMapsDataRepository
 	scriptsRepository interfaces.IScriptsRepository
@@ -30,6 +32,9 @@ type GameStateBuilder struct {
 	config      interfaces.IConfigProvider
 	levelNumber int
 
+	// Шрифты
+	fontUseCases interfaces.IFontUseCases
+
 	// Карта уровня
 	mapEntity *types.MapEntity
 
@@ -39,10 +44,6 @@ type GameStateBuilder struct {
 	coordinateService        interfaces.ICoordinateService
 	tankBrakingService       interfaces.ITankBrakingService
 
-	// Временные адаптеры
-	tempRendererAdapter *game.GameRendererAdapter
-	tempInputAdapter    interfaces.IInputAdapter
-
 	// Lua Engine для AI (существует весь срок жизни App)
 	luaEngine interfaces.ILuaEngine
 
@@ -50,8 +51,8 @@ type GameStateBuilder struct {
 	session *session_entities.GameSessionEntity
 }
 
-// NewGameStateBuilder создает новый builder
-func NewGameStateBuilder(
+// NewStageStateBuilder создает новый builder
+func NewStageStateBuilder(
 	mapsRepository interfaces.IMapsDataRepository,
 	scriptsRepository interfaces.IScriptsRepository,
 	levelNumber int,
@@ -62,12 +63,11 @@ func NewGameStateBuilder(
 	wallCollisionService interfaces.IWallCollisionService,
 	coordinateService interfaces.ICoordinateService,
 	tankBrakingService interfaces.ITankBrakingService,
-	tempRendererAdapter *game.GameRendererAdapter,
-	tempInputAdapter interfaces.IInputAdapter,
+	fontUseCases interfaces.IFontUseCases,
 	luaEngine interfaces.ILuaEngine,
 	session *session_entities.GameSessionEntity,
-) *GameStateBuilder {
-	return &GameStateBuilder{
+) *StageStateBuilder {
+	return &StageStateBuilder{
 		mapsRepository:           mapsRepository,
 		scriptsRepository:        scriptsRepository,
 		gameRepository:           gameRepository,
@@ -78,15 +78,14 @@ func NewGameStateBuilder(
 		wallCollisionService:     wallCollisionService,
 		coordinateService:        coordinateService,
 		tankBrakingService:       tankBrakingService,
-		tempRendererAdapter:      tempRendererAdapter,
-		tempInputAdapter:         tempInputAdapter,
+		fontUseCases:             fontUseCases,
 		luaEngine:                luaEngine,
 		session:                  session,
 	}
 }
 
-// Build создает и возвращает новый экземпляр GameState
-func (b *GameStateBuilder) Build() (*GameState, error) {
+// Build создает и возвращает новый экземпляр StageState
+func (b *StageStateBuilder) Build() (*StageState, error) {
 	// Загружаем уровень
 	if err := b.loadLevel(); err != nil {
 		return nil, err
@@ -231,8 +230,92 @@ func (b *GameStateBuilder) Build() (*GameState, error) {
 
 	tankLifecycleUseCases.SetCollisionUseCases(collisionUseCases)
 
-	// Собираем финальный GameState
-	gameState := b.buildGameState(
+	stageUseCasesValue := stateusecases.NewStageUseCases(
+		tankLifecycleUseCases,
+		tankCommonUseCases,
+		bulletUseCases,
+		collisionUseCases,
+		enemyInputAdapter,
+		hqUseCases,
+		hq,
+	)
+	stageUseCases := &stageUseCasesValue
+
+	// Создаем адаптер ввода игрока
+	inputAdapter := input_adapters.NewStageKeyboardInputAdapter(
+		tankActionsUseCases,
+		nil,
+		stageUseCases,
+		ebiten.KeyW,
+		ebiten.KeyS,
+		ebiten.KeyA,
+		ebiten.KeyD,
+		ebiten.KeySpace,
+		ebiten.KeyP,
+	)
+
+	// Создаем TilesUseCases для рендера
+	renderAnimationService := services.NewAnimationService()
+	mapTilesUseCases := use_cases.NewTilesUseCases(
+		b.tilesetRegistry.Blocks(),
+		services.NewTileService(b.tilesetRegistry.Blocks()),
+		renderAnimationService,
+	)
+	playerTilesUseCases := use_cases.NewTilesUseCases(
+		b.tilesetRegistry.Player(),
+		services.NewTileService(b.tilesetRegistry.Player()),
+		renderAnimationService,
+	)
+	bulletTilesUseCases := use_cases.NewTilesUseCases(
+		b.tilesetRegistry.Bullet(),
+		services.NewTileService(b.tilesetRegistry.Bullet()),
+		renderAnimationService,
+	)
+	spawnerTilesUseCases := use_cases.NewTilesUseCases(
+		b.tilesetRegistry.Spawner(),
+		services.NewTileService(b.tilesetRegistry.Spawner()),
+		renderAnimationService,
+	)
+	explosionTilesUseCases := use_cases.NewTilesUseCases(
+		b.tilesetRegistry.Explosion(),
+		services.NewTileService(b.tilesetRegistry.Explosion()),
+		renderAnimationService,
+	)
+	hqTilesUseCasesForRenderer := use_cases.NewTilesUseCases(
+		b.tilesetRegistry.HQ(),
+		services.NewTileService(b.tilesetRegistry.HQ()),
+		renderAnimationService,
+	)
+
+	mapOffsets := b.config.GetMapOffsets()
+	mapOffsetX := int(mapOffsets[0])
+	mapOffsetY := int(mapOffsets[1])
+	mapBlocksCount := b.config.GetMapBlocksCount()
+	mapWidthHeightForAdapter := mapBlocksCount.Width * int(
+		b.config.GetTileBaseSize(),
+	)
+
+	rendererAdapter := game.NewStageRendererAdapter(
+		mapUseCases,
+		tankCommonUseCases,
+		tankRenderUseCases,
+		bulletUseCases,
+		mapTilesUseCases,
+		playerTilesUseCases,
+		bulletTilesUseCases,
+		spawnerTilesUseCases,
+		explosionTilesUseCases,
+		hqTilesUseCasesForRenderer,
+		hqUseCases,
+		b.fontUseCases,
+		int(b.config.GetTileBaseSize()),
+		mapOffsetX,
+		mapOffsetY,
+		mapWidthHeightForAdapter,
+	)
+
+	// Собираем финальный StageState
+	stageState := b.buildStageState(
 		hq,
 		hqUseCases,
 		tankActionsUseCases,
@@ -246,11 +329,15 @@ func (b *GameStateBuilder) Build() (*GameState, error) {
 		enemyInputAdapter,
 	)
 
-	return gameState, nil
+	stageState.InputAdapter = inputAdapter
+	stageState.RendererAdapter = rendererAdapter
+	stageState.stageUseCases = stageUseCases
+
+	return stageState, nil
 }
 
 // loadLevel загружает уровень и заполняет репозиторий блоков
-func (b *GameStateBuilder) loadLevel() error {
+func (b *StageStateBuilder) loadLevel() error {
 	tileBaseSize := int(b.config.GetTileBaseSize())
 	mapEntity, err := b.mapsRepository.GetLevel(b.levelNumber, tileBaseSize)
 	if err != nil {
@@ -262,7 +349,7 @@ func (b *GameStateBuilder) loadLevel() error {
 }
 
 // buildTileServices создает сервисы для тайлов и анимаций
-func (b *GameStateBuilder) buildTileServices() (*use_cases.TilesUseCases, error) {
+func (b *StageStateBuilder) buildTileServices() (*use_cases.TilesUseCases, error) {
 	tileService := services.NewTileServiceWithSpecialRepos(
 		b.tilesetRegistry.Player(),
 		b.tilesetRegistry.Spawner(),
@@ -283,7 +370,7 @@ func (b *GameStateBuilder) buildTileServices() (*use_cases.TilesUseCases, error)
 }
 
 // buildBulletUseCases создает Use Cases для пуль
-func (b *GameStateBuilder) buildBulletUseCases() (*use_cases.BulletUseCases, uint, error) {
+func (b *StageStateBuilder) buildBulletUseCases() (*use_cases.BulletUseCases, uint, error) {
 	baseSizePx := b.config.GetBaseSizePx()
 
 	bulletTileService := services.NewTileService(b.tilesetRegistry.Bullet())
@@ -303,7 +390,7 @@ func (b *GameStateBuilder) buildBulletUseCases() (*use_cases.BulletUseCases, uin
 }
 
 // createHQ создает базу из конфига
-func (b *GameStateBuilder) createHQ(
+func (b *StageStateBuilder) createHQ(
 	tilesUseCases *use_cases.TilesUseCases,
 	baseSizePx uint,
 ) *types.HQEntity {
@@ -337,7 +424,7 @@ func (b *GameStateBuilder) createHQ(
 }
 
 // buildCollisionServices создает сервисы коллизий
-func (b *GameStateBuilder) buildCollisionServices(
+func (b *StageStateBuilder) buildCollisionServices(
 	bulletUseCases *use_cases.BulletUseCases,
 	playerTankActions interfaces.ITankActionsUseCases,
 	mapUseCases *use_cases.MapUseCases,
@@ -379,8 +466,8 @@ func (b *GameStateBuilder) buildCollisionServices(
 	return collisionUseCases, hqUseCases, nil
 }
 
-// buildGameState собирает финальный GameState
-func (b *GameStateBuilder) buildGameState(
+// buildStageState собирает финальный StageState
+func (b *StageStateBuilder) buildStageState(
 	hq *types.HQEntity,
 	hqUseCases interfaces.IHQUseCases,
 	tankActionsUseCases interfaces.ITankActionsUseCases,
@@ -392,8 +479,8 @@ func (b *GameStateBuilder) buildGameState(
 	collisionUseCases *use_cases.CollisionUseCases,
 	tilesUseCasesWithAnimations *use_cases.TilesUseCases,
 	enemyInputAdapter interfaces.IAiInputAdapter,
-) *GameState {
-	return &GameState{
+) *StageState {
+	return &StageState{
 		HQEntity:              hq,
 		HQUseCases:            hqUseCases,
 		TankActionsUseCases:   tankActionsUseCases,
@@ -404,10 +491,11 @@ func (b *GameStateBuilder) buildGameState(
 		MapUseCases:           mapUseCases,
 		CollisionUseCases:     collisionUseCases,
 		TilesUseCases:         tilesUseCasesWithAnimations,
-		InputAdapter:          b.tempInputAdapter,
-		RendererAdapter:       b.tempRendererAdapter,
+		InputAdapter:          nil,
+		RendererAdapter:       nil,
 		EnemyInputAdapter:     enemyInputAdapter,
 		StartTime:             time.Now(),
 		Session:               b.session,
+		stageUseCases:         nil,
 	}
 }

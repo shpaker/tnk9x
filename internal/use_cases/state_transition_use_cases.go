@@ -34,7 +34,7 @@ func (uc *StateTransitionUseCases) ToGame(
 	// Обновляем уровень и целевое состояние в сессии
 	if session != nil {
 		session.Level = int(levelNumber)
-		targetState := types.StateTypeGame
+		targetState := types.StateTypeStage
 		session.SetTargetState(&targetState)
 	}
 	return session

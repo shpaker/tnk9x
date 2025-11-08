@@ -13,9 +13,9 @@ import (
 	"github.com/shpaker/gonflict/internal/types/session_entities"
 )
 
-// GameState представляет игровое состояние уровня
+// StageState представляет состояние уровня
 // Объединяет логику управления игровыми объектами и интеграцию с Ebiten
-type GameState struct {
+type StageState struct {
 	// Entities
 	HQEntity *types.HQEntity
 
@@ -25,14 +25,14 @@ type GameState struct {
 	TankCommonUseCases    interfaces.ITankCommonUseCases    // Общий use case для движения танков
 	TankRenderUseCases    interfaces.ITankRenderUseCases    // Общий use case для рендеринга танков
 	TankLifecycleUseCases interfaces.ITankLifecycleUseCases // Use case для жизненного цикла и спавна
-	BulletUseCases        *use_cases.BulletUseCases
+	BulletUseCases        interfaces.IBulletUseCases
 	MapUseCases           *use_cases.MapUseCases
 	CollisionUseCases     *use_cases.CollisionUseCases
 	TilesUseCases         *use_cases.TilesUseCases
 
 	// Адаптеры
 	InputAdapter      interfaces.IInputAdapter
-	RendererAdapter   *game.GameRendererAdapter
+	RendererAdapter   *game.StageRendererAdapter
 	EnemyInputAdapter interfaces.IAiInputAdapter // AI адаптер врагов
 
 	// Метаданные
@@ -41,26 +41,28 @@ type GameState struct {
 
 	// Сессия
 	Session *session_entities.GameSessionEntity
+
+	// Use cases
+	stageUseCases interfaces.IStageUseCases
 }
 
-// NewGameState создает новое состояние игры через билдер
-func NewGameState(
+// NewStageState создает новое состояние уровня через билдер
+func NewStageState(
 	mapsRepository interfaces.IMapsDataRepository,
 	scriptsRepository interfaces.IScriptsRepository,
 	levelNumber int,
 	tilesetRegistry interfaces.ITilesetRepositoryRegistry,
 	config interfaces.IConfigProvider,
+	fontUseCases interfaces.IFontUseCases,
 	gameRepository interfaces.IGameRepositoriesRegistry,
 	boundaryCollisionService interfaces.IBoundaryCollisionService,
 	wallCollisionService interfaces.IWallCollisionService,
 	coordinateService interfaces.ICoordinateService,
 	tankBrakingService interfaces.ITankBrakingService,
-	rendererAdapter *game.GameRendererAdapter,
-	inputAdapter interfaces.IInputAdapter,
 	luaEngine interfaces.ILuaEngine,
 	session *session_entities.GameSessionEntity,
-) (*GameState, error) {
-	builder := NewGameStateBuilder(
+) (*StageState, error) {
+	builder := NewStageStateBuilder(
 		mapsRepository,
 		scriptsRepository,
 		levelNumber,
@@ -71,8 +73,7 @@ func NewGameState(
 		wallCollisionService,
 		coordinateService,
 		tankBrakingService,
-		rendererAdapter,
-		inputAdapter,
+		fontUseCases,
 		luaEngine,
 		session,
 	)
@@ -80,53 +81,23 @@ func NewGameState(
 }
 
 // SetUp запускается один раз на старте состояния
-func (state *GameState) SetUp() {
-	if state.TankLifecycleUseCases == nil {
+func (state *StageState) SetUp() {
+	if state.stageUseCases == nil {
 		return
 	}
-	state.spawnPlayerTank()
-	state.spawnEnemyTanks()
-}
-
-func (state *GameState) spawnPlayerTank() {
-	playerTank, err := state.TankLifecycleUseCases.SpawnPlayer1()
-	if err != nil {
-		_ = err
-		return
-	}
-
-	if playerTank == nil {
-		return
-	}
-
-	if state.InputAdapter != nil {
+	playerTank := state.stageUseCases.SpawnPlayerTank()
+	if playerTank != nil && state.InputAdapter != nil {
 		if keyboardAdapter, ok := state.InputAdapter.(interface {
 			SetPlayerTank(*types.TankEntity)
 		}); ok {
 			keyboardAdapter.SetPlayerTank(playerTank)
 		}
 	}
-}
-
-func (state *GameState) spawnEnemyTanks() {
-	enemies, err := state.TankLifecycleUseCases.OnStageSetUpEnemiesSpawn()
-	if err != nil {
-		_ = err
-		return
-	}
-
-	for _, enemy := range enemies {
-		if enemy == nil {
-			continue
-		}
-		if state.EnemyInputAdapter != nil {
-			state.EnemyInputAdapter.AddTank(enemy)
-		}
-	}
+	state.stageUseCases.SpawnEnemyTanks()
 }
 
 // Update обновляет состояние игры (вызывается Ebiten каждый кадр)
-func (state *GameState) Update() {
+func (state *StageState) Update() {
 	// Вызываем SetUp один раз на старте состояния
 	if !state.isSetUp {
 		state.SetUp()
@@ -142,52 +113,35 @@ func (state *GameState) Update() {
 		dt = 1.0 / 60.0 // Fallback если TPS равен 0
 	}
 
+	// Обновляем ввод
+	if state.InputAdapter != nil {
+		state.InputAdapter.Update(dt)
+	}
+
+	paused := state.stageUseCases != nil && state.stageUseCases.IsPaused()
+
 	// Обновляем жизненный цикл танков (спавн и взрыв)
-	if state.TankLifecycleUseCases != nil {
+	if state.TankLifecycleUseCases != nil && !paused {
 		spawned, _ := state.TankLifecycleUseCases.UpdateAllTanksLifecycle()
 		if spawned != nil && state.EnemyInputAdapter != nil {
 			state.EnemyInputAdapter.AddTank(spawned)
 		}
 	}
 
-	// Обновляем ввод
-	state.InputAdapter.Update(dt)
-
 	// Обновляем игровые объекты (танки, пули, коллизии, AI)
-	state.updateGameObjects(dt)
+	if state.stageUseCases != nil {
+		state.stageUseCases.UpdateGameObjects(dt)
+	}
 
 	// Обновляем все анимации
-	if state.TilesUseCases != nil {
+	if !paused && state.TilesUseCases != nil {
 		state.TilesUseCases.UpdateAnimations()
 	}
 }
 
-func (state *GameState) Draw(screen *ebiten.Image) {
+func (state *StageState) Draw(screen *ebiten.Image) {
 	state.RendererAdapter.DrawAll(screen)
-}
-
-// updateGameObjects обновляет игровые объекты (танки, пули, коллизии, AI)
-func (state *GameState) updateGameObjects(dt float64) {
-	// Обновляем все танки (игрок + враги) через use cases
-	if state.TankCommonUseCases != nil {
-		if err := state.TankCommonUseCases.UpdateAllTanks(dt); err != nil {
-			_ = err
-		}
-	}
-
-	// Обновляем пули
-	_ = state.BulletUseCases.UpdateBullets(dt)
-
-	// Проверяем коллизии ПОСЛЕ движения всех объектов
-	state.CollisionUseCases.UpdateCollisions()
-
-	// Обновляем AI адаптер врагов ПОСЛЕ коллизий, чтобы AI видел актуальное состояние танков
-	if state.EnemyInputAdapter != nil {
-		state.EnemyInputAdapter.Update(dt)
-	}
-
-	// Проверяем завершение анимации взрыва базы
-	if state.HQUseCases != nil {
-		state.HQUseCases.IsExplosionFinished(state.HQEntity)
+	if state.stageUseCases != nil && state.stageUseCases.IsPaused() {
+		state.RendererAdapter.DrawPauseOverlay(screen)
 	}
 }
