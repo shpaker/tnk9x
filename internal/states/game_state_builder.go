@@ -14,6 +14,8 @@ import (
 	"github.com/shpaker/gonflict/internal/types"
 	"github.com/shpaker/gonflict/internal/use_cases"
 	tank_use_cases "github.com/shpaker/gonflict/internal/use_cases/tank_use_cases"
+
+	"github.com/shpaker/gonflict/internal/types/session_entities"
 )
 
 // GameStateBuilder создает все компоненты GameState
@@ -45,7 +47,7 @@ type GameStateBuilder struct {
 	luaEngine interfaces.ILuaEngine
 
 	// Сессия
-	session *types.GameSessionEntity
+	session *session_entities.GameSessionEntity
 }
 
 // NewGameStateBuilder создает новый builder
@@ -63,7 +65,7 @@ func NewGameStateBuilder(
 	tempRendererAdapter *game.GameRendererAdapter,
 	tempInputAdapter interfaces.IInputAdapter,
 	luaEngine interfaces.ILuaEngine,
-	session *types.GameSessionEntity,
+	session *session_entities.GameSessionEntity,
 ) *GameStateBuilder {
 	return &GameStateBuilder{
 		mapsRepository:           mapsRepository,

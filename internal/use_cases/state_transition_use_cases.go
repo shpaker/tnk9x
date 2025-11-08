@@ -2,6 +2,7 @@ package use_cases
 
 import (
 	"github.com/shpaker/gonflict/internal/types"
+	"github.com/shpaker/gonflict/internal/types/session_entities"
 )
 
 // StateTransitionUseCases реализация для управления переходами между состояниями
@@ -16,8 +17,8 @@ func NewStateTransitionUseCases() *StateTransitionUseCases {
 
 // ToStageSelect создает переход к состоянию выбора уровня
 func (uc *StateTransitionUseCases) ToStageSelect(
-	session *types.GameSessionEntity,
-) *types.GameSessionEntity {
+	session *session_entities.GameSessionEntity,
+) *session_entities.GameSessionEntity {
 	if session != nil {
 		targetState := types.StateTypeStageSelect
 		session.SetTargetState(&targetState)
@@ -27,9 +28,9 @@ func (uc *StateTransitionUseCases) ToStageSelect(
 
 // ToGame создает переход к игровому состоянию на указанный уровень
 func (uc *StateTransitionUseCases) ToGame(
-	session *types.GameSessionEntity,
+	session *session_entities.GameSessionEntity,
 	levelNumber uint,
-) *types.GameSessionEntity {
+) *session_entities.GameSessionEntity {
 	// Обновляем уровень и целевое состояние в сессии
 	if session != nil {
 		session.Level = int(levelNumber)

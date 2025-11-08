@@ -8,6 +8,8 @@ import (
 	"github.com/shpaker/gonflict/internal/interfaces"
 	"github.com/shpaker/gonflict/internal/types"
 	"github.com/shpaker/gonflict/internal/use_cases"
+
+	"github.com/shpaker/gonflict/internal/types/session_entities"
 )
 
 // StageSelectState представляет состояние выбора уровня
@@ -16,7 +18,7 @@ type StageSelectState struct {
 	selector           *types.StageSelectorEntity
 	selectorUseCases   *use_cases.StageSelectorUseCases
 	transitionUseCases *use_cases.StateTransitionUseCases
-	session            *types.GameSessionEntity
+	session            *session_entities.GameSessionEntity
 	inputAdapter       *stage_select.StageSelectKeyboardInputAdapter
 	rendererAdapter    *stage_select.StageSelectRendererAdapter
 	isSetUp            bool // Флаг для отслеживания, был ли вызван SetUp
@@ -27,7 +29,7 @@ func NewStageSelectState(
 	config interfaces.IConfigProvider,
 	selectorUseCases *use_cases.StageSelectorUseCases,
 	transitionUseCases *use_cases.StateTransitionUseCases,
-	session *types.GameSessionEntity,
+	session *session_entities.GameSessionEntity,
 	fontsRepository interfaces.IFontsRepository,
 	mapsRepository interfaces.IMapsDataRepository,
 ) (*StageSelectState, error) {

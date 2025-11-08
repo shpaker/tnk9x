@@ -20,13 +20,15 @@ import (
 	"github.com/shpaker/gonflict/internal/states"
 	"github.com/shpaker/gonflict/internal/types"
 	"github.com/shpaker/gonflict/internal/use_cases"
+
+	"github.com/shpaker/gonflict/internal/types/session_entities"
 )
 
 type App struct {
 	config    *Config
 	State     interfaces.IState
-	luaEngine interfaces.ILuaEngine    // Lua Engine для AI (существует весь срок жизни App)
-	session   *types.GameSessionEntity // Сессия игры
+	luaEngine interfaces.ILuaEngine               // Lua Engine для AI (существует весь срок жизни App)
+	session   *session_entities.GameSessionEntity // Сессия игры
 }
 
 // ebiten game interface
@@ -98,7 +100,7 @@ func New(cfg *Config) *App {
 	luaEngine := ai.NewLuaEngine()
 
 	// Создаем GameSessionEntity
-	session := types.NewGameSessionEntity()
+	session := session_entities.NewGameSessionEntity()
 
 	// Создаем Use Cases для выбор уровня
 	stageSelectorUseCases := use_cases.NewStageSelectorUseCases()
@@ -128,7 +130,7 @@ func New(cfg *Config) *App {
 
 // createStateFromTarget создает состояние на основе TargetState
 func (app *App) createStateFromTarget(
-	session *types.GameSessionEntity,
+	session *session_entities.GameSessionEntity,
 	targetState *types.StateType,
 ) (interfaces.IState, error) {
 	if targetState == nil {
@@ -147,7 +149,7 @@ func (app *App) createStateFromTarget(
 
 // createGameState создает игровое состояние
 func (app *App) createGameState(
-	session *types.GameSessionEntity,
+	session *session_entities.GameSessionEntity,
 ) (interfaces.IState, error) {
 	// Создаем все необходимые зависимости для GameState
 	fileRepository := raw.NewFileRepository("assets")
@@ -319,7 +321,7 @@ func (app *App) createGameState(
 
 // createStageSelectState создает состояние выбора уровня
 func (app *App) createStageSelectState(
-	session *types.GameSessionEntity,
+	session *session_entities.GameSessionEntity,
 ) (interfaces.IState, error) {
 	fileRepository := raw.NewFileRepository("assets")
 

@@ -9,6 +9,8 @@ import (
 	"github.com/shpaker/gonflict/internal/interfaces"
 	"github.com/shpaker/gonflict/internal/types"
 	"github.com/shpaker/gonflict/internal/use_cases"
+
+	"github.com/shpaker/gonflict/internal/types/session_entities"
 )
 
 // GameState представляет игровое состояние уровня
@@ -38,7 +40,7 @@ type GameState struct {
 	isSetUp   bool // Флаг для отслеживания, был ли вызван SetUp
 
 	// Сессия
-	Session *types.GameSessionEntity
+	Session *session_entities.GameSessionEntity
 }
 
 // NewGameState создает новое состояние игры через билдер
@@ -56,7 +58,7 @@ func NewGameState(
 	rendererAdapter *game.GameRendererAdapter,
 	inputAdapter interfaces.IInputAdapter,
 	luaEngine interfaces.ILuaEngine,
-	session *types.GameSessionEntity,
+	session *session_entities.GameSessionEntity,
 ) (*GameState, error) {
 	builder := NewGameStateBuilder(
 		mapsRepository,
