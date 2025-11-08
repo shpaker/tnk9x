@@ -7,50 +7,9 @@ on:
     branches: [ main, develop ]
 
 jobs:
-  setup:
-    name: Setup
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v4
-        with:
-          go-version: '1.24.3'
-
-      - name: Setup Just
-        uses: extractions/setup-just@v3
-
-      - name: Cache Go modules
-        id: cache-go-modules
-        uses: actions/cache@v3
-        with:
-          path: ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-
-      - name: Cache Go tools
-        id: cache-go-tools
-        uses: actions/cache@v3
-        with:
-          path: ~/go/bin
-          key: ${{ runner.os }}-go-tools-v1
-          restore-keys: |
-            ${{ runner.os }}-go-tools-
-
-      - name: Download dependencies
-        run: just deps
-
-      - name: Install development tools
-        if: steps.cache-go-tools.outputs.cache-hit != 'true'
-        run: just install-tools
-
   format:
     name: Format Check
     runs-on: ubuntu-latest
-    needs: setup
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -63,28 +22,10 @@ jobs:
       - name: Setup Just
         uses: extractions/setup-just@v3
 
-      - name: Cache Go modules
-        uses: actions/cache@v3
-        with:
-          path: ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-
-      - name: Cache Go tools
-        id: cache-go-tools
-        uses: actions/cache@v3
-        with:
-          path: ~/go/bin
-          key: ${{ runner.os }}-go-tools-v1
-          restore-keys: |
-            ${{ runner.os }}-go-tools-
-
       - name: Download dependencies
         run: just deps
 
-      - name: Install development tools
-        if: steps.cache-go-tools.outputs.cache-hit != 'true'
+      - name: Install tools
         run: just install-tools
 
       - name: Check formatting
@@ -93,7 +34,6 @@ jobs:
   lint:
     name: Linter
     runs-on: ubuntu-latest
-    needs: setup
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -106,28 +46,10 @@ jobs:
       - name: Setup Just
         uses: extractions/setup-just@v3
 
-      - name: Cache Go modules
-        uses: actions/cache@v3
-        with:
-          path: ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-
-      - name: Cache Go tools
-        id: cache-go-tools
-        uses: actions/cache@v3
-        with:
-          path: ~/go/bin
-          key: ${{ runner.os }}-go-tools-v1
-          restore-keys: |
-            ${{ runner.os }}-go-tools-
-
       - name: Download dependencies
         run: just deps
 
-      - name: Install development tools
-        if: steps.cache-go-tools.outputs.cache-hit != 'true'
+      - name: Install tools
         run: just install-tools
 
       - name: Run linter
@@ -136,7 +58,6 @@ jobs:
   test:
     name: Tests
     runs-on: ubuntu-latest
-    needs: setup
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -149,16 +70,11 @@ jobs:
       - name: Setup Just
         uses: extractions/setup-just@v3
 
-      - name: Cache Go modules
-        uses: actions/cache@v3
-        with:
-          path: ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-
       - name: Download dependencies
         run: just deps
+
+      - name: Install tools
+        run: just install-tools
 
       - name: Run tests
         run: just test
@@ -179,16 +95,11 @@ jobs:
       - name: Setup Just
         uses: extractions/setup-just@v3
 
-      - name: Cache Go modules
-        uses: actions/cache@v3
-        with:
-          path: ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-
       - name: Download dependencies
         run: just deps
+
+      - name: Install tools
+        run: just install-tools
 
       - name: Build application
         run: just build
