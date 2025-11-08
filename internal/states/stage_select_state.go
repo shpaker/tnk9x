@@ -16,7 +16,7 @@ type StageSelectState struct {
 	selector           *types.StageSelectorEntity
 	selectorUseCases   *use_cases.StageSelectorUseCases
 	transitionUseCases *use_cases.StateTransitionUseCases
-	session            *types.SessionEntity
+	session            *types.GameSessionEntity
 	inputAdapter       *stage_select.StageSelectKeyboardInputAdapter
 	rendererAdapter    *stage_select.StageSelectRendererAdapter
 	isSetUp            bool // Флаг для отслеживания, был ли вызван SetUp
@@ -27,7 +27,7 @@ func NewStageSelectState(
 	config interfaces.IConfigProvider,
 	selectorUseCases *use_cases.StageSelectorUseCases,
 	transitionUseCases *use_cases.StateTransitionUseCases,
-	session *types.SessionEntity,
+	session *types.GameSessionEntity,
 	fontsRepository interfaces.IFontsRepository,
 	mapsRepository interfaces.IMapsDataRepository,
 ) (*StageSelectState, error) {

@@ -45,7 +45,7 @@ type GameStateBuilder struct {
 	luaEngine interfaces.ILuaEngine
 
 	// Сессия
-	session *types.SessionEntity
+	session *types.GameSessionEntity
 }
 
 // NewGameStateBuilder создает новый builder
@@ -63,7 +63,7 @@ func NewGameStateBuilder(
 	tempRendererAdapter *game.GameRendererAdapter,
 	tempInputAdapter interfaces.IInputAdapter,
 	luaEngine interfaces.ILuaEngine,
-	session *types.SessionEntity,
+	session *types.GameSessionEntity,
 ) *GameStateBuilder {
 	return &GameStateBuilder{
 		mapsRepository:           mapsRepository,

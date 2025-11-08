@@ -25,8 +25,8 @@ import (
 type App struct {
 	config    *Config
 	State     interfaces.IState
-	luaEngine interfaces.ILuaEngine // Lua Engine для AI (существует весь срок жизни App)
-	session   *types.SessionEntity  // Сессия игры
+	luaEngine interfaces.ILuaEngine    // Lua Engine для AI (существует весь срок жизни App)
+	session   *types.GameSessionEntity // Сессия игры
 }
 
 // ebiten game interface
@@ -97,8 +97,8 @@ func New(cfg *Config) *App {
 	// Создаем Lua engine для AI (общий для всех GameState, существует весь срок жизни App)
 	luaEngine := ai.NewLuaEngine()
 
-	// Создаем SessionEntity
-	session := types.NewSessionEntity()
+	// Создаем GameSessionEntity
+	session := types.NewGameSessionEntity()
 
 	// Создаем Use Cases для выбор уровня
 	stageSelectorUseCases := use_cases.NewStageSelectorUseCases()
@@ -128,7 +128,7 @@ func New(cfg *Config) *App {
 
 // createStateFromTarget создает состояние на основе TargetState
 func (app *App) createStateFromTarget(
-	session *types.SessionEntity,
+	session *types.GameSessionEntity,
 	targetState *types.StateType,
 ) (interfaces.IState, error) {
 	if targetState == nil {
@@ -147,7 +147,7 @@ func (app *App) createStateFromTarget(
 
 // createGameState создает игровое состояние
 func (app *App) createGameState(
-	session *types.SessionEntity,
+	session *types.GameSessionEntity,
 ) (interfaces.IState, error) {
 	// Создаем все необходимые зависимости для GameState
 	fileRepository := raw.NewFileRepository("assets")
@@ -319,7 +319,7 @@ func (app *App) createGameState(
 
 // createStageSelectState создает состояние выбора уровня
 func (app *App) createStageSelectState(
-	session *types.SessionEntity,
+	session *types.GameSessionEntity,
 ) (interfaces.IState, error) {
 	fileRepository := raw.NewFileRepository("assets")
 

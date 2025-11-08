@@ -16,8 +16,8 @@ func NewStateTransitionUseCases() *StateTransitionUseCases {
 
 // ToStageSelect создает переход к состоянию выбора уровня
 func (uc *StateTransitionUseCases) ToStageSelect(
-	session *types.SessionEntity,
-) *types.SessionEntity {
+	session *types.GameSessionEntity,
+) *types.GameSessionEntity {
 	if session != nil {
 		targetState := types.StateTypeStageSelect
 		session.SetTargetState(&targetState)
@@ -27,9 +27,9 @@ func (uc *StateTransitionUseCases) ToStageSelect(
 
 // ToGame создает переход к игровому состоянию на указанный уровень
 func (uc *StateTransitionUseCases) ToGame(
-	session *types.SessionEntity,
+	session *types.GameSessionEntity,
 	levelNumber uint,
-) *types.SessionEntity {
+) *types.GameSessionEntity {
 	// Обновляем уровень и целевое состояние в сессии
 	if session != nil {
 		session.Level = int(levelNumber)

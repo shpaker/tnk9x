@@ -38,7 +38,7 @@ type GameState struct {
 	isSetUp   bool // Флаг для отслеживания, был ли вызван SetUp
 
 	// Сессия
-	Session *types.SessionEntity
+	Session *types.GameSessionEntity
 }
 
 // NewGameState создает новое состояние игры через билдер
@@ -56,7 +56,7 @@ func NewGameState(
 	rendererAdapter *game.GameRendererAdapter,
 	inputAdapter interfaces.IInputAdapter,
 	luaEngine interfaces.ILuaEngine,
-	session *types.SessionEntity,
+	session *types.GameSessionEntity,
 ) (*GameState, error) {
 	builder := NewGameStateBuilder(
 		mapsRepository,
