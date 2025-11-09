@@ -45,7 +45,7 @@ jobs:
         run: |
           $tag = "${{ github.ref_name }}"
           $suffix = if ("${{ matrix.build_type }}" -eq "prod") { "prod" } else { "debug" }
-          $zipName = \"bc_${suffix}_$tag.zip\"
+          $zipName = "bc_${suffix}_$tag.zip"
 
           New-Item -ItemType Directory -Force -Path package | Out-Null
           Copy-Item dist/gonflict.exe package/
