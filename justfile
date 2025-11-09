@@ -28,7 +28,7 @@ build-macos:
     echo "Building macOS (Apple Silicon) release $VERSION -> $out_dir/$release_output"
     GOOS="darwin" GOARCH="arm64" CGO_ENABLED=1 {{gocmd}} build -trimpath -ldflags "-s -w -X github.com/shpaker/gonflict/internal.Version=${VERSION}" -o "$out_dir/$release_output" ./cmd
     echo "Building macOS (Apple Silicon) debug $VERSION -> $out_dir/$debug_output"
-    GOOS="darwin" GOARCH="arm64" CGO_ENABLED=1 {{gocmd}} build -ldflags "-X github.com/shpaker/gonflict/internal.Version=${VERSION} -X github.com/shpaker/gonflict/internal.Debug=true" -o "$out_dir/$debug_output" ./cmd
+    GOOS="darwin" GOARCH="arm64" CGO_ENABLED=1 {{gocmd}} build -ldflags "-X github.com/shpaker/gonflict/internal.Version=${VERSION} -X github.com/shpaker/gonflict/internal.DebugFlag=true" -o "$out_dir/$debug_output" ./cmd
     echo "macOS builds stored in $out_dir"
 
 build-windows:
@@ -43,7 +43,7 @@ build-windows:
     echo "Building Windows (x64) release $VERSION -> $out_dir/$release_output"
     GOOS="windows" GOARCH="amd64" CGO_ENABLED=0 {{gocmd}} build -trimpath -ldflags "-s -w -X github.com/shpaker/gonflict/internal.Version=${VERSION}" -o "$out_dir/$release_output" ./cmd
     echo "Building Windows (x64) debug $VERSION -> $out_dir/$debug_output"
-    GOOS="windows" GOARCH="amd64" CGO_ENABLED=0 {{gocmd}} build -ldflags "-X github.com/shpaker/gonflict/internal.Version=${VERSION} -X github.com/shpaker/gonflict/internal.Debug=true" -o "$out_dir/$debug_output" ./cmd
+    GOOS="windows" GOARCH="amd64" CGO_ENABLED=0 {{gocmd}} build -ldflags "-X github.com/shpaker/gonflict/internal.Version=${VERSION} -X github.com/shpaker/gonflict/internal.DebugFlag=true" -o "$out_dir/$debug_output" ./cmd
     echo "Windows builds stored in $out_dir"
 
 build-all: build-macos build-windows

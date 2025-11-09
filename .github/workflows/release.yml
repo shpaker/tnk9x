@@ -32,7 +32,7 @@ jobs:
         env:
           GOOS: windows
           GOARCH: amd64
-        run: go build -ldflags "-X github.com/shpaker/gonflict/internal.Version=$env:APP_VERSION -X github.com/shpaker/gonflict/internal.Debug=true" -o dist/gonflict.exe ./cmd
+        run: go build -ldflags "-X github.com/shpaker/gonflict/internal.Version=$env:APP_VERSION -X github.com/shpaker/gonflict/internal.DebugFlag=true" -o dist/gonflict.exe ./cmd
 
       - name: Build Windows executable (production)
         if: matrix.build_type == 'prod'

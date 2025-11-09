@@ -4,4 +4,13 @@ package internal
 var Version = "dev"
 
 // Debug определяет, включен ли режим отладки.
-var Debug bool = false
+var Debug bool
+
+// DebugFlag используется для установки режима отладки через ldflags.
+var DebugFlag = "false"
+
+func init() {
+	if DebugFlag == "true" {
+		Debug = true
+	}
+}
