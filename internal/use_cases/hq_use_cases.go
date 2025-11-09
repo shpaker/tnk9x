@@ -78,3 +78,12 @@ func (uc *HQUseCases) IsExplosionFinished(hq *types.HQEntity) {
 func (uc *HQUseCases) GetHQ() *types.HQEntity {
 	return uc.hq
 }
+
+// IsDestroyed возвращает true, если база уничтожена
+func (uc *HQUseCases) IsDestroyed() bool {
+	if uc == nil || uc.hq == nil {
+		return false
+	}
+
+	return uc.hq.IsDestroyed()
+}

@@ -143,6 +143,22 @@ func (uc *TankLifecycleUseCases) SpawnPlayer1() (*types.TankEntity, error) {
 	return &tank, nil
 }
 
+// GetPlayerTank возвращает танк игрока из репозитория
+func (uc *TankLifecycleUseCases) GetPlayerTank() *types.TankEntity {
+	if uc.tanksRepository == nil {
+		return nil
+	}
+	return uc.tanksRepository.GetPlayer()
+}
+
+// SetPlayerTank устанавливает танк игрока в репозитории
+func (uc *TankLifecycleUseCases) SetPlayerTank(tank *types.TankEntity) {
+	if uc.tanksRepository == nil {
+		return
+	}
+	uc.tanksRepository.SetPlayer(tank)
+}
+
 // ============================================================================
 // Базовые операции жизненного цикла
 // ============================================================================

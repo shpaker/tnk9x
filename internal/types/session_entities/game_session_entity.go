@@ -4,9 +4,7 @@ import "github.com/shpaker/gonflict/internal/types"
 
 // GameSessionEntity представляет данные игровой сессии
 // Данные передаются между уровнями и сохраняются на протяжении всей игры
-
 type GameSessionEntity struct {
-	PlayerLives  int              // Количество жизней игрока
 	Score        int              // Общий счёт за всю сессию
 	Level        int              // Текущий уровень
 	targetState  *types.StateType // Целевое состояние для перехода (nil если переход не требуется) - приватное поле
@@ -17,7 +15,6 @@ type GameSessionEntity struct {
 func NewGameSessionEntity() *GameSessionEntity {
 	initialState := types.StateTypeStageSelect // По умолчанию начинаем с выбора уровня
 	return &GameSessionEntity{
-		PlayerLives:  3, // По умолчанию 3 жизни
 		Score:        0,
 		Level:        1,
 		targetState:  &initialState,
@@ -40,10 +37,6 @@ func (s *GameSessionEntity) SetTargetState(state *types.StateType) {
 	if s != nil {
 		s.targetState = state
 	}
-}
-
-func (s *GameSessionEntity) IsCompleted() bool {
-	return s.stageSession.IsCompleted() && s.PlayerLives <= 0
 }
 
 func (s *GameSessionEntity) StageSession() *StageSessionEntity {

@@ -69,6 +69,8 @@ type ITankLifecycleUseCases interface {
 	OnStageSetUpEnemiesSpawn() ([3]*types.TankEntity, error)
 	SpawnEnemy(index *int, ignoreRespawnDelay bool) (*types.TankEntity, error)
 	SpawnPlayer1() (*types.TankEntity, error)
+	GetPlayerTank() *types.TankEntity
+	SetPlayerTank(tank *types.TankEntity)
 	Explode(tank *types.TankEntity) error
 	IsSpawnFinished(tank *types.TankEntity, currentTime float64)
 	IsExplosionFinished(tank *types.TankEntity)
@@ -100,6 +102,7 @@ type IHQUseCases interface {
 	GetHQ() *types.HQEntity
 	Explode(hq *types.HQEntity) error
 	IsExplosionFinished(hq *types.HQEntity)
+	IsDestroyed() bool
 }
 
 // IFontUseCases интерфейс для работы со шрифтами
@@ -112,7 +115,13 @@ type IStageUseCases interface {
 	SpawnPlayerTank() *types.TankEntity
 	SpawnInitialEnemyTanks() []*types.TankEntity
 	TrySpawnEnemy() *types.TankEntity
+	TryRespawnPlayerTank() *types.TankEntity
 	UpdateGameObjects(dt float64)
 	TogglePause()
 	IsPaused() bool
+	PauseStageState()
+	ResumeStageState()
+	IsStageWon() bool
+	IsStageLost() bool
+	IsStageFinished() bool
 }

@@ -8,7 +8,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 
-	"github.com/shpaker/gonflict/internal/adapters/game/input_adapters/ai"
+	"github.com/shpaker/gonflict/internal/adapters/stage/input_adapters/ai"
 	"github.com/shpaker/gonflict/internal/interfaces"
 	game_repos "github.com/shpaker/gonflict/internal/repositories/game"
 	"github.com/shpaker/gonflict/internal/repositories/processed"
@@ -23,11 +23,12 @@ import (
 )
 
 type App struct {
-	config       *Config
-	State        interfaces.IState
-	luaEngine    interfaces.ILuaEngine               // Lua Engine для AI (существует весь срок жизни App)
-	session      *session_entities.GameSessionEntity // Сессия игры
-	fontUseCases interfaces.IFontUseCases
+	config        *Config
+	State         interfaces.IState
+	luaEngine     interfaces.ILuaEngine               // Lua Engine для AI (существует весь срок жизни App)
+	session       *session_entities.GameSessionEntity // Сессия игры
+	fontUseCases  interfaces.IFontUseCases
+	debugUseCases *use_cases.DebugUseCases
 }
 
 // ebiten game interface
@@ -61,13 +62,18 @@ func (app *App) Update() error {
 
 func (app *App) Draw(screen *ebiten.Image) {
 	app.State.Draw(screen)
+	if app.debugUseCases == nil {
+		return
+	}
+
+	debugText, enabled := app.debugUseCases.BuildDebugInfo()
+	if !enabled {
+		return
+	}
+
 	ebitenutil.DebugPrintAt(
 		screen,
-		fmt.Sprintf(
-			"TPS: %.2f,\nFPS: %.2f",
-			ebiten.ActualTPS(),
-			ebiten.ActualFPS(),
-		),
+		debugText,
 		0,
 		0,
 	)
@@ -124,6 +130,10 @@ func New(cfg *Config) *App {
 		luaEngine:    luaEngine,
 		session:      session,
 		fontUseCases: fontUseCases,
+		debugUseCases: use_cases.NewDebugUseCases(
+			cfg,
+			session,
+		),
 	}
 }
 

@@ -3,15 +3,14 @@ app:
   name: "gonflict"
   level_number: 1
   screen_px: [1280, 720]  # Размер экрана в пикселях [width, height]
+  debug: true
 
 game:
   enemy_spawners:
     - [0, 0]   # Левый верхний угол
     - [6, 0]   # Центр сверху
     - [12, 0]  # Правый верхний угол
-  players_spawners:
-    - [4, 12]
-    - [8, 12]
+  players_1_spawn_at: [4, 12]
   hq_position: [6, 12]
   ai_update_interval_ticks: 20  # Интервал обновления AI в тиках (60 тиков = 1000мс при 60 FPS)
 

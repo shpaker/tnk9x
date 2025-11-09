@@ -11,7 +11,7 @@ import (
 // IConfigProvider интерфейс для получения данных конфигурации
 type IConfigProvider interface {
 	GetEnemySpawners() []types.Position
-	GetPlayerSpawners() []types.Position
+	GetPlayer1Spawn() types.Position
 	GetHQPosition() [2]int
 	GetAIUpdateIntervalTicks() int
 	GetEnemyRespawnDelayTicks() uint
@@ -19,6 +19,7 @@ type IConfigProvider interface {
 	GetMapBlocksCount() types.Size
 	GetMapOffsets() [2]uint
 	GetTileBaseSize() uint
+	IsDebugEnabled() bool
 }
 
 // IInputAdapter интерфейс для адаптеров ввода

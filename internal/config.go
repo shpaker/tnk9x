@@ -20,12 +20,13 @@ type appConfigSchema struct {
 	Name        string  `yaml:"name"`
 	LevelNumber int     `yaml:"level_number"`
 	ScreenPx    [2]uint `yaml:"screen_px"`
+	Debug       bool    `yaml:"debug"`
 }
 
 // gameConfigSchema для парсинга game секции из YAML
 type gameConfigSchema struct {
 	EnemySpawners          [][2]int `yaml:"enemy_spawners"`
-	PlayerSpawners         [][2]int `yaml:"players_spawners"`
+	Player1Spawn           [2]int   `yaml:"players_1_spawn_at"`
 	HQPosition             [2]int   `yaml:"hq_position"`               // Позиция базы [x, y]
 	AIUpdateIntervalTicks  int      `yaml:"ai_update_interval_ticks"`  // Интервал обновления AI в тиках (по умолчанию 60 тиков = 1000мс)
 	EnemyRespawnDelayTicks uint     `yaml:"enemy_respawn_delay_ticks"` // Задержка между спавнами врагов в тиках
@@ -42,10 +43,11 @@ type Config struct {
 	Name        string
 	LevelNumber int
 	ScreenPx    types.Size
+	Debug       bool
 
 	// Game settings
 	EnemySpawners          []types.Position
-	PlayerSpawners         []types.Position
+	Player1Spawn           types.Position
 	HQPosition             [2]int
 	AIUpdateIntervalTicks  int
 	EnemyRespawnDelayTicks uint
@@ -89,12 +91,13 @@ func LoadConfig() (*Config, error) {
 			Width:  int(schema.App.ScreenPx[0]),
 			Height: int(schema.App.ScreenPx[1]),
 		},
+		Debug: schema.App.Debug,
 
 		EnemySpawners: convertCoordsToPositions(
 			schema.Game.EnemySpawners,
 		),
-		PlayerSpawners: convertCoordsToPositions(
-			schema.Game.PlayerSpawners,
+		Player1Spawn: convertCoordToPosition(
+			schema.Game.Player1Spawn,
 		),
 		HQPosition:             schema.Game.HQPosition,
 		AIUpdateIntervalTicks:  schema.Game.AIUpdateIntervalTicks,
@@ -121,12 +124,16 @@ func LoadConfig() (*Config, error) {
 func convertCoordsToPositions(coords [][2]int) []types.Position {
 	positions := make([]types.Position, len(coords))
 	for i, coord := range coords {
-		positions[i] = types.Position{
-			X: float64(coord[0]),
-			Y: float64(coord[1]),
-		}
+		positions[i] = convertCoordToPosition(coord)
 	}
 	return positions
+}
+
+func convertCoordToPosition(coord [2]int) types.Position {
+	return types.Position{
+		X: float64(coord[0]),
+		Y: float64(coord[1]),
+	}
 }
 
 // Геттеры для интерфейса IConfigProvider
@@ -135,8 +142,8 @@ func (c *Config) GetEnemySpawners() []types.Position {
 	return c.EnemySpawners
 }
 
-func (c *Config) GetPlayerSpawners() []types.Position {
-	return c.PlayerSpawners
+func (c *Config) GetPlayer1Spawn() types.Position {
+	return c.Player1Spawn
 }
 
 func (c *Config) GetHQPosition() [2]int {
@@ -165,6 +172,10 @@ func (c *Config) GetMapOffsets() [2]uint {
 
 func (c *Config) GetTileBaseSize() uint {
 	return c.TileBaseSize
+}
+
+func (c *Config) IsDebugEnabled() bool {
+	return c.Debug
 }
 
 // ScreenWidth возвращает ширину экрана

@@ -418,6 +418,21 @@ func (r *StageRendererAdapter) DrawAll(screen *ebiten.Image) {
 
 // DrawPauseOverlay отрисовывает экранную заставку паузы
 func (r *StageRendererAdapter) DrawPauseOverlay(screen *ebiten.Image) {
+	r.drawOverlayMessage(screen, "PAUSED")
+}
+
+// DrawStageEndOverlay отрисовывает сообщение о результате уровня
+func (r *StageRendererAdapter) DrawStageEndOverlay(
+	screen *ebiten.Image,
+	message string,
+) {
+	r.drawOverlayMessage(screen, message)
+}
+
+func (r *StageRendererAdapter) drawOverlayMessage(
+	screen *ebiten.Image,
+	message string,
+) {
 	bounds := screen.Bounds()
 	width := float32(bounds.Dx())
 	height := float32(bounds.Dy())
@@ -428,17 +443,16 @@ func (r *StageRendererAdapter) DrawPauseOverlay(screen *ebiten.Image) {
 		0,
 		width,
 		height,
-		color.NRGBA{R: 0, G: 0, B: 0, A: 180},
+		color.NRGBA{R: 40, G: 40, B: 40, A: 180},
 		false,
 	)
 
-	pauseFace := r.ensurePauseFontFace()
-	if pauseFace == nil {
+	face := r.ensurePauseFontFace()
+	if face == nil {
 		return
 	}
 
-	message := "PAUSED"
-	textWidth, textHeight := text.Measure(message, pauseFace, 0)
+	textWidth, textHeight := text.Measure(message, face, 0)
 	x := (float64(bounds.Dx()) - textWidth) / 2
 	y := float64(bounds.Dy())/2 - textHeight/2
 
@@ -446,7 +460,7 @@ func (r *StageRendererAdapter) DrawPauseOverlay(screen *ebiten.Image) {
 	op.GeoM.Translate(x, y)
 	op.ColorScale.ScaleWithColor(color.White)
 
-	text.Draw(screen, message, pauseFace, op)
+	text.Draw(screen, message, face, op)
 }
 
 func (r *StageRendererAdapter) ensurePauseFontFace() text.Face {

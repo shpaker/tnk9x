@@ -7,6 +7,7 @@ import (
 	"github.com/shpaker/gonflict/internal/types/session_entities"
 )
 
+// StageUseCases предоставляет бизнес-логику уровня (stage)
 type StageUseCases struct {
 	// Служебное состояние
 	isPaused bool
@@ -19,8 +20,10 @@ type StageUseCases struct {
 	hqUseCases            interfaces.IHQUseCases
 
 	// Сущности
-	hqEntity     *types.HQEntity
 	stageSession *session_entities.StageSessionEntity
+
+	// Отслеживание состояния врагов
+	destroyedEnemies map[*types.TankEntity]struct{}
 }
 
 func NewStageUseCases(
@@ -29,7 +32,6 @@ func NewStageUseCases(
 	bulletUseCases interfaces.IBulletUseCases,
 	collisionUseCases interfaces.ICollisionUseCases,
 	hqUseCases interfaces.IHQUseCases,
-	hqEntity *types.HQEntity,
 	stageSession *session_entities.StageSessionEntity,
 	enemyRespawnDelay uint,
 ) StageUseCases {
@@ -46,8 +48,8 @@ func NewStageUseCases(
 		bulletUseCases:        bulletUseCases,
 		collisionUseCases:     collisionUseCases,
 		hqUseCases:            hqUseCases,
-		hqEntity:              hqEntity,
 		stageSession:          stageSession,
+		destroyedEnemies:      make(map[*types.TankEntity]struct{}),
 	}
 }
 
@@ -64,6 +66,10 @@ func (uc *StageUseCases) ResumeStageState() {
 // --- Спавн сущностей ---
 
 func (uc *StageUseCases) SpawnPlayerTank() *types.TankEntity {
+	if uc.stageSession != nil && uc.stageSession.IsPlayer1Defeated() {
+		return nil
+	}
+
 	if uc.tankLifecycleUseCases == nil {
 		return nil
 	}
@@ -83,6 +89,7 @@ func (uc *StageUseCases) SpawnInitialEnemyTanks() []*types.TankEntity {
 
 	if uc.stageSession != nil {
 		uc.stageSession.Reset()
+		uc.destroyedEnemies = make(map[*types.TankEntity]struct{})
 	}
 
 	enemies, err := uc.tankLifecycleUseCases.OnStageSetUpEnemiesSpawn()
@@ -111,12 +118,6 @@ func (uc *StageUseCases) UpdateGameObjects(dt float64) {
 
 	uc.updateEnemySpawnCountdown()
 
-	if uc.tankCommonUseCases != nil {
-		if err := uc.tankCommonUseCases.UpdateAllTanks(dt); err != nil {
-			_ = err
-		}
-	}
-
 	if uc.bulletUseCases != nil {
 		_ = uc.bulletUseCases.UpdateBullets(dt)
 	}
@@ -125,8 +126,10 @@ func (uc *StageUseCases) UpdateGameObjects(dt float64) {
 		uc.collisionUseCases.UpdateCollisions()
 	}
 
+	uc.trackDestroyedEnemies()
+
 	if uc.hqUseCases != nil {
-		uc.hqUseCases.IsExplosionFinished(uc.hqEntity)
+		uc.hqUseCases.IsExplosionFinished(uc.hqUseCases.GetHQ())
 	}
 }
 
@@ -140,6 +143,31 @@ func (uc *StageUseCases) IsPaused() bool {
 	return uc.isPaused
 }
 
+// TryRespawnPlayerTank пытается возродить игрока, если его танк уничтожен и есть оставшиеся жизни
+func (uc *StageUseCases) TryRespawnPlayerTank() *types.TankEntity {
+	if uc.stageSession == nil {
+		return nil
+	}
+
+	playerTank := uc.getPlayerTank()
+	if playerTank == nil || playerTank.State != types.TankStateExploded ||
+		uc.stageSession.IsPlayer1Defeated() {
+		return nil
+	}
+
+	uc.stageSession.DecrementPlayer1Lives()
+
+	respawned := uc.SpawnPlayerTank()
+	if respawned == nil {
+		// Возвращаем жизнь, если возродить не удалось
+		uc.stageSession.SetPlayer1Lives(
+			uc.stageSession.GetPlayer1Lives() + 1,
+		)
+	}
+
+	return respawned
+}
+
 // TrySpawnEnemy пытается создать нового врага при соблюдении условий респавна
 func (uc *StageUseCases) TrySpawnEnemy() *types.TankEntity {
 	if uc.tankLifecycleUseCases == nil {
@@ -148,7 +176,7 @@ func (uc *StageUseCases) TrySpawnEnemy() *types.TankEntity {
 
 	if uc.stageSession != nil &&
 		uc.tankCommonUseCases != nil &&
-		int(uc.stageSession.MaxActiveEnemies()) <= countActiveEnemies(
+		int(uc.stageSession.GetMaxActiveEnemies()) <= countActiveEnemies(
 			uc.tankCommonUseCases.GetAllTanks(),
 		) {
 		return nil
@@ -184,6 +212,81 @@ func (uc *StageUseCases) registerEnemySpawned() {
 	if uc.stageSession != nil {
 		uc.stageSession.RegisterEnemySpawned()
 	}
+}
+
+// IsStageWon возвращает true, если игрок выполнил условия победы (все враги уничтожены)
+func (uc *StageUseCases) IsStageWon() bool {
+	if uc.stageSession == nil {
+		return false
+	}
+
+	if !uc.stageSession.AreAllEnemiesDefeated() {
+		return false
+	}
+
+	if uc.stageSession.IsPlayer1Defeated() {
+		return false
+	}
+
+	if uc.hqUseCases != nil {
+		return !uc.hqUseCases.IsDestroyed()
+	}
+
+	return true
+}
+
+// IsStageLost возвращает true, если выполнено любое условие поражения (игрок погиб или база уничтожена)
+func (uc *StageUseCases) IsStageLost() bool {
+	if uc.stageSession != nil && uc.stageSession.IsPlayer1Defeated() {
+		return true
+	}
+
+	if uc.hqUseCases != nil {
+		return uc.hqUseCases.IsDestroyed()
+	}
+
+	return false
+}
+
+// IsStageFinished возвращает true, если уровень завершён победой или поражением
+func (uc *StageUseCases) IsStageFinished() bool {
+	return uc.IsStageWon() || uc.IsStageLost()
+}
+
+func (uc *StageUseCases) trackDestroyedEnemies() {
+	if uc.stageSession == nil || uc.tankCommonUseCases == nil {
+		return
+	}
+
+	enemies := uc.tankCommonUseCases.GetAllTanks()
+	if len(enemies) == 0 {
+		return
+	}
+
+	if uc.destroyedEnemies == nil {
+		uc.destroyedEnemies = make(map[*types.TankEntity]struct{})
+	}
+
+	for _, tank := range enemies {
+		if tank == nil || !tank.IsEnemy {
+			continue
+		}
+
+		if tank.State == types.TankStateExploded {
+			if _, exists := uc.destroyedEnemies[tank]; exists {
+				continue
+			}
+			uc.stageSession.IncrementDestroyedEnemies()
+			uc.destroyedEnemies[tank] = struct{}{}
+		}
+	}
+}
+
+func (uc *StageUseCases) getPlayerTank() *types.TankEntity {
+	if uc.tankLifecycleUseCases == nil {
+		return nil
+	}
+	return uc.tankLifecycleUseCases.GetPlayerTank()
 }
 
 func countActiveEnemies(tanks []*types.TankEntity) int {

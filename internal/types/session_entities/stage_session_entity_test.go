@@ -2,14 +2,14 @@ package session_entities
 
 import "testing"
 
-func TestStageSessionEntity_IsCompleted(t *testing.T) {
+func TestStageSessionEntity_AreAllEnemiesDefeated(t *testing.T) {
 	session := &StageSessionEntity{
 		totalEnemies:     2,
 		spawnedEnemies:   2,
 		destroyedEnemies: 2,
 	}
 
-	if !session.IsCompleted() {
+	if !session.AreAllEnemiesDefeated() {
 		t.Fatalf(
 			"expected stage to be completed when destroyedEnemies >= totalEnemies",
 		)
@@ -57,6 +57,76 @@ func TestStageSessionEntity_IncrementDestroyedEnemies(t *testing.T) {
 		t.Fatalf(
 			"expected destroyedEnemies to increment to 7, got %d",
 			session.destroyedEnemies,
+		)
+	}
+}
+
+func TestStageSessionEntity_Player1Lives_Default(t *testing.T) {
+	session := NewStageSessionEntity()
+
+	if session.GetPlayer1Lives() != defaultStagePlayer1Lives {
+		t.Fatalf(
+			"expected default player lives to be %d, got %d",
+			defaultStagePlayer1Lives,
+			session.GetPlayer1Lives(),
+		)
+	}
+
+	if session.IsPlayer1Defeated() {
+		t.Fatalf("expected player to have lives remaining by default")
+	}
+
+	if session.GetPlayer1InitialLives() != defaultStagePlayer1Lives {
+		t.Fatalf(
+			"expected initial player lives to be %d, got %d",
+			defaultStagePlayer1Lives,
+			session.GetPlayer1InitialLives(),
+		)
+	}
+}
+
+func TestStageSessionEntity_Player1Lives_Decrement(t *testing.T) {
+	session := NewStageSessionEntity()
+	session.SetPlayer1Lives(1)
+	session.DecrementPlayer1Lives()
+	session.DecrementPlayer1Lives()
+
+	if session.GetPlayer1Lives() != 0 {
+		t.Fatalf(
+			"expected player lives to stop at 0, got %d",
+			session.GetPlayer1Lives(),
+		)
+	}
+
+	if !session.IsPlayer1Defeated() {
+		t.Fatalf("expected player to be defeated with zero lives")
+	}
+}
+
+func TestStageSessionEntity_RemainingEnemies(t *testing.T) {
+	session := NewStageSessionEntity()
+	session.totalEnemies = 2
+
+	if session.GetRemainingEnemies() != 2 {
+		t.Fatalf(
+			"expected remaining enemies to be 2, got %d",
+			session.GetRemainingEnemies(),
+		)
+	}
+
+	session.IncrementDestroyedEnemies()
+	if session.GetRemainingEnemies() != 1 {
+		t.Fatalf(
+			"expected remaining enemies to be 1, got %d",
+			session.GetRemainingEnemies(),
+		)
+	}
+
+	session.IncrementDestroyedEnemies()
+	if session.GetRemainingEnemies() != 0 {
+		t.Fatalf(
+			"expected remaining enemies to be 0, got %d",
+			session.GetRemainingEnemies(),
 		)
 	}
 }

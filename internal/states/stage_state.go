@@ -5,7 +5,7 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 
-	game "github.com/shpaker/gonflict/internal/adapters/game"
+	game "github.com/shpaker/gonflict/internal/adapters/stage"
 	"github.com/shpaker/gonflict/internal/interfaces"
 	"github.com/shpaker/gonflict/internal/types"
 	"github.com/shpaker/gonflict/internal/types/session_entities"
@@ -122,23 +122,38 @@ func (state *StageState) Update() {
 		state.InputAdapter.Update(dt)
 	}
 
-	paused := state.stageUseCases != nil && state.stageUseCases.IsPaused()
-
-	// Обновляем жизненный цикл танков (спавн и взрыв)
-	if state.TankLifecycleUseCases != nil && !paused {
-		_ = state.TankLifecycleUseCases.UpdateAllTanksLifecycle()
+	stageFinished := false
+	if state.stageUseCases != nil {
+		stageFinished = state.stageUseCases.IsStageFinished()
+		if stageFinished && !state.stageUseCases.IsPaused() {
+			state.stageUseCases.PauseStageState()
+		}
 	}
 
+	paused := state.stageUseCases != nil && state.stageUseCases.IsPaused()
+
 	// Обновляем игровые объекты (танки, пули, коллизии, AI)
-	if state.stageUseCases != nil {
+	if state.TankLifecycleUseCases != nil && state.stageUseCases != nil &&
+		!paused {
+		_ = state.TankLifecycleUseCases.UpdateAllTanksLifecycle()
+		_ = state.TankCommonUseCases.UpdateAllTanks(dt)
 		state.stageUseCases.UpdateGameObjects(dt)
-		// if !paused {
+
+		if respawned := state.stageUseCases.TryRespawnPlayerTank(); respawned != nil {
+			if state.InputAdapter != nil {
+				if keyboardAdapter, ok := state.InputAdapter.(interface {
+					SetPlayerTank(*types.TankEntity)
+				}); ok {
+					keyboardAdapter.SetPlayerTank(respawned)
+				}
+			}
+		}
+
 		if spawned := state.stageUseCases.TrySpawnEnemy(); spawned != nil {
 			if state.EnemyInputAdapter != nil {
 				state.EnemyInputAdapter.AddTank(spawned)
 			}
 		}
-		// }
 	}
 
 	if state.EnemyInputAdapter != nil && !paused {
@@ -153,7 +168,20 @@ func (state *StageState) Update() {
 
 func (state *StageState) Draw(screen *ebiten.Image) {
 	state.RendererAdapter.DrawAll(screen)
-	if state.stageUseCases != nil && state.stageUseCases.IsPaused() {
+	if state.stageUseCases == nil {
+		return
+	}
+
+	if state.stageUseCases.IsStageFinished() {
+		label := "DEFEAT"
+		if state.stageUseCases.IsStageWon() {
+			label = "WIN"
+		}
+		state.RendererAdapter.DrawStageEndOverlay(screen, label)
+		return
+	}
+
+	if state.stageUseCases.IsPaused() {
 		state.RendererAdapter.DrawPauseOverlay(screen)
 	}
 }

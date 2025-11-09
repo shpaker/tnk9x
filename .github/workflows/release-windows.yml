@@ -1,0 +1,46 @@
+name: Release Windows Build
+
+on:
+  push:
+    tags:
+      - '*'
+
+jobs:
+  build-windows:
+    name: Build Windows Artifact
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.24.3'
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Build Windows executable
+        run: go build -o dist/gonflict.exe ./cmd
+
+      - name: Package artifacts
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}"
+          $zipName = "bc$tag.zip"
+
+          New-Item -ItemType Directory -Force -Path package | Out-Null
+          Copy-Item dist/gonflict.exe package/
+          Copy-Item config.yml package/
+          Copy-Item assets package/assets -Recurse
+
+          Compress-Archive -Path package/* -DestinationPath $zipName
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-build
+          path: bc${{ github.ref_name }}.zip
+

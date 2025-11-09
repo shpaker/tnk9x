@@ -7,8 +7,8 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	lua "github.com/yuin/gopher-lua"
 
-	game "github.com/shpaker/gonflict/internal/adapters/game"
-	"github.com/shpaker/gonflict/internal/adapters/game/input_adapters"
+	game "github.com/shpaker/gonflict/internal/adapters/stage"
+	"github.com/shpaker/gonflict/internal/adapters/stage/input_adapters"
 	"github.com/shpaker/gonflict/internal/interfaces"
 	"github.com/shpaker/gonflict/internal/services"
 	collision_services "github.com/shpaker/gonflict/internal/services/collision_services"
@@ -199,11 +199,7 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 	}
 
 	enemySpawners := b.config.GetEnemySpawners()
-	playerSpawners := b.config.GetPlayerSpawners()
-	playerSpawner := types.Position{X: 12, Y: 24}
-	if len(playerSpawners) > 0 {
-		playerSpawner = playerSpawners[0]
-	}
+	playerSpawner := b.config.GetPlayer1Spawn()
 	baseSize := types.Size{Width: int(baseSizePx), Height: int(baseSizePx)}
 
 	tankLifecycleUseCases.SetSpawnConfiguration(
@@ -241,7 +237,6 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 		bulletUseCases,
 		collisionUseCases,
 		hqUseCases,
-		hq,
 		stageSession,
 		enemyRespawnDelay,
 	)
