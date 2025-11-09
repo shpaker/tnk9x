@@ -2,6 +2,7 @@ package use_cases
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/hajimehoshi/ebiten/v2"
 
@@ -12,14 +13,17 @@ import (
 // DebugUseCases формирует отладочную информацию
 type DebugUseCases struct {
 	session *session_entities.GameSessionEntity
+	version string
 }
 
 // NewDebugUseCases создаёт UseCase для отладочной информации
 func NewDebugUseCases(
 	session *session_entities.GameSessionEntity,
+	version string,
 ) *DebugUseCases {
 	return &DebugUseCases{
 		session: session,
+		version: version,
 	}
 }
 
@@ -30,17 +34,20 @@ func (uc *DebugUseCases) BuildDebugInfo() string {
 	}
 	info := uc.collectDebugData()
 
-	debugString := fmt.Sprintf(
-		"FPS: %.2f\nTPS: %.2f\nLives: %d/%d\nEnemies: %d/%d",
-		info.FPS,
-		info.TPS,
-		info.PlayerLives,
-		info.PlayerInitialLives,
-		info.RemainingEnemies,
-		info.TotalEnemies,
-	)
+	version := uc.version
+	if version == "" {
+		version = "dev"
+	}
 
-	return debugString
+	debugLines := []string{
+		fmt.Sprintf("Version: %s", version),
+		fmt.Sprintf("FPS: %.2f", info.FPS),
+		fmt.Sprintf("TPS: %.2f", info.TPS),
+		fmt.Sprintf("Lives: %d/%d", info.PlayerLives, info.PlayerInitialLives),
+		fmt.Sprintf("Enemies: %d/%d", info.RemainingEnemies, info.TotalEnemies),
+	}
+
+	return strings.Join(debugLines, "\n")
 }
 
 // collectDebugData собирает данные для отладки
