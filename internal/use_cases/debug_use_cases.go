@@ -5,34 +5,29 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 
-	"github.com/shpaker/gonflict/internal/interfaces"
 	"github.com/shpaker/gonflict/internal/types"
 	"github.com/shpaker/gonflict/internal/types/session_entities"
 )
 
 // DebugUseCases формирует отладочную информацию
 type DebugUseCases struct {
-	config  interfaces.IConfigProvider
 	session *session_entities.GameSessionEntity
 }
 
 // NewDebugUseCases создаёт UseCase для отладочной информации
 func NewDebugUseCases(
-	config interfaces.IConfigProvider,
 	session *session_entities.GameSessionEntity,
 ) *DebugUseCases {
 	return &DebugUseCases{
-		config:  config,
 		session: session,
 	}
 }
 
 // BuildDebugInfo возвращает строку для вывода отладочной информации
-func (uc *DebugUseCases) BuildDebugInfo() (string, bool) {
-	if uc == nil || uc.config == nil || !uc.config.IsDebugEnabled() {
-		return "", false
+func (uc *DebugUseCases) BuildDebugInfo() string {
+	if uc == nil {
+		return ""
 	}
-
 	info := uc.collectDebugData()
 
 	debugString := fmt.Sprintf(
@@ -45,7 +40,7 @@ func (uc *DebugUseCases) BuildDebugInfo() (string, bool) {
 		info.TotalEnemies,
 	)
 
-	return debugString, true
+	return debugString
 }
 
 // collectDebugData собирает данные для отладки

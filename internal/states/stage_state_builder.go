@@ -313,6 +313,9 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 		mapOffsetX,
 		mapOffsetY,
 		mapWidthHeightForAdapter,
+		int(b.config.GetTitleFontSize()),
+		int(b.config.GetSubtitleFontSize()),
+		int(b.config.GetRegularFontSize()),
 	)
 
 	// Собираем финальный StageState
@@ -497,5 +500,6 @@ func (b *StageStateBuilder) buildStageState(
 		EnemyInputAdapter:     enemyInputAdapter,
 		StartTime:             time.Now(),
 		stageUseCases:         nil,
+		session:               b.session,
 	}
 }

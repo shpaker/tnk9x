@@ -7,8 +7,10 @@ on:
 
 jobs:
   build-windows:
-    name: Build Windows Artifact
+    name: Build Win
     runs-on: windows-latest
+    env:
+      APP_VERSION: ${{ github.ref_name }}
     strategy:
       matrix:
         build_type: [debug, prod]
@@ -30,7 +32,7 @@ jobs:
         env:
           GOOS: windows
           GOARCH: amd64
-        run: go build -o dist/gonflict.exe ./cmd
+        run: go build -ldflags "-X github.com/shpaker/gonflict/internal.Version=$env:APP_VERSION -X github.com/shpaker/gonflict/internal.Debug=true" -o dist/gonflict.exe ./cmd
 
       - name: Build Windows executable (production)
         if: matrix.build_type == 'prod'
@@ -38,7 +40,7 @@ jobs:
           GOOS: windows
           GOARCH: amd64
           CGO_ENABLED: 0
-        run: go build -trimpath -ldflags "-s -w" -o dist/gonflict.exe ./cmd
+        run: go build -trimpath -ldflags "-s -w -X github.com/shpaker/gonflict/internal.Version=$env:APP_VERSION" -o dist/gonflict.exe ./cmd
 
       - name: Package artifacts
         shell: pwsh

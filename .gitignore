@@ -2,6 +2,7 @@
 *.bak*
 dist/
 _assets/
+_build/
 
 # Binaries for programs and plugins
 *.exe

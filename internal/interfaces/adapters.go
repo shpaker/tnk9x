@@ -19,7 +19,10 @@ type IConfigProvider interface {
 	GetMapBlocksCount() types.Size
 	GetMapOffsets() [2]uint
 	GetTileBaseSize() uint
-	IsDebugEnabled() bool
+	GetTitleFontSize() uint
+	GetSubtitleFontSize() uint
+	GetRegularFontSize() uint
+	GetGameTitle() string
 }
 
 // IInputAdapter интерфейс для адаптеров ввода

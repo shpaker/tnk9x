@@ -12,8 +12,8 @@ import (
 type StageSelectKeyboardInputAdapter struct {
 	selector         *types.StageSelectorEntity
 	selectorUseCases *use_cases.StageSelectorUseCases
-	upButton         ebiten.Key
-	downButton       ebiten.Key
+	previousButton   ebiten.Key
+	nextButton       ebiten.Key
 	enterButton      ebiten.Key
 }
 
@@ -21,15 +21,15 @@ type StageSelectKeyboardInputAdapter struct {
 func NewStageSelectKeyboardInputAdapter(
 	selector *types.StageSelectorEntity,
 	selectorUseCases *use_cases.StageSelectorUseCases,
-	upButton ebiten.Key,
-	downButton ebiten.Key,
+	previousButton ebiten.Key,
+	nextButton ebiten.Key,
 	enterButton ebiten.Key,
 ) *StageSelectKeyboardInputAdapter {
 	return &StageSelectKeyboardInputAdapter{
 		selector:         selector,
 		selectorUseCases: selectorUseCases,
-		upButton:         upButton,
-		downButton:       downButton,
+		previousButton:   previousButton,
+		nextButton:       nextButton,
 		enterButton:      enterButton,
 	}
 }
@@ -41,11 +41,15 @@ func (a *StageSelectKeyboardInputAdapter) Update(dt float64) {
 	}
 
 	// Обрабатываем нажатия клавиш
-	if inpututil.IsKeyJustPressed(a.upButton) {
+	if inpututil.IsKeyJustPressed(a.previousButton) ||
+		inpututil.IsKeyJustPressed(ebiten.KeyLeft) ||
+		inpututil.IsKeyJustPressed(ebiten.KeyA) {
 		a.selectorUseCases.Previous(a.selector)
 	}
 
-	if inpututil.IsKeyJustPressed(a.downButton) {
+	if inpututil.IsKeyJustPressed(a.nextButton) ||
+		inpututil.IsKeyJustPressed(ebiten.KeyRight) ||
+		inpututil.IsKeyJustPressed(ebiten.KeyD) {
 		a.selectorUseCases.Next(a.selector)
 	}
 

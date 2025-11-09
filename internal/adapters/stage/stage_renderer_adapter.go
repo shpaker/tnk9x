@@ -33,7 +33,10 @@ type StageRendererAdapter struct {
 	imageCache             map[string]*ebiten.Image // Кэш ebiten.Image
 	imageService           *services.ImageService   // Сервис для работы с изображениями
 	fontUseCases           interfaces.IFontUseCases
-	pauseFontFace          text.Face
+	fontFace               text.Face
+	titleFontSize          int
+	subtitleFontSize       int
+	regularFontSize        int
 	tileMinSize            int
 	mapOffsetX             int
 	mapOffsetY             int
@@ -58,7 +61,22 @@ func NewStageRendererAdapter(
 	mapOffsetX int,
 	mapOffsetY int,
 	mapWidthHeight int,
+	titleFontSize int,
+	subtitleFontSize int,
+	regularFontSize int,
 ) *StageRendererAdapter {
+	if titleFontSize <= 0 {
+		titleFontSize = 32
+	}
+	if subtitleFontSize <= 0 {
+		subtitleFontSize = titleFontSize / 2
+		if subtitleFontSize == 0 {
+			subtitleFontSize = 16
+		}
+	}
+	if regularFontSize <= 0 {
+		regularFontSize = subtitleFontSize
+	}
 	return &StageRendererAdapter{
 		mapUseCases:            mapUseCases,
 		tankCommonUseCases:     tankCommonUseCases,
@@ -78,6 +96,9 @@ func NewStageRendererAdapter(
 		mapOffsetX:             mapOffsetX,
 		mapOffsetY:             mapOffsetY,
 		mapWidthHeight:         mapWidthHeight,
+		titleFontSize:          titleFontSize,
+		subtitleFontSize:       subtitleFontSize,
+		regularFontSize:        regularFontSize,
 	}
 }
 
@@ -418,7 +439,7 @@ func (r *StageRendererAdapter) DrawAll(screen *ebiten.Image) {
 
 // DrawPauseOverlay отрисовывает экранную заставку паузы
 func (r *StageRendererAdapter) DrawPauseOverlay(screen *ebiten.Image) {
-	r.drawOverlayMessage(screen, "PAUSED")
+	r.drawOverlayMessage(screen, "PAUSED", "")
 }
 
 // DrawStageEndOverlay отрисовывает сообщение о результате уровня
@@ -426,12 +447,13 @@ func (r *StageRendererAdapter) DrawStageEndOverlay(
 	screen *ebiten.Image,
 	message string,
 ) {
-	r.drawOverlayMessage(screen, message)
+	r.drawOverlayMessage(screen, message, "press any key to continue")
 }
 
 func (r *StageRendererAdapter) drawOverlayMessage(
 	screen *ebiten.Image,
 	message string,
+	subtitle string,
 ) {
 	bounds := screen.Bounds()
 	width := float32(bounds.Dx())
@@ -443,29 +465,50 @@ func (r *StageRendererAdapter) drawOverlayMessage(
 		0,
 		width,
 		height,
-		color.NRGBA{R: 40, G: 40, B: 40, A: 180},
+		color.NRGBA{R: 40, G: 40, B: 40, A: 240},
 		false,
 	)
 
-	face := r.ensurePauseFontFace()
+	face := r.ensureFontFace()
 	if face == nil {
 		return
 	}
 
 	textWidth, textHeight := text.Measure(message, face, 0)
 	x := (float64(bounds.Dx()) - textWidth) / 2
-	y := float64(bounds.Dy())/2 - textHeight/2
+	y := (float64(bounds.Dy()) - textHeight) / 2
 
 	op := &text.DrawOptions{}
 	op.GeoM.Translate(x, y)
 	op.ColorScale.ScaleWithColor(color.White)
 
 	text.Draw(screen, message, face, op)
+
+	if subtitle == "" {
+		return
+	}
+
+	scale := float64(r.subtitleFontSize) / float64(r.titleFontSize)
+	if scale <= 0 {
+		return
+	}
+
+	subtitleWidth, _ := text.Measure(subtitle, face, 0)
+	scaledWidth := subtitleWidth * scale
+	subtitleX := (float64(bounds.Dx()) - scaledWidth) / 2
+	subtitleY := float64(bounds.Dy()) - float64(r.titleFontSize)/2
+
+	subtitleOp := &text.DrawOptions{}
+	subtitleOp.GeoM.Scale(scale, scale)
+	subtitleOp.GeoM.Translate(subtitleX, subtitleY)
+	subtitleOp.ColorScale.ScaleWithColor(color.White)
+
+	text.Draw(screen, subtitle, face, subtitleOp)
 }
 
-func (r *StageRendererAdapter) ensurePauseFontFace() text.Face {
-	if r.pauseFontFace != nil {
-		return r.pauseFontFace
+func (r *StageRendererAdapter) ensureFontFace() text.Face {
+	if r.fontFace != nil {
+		return r.fontFace
 	}
 	if r.fontUseCases == nil {
 		return nil
@@ -477,15 +520,15 @@ func (r *StageRendererAdapter) ensurePauseFontFace() text.Face {
 	}
 
 	face, err := opentype.NewFace(baseFont, &opentype.FaceOptions{
-		Size: 32,
+		Size: float64(r.titleFontSize),
 		DPI:  72,
 	})
 	if err != nil {
 		return nil
 	}
 
-	r.pauseFontFace = text.NewGoXFace(face)
-	return r.pauseFontFace
+	r.fontFace = text.NewGoXFace(face)
+	return r.fontFace
 }
 
 // drawScreenBackground отрисовывает серый фон экрана

@@ -18,6 +18,10 @@ type StageSelectRendererAdapter struct {
 	fontFace         text.Face
 	screenWidth      int
 	screenHeight     int
+	titleFontSize    int
+	regularFontSize  int
+	subtitleFontSize int
+	gameTitle        string
 }
 
 // NewStageSelectRendererAdapter создает новый экземпляр StageSelectRendererAdapter
@@ -27,9 +31,23 @@ func NewStageSelectRendererAdapter(
 	fontFace text.Face,
 	screenWidth int,
 	screenHeight int,
+	titleFontSize int,
+	regularFontSize int,
+	subtitleFontSize int,
+	gameTitle string,
 ) (*StageSelectRendererAdapter, error) {
 	if fontFace == nil {
 		return nil, fmt.Errorf("font face is nil")
+	}
+
+	if titleFontSize <= 0 {
+		titleFontSize = 32
+	}
+	if regularFontSize <= 0 {
+		regularFontSize = titleFontSize
+	}
+	if subtitleFontSize <= 0 {
+		subtitleFontSize = regularFontSize
 	}
 
 	return &StageSelectRendererAdapter{
@@ -38,11 +56,19 @@ func NewStageSelectRendererAdapter(
 		fontFace:         fontFace,
 		screenWidth:      screenWidth,
 		screenHeight:     screenHeight,
+		titleFontSize:    titleFontSize,
+		regularFontSize:  regularFontSize,
+		subtitleFontSize: subtitleFontSize,
+		gameTitle:        gameTitle,
 	}, nil
 }
 
 // DrawAll отрисовывает все элементы экрана выбора уровня
-func (r *StageSelectRendererAdapter) DrawAll(screen *ebiten.Image) {
+func (r *StageSelectRendererAdapter) DrawAll(
+	screen *ebiten.Image,
+	levelActive bool,
+	playerCount int,
+) {
 	if r.selector == nil || r.selectorUseCases == nil {
 		return
 	}
@@ -55,6 +81,17 @@ func (r *StageSelectRendererAdapter) DrawAll(screen *ebiten.Image) {
 	// Очищаем экран черным фоном для видимости
 	screen.Fill(color.Black)
 
+	// Отрисовываем заголовок
+	titleText := r.gameTitle
+	titleWidth, _ := text.Measure(titleText, r.fontFace, 0)
+	titleX := (actualWidth - titleWidth) / 2
+	titleY := actualHeight/4 - float64(r.titleFontSize)/2
+
+	titleOp := &text.DrawOptions{}
+	titleOp.GeoM.Translate(titleX, titleY)
+	titleOp.ColorScale.ScaleWithColor(color.White)
+	text.Draw(screen, titleText, r.fontFace, titleOp)
+
 	// Отрисовываем текст выбранного уровня
 	stageText := r.selectorUseCases.String(r.selector)
 
@@ -62,13 +99,69 @@ func (r *StageSelectRendererAdapter) DrawAll(screen *ebiten.Image) {
 	textWidth, textHeight := text.Measure(stageText, r.fontFace, 0)
 
 	// Центрируем текст по горизонтали и вертикали
-	// В text/v2, y указывает на baseline, поэтому вычитаем половину высоты текста
-	x := (actualWidth - textWidth) / 2
-	y := actualHeight/2 - textHeight/2
+	scale := float64(r.regularFontSize) / float64(r.titleFontSize)
+	if scale <= 0 {
+		scale = 1
+	}
+	scaledWidth := textWidth * scale
+	scaledHeight := textHeight * scale
+	x := (actualWidth - scaledWidth) / 2
+	y := (actualHeight-scaledHeight)/2 + float64(r.regularFontSize)
 
 	// Отрисовываем текст используя text/v2
+	stageColor := color.NRGBA{R: 150, G: 150, B: 150, A: 255}
+	if levelActive {
+		stageColor = color.NRGBA{R: 255, G: 255, B: 255, A: 255}
+	}
+
 	op := &text.DrawOptions{}
+	op.GeoM.Scale(scale, scale)
 	op.GeoM.Translate(x, y)
-	op.ColorScale.ScaleWithColor(color.White)
+	op.ColorScale.ScaleWithColor(stageColor)
 	text.Draw(screen, stageText, r.fontFace, op)
+
+	// Отрисовываем выбор количества игроков
+	if playerCount < 1 {
+		playerCount = 1
+	}
+	if playerCount > 2 {
+		playerCount = 2
+	}
+
+	playerText := fmt.Sprintf("PLAYERS %d", playerCount)
+	playerWidth, _ := text.Measure(playerText, r.fontFace, 0)
+	playerScale := scale
+	playerScaledWidth := playerWidth * playerScale
+	playerX := (actualWidth - playerScaledWidth) / 2
+	playerY := y + scaledHeight + float64(r.regularFontSize)
+
+	playerColor := color.NRGBA{R: 150, G: 150, B: 150, A: 255}
+	if !levelActive {
+		playerColor = color.NRGBA{R: 255, G: 255, B: 255, A: 255}
+	}
+
+	playerOp := &text.DrawOptions{}
+	playerOp.GeoM.Scale(playerScale, playerScale)
+	playerOp.GeoM.Translate(playerX, playerY)
+	playerOp.ColorScale.ScaleWithColor(playerColor)
+	text.Draw(screen, playerText, r.fontFace, playerOp)
+
+	// Отрисовываем подсказку
+	subtitleText := "PRESS ENTER TO START"
+	subtitleWidth, _ := text.Measure(subtitleText, r.fontFace, 0)
+	subtitleScale := float64(r.subtitleFontSize) / float64(r.titleFontSize)
+	if subtitleScale <= 0 {
+		subtitleScale = 1
+	}
+	subtitleScaledWidth := subtitleWidth * subtitleScale
+	subtitleX := (actualWidth - subtitleScaledWidth) / 2
+	subtitleY := actualHeight - float64(r.subtitleFontSize)
+
+	subtitleOp := &text.DrawOptions{}
+	subtitleOp.GeoM.Scale(subtitleScale, subtitleScale)
+	subtitleOp.GeoM.Translate(subtitleX, subtitleY)
+	subtitleOp.ColorScale.ScaleWithColor(
+		color.NRGBA{R: 200, G: 200, B: 200, A: 255},
+	)
+	text.Draw(screen, subtitleText, r.fontFace, subtitleOp)
 }

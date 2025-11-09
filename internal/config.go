@@ -17,10 +17,13 @@ type configSchema struct {
 
 // appConfigSchema для парсинга app секции из YAML
 type appConfigSchema struct {
-	Name        string  `yaml:"name"`
-	LevelNumber int     `yaml:"level_number"`
-	ScreenPx    [2]uint `yaml:"screen_px"`
-	Debug       bool    `yaml:"debug"`
+	Name             string  `yaml:"name"`
+	LevelNumber      int     `yaml:"level_number"`
+	ScreenPx         [2]uint `yaml:"screen_px"`
+	TitleFontSize    uint    `yaml:"title_font_size"`
+	SubtitleFontSize uint    `yaml:"subtitle_font_size"`
+	RegularFontSize  uint    `yaml:"regular_font_size"`
+	GameTitle        string  `yaml:"game_title"`
 }
 
 // gameConfigSchema для парсинга game секции из YAML
@@ -40,10 +43,13 @@ type gameConfigSchema struct {
 // Config содержит конфигурацию приложения
 type Config struct {
 	// App settings
-	Name        string
-	LevelNumber int
-	ScreenPx    types.Size
-	Debug       bool
+	Name             string
+	LevelNumber      int
+	ScreenPx         types.Size
+	TitleFontSize    uint
+	SubtitleFontSize uint
+	RegularFontSize  uint
+	GameTitle        string
 
 	// Game settings
 	EnemySpawners          []types.Position
@@ -91,8 +97,10 @@ func LoadConfig() (*Config, error) {
 			Width:  int(schema.App.ScreenPx[0]),
 			Height: int(schema.App.ScreenPx[1]),
 		},
-		Debug: schema.App.Debug,
-
+		TitleFontSize:    schema.App.TitleFontSize,
+		SubtitleFontSize: schema.App.SubtitleFontSize,
+		RegularFontSize:  schema.App.RegularFontSize,
+		GameTitle:        schema.App.GameTitle,
 		EnemySpawners: convertCoordsToPositions(
 			schema.Game.EnemySpawners,
 		),
@@ -174,8 +182,20 @@ func (c *Config) GetTileBaseSize() uint {
 	return c.TileBaseSize
 }
 
-func (c *Config) IsDebugEnabled() bool {
-	return c.Debug
+func (c *Config) GetTitleFontSize() uint {
+	return c.TitleFontSize
+}
+
+func (c *Config) GetSubtitleFontSize() uint {
+	return c.SubtitleFontSize
+}
+
+func (c *Config) GetRegularFontSize() uint {
+	return c.RegularFontSize
+}
+
+func (c *Config) GetGameTitle() string {
+	return c.GameTitle
 }
 
 // ScreenWidth возвращает ширину экрана

@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
 
 	game "github.com/shpaker/gonflict/internal/adapters/stage"
 	"github.com/shpaker/gonflict/internal/interfaces"
@@ -40,6 +41,9 @@ type StageState struct {
 
 	// Use cases
 	stageUseCases interfaces.IStageUseCases
+
+	// Сессия
+	session *session_entities.GameSessionEntity
 }
 
 // NewStageState создает новое состояние уровня через билдер
@@ -127,6 +131,11 @@ func (state *StageState) Update() {
 		stageFinished = state.stageUseCases.IsStageFinished()
 		if stageFinished && !state.stageUseCases.IsPaused() {
 			state.stageUseCases.PauseStageState()
+		}
+		if stageFinished && state.session != nil &&
+			len(inpututil.AppendJustPressedKeys(nil)) > 0 {
+			target := types.StateTypeStageSelect
+			state.session.SetTargetState(&target)
 		}
 	}
 

@@ -10,15 +10,45 @@ default:
 
 build:
     #!/bin/bash
-    echo "Building application..."
-    {{gocmd}} build -o {{binary_name}} -v ./cmd
-    echo "Build completed: {{binary_name}}"
+    set -euo pipefail
+    VERSION="dev-$(date -u +%Y-%m-%dT%H:%M)"
+    echo "Building application (version $VERSION)..."
+    {{gocmd}} build -ldflags "-X github.com/shpaker/gonflict/internal.Version=${VERSION}" -o {{binary_name}} -v ./cmd
+    echo "Build completed: {{binary_name}} (version $VERSION)"
 
-build-linux:
+build-macos:
     #!/bin/bash
-    echo "Building for Linux..."
-    CGO_ENABLED=0 GOOS=linux GOARCH=amd64 {{gocmd}} build -o {{binary_unix}} -v ./cmd
-    echo "Linux build completed: {{binary_unix}}"
+    set -euo pipefail
+    out_dir="_build/macos"
+    rm -rf "$out_dir"
+    mkdir -p "$out_dir"
+    VERSION="dev-$(date -u +%Y-%m-%dT%H:%M)"
+    release_output="{{binary_name}}_darwin_arm64"
+    debug_output="{{binary_name}}_darwin_arm64_debug"
+    echo "Building macOS (Apple Silicon) release $VERSION -> $out_dir/$release_output"
+    GOOS="darwin" GOARCH="arm64" CGO_ENABLED=1 {{gocmd}} build -trimpath -ldflags "-s -w -X github.com/shpaker/gonflict/internal.Version=${VERSION}" -o "$out_dir/$release_output" ./cmd
+    echo "Building macOS (Apple Silicon) debug $VERSION -> $out_dir/$debug_output"
+    GOOS="darwin" GOARCH="arm64" CGO_ENABLED=1 {{gocmd}} build -ldflags "-X github.com/shpaker/gonflict/internal.Version=${VERSION} -X github.com/shpaker/gonflict/internal.Debug=true" -o "$out_dir/$debug_output" ./cmd
+    echo "macOS builds stored in $out_dir"
+
+build-windows:
+    #!/bin/bash
+    set -euo pipefail
+    out_dir="_build/windows"
+    rm -rf "$out_dir"
+    mkdir -p "$out_dir"
+    VERSION="dev-$(date -u +%Y-%m-%dT%H:%M)"
+    release_output="{{binary_name}}_windows_amd64.exe"
+    debug_output="{{binary_name}}_windows_amd64_debug.exe"
+    echo "Building Windows (x64) release $VERSION -> $out_dir/$release_output"
+    GOOS="windows" GOARCH="amd64" CGO_ENABLED=0 {{gocmd}} build -trimpath -ldflags "-s -w -X github.com/shpaker/gonflict/internal.Version=${VERSION}" -o "$out_dir/$release_output" ./cmd
+    echo "Building Windows (x64) debug $VERSION -> $out_dir/$debug_output"
+    GOOS="windows" GOARCH="amd64" CGO_ENABLED=0 {{gocmd}} build -ldflags "-X github.com/shpaker/gonflict/internal.Version=${VERSION} -X github.com/shpaker/gonflict/internal.Debug=true" -o "$out_dir/$debug_output" ./cmd
+    echo "Windows builds stored in $out_dir"
+
+build-all: build-macos build-windows
+    #!/bin/bash
+    echo "macOS и Windows сборки готовы"
 
 clean:
     #!/bin/bash
@@ -54,8 +84,10 @@ run: build
 
 dev:
     #!/bin/bash
-    echo "Running in development mode..."
-    {{gocmd}} run ./cmd
+    set -euo pipefail
+    VERSION="dev-$(date -u +%Y-%m-%dT%H:%M)"
+    echo "Running in development mode (version $VERSION)..."
+    {{gocmd}} run -ldflags "-X github.com/shpaker/gonflict/internal.Version=${VERSION}" ./cmd
 
 # Форматирование
 fmt:

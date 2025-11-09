@@ -3,7 +3,10 @@ app:
   name: "gonflict"
   level_number: 1
   screen_px: [1280, 720]  # Размер экрана в пикселях [width, height]
-  debug: true
+  title_font_size: 48
+  subtitle_font_size: 12
+  regular_font_size: 12
+  game_title: "Tnk25"
 
 game:
   enemy_spawners:

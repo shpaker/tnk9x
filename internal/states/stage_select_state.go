@@ -24,7 +24,16 @@ type StageSelectState struct {
 	inputAdapter       *stage_select.StageSelectKeyboardInputAdapter
 	rendererAdapter    *stage_select.StageSelectRendererAdapter
 	isSetUp            bool // Флаг для отслеживания, был ли вызван SetUp
+	activeMenuItem     stageSelectMenuItem
+	playerCount        int
 }
+
+type stageSelectMenuItem int
+
+const (
+	stageSelectMenuItemLevel stageSelectMenuItem = iota
+	stageSelectMenuItemPlayers
+)
 
 // NewStageSelectState создает новое состояние выбора уровня
 func NewStageSelectState(
@@ -66,8 +75,21 @@ func NewStageSelectState(
 		return nil, err
 	}
 
+	titleSize := config.GetTitleFontSize()
+	if titleSize == 0 {
+		titleSize = 32
+	}
+	regularSize := config.GetRegularFontSize()
+	if regularSize == 0 {
+		regularSize = titleSize
+	}
+	subtitleSize := config.GetSubtitleFontSize()
+	if subtitleSize == 0 {
+		subtitleSize = regularSize
+	}
+
 	fontFace, err := opentype.NewFace(baseFont, &opentype.FaceOptions{
-		Size: 32,
+		Size: float64(titleSize),
 		DPI:  72,
 	})
 	if err != nil {
@@ -83,6 +105,10 @@ func NewStageSelectState(
 		textFace,
 		screenWidth,
 		screenHeight,
+		int(titleSize),
+		int(regularSize),
+		int(subtitleSize),
+		config.GetGameTitle(),
 	)
 	if err != nil {
 		return nil, err
@@ -91,9 +117,9 @@ func NewStageSelectState(
 	inputAdapter := stage_select.NewStageSelectKeyboardInputAdapter(
 		selector,
 		selectorUseCases,
-		ebiten.KeyW,     // up
-		ebiten.KeyS,     // down
-		ebiten.KeyEnter, // enter
+		ebiten.KeyLeft,
+		ebiten.KeyRight,
+		ebiten.KeyEnter,
 	)
 
 	state := &StageSelectState{
@@ -104,6 +130,8 @@ func NewStageSelectState(
 		Session:            session,
 		inputAdapter:       inputAdapter,
 		rendererAdapter:    rendererAdapter,
+		activeMenuItem:     stageSelectMenuItemLevel,
+		playerCount:        1,
 	}
 
 	return state, nil
@@ -122,8 +150,14 @@ func (s *StageSelectState) Update() {
 		s.isSetUp = true
 	}
 
-	// Обрабатываем ввод
-	s.inputAdapter.Update(0)
+	s.handleMenuNavigation()
+
+	// Обрабатываем ввод в зависимости от активного пункта меню
+	if s.activeMenuItem == stageSelectMenuItemLevel {
+		s.inputAdapter.Update(0)
+	} else {
+		s.handlePlayerCountSelection()
+	}
 
 	// Обрабатываем переход к игре по Enter
 	if inpututil.IsKeyJustPressed(ebiten.KeyEnter) {
@@ -135,6 +169,37 @@ func (s *StageSelectState) Update() {
 // Draw отрисовывает экран выбора уровня
 func (s *StageSelectState) Draw(screen *ebiten.Image) {
 	if s.rendererAdapter != nil {
-		s.rendererAdapter.DrawAll(screen)
+		isLevelActive := s.activeMenuItem == stageSelectMenuItemLevel
+		s.rendererAdapter.DrawAll(
+			screen,
+			isLevelActive,
+			s.playerCount,
+		)
+	}
+}
+
+func (s *StageSelectState) handleMenuNavigation() {
+	moveUp := inpututil.IsKeyJustPressed(ebiten.KeyUp) ||
+		inpututil.IsKeyJustPressed(ebiten.KeyW)
+	moveDown := inpututil.IsKeyJustPressed(ebiten.KeyDown) ||
+		inpututil.IsKeyJustPressed(ebiten.KeyS)
+
+	if moveUp {
+		s.activeMenuItem = stageSelectMenuItemLevel
+	}
+	if moveDown {
+		s.activeMenuItem = stageSelectMenuItemPlayers
+	}
+}
+
+func (s *StageSelectState) handlePlayerCountSelection() {
+	if inpututil.IsKeyJustPressed(ebiten.KeyLeft) ||
+		inpututil.IsKeyJustPressed(ebiten.KeyA) {
+		s.playerCount = 1
+	}
+
+	if inpututil.IsKeyJustPressed(ebiten.KeyRight) ||
+		inpututil.IsKeyJustPressed(ebiten.KeyD) {
+		s.playerCount = 2
 	}
 }

@@ -7,6 +7,7 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
 
 	"github.com/shpaker/gonflict/internal/adapters/stage/input_adapters/ai"
 	"github.com/shpaker/gonflict/internal/interfaces"
@@ -42,6 +43,11 @@ func (app *App) Update() error {
 		return errors.New("exit application")
 	}
 
+	// Переключаем режим отладки по F1
+	if inpututil.IsKeyJustPressed(ebiten.KeyF1) {
+		Debug = !Debug
+	}
+
 	// Обновляем текущее состояние
 	app.State.Update()
 
@@ -66,8 +72,12 @@ func (app *App) Draw(screen *ebiten.Image) {
 		return
 	}
 
-	debugText, enabled := app.debugUseCases.BuildDebugInfo()
-	if !enabled {
+	if !Debug {
+		return
+	}
+
+	debugText := app.debugUseCases.BuildDebugInfo()
+	if debugText == "" {
 		return
 	}
 
@@ -131,7 +141,6 @@ func New(cfg *Config) *App {
 		session:      session,
 		fontUseCases: fontUseCases,
 		debugUseCases: use_cases.NewDebugUseCases(
-			cfg,
 			session,
 		),
 	}
