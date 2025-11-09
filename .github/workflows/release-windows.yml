@@ -9,6 +9,9 @@ jobs:
   build-windows:
     name: Build Windows Artifact
     runs-on: windows-latest
+    strategy:
+      matrix:
+        build_type: [debug, prod]
 
     steps:
       - name: Checkout code
@@ -22,14 +25,27 @@ jobs:
       - name: Download dependencies
         run: go mod download
 
-      - name: Build Windows executable
+      - name: Build Windows executable (debug)
+        if: matrix.build_type == 'debug'
+        env:
+          GOOS: windows
+          GOARCH: amd64
         run: go build -o dist/gonflict.exe ./cmd
+
+      - name: Build Windows executable (production)
+        if: matrix.build_type == 'prod'
+        env:
+          GOOS: windows
+          GOARCH: amd64
+          CGO_ENABLED: 0
+        run: go build -trimpath -ldflags "-s -w" -o dist/gonflict.exe ./cmd
 
       - name: Package artifacts
         shell: pwsh
         run: |
           $tag = "${{ github.ref_name }}"
-          $zipName = "bc$tag.zip"
+          $suffix = if ("${{ matrix.build_type }}" -eq "prod") { "prod" } else { "debug" }
+          $zipName = \"bc_${suffix}_$tag.zip\"
 
           New-Item -ItemType Directory -Force -Path package | Out-Null
           Copy-Item dist/gonflict.exe package/
@@ -41,6 +57,6 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: windows-build
-          path: bc${{ github.ref_name }}.zip
+          name: windows-build-${{ matrix.build_type }}
+          path: bc_${{ matrix.build_type }}_${{ github.ref_name }}.zip
 
