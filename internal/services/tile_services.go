@@ -11,6 +11,7 @@ import (
 // TileService предоставляет логику создания тайлов и анимаций
 type TileService struct {
 	tilesRepository            interfaces.ITilesetRepository
+	enemyTilesetRepository     interfaces.ITilesetRepository
 	spawnerTilesetRepository   interfaces.ITilesetRepository
 	explosionTilesetRepository interfaces.ITilesetRepository
 }
@@ -27,11 +28,13 @@ func NewTileService(
 // NewTileServiceWithSpecialRepos создает новый сервис тайлов с репозиториями для специальных анимаций
 func NewTileServiceWithSpecialRepos(
 	tilesRepository interfaces.ITilesetRepository,
+	enemyTilesetRepository interfaces.ITilesetRepository,
 	spawnerTilesetRepository interfaces.ITilesetRepository,
 	explosionTilesetRepository interfaces.ITilesetRepository,
 ) *TileService {
 	return &TileService{
 		tilesRepository:            tilesRepository,
+		enemyTilesetRepository:     enemyTilesetRepository,
 		spawnerTilesetRepository:   spawnerTilesetRepository,
 		explosionTilesetRepository: explosionTilesetRepository,
 	}
@@ -41,22 +44,57 @@ func NewTileServiceWithSpecialRepos(
 func (s *TileService) GetTileAnimationFrames(
 	id string,
 ) (types.AnimationData, error) {
-	return s.tilesRepository.GetAnimationData(id)
+	if s.tilesRepository != nil {
+		animationData, err := s.tilesRepository.GetAnimationData(id)
+		if err == nil {
+			return animationData, nil
+		}
+		if s.enemyTilesetRepository == nil {
+			return nil, err
+		}
+	}
+
+	if s.enemyTilesetRepository != nil {
+		return s.enemyTilesetRepository.GetAnimationData(id)
+	}
+
+	return nil, fmt.Errorf("animation '%s' not found", id)
 }
 
 // GetAnimationConfig получает конфигурацию анимации по ID
 func (s *TileService) GetAnimationConfig(
 	id string,
 ) (types.AnimationConfig, error) {
-	config, err := s.tilesRepository.GetAnimationConfig(id)
-	if err != nil {
+	if s.tilesRepository != nil {
+		config, err := s.tilesRepository.GetAnimationConfig(id)
+		if err == nil {
+			return config, nil
+		}
+		if s.enemyTilesetRepository == nil {
+			return types.AnimationConfig{}, fmt.Errorf(
+				"animation config '%s' not found: %w",
+				id,
+				err,
+			)
+		}
+	}
+
+	if s.enemyTilesetRepository != nil {
+		config, err := s.enemyTilesetRepository.GetAnimationConfig(id)
+		if err == nil {
+			return config, nil
+		}
 		return types.AnimationConfig{}, fmt.Errorf(
 			"animation config '%s' not found: %w",
 			id,
 			err,
 		)
 	}
-	return config, nil
+
+	return types.AnimationConfig{}, fmt.Errorf(
+		"animation config '%s' not found",
+		id,
+	)
 }
 
 // CreateAnimationFromConfig создает анимацию на основе конфигурации и данных кадров

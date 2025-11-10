@@ -62,6 +62,8 @@ type ITankCommonUseCases interface {
 type ITankRenderUseCases interface {
 	IsSpawnAnimationFinished(tank *types.TankEntity) bool
 	IsExplosionAnimationFinished(tank *types.TankEntity) bool
+	UpdateTankAnimation(tank *types.TankEntity)
+	SyncAnimationWithState(tank *types.TankEntity)
 }
 
 // ITankLifecycleUseCases интерфейс для жизненного цикла танка

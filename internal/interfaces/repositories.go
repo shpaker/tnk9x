@@ -86,6 +86,8 @@ type ITilesetRepositoryRegistry interface {
 	Blocks() ITilesetRepository
 	// Player возвращает репозиторий тайлсетов для игрока
 	Player() ITilesetRepository
+	// Enemy возвращает репозиторий тайлсетов для врагов
+	Enemy() ITilesetRepository
 	// Bullet возвращает репозиторий тайлсетов для пуль
 	Bullet() ITilesetRepository
 	// Spawner возвращает репозиторий тайлсетов для спавна

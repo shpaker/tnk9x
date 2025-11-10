@@ -13,6 +13,7 @@ type TankActionsUseCases struct {
 	coordinateService interfaces.ICoordinateService
 	bulletUseCases    interfaces.IBulletUseCases
 	commonUseCases    interfaces.ITankCommonUseCases // Для управления анимацией через TankCommonUseCases
+	renderUseCases    interfaces.ITankRenderUseCases // Для обновления анимации танка
 	mapUseCases       interfaces.IMapUseCases
 }
 
@@ -22,6 +23,7 @@ func NewTankActionsUseCases(
 	coordinateService interfaces.ICoordinateService,
 	bulletUseCases interfaces.IBulletUseCases,
 	commonUseCases interfaces.ITankCommonUseCases,
+	renderUseCases interfaces.ITankRenderUseCases,
 	mapUseCases interfaces.IMapUseCases,
 ) *TankActionsUseCases {
 	return &TankActionsUseCases{
@@ -29,6 +31,7 @@ func NewTankActionsUseCases(
 		coordinateService: coordinateService,
 		bulletUseCases:    bulletUseCases,
 		commonUseCases:    commonUseCases,
+		renderUseCases:    renderUseCases,
 		mapUseCases:       mapUseCases,
 	}
 }
@@ -66,6 +69,9 @@ func (uc *TankActionsUseCases) Rotate(
 
 	if tank.State == types.TankStateStopped {
 		tank.Direction = direction
+		if uc.renderUseCases != nil {
+			uc.renderUseCases.UpdateTankAnimation(tank)
+		}
 		return nil
 	}
 

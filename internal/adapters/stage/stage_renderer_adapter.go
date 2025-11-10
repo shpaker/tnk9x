@@ -131,7 +131,7 @@ func (r *StageRendererAdapter) drawTanks(screen *ebiten.Image) {
 			continue
 		}
 
-		// Получаем изображение танка через TankTilesUseCases
+		// Получаем изображение танка через playerTilesUseCases (для всех танков)
 		imageData, err := r.playerTilesUseCases.GetImage(imageID)
 		if err != nil {
 			continue
@@ -140,20 +140,14 @@ func (r *StageRendererAdapter) drawTanks(screen *ebiten.Image) {
 		// Получаем закэшированное изображение
 		img := r.getCachedImage(imageID, imageData)
 
-		// Поворачиваем изображение в зависимости от направления
-		rotatedImg := r.imageService.RotateImage(img, tank.Direction)
-		rotatedImage, ok := rotatedImg.(*ebiten.Image)
-		if !ok {
-			rotatedImage = img
-		}
-
+		// Используем изображение напрямую без поворота (спрайты уже содержат правильное направление)
 		op := &ebiten.DrawImageOptions{}
 		op.GeoM.Translate(
 			float64(r.mapOffsetX)+tank.Position.X,
 			float64(r.mapOffsetY)+tank.Position.Y,
 		)
 
-		screen.DrawImage(rotatedImage, op)
+		screen.DrawImage(img, op)
 	}
 }
 

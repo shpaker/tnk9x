@@ -104,25 +104,32 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 	}
 
 	// Создаем общие use cases для всех танков
-	tankRenderUseCases := tank_use_cases.NewTankRenderUseCases()
+	entitiesCollisionService := collision_services.NewEntitiesCollisionService()
+
+	enemyRespawnDelay := b.config.GetEnemyRespawnDelayTicks()
+
+	// Создаем финальный tankRenderUseCases
+	tankRenderUseCases := tank_use_cases.NewTankRenderUseCases(
+		tilesUseCasesWithAnimations,
+	)
+
+	// Создаем финальный tankCommonUseCases с финальным tankRenderUseCases
 	tankCommonUseCases := tank_use_cases.NewTankCommonUseCases(
 		bulletUseCases,
-		tilesUseCasesWithAnimations,
 		b.tankBrakingService,
 		b.coordinateService,
 		tankRenderUseCases,
 		b.gameRepository.GetTanksRepository(),
 	)
-	entitiesCollisionService := collision_services.NewEntitiesCollisionService()
 
-	enemyRespawnDelay := b.config.GetEnemyRespawnDelayTicks()
-
+	// Создаем финальный tankLifecycleUseCases с финальными зависимостями
 	tankLifecycleUseCases := tank_use_cases.NewTankLifecycleUseCases(
 		tilesUseCasesWithAnimations,
 		tankRenderUseCases,
 		tankCommonUseCases,
 		enemyRespawnDelay,
 	)
+
 	// Создаем Use Cases для карты
 	mapUseCases := use_cases.NewMapUseCases(
 		b.mapEntity,
@@ -133,12 +140,14 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 		b.coordinateService,
 		bulletUseCases,
 		tankCommonUseCases,
+		tankRenderUseCases,
 		mapUseCases,
 	)
 
 	// Создаем HQ TilesUseCases для работы с HQ tileset и анимациями взрыва
 	hqTileService := services.NewTileServiceWithSpecialRepos(
 		b.tilesetRegistry.Player(),
+		nil,
 		b.tilesetRegistry.Spawner(),
 		b.tilesetRegistry.Explosion(),
 	)
@@ -356,6 +365,7 @@ func (b *StageStateBuilder) loadLevel() error {
 func (b *StageStateBuilder) buildTileServices() (*use_cases.TilesUseCases, error) {
 	tileService := services.NewTileServiceWithSpecialRepos(
 		b.tilesetRegistry.Player(),
+		b.tilesetRegistry.Enemy(),
 		b.tilesetRegistry.Spawner(),
 		b.tilesetRegistry.Explosion(),
 	)

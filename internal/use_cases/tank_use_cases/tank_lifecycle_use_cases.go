@@ -60,6 +60,13 @@ func (uc *TankLifecycleUseCases) SetCollisionUseCases(
 	uc.collisionUseCases = collisionUseCases
 }
 
+// SetTankCommonUseCases обновляет ссылку на общие use cases танков.
+func (uc *TankLifecycleUseCases) SetTankCommonUseCases(
+	tankCommonUseCases interfaces.ITankCommonUseCases,
+) {
+	uc.tankCommonUseCases = tankCommonUseCases
+}
+
 // ============================================================================
 // Спавн игрока и врагов
 // ============================================================================
@@ -233,15 +240,9 @@ func (uc *TankLifecycleUseCases) IsExplosionFinished(tank *types.TankEntity) {
 func (uc *TankLifecycleUseCases) finishSpawnAnimation(
 	tank *types.TankEntity,
 ) {
-	tankAnimation, err := uc.tilesUseCases.CreateAnimationTile("base_tank")
-	if err == nil {
-		tank.Image = tankAnimation
-		uc.tilesUseCases.AddAnimation(tankAnimation)
-		// Анимация будет запущена автоматически когда танк начнет двигаться
-		// Сейчас танк стоит, поэтому анимация должна быть остановлена
-		uc.tilesUseCases.StopAnimation(tankAnimation)
+	if uc.renderUseCases != nil {
+		uc.renderUseCases.UpdateTankAnimation(tank)
 	}
-
 	tank.State = types.TankStateStopped
 }
 

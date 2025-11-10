@@ -1,5 +1,7 @@
 package types
 
+import "fmt"
+
 // TankState представляет состояние танка
 type TankState int
 
@@ -74,4 +76,33 @@ func (t *TankEntity) IsDestroyed() bool {
 // IsStopped возвращает true если танк остановлен (по скорости или по состоянию)
 func (t *TankEntity) IsStopped() bool {
 	return t.Speed == 0 || t.State == TankStateStopped
+}
+
+// GetTankAnimationName возвращает имя анимации танка в зависимости от направления и типа
+func (t *TankEntity) GetTankAnimationName() string {
+	if t == nil {
+		return "player1_regular_tank_up"
+	}
+
+	prefix := "player1_regular"
+	// Временно все танки используют анимации игрока
+	// if t.IsEnemy {
+	// 	prefix = "enemy_regular"
+	// }
+
+	var direction string
+	switch t.Direction {
+	case DirectionUp:
+		direction = "up"
+	case DirectionDown:
+		direction = "down"
+	case DirectionLeft:
+		direction = "left"
+	case DirectionRight:
+		direction = "right"
+	default:
+		direction = "up"
+	}
+
+	return fmt.Sprintf("%s_tank_%s", prefix, direction)
 }

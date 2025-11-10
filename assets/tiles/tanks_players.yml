@@ -1,0 +1,28 @@
+---
+size: 16
+
+images:
+  # Игрок 1 (желтый) - базовый танк
+  player1_regular_up_1: [0, 0]
+  player1_regular_up_2: [1, 0]
+  player1_regular_left_1: [2, 0]
+  player1_regular_left_2: [3, 0]
+  player1_regular_down_1: [4, 0]
+  player1_regular_down_2: [5, 0]
+  player1_regular_right_1: [6, 0]
+  player1_regular_right_2: [7, 0]
+
+animations:
+  # Игрок 1 (желтый) - базовый танк
+  player1_regular_tank_up:
+    duration: 10
+    frames: [player1_regular_up_1, player1_regular_up_2]
+  player1_regular_tank_left:
+    duration: 10
+    frames: [player1_regular_left_1, player1_regular_left_2]
+  player1_regular_tank_down:
+    duration: 10
+    frames: [player1_regular_down_1, player1_regular_down_2]
+  player1_regular_tank_right:
+    duration: 10
+    frames: [player1_regular_right_1, player1_regular_right_2]

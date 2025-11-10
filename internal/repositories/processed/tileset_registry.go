@@ -10,6 +10,7 @@ import (
 type TilesetRepositoryRegistry struct {
 	blocks    interfaces.ITilesetRepository
 	player    interfaces.ITilesetRepository
+	enemy     interfaces.ITilesetRepository
 	bullet    interfaces.ITilesetRepository
 	spawner   interfaces.ITilesetRepository
 	explosion interfaces.ITilesetRepository
@@ -26,10 +27,22 @@ func NewTilesetRepositoryRegistry(
 		return nil, fmt.Errorf("failed to create blocks tileset: %w", err)
 	}
 
-	// Создаем репозиторий для игрока
-	playerRepo, err := NewTilesetDataRepository(fileRepo, "tiles/player")
+	// Создаем репозиторий для танков игроков
+	playerRepo, err := NewTilesetDataRepository(fileRepo, "tiles/tanks_players")
 	if err != nil {
-		return nil, fmt.Errorf("failed to create player tileset: %w", err)
+		return nil, fmt.Errorf(
+			"failed to create tanks_players tileset: %w",
+			err,
+		)
+	}
+
+	// Создаем репозиторий для танков врагов
+	enemyRepo, err := NewTilesetDataRepository(fileRepo, "tiles/tanks_enemies")
+	if err != nil {
+		return nil, fmt.Errorf(
+			"failed to create tanks_enemies tileset: %w",
+			err,
+		)
 	}
 
 	// Создаем репозиторий для пуль
@@ -59,6 +72,7 @@ func NewTilesetRepositoryRegistry(
 	return &TilesetRepositoryRegistry{
 		blocks:    blocksRepo,
 		player:    playerRepo,
+		enemy:     enemyRepo,
 		bullet:    bulletRepo,
 		spawner:   spawnerRepo,
 		explosion: explosionRepo,
@@ -74,6 +88,11 @@ func (tr *TilesetRepositoryRegistry) Blocks() interfaces.ITilesetRepository {
 // Player возвращает репозиторий тайлсетов для игрока
 func (tr *TilesetRepositoryRegistry) Player() interfaces.ITilesetRepository {
 	return tr.player
+}
+
+// Enemy возвращает репозиторий тайлсетов для врагов
+func (tr *TilesetRepositoryRegistry) Enemy() interfaces.ITilesetRepository {
+	return tr.enemy
 }
 
 // Bullet возвращает репозиторий тайлсетов для пуль
