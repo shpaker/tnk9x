@@ -37,7 +37,7 @@ func TestAddAndGetBullets(t *testing.T) {
 	}
 
 	// Создаем тестовую пулю с Image и Owner
-	bullet := *types.NewBulletEntity(
+	bullet := types.NewBulletEntity(
 		types.Position{X: 100, Y: 100},
 		types.Size{Width: 4, Height: 4},
 		types.SURFACE,
@@ -58,7 +58,7 @@ func TestAddAndGetBullets(t *testing.T) {
 	}
 
 	// Проверяем, что Image работает корректно
-	if bullets[0].Image == nil {
+	if bullets[0] == nil || bullets[0].Image == nil {
 		t.Error("Image не должен быть nil")
 	}
 
@@ -75,7 +75,7 @@ func TestAddBulletWithoutOwner(t *testing.T) {
 	repo := NewBulletsRepository()
 
 	// Создаем пулю без owner
-	bullet := *types.NewBulletEntity(
+	bullet := types.NewBulletEntity(
 		types.Position{X: 100, Y: 100},
 		types.Size{Width: 4, Height: 4},
 		types.SURFACE,
@@ -100,7 +100,7 @@ func TestAddBulletDuplicateOwner(t *testing.T) {
 	}
 
 	// Создаем первую пулю
-	bullet1 := *types.NewBulletEntity(
+	bullet1 := types.NewBulletEntity(
 		types.Position{X: 100, Y: 100},
 		types.Size{Width: 4, Height: 4},
 		types.SURFACE,
@@ -116,7 +116,7 @@ func TestAddBulletDuplicateOwner(t *testing.T) {
 	}
 
 	// Пытаемся добавить вторую пулю от того же owner
-	bullet2 := *types.NewBulletEntity(
+	bullet2 := types.NewBulletEntity(
 		types.Position{X: 200, Y: 200},
 		types.Size{Width: 4, Height: 4},
 		types.SURFACE,
@@ -149,7 +149,7 @@ func TestRemoveBullet(t *testing.T) {
 	}
 
 	// Создаем тестовые пули с Image и Owner
-	bullet1 := *types.NewBulletEntity(
+	bullet1 := types.NewBulletEntity(
 		types.Position{X: 100, Y: 100},
 		types.Size{Width: 4, Height: 4},
 		types.SURFACE,
@@ -158,7 +158,7 @@ func TestRemoveBullet(t *testing.T) {
 		types.DirectionUp,
 		tank1,
 	)
-	bullet2 := *types.NewBulletEntity(
+	bullet2 := types.NewBulletEntity(
 		types.Position{X: 200, Y: 200},
 		types.Size{Width: 4, Height: 4},
 		types.SURFACE,

@@ -17,7 +17,7 @@ import (
 type IBulletUseCases interface {
 	ShootBullet(tank *types.TankEntity) error
 	UpdateBullets(dt float64) error
-	GetBullets() []types.BulletEntity
+	GetBullets() []*types.BulletEntity
 	RemoveBullet(index int) error
 }
 

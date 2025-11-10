@@ -68,7 +68,7 @@ func (uc *BulletUseCases) ShootBullet(tank *types.TankEntity) error {
 	)
 
 	// Игнорируем ошибку от AddBullet (если пуля не добавлена - просто не стреляем)
-	_ = uc.bulletsRepository.AddBullet(*bullet)
+	_ = uc.bulletsRepository.AddBullet(bullet)
 	return nil
 }
 
@@ -76,7 +76,10 @@ func (uc *BulletUseCases) ShootBullet(tank *types.TankEntity) error {
 func (uc *BulletUseCases) UpdateBullets(dt float64) error {
 	bullets := uc.bulletsRepository.GetAllBullets()
 	for i := len(bullets) - 1; i >= 0; i-- {
-		bullet := &bullets[i]
+		bullet := bullets[i]
+		if bullet == nil {
+			continue
+		}
 
 		// Вычисляем новую позицию
 		delta := bullet.Speed * dt
@@ -95,7 +98,7 @@ func (uc *BulletUseCases) UpdateBullets(dt float64) error {
 }
 
 // GetBullets возвращает все активные пули
-func (uc *BulletUseCases) GetBullets() []types.BulletEntity {
+func (uc *BulletUseCases) GetBullets() []*types.BulletEntity {
 	return uc.bulletsRepository.GetAllBullets()
 }
 

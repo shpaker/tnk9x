@@ -111,7 +111,7 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 		b.tankBrakingService,
 		b.coordinateService,
 		tankRenderUseCases,
-		b.gameRepository.TanksRepository(),
+		b.gameRepository.GetTanksRepository(),
 	)
 	entitiesCollisionService := collision_services.NewEntitiesCollisionService()
 
@@ -145,7 +145,7 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 	hqAnimationService := services.NewAnimationService()
 	hqTilesUseCases := use_cases.NewTilesUseCasesWithAnimations(
 		b.tilesetRegistry.HQ(),
-		b.gameRepository.AnimationsRepository(),
+		b.gameRepository.GetAnimationsRepository(),
 		b.tilesetRegistry.Spawner(),
 		b.tilesetRegistry.Explosion(), // Необходимо для CreateExplosionAnimation
 		hqTileService,
@@ -203,7 +203,7 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 	baseSize := types.Size{Width: int(baseSizePx), Height: int(baseSizePx)}
 
 	tankLifecycleUseCases.SetSpawnConfiguration(
-		b.gameRepository.TanksRepository(),
+		b.gameRepository.GetTanksRepository(),
 		enemySpawners,
 		playerSpawner,
 		baseSize,
@@ -363,7 +363,7 @@ func (b *StageStateBuilder) buildTileServices() (*use_cases.TilesUseCases, error
 
 	tilesUseCasesWithAnimations := use_cases.NewTilesUseCasesWithAnimations(
 		b.tilesetRegistry.Player(),
-		b.gameRepository.AnimationsRepository(),
+		b.gameRepository.GetAnimationsRepository(),
 		b.tilesetRegistry.Spawner(),
 		b.tilesetRegistry.Explosion(),
 		tileService,
@@ -385,7 +385,7 @@ func (b *StageStateBuilder) buildBulletUseCases() (*use_cases.BulletUseCases, ui
 		bulletAnimationService,
 	)
 	bulletUseCases := use_cases.NewBulletUseCases(
-		b.gameRepository.BulletsRepository(),
+		b.gameRepository.GetBulletsRepository(),
 		bulletTilesUseCases,
 		baseSizePx,
 	)

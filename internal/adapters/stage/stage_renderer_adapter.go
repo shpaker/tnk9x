@@ -372,46 +372,48 @@ func (r *StageRendererAdapter) drawBullets(screen *ebiten.Image) {
 	bullets := r.bulletUseCases.GetBullets()
 
 	for _, bullet := range bullets {
-		if bullet.Image != nil {
-			// Получаем ID изображения пули
-			imageID, err := bullet.Image.GetImageID()
-			if err != nil {
-				continue
-			}
-
-			// Получаем изображение пули через BulletTilesUseCases
-			imageData, err := r.bulletTilesUseCases.GetImage(imageID)
-			if err != nil {
-				continue
-			}
-
-			// Конвертируем image.Image в ebiten.Image
-			img := ebiten.NewImageFromImage(imageData)
-
-			// Поворачиваем изображение в зависимости от направления пули
-			rotationAngle := getRotationAngle(bullet.Direction)
-			rotatedImg, err := r.imageService.RotateImageByAngle(
-				img,
-				rotationAngle,
-			)
-			if err != nil {
-				continue
-			}
-			rotatedImage, ok := rotatedImg.(*ebiten.Image)
-			if !ok {
-				continue
-			}
-
-			// Вычисляем позицию на экране
-			screenX := float64(r.mapOffsetX) + bullet.Position.X
-			screenY := float64(r.mapOffsetY) + bullet.Position.Y
-
-			// Создаем опции для отрисовки
-			op := &ebiten.DrawImageOptions{}
-			op.GeoM.Translate(screenX, screenY)
-
-			screen.DrawImage(rotatedImage, op)
+		if bullet == nil || bullet.Image == nil {
+			continue
 		}
+
+		// Получаем ID изображения пули
+		imageID, err := bullet.Image.GetImageID()
+		if err != nil {
+			continue
+		}
+
+		// Получаем изображение пули через BulletTilesUseCases
+		imageData, err := r.bulletTilesUseCases.GetImage(imageID)
+		if err != nil {
+			continue
+		}
+
+		// Конвертируем image.Image в ebiten.Image
+		img := ebiten.NewImageFromImage(imageData)
+
+		// Поворачиваем изображение в зависимости от направления пули
+		rotationAngle := getRotationAngle(bullet.Direction)
+		rotatedImg, err := r.imageService.RotateImageByAngle(
+			img,
+			rotationAngle,
+		)
+		if err != nil {
+			continue
+		}
+		rotatedImage, ok := rotatedImg.(*ebiten.Image)
+		if !ok {
+			continue
+		}
+
+		// Вычисляем позицию на экране
+		screenX := float64(r.mapOffsetX) + bullet.Position.X
+		screenY := float64(r.mapOffsetY) + bullet.Position.Y
+
+		// Создаем опции для отрисовки
+		op := &ebiten.DrawImageOptions{}
+		op.GeoM.Translate(screenX, screenY)
+
+		screen.DrawImage(rotatedImage, op)
 	}
 }
 

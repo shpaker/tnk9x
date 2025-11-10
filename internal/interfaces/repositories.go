@@ -13,19 +13,19 @@ import (
 
 // IGameRepositoriesRegistry определяет интерфейс для реестра игровых репозиториев
 type IGameRepositoriesRegistry interface {
-	BulletsRepository() IBulletsRepository
-	AnimationsRepository() IAnimationsRepository
-	TanksRepository() ITanksRepository
+	GetBulletsRepository() IBulletsRepository
+	GetAnimationsRepository() IAnimationsRepository
+	GetTanksRepository() ITanksRepository
 }
 
 // IBulletsRepository определяет интерфейс для работы с пулями
 type IBulletsRepository interface {
 	// AddBullet добавляет пулю в репозиторий
 	// Возвращает ошибку если у пули нет owner или если у этого owner уже есть пуля
-	AddBullet(bullet types.BulletEntity) error
+	AddBullet(bullet *types.BulletEntity) error
 
 	// GetAllBullets возвращает все пули
-	GetAllBullets() []types.BulletEntity
+	GetAllBullets() []*types.BulletEntity
 
 	// RemoveBullet удаляет пулю по индексу
 	RemoveBullet(index int) error

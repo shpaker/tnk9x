@@ -4,35 +4,36 @@ import (
 	"github.com/shpaker/gonflict/internal/interfaces"
 )
 
-// GameRepositoriesRegistry содержит все игровые репозитории
+// GameRepositoriesRegistry содержит все игровые репозитории.
 type GameRepositoriesRegistry struct {
-	bullets    interfaces.IBulletsRepository
-	animations interfaces.IAnimationsRepository
-	tanks      interfaces.ITanksRepository
+	// Repositories
+	bulletsRepository    interfaces.IBulletsRepository
+	animationsRepository interfaces.IAnimationsRepository
+	tanksRepository      interfaces.ITanksRepository
 }
 
 // NewGameRepositoriesRegistry создает новый GameRepositoriesRegistry со всеми репозиториями
 func NewGameRepositoriesRegistry() *GameRepositoriesRegistry {
 	return &GameRepositoriesRegistry{
-		bullets:    NewBulletsRepository(),
-		animations: NewAnimationsRepository(),
-		tanks:      NewTanksRepository(),
+		bulletsRepository:    NewBulletsRepository(),
+		animationsRepository: NewAnimationsRepository(),
+		tanksRepository:      NewTanksRepository(),
 	}
 }
 
 // === Методы для доступа к репозиториям ===
 
-// BulletsRepository возвращает репозиторий пуль
-func (gr *GameRepositoriesRegistry) BulletsRepository() interfaces.IBulletsRepository {
-	return gr.bullets
+// GetBulletsRepository возвращает репозиторий пуль.
+func (gr *GameRepositoriesRegistry) GetBulletsRepository() interfaces.IBulletsRepository {
+	return gr.bulletsRepository
 }
 
-// AnimationsRepository возвращает репозиторий анимаций
-func (gr *GameRepositoriesRegistry) AnimationsRepository() interfaces.IAnimationsRepository {
-	return gr.animations
+// GetAnimationsRepository возвращает репозиторий анимаций.
+func (gr *GameRepositoriesRegistry) GetAnimationsRepository() interfaces.IAnimationsRepository {
+	return gr.animationsRepository
 }
 
-// TanksRepository возвращает репозиторий танков
-func (gr *GameRepositoriesRegistry) TanksRepository() interfaces.ITanksRepository {
-	return gr.tanks
+// GetTanksRepository возвращает репозиторий танков.
+func (gr *GameRepositoriesRegistry) GetTanksRepository() interfaces.ITanksRepository {
+	return gr.tanksRepository
 }

@@ -11,13 +11,13 @@ func TestNewGameRepositoriesRegistry(t *testing.T) {
 	gameRepo := game.NewGameRepositoriesRegistry()
 
 	// Проверяем, что все репозитории созданы
-	if gameRepo.BulletsRepository() == nil {
+	if gameRepo.GetBulletsRepository() == nil {
 		t.Error("Bullets repository should not be nil")
 	}
-	if gameRepo.AnimationsRepository() == nil {
+	if gameRepo.GetAnimationsRepository() == nil {
 		t.Error("Animations repository should not be nil")
 	}
-	if gameRepo.TanksRepository() == nil {
+	if gameRepo.GetTanksRepository() == nil {
 		t.Error("Tanks repository should not be nil")
 	}
 }
@@ -31,7 +31,7 @@ func TestGameRepositoriesRegistryBullets(t *testing.T) {
 	}
 
 	// Создаем пулю с минимальными данными
-	bullet := *types.NewBulletEntity(
+	bullet := types.NewBulletEntity(
 		types.Position{X: 10, Y: 20},
 		types.Size{Width: 4, Height: 4},
 		types.SURFACE,
@@ -42,19 +42,19 @@ func TestGameRepositoriesRegistryBullets(t *testing.T) {
 	)
 
 	// Добавляем пулю
-	err := gameRepo.BulletsRepository().AddBullet(bullet)
+	err := gameRepo.GetBulletsRepository().AddBullet(bullet)
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
 
 	// Проверяем, что пуля добавлена
-	bullets := gameRepo.BulletsRepository().GetAllBullets()
+	bullets := gameRepo.GetBulletsRepository().GetAllBullets()
 	if len(bullets) != 1 {
 		t.Errorf("Expected 1 bullet, got %d", len(bullets))
 	}
 
 	// Проверяем методы интерфейса
-	bulletsRepo := gameRepo.BulletsRepository()
+	bulletsRepo := gameRepo.GetBulletsRepository()
 	if bulletsRepo == nil {
 		t.Error("BulletsRepository() should not return nil")
 	}
@@ -64,7 +64,7 @@ func TestGameRepositoriesRegistryAnimations(t *testing.T) {
 	gameRepo := game.NewGameRepositoriesRegistry()
 
 	// Проверяем методы интерфейса
-	animationsRepo := gameRepo.AnimationsRepository()
+	animationsRepo := gameRepo.GetAnimationsRepository()
 	if animationsRepo == nil {
 		t.Error("AnimationsRepository() should not return nil")
 	}
@@ -81,10 +81,10 @@ func TestGameRepositoriesRegistryTanks(t *testing.T) {
 	}
 
 	// Добавляем танк игрока
-	gameRepo.TanksRepository().SetPlayer(playerTank)
+	gameRepo.GetTanksRepository().SetPlayer(playerTank)
 
 	// Проверяем, что танк добавлен
-	player := gameRepo.TanksRepository().GetPlayer()
+	player := gameRepo.GetTanksRepository().GetPlayer()
 	if player == nil {
 		t.Error("Player tank should not be nil")
 	}
@@ -97,16 +97,16 @@ func TestGameRepositoriesRegistryTanks(t *testing.T) {
 	}
 
 	// Добавляем врага
-	gameRepo.TanksRepository().AddEnemy(enemyTank)
+	gameRepo.GetTanksRepository().AddEnemy(enemyTank)
 
 	// Проверяем получение всех врагов
-	enemies := gameRepo.TanksRepository().GetAllEnemies()
+	enemies := gameRepo.GetTanksRepository().GetAllEnemies()
 	if len(enemies) != 1 {
 		t.Errorf("Expected 1 enemy, got %d", len(enemies))
 	}
 
 	// Проверяем методы интерфейса
-	tanksRepo := gameRepo.TanksRepository()
+	tanksRepo := gameRepo.GetTanksRepository()
 	if tanksRepo == nil {
 		t.Error("TanksRepository() should not return nil")
 	}

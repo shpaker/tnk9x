@@ -64,13 +64,15 @@ func (uc *CollisionUseCases) UpdateCollisions() {
 
 	// Проверяем коллизии с HQ ПЕРВЫМИ, чтобы пули не удалялись другими проверками
 	uc.checkBulletsCollisions(bullets, hq, mapBlocks)
+	// После удаления пуль обновляем срез
+	bullets = uc.bulletUseCases.GetBullets()
 	uc.checkTanksCollisions(allTanks, bullets, mapBlocks)
 }
 
 // checkTanksCollisions проверяет коллизии всех танков с границами и стенами унифицированно
 func (uc *CollisionUseCases) checkTanksCollisions(
 	allTanks []*types.TankEntity,
-	bullets []types.BulletEntity,
+	bullets []*types.BulletEntity,
 	mapBlocks types.MapBlocks,
 ) {
 	for _, tank := range allTanks {
@@ -86,27 +88,59 @@ func (uc *CollisionUseCases) checkTanksCollisions(
 }
 
 func (uc *CollisionUseCases) checkBulletsCollisions(
-	bullets []types.BulletEntity,
+	bullets []*types.BulletEntity,
 	hq *types.HQEntity,
 	mapBlocks types.MapBlocks,
 ) {
-	for index, bullet := range bullets {
-		if uc.checkBulletBoundaryCollision(&bullet) ||
-			uc.checkBulletHQCollision(&bullet, hq) ||
-			uc.checkBulletWallCollision(&bullet, mapBlocks) {
+	for index := 0; index < len(bullets); index++ {
+		bullet := bullets[index]
+		if bullet == nil {
+			continue
+		}
+		if uc.checkBulletBoundaryCollision(bullet) ||
+			uc.checkBulletHQCollision(bullet, hq) ||
+			uc.checkBulletWallCollision(bullet, mapBlocks) {
 			_ = uc.bulletUseCases.RemoveBullet(index)
+			bullets = uc.bulletUseCases.GetBullets()
+			index--
+			continue
+		}
+
+		for j := index + 1; j < len(bullets); j++ {
+			other := bullets[j]
+			if uc.checkBulletBulletCollision(bullet, other) {
+				_ = uc.bulletUseCases.RemoveBullet(j)
+				_ = uc.bulletUseCases.RemoveBullet(index)
+				bullets = uc.bulletUseCases.GetBullets()
+				index--
+				break
+			}
 		}
 	}
+}
+
+func (uc *CollisionUseCases) checkBulletBulletCollision(
+	first *types.BulletEntity,
+	second *types.BulletEntity,
+) bool {
+	if first == nil || second == nil {
+		return false
+	}
+
+	return uc.entitiesCollisionService.CheckColliders(first, second)
 }
 
 // checkTankBulletCollisions проверяет коллизии танка с пулями
 func (uc *CollisionUseCases) checkTankBulletCollisions(
 	tank *types.TankEntity,
-	bullets []types.BulletEntity,
+	bullets []*types.BulletEntity,
 ) {
 	for index, bullet := range bullets {
+		if bullet == nil {
+			continue
+		}
 		if uc.bulletCollisionService.CheckBulletTankCollision(
-			&bullet,
+			bullet,
 			tank,
 		) {
 			_ = uc.bulletUseCases.RemoveBullet(index)

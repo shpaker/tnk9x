@@ -7,26 +7,27 @@ import (
 )
 
 type BulletsRepository struct {
-	bullets []types.BulletEntity
+	bullets []*types.BulletEntity
 }
 
 func NewBulletsRepository() *BulletsRepository {
 	return &BulletsRepository{
-		bullets: make([]types.BulletEntity, 0),
+		bullets: make([]*types.BulletEntity, 0),
 	}
 }
 
 // AddBullet добавляет пулю в репозиторий
 // Возвращает ошибку если у пули нет owner или если у этого owner уже есть пуля
-func (br *BulletsRepository) AddBullet(bullet types.BulletEntity) error {
+func (br *BulletsRepository) AddBullet(bullet *types.BulletEntity) error {
 	// Проверяем наличие owner
-	if bullet.GetOwner() == nil {
+	if bullet == nil || bullet.GetOwner() == nil {
 		return fmt.Errorf("bullet owner is nil")
 	}
 
 	// Проверяем, есть ли уже пуля от этого owner
 	for _, existingBullet := range br.bullets {
-		if existingBullet.GetOwner() == bullet.GetOwner() {
+		if existingBullet != nil &&
+			existingBullet.GetOwner() == bullet.GetOwner() {
 			return fmt.Errorf("tank already has a bullet")
 		}
 	}
@@ -36,7 +37,7 @@ func (br *BulletsRepository) AddBullet(bullet types.BulletEntity) error {
 }
 
 // GetAllBullets возвращает все пули
-func (br *BulletsRepository) GetAllBullets() []types.BulletEntity {
+func (br *BulletsRepository) GetAllBullets() []*types.BulletEntity {
 	return br.bullets
 }
 
