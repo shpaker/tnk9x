@@ -19,6 +19,19 @@ jobs:
         with:
           go-version: '1.24.3'
 
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libglfw3 \
+            libglfw3-dev \
+            libglu1-mesa-dev \
+            mesa-common-dev \
+            libxrandr-dev \
+            libxinerama-dev \
+            libxi-dev \
+            libxcursor-dev
+
       - name: Setup Just
         uses: extractions/setup-just@v3
 
@@ -42,6 +55,19 @@ jobs:
         uses: actions/setup-go@v4
         with:
           go-version: '1.24.3'
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libglfw3 \
+            libglfw3-dev \
+            libglu1-mesa-dev \
+            mesa-common-dev \
+            libxrandr-dev \
+            libxinerama-dev \
+            libxi-dev \
+            libxcursor-dev
 
       - name: Setup Just
         uses: extractions/setup-just@v3
@@ -67,6 +93,19 @@ jobs:
         with:
           go-version: '1.24.3'
 
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libglfw3 \
+            libglfw3-dev \
+            libglu1-mesa-dev \
+            mesa-common-dev \
+            libxrandr-dev \
+            libxinerama-dev \
+            libxi-dev \
+            libxcursor-dev
+
       - name: Setup Just
         uses: extractions/setup-just@v3
 
@@ -91,6 +130,19 @@ jobs:
         uses: actions/setup-go@v4
         with:
           go-version: '1.24.3'
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libglfw3 \
+            libglfw3-dev \
+            libglu1-mesa-dev \
+            mesa-common-dev \
+            libxrandr-dev \
+            libxinerama-dev \
+            libxi-dev \
+            libxcursor-dev
 
       - name: Setup Just
         uses: extractions/setup-just@v3

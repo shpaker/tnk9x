@@ -41,7 +41,15 @@ jobs:
         if: matrix.os == 'linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libglfw3 libglfw3-dev libglu1-mesa-dev mesa-common-dev
+          sudo apt-get install -y \
+            libglfw3 \
+            libglfw3-dev \
+            libglu1-mesa-dev \
+            mesa-common-dev \
+            libxrandr-dev \
+            libxinerama-dev \
+            libxi-dev \
+            libxcursor-dev
 
       - name: Build executable (Windows)
         if: matrix.os == 'windows'
