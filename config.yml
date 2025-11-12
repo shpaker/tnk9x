@@ -1,6 +1,5 @@
 ---
 app:
-  level_number: 1
   screen_px: [1280, 720]  # Размер экрана в пикселях [width, height]
   title_font_size: 48
   subtitle_font_size: 12

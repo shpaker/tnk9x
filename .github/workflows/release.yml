@@ -37,6 +37,12 @@ jobs:
       - name: Download dependencies
         run: go mod download
 
+      - name: Install Linux dependencies
+        if: matrix.os == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libglfw3 libglfw3-dev libglu1-mesa-dev mesa-common-dev
+
       - name: Build executable (Windows)
         if: matrix.os == 'windows'
         shell: pwsh
@@ -59,10 +65,11 @@ jobs:
           GOARCH: ${{ matrix.goarch }}
           APP_VERSION: ${{ github.ref_name }}
         run: |
+          export CGO_ENABLED=1
           if [ "${{ matrix.build_type }}" = "debug" ]; then
             go build -ldflags "-X github.com/shpaker/gonflict/internal.Version=$APP_VERSION -X github.com/shpaker/gonflict/internal.DebugFlag=true" -o dist/gonflict ./cmd
           else
-            CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -X github.com/shpaker/gonflict/internal.Version=$APP_VERSION" -o dist/gonflict ./cmd
+            go build -trimpath -ldflags "-s -w -X github.com/shpaker/gonflict/internal.Version=$APP_VERSION" -o dist/gonflict ./cmd
           fi
 
       - name: Package artifacts (Windows)

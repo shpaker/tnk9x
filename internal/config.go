@@ -15,7 +15,6 @@ type configSchema struct {
 }
 
 type appConfigSchema struct {
-	LevelNumber      int     `yaml:"level_number"`
 	ScreenPx         [2]uint `yaml:"screen_px"`
 	TitleFontSize    uint    `yaml:"title_font_size"`
 	SubtitleFontSize uint    `yaml:"subtitle_font_size"`
@@ -36,7 +35,6 @@ type gameConfigSchema struct {
 }
 
 type Config struct {
-	LevelNumber      int
 	ScreenPx         types.Size
 	TitleFontSize    uint
 	SubtitleFontSize uint
@@ -74,7 +72,6 @@ func LoadConfig() (*Config, error) {
 	}
 
 	cfg := &Config{
-		LevelNumber: schema.App.LevelNumber,
 		ScreenPx: types.Size{
 			Width:  int(schema.App.ScreenPx[0]),
 			Height: int(schema.App.ScreenPx[1]),
