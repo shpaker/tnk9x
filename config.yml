@@ -1,12 +1,11 @@
 ---
 app:
-  name: "gonflict"
   level_number: 1
   screen_px: [1280, 720]  # Размер экрана в пикселях [width, height]
   title_font_size: 48
   subtitle_font_size: 12
   regular_font_size: 12
-  game_title: "Tnk25"
+  game_title: "TNK25"
 
 game:
   enemy_spawners:
@@ -22,4 +21,3 @@ game:
   base_size_px: 16
   enemy_respawn_delay_ticks: 120  # Задержка между спавнами врагов в тиках (3 секунды при 60 FPS)
   map_blocks_count: [26, 26]  # Размер карты в блоках [width, height]
-  map_offsets_px: [16, 16]  # [x, y] оффсеты игровой карты от угла экрана

@@ -15,7 +15,6 @@ type configSchema struct {
 }
 
 type appConfigSchema struct {
-	Name             string  `yaml:"name"`
 	LevelNumber      int     `yaml:"level_number"`
 	ScreenPx         [2]uint `yaml:"screen_px"`
 	TitleFontSize    uint    `yaml:"title_font_size"`
@@ -32,13 +31,11 @@ type gameConfigSchema struct {
 	AIUpdateIntervalTicks  int      `yaml:"ai_update_interval_ticks"`  // Интервал обновления AI в тиках (по умолчанию 60 тиков = 1000мс)
 	EnemyRespawnDelayTicks uint     `yaml:"enemy_respawn_delay_ticks"` // Задержка между спавнами врагов в тиках
 
-	BaseSizePx     uint    `yaml:"base_size_px"`
-	MapBlocksCount [2]int  `yaml:"map_blocks_count"` // Размер карты в блоках [width, height]
-	MapOffsets     [2]uint `yaml:"map_offsets_px"`   // Оффсеты игровой карты от угла экрана [x, y]
+	BaseSizePx     uint   `yaml:"base_size_px"`
+	MapBlocksCount [2]int `yaml:"map_blocks_count"` // Размер карты в блоках [width, height]
 }
 
 type Config struct {
-	Name             string
 	LevelNumber      int
 	ScreenPx         types.Size
 	TitleFontSize    uint
@@ -55,7 +52,6 @@ type Config struct {
 
 	BaseSizePx     uint
 	MapBlocksCount types.Size
-	MapOffsets     [2]uint
 
 	TileBaseSize uint
 }
@@ -78,7 +74,6 @@ func LoadConfig() (*Config, error) {
 	}
 
 	cfg := &Config{
-		Name:        schema.App.Name,
 		LevelNumber: schema.App.LevelNumber,
 		ScreenPx: types.Size{
 			Width:  int(schema.App.ScreenPx[0]),
@@ -106,7 +101,6 @@ func LoadConfig() (*Config, error) {
 			Width:  schema.Game.MapBlocksCount[0],
 			Height: schema.Game.MapBlocksCount[1],
 		},
-		MapOffsets: schema.Game.MapOffsets,
 	}
 
 	cfg.TileBaseSize = cfg.BaseSizePx / 2
@@ -163,10 +157,6 @@ func (c *Config) GetBaseSizePx() uint {
 
 func (c *Config) GetMapBlocksCount() types.Size {
 	return c.MapBlocksCount
-}
-
-func (c *Config) GetMapOffsets() [2]uint {
-	return c.MapOffsets
 }
 
 func (c *Config) GetTileBaseSize() uint {

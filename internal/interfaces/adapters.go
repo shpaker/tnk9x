@@ -17,7 +17,6 @@ type IConfigProvider interface {
 	GetEnemyRespawnDelayTicks() uint
 	GetBaseSizePx() uint
 	GetMapBlocksCount() types.Size
-	GetMapOffsets() [2]uint
 	GetTileBaseSize() uint
 	GetTitleFontSize() uint
 	GetSubtitleFontSize() uint

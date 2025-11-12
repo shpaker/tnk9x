@@ -299,13 +299,12 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 		renderAnimationService,
 	)
 
-	mapOffsets := b.config.GetMapOffsets()
-	mapOffsetX := int(mapOffsets[0])
-	mapOffsetY := int(mapOffsets[1])
 	mapBlocksCount := b.config.GetMapBlocksCount()
-	mapWidthHeightForAdapter := mapBlocksCount.Width * int(
-		b.config.GetTileBaseSize(),
-	)
+	rendererTileSize := int(b.config.GetTileBaseSize())
+	mapWidthHeightForAdapter := mapBlocksCount.Width * rendererTileSize
+
+	mapOffsetY := 16
+	mapOffsetX := mapWidthHeightForAdapter / 2
 
 	rendererAdapter := game.NewStageRendererAdapter(
 		mapUseCases,
@@ -320,7 +319,7 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 		hqTilesUseCasesForRenderer,
 		hqUseCases,
 		b.fontUseCases,
-		int(b.config.GetTileBaseSize()),
+		rendererTileSize,
 		mapOffsetX,
 		mapOffsetY,
 		mapWidthHeightForAdapter,

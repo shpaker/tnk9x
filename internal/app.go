@@ -263,7 +263,9 @@ func (app *App) Run(ctx context.Context) error {
 		app.config.ScreenWidth(),
 		app.config.ScreenHeight(),
 	)
-	ebiten.SetWindowTitle(fmt.Sprintf("%s v%s", app.config.Name, Version))
+	ebiten.SetWindowTitle(
+		fmt.Sprintf("%s v%s", app.config.GetGameTitle(), Version),
+	)
 
 	err := ebiten.RunGame(app)
 
