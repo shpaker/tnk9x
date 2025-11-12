@@ -10,6 +10,7 @@ import (
 	game "github.com/shpaker/gonflict/internal/adapters/stage"
 	"github.com/shpaker/gonflict/internal/adapters/stage/input_adapters"
 	"github.com/shpaker/gonflict/internal/interfaces"
+	"github.com/shpaker/gonflict/internal/repositories/processed"
 	"github.com/shpaker/gonflict/internal/services"
 	collision_services "github.com/shpaker/gonflict/internal/services/collision_services"
 	"github.com/shpaker/gonflict/internal/types"
@@ -146,17 +147,19 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 
 	// Создаем HQ TilesUseCases для работы с HQ tileset и анимациями взрыва
 	hqTileService := services.NewTileServiceWithSpecialRepos(
-		b.tilesetRegistry.Player(),
-		nil,
-		b.tilesetRegistry.Spawner(),
-		b.tilesetRegistry.Explosion(),
+		b.tilesetRegistry,
+		processed.TilesetTypePlayer,
+		processed.TilesetType(""),
+		processed.TilesetTypeSpawner,
+		processed.TilesetTypeExplosion,
 	)
 	hqAnimationService := services.NewAnimationService()
 	hqTilesUseCases := use_cases.NewTilesUseCasesWithAnimations(
-		b.tilesetRegistry.HQ(),
+		b.tilesetRegistry,
+		processed.TilesetTypeHQ,
 		b.gameRepository.GetAnimationsRepository(),
-		b.tilesetRegistry.Spawner(),
-		b.tilesetRegistry.Explosion(), // Необходимо для CreateExplosionAnimation
+		processed.TilesetTypeSpawner,
+		processed.TilesetTypeExplosion,
 		hqTileService,
 		hqAnimationService,
 	)
@@ -267,33 +270,45 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 	// Создаем TilesUseCases для рендера
 	renderAnimationService := services.NewAnimationService()
 	mapTilesUseCases := use_cases.NewTilesUseCases(
-		b.tilesetRegistry.Blocks(),
-		services.NewTileService(b.tilesetRegistry.Blocks()),
+		b.tilesetRegistry,
+		processed.TilesetTypeBlocks,
+		services.NewTileService(b.tilesetRegistry, processed.TilesetTypeBlocks),
 		renderAnimationService,
 	)
 	playerTilesUseCases := use_cases.NewTilesUseCases(
-		b.tilesetRegistry.Player(),
-		services.NewTileService(b.tilesetRegistry.Player()),
+		b.tilesetRegistry,
+		processed.TilesetTypePlayer,
+		services.NewTileService(b.tilesetRegistry, processed.TilesetTypePlayer),
 		renderAnimationService,
 	)
 	bulletTilesUseCases := use_cases.NewTilesUseCases(
-		b.tilesetRegistry.Bullet(),
-		services.NewTileService(b.tilesetRegistry.Bullet()),
+		b.tilesetRegistry,
+		processed.TilesetTypeBullet,
+		services.NewTileService(b.tilesetRegistry, processed.TilesetTypeBullet),
 		renderAnimationService,
 	)
 	spawnerTilesUseCases := use_cases.NewTilesUseCases(
-		b.tilesetRegistry.Spawner(),
-		services.NewTileService(b.tilesetRegistry.Spawner()),
+		b.tilesetRegistry,
+		processed.TilesetTypeSpawner,
+		services.NewTileService(
+			b.tilesetRegistry,
+			processed.TilesetTypeSpawner,
+		),
 		renderAnimationService,
 	)
 	explosionTilesUseCases := use_cases.NewTilesUseCases(
-		b.tilesetRegistry.Explosion(),
-		services.NewTileService(b.tilesetRegistry.Explosion()),
+		b.tilesetRegistry,
+		processed.TilesetTypeExplosion,
+		services.NewTileService(
+			b.tilesetRegistry,
+			processed.TilesetTypeExplosion,
+		),
 		renderAnimationService,
 	)
 	hqTilesUseCasesForRenderer := use_cases.NewTilesUseCases(
-		b.tilesetRegistry.HQ(),
-		services.NewTileService(b.tilesetRegistry.HQ()),
+		b.tilesetRegistry,
+		processed.TilesetTypeHQ,
+		services.NewTileService(b.tilesetRegistry, processed.TilesetTypeHQ),
 		renderAnimationService,
 	)
 
@@ -364,18 +379,20 @@ func (b *StageStateBuilder) loadLevel() error {
 // buildTileServices создает сервисы для тайлов и анимаций
 func (b *StageStateBuilder) buildTileServices() (*use_cases.TilesUseCases, error) {
 	tileService := services.NewTileServiceWithSpecialRepos(
-		b.tilesetRegistry.Player(),
-		b.tilesetRegistry.Enemy(),
-		b.tilesetRegistry.Spawner(),
-		b.tilesetRegistry.Explosion(),
+		b.tilesetRegistry,
+		processed.TilesetTypePlayer,
+		processed.TilesetTypeEnemy,
+		processed.TilesetTypeSpawner,
+		processed.TilesetTypeExplosion,
 	)
 	animationService := services.NewAnimationService()
 
 	tilesUseCasesWithAnimations := use_cases.NewTilesUseCasesWithAnimations(
-		b.tilesetRegistry.Player(),
+		b.tilesetRegistry,
+		processed.TilesetTypePlayer,
 		b.gameRepository.GetAnimationsRepository(),
-		b.tilesetRegistry.Spawner(),
-		b.tilesetRegistry.Explosion(),
+		processed.TilesetTypeSpawner,
+		processed.TilesetTypeExplosion,
 		tileService,
 		animationService,
 	)
@@ -387,10 +404,14 @@ func (b *StageStateBuilder) buildTileServices() (*use_cases.TilesUseCases, error
 func (b *StageStateBuilder) buildBulletUseCases() (*use_cases.BulletUseCases, uint, error) {
 	baseSizePx := b.config.GetBaseSizePx()
 
-	bulletTileService := services.NewTileService(b.tilesetRegistry.Bullet())
+	bulletTileService := services.NewTileService(
+		b.tilesetRegistry,
+		processed.TilesetTypeBullet,
+	)
 	bulletAnimationService := services.NewAnimationService()
 	bulletTilesUseCases := use_cases.NewTilesUseCases(
-		b.tilesetRegistry.Bullet(),
+		b.tilesetRegistry,
+		processed.TilesetTypeBullet,
 		bulletTileService,
 		bulletAnimationService,
 	)

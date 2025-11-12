@@ -62,16 +62,6 @@ type ITanksRepository interface {
 // Processed Repositories Interfaces
 // ============================================================================
 
-// ITilesetRepository определяет интерфейс для работы с тайлсетами
-type ITilesetRepository interface {
-	// GetImage возвращает изображение по ID из тайлсета
-	GetImage(id string) (image.Image, error)
-	// GetAnimationData возвращает данные анимации по ID
-	GetAnimationData(id string) (types.AnimationData, error)
-	// GetAnimationConfig возвращает конфигурацию анимации по ID
-	GetAnimationConfig(id string) (types.AnimationConfig, error)
-}
-
 // IMapsDataRepository определяет интерфейс для работы с картами уровней
 type IMapsDataRepository interface {
 	// GetLevel загружает уровень по номеру и возвращает его данные
@@ -80,22 +70,46 @@ type IMapsDataRepository interface {
 	GetLevelsCount() (int, error)
 }
 
-// ITilesetRepositoryRegistry определяет интерфейс для реестра тайлсетов
+// ITilesetRepositoryRegistry определяет интерфейс для фасада тайлсетов
 type ITilesetRepositoryRegistry interface {
-	// Blocks возвращает репозиторий тайлсетов для блоков
-	Blocks() ITilesetRepository
-	// Player возвращает репозиторий тайлсетов для игрока
-	Player() ITilesetRepository
-	// Enemy возвращает репозиторий тайлсетов для врагов
-	Enemy() ITilesetRepository
-	// Bullet возвращает репозиторий тайлсетов для пуль
-	Bullet() ITilesetRepository
-	// Spawner возвращает репозиторий тайлсетов для спавна
-	Spawner() ITilesetRepository
-	// Explosion возвращает репозиторий тайлсетов для взрыва
-	Explosion() ITilesetRepository
-	// HQ возвращает репозиторий тайлсетов для базы
-	HQ() ITilesetRepository
+	// === Методы для блоков ===
+	GetBlocksImage(id string) (types.IImageProvider, error)
+	GetBlocksAnimationData(id string) (types.AnimationData, error)
+	GetBlocksAnimationConfig(id string) (types.AnimationConfig, error)
+
+	// === Методы для игрока ===
+	GetPlayerImage(id string) (types.IImageProvider, error)
+	GetPlayerAnimationData(id string) (types.AnimationData, error)
+	GetPlayerAnimationConfig(id string) (types.AnimationConfig, error)
+
+	// === Методы для врагов ===
+	GetEnemyImage(id string) (types.IImageProvider, error)
+	GetEnemyAnimationData(id string) (types.AnimationData, error)
+	GetEnemyAnimationConfig(id string) (types.AnimationConfig, error)
+
+	// === Методы для пуль ===
+	GetBulletImage(id string) (types.IImageProvider, error)
+	GetBulletAnimationData(id string) (types.AnimationData, error)
+	GetBulletAnimationConfig(id string) (types.AnimationConfig, error)
+
+	// === Методы для спавна ===
+	GetSpawnerImage(id string) (types.IImageProvider, error)
+	GetSpawnerAnimationData(id string) (types.AnimationData, error)
+	GetSpawnerAnimationConfig(id string) (types.AnimationConfig, error)
+
+	// === Методы для взрыва ===
+	GetExplosionImage(id string) (types.IImageProvider, error)
+	GetExplosionAnimationData(id string) (types.AnimationData, error)
+	GetExplosionAnimationConfig(id string) (types.AnimationConfig, error)
+
+	// === Методы для базы ===
+	GetHQImage(id string) (types.IImageProvider, error)
+	GetHQAnimationData(id string) (types.AnimationData, error)
+	GetHQAnimationConfig(id string) (types.AnimationConfig, error)
+
+	// GetImageData возвращает image.Image по типу тайлсета и ID (для внутреннего использования)
+	// tilesetType передается как string для избежания циклических зависимостей
+	GetImageData(tilesetType string, id string) (image.Image, error)
 }
 
 // IScriptsRepository определяет интерфейс для работы с Lua скриптами

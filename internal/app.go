@@ -105,7 +105,7 @@ func New(cfg *Config) *App {
 	// Создаем репозиторий карт
 	mapsRepository := processed.NewMapsDataRepository(
 		fileRepository,
-		tilesetRegistry.Blocks(),
+		tilesetRegistry,
 	)
 	fontsRepository := processed.NewFontsRepository(fileRepository)
 	fontUseCases := use_cases.NewFontUseCases(fontsRepository)
@@ -187,7 +187,7 @@ func (app *App) createStageState(
 	// Создаем репозиторий карт
 	mapsRepository := processed.NewMapsDataRepository(
 		fileRepository,
-		tilesetRegistry.Blocks(),
+		tilesetRegistry,
 	)
 	// Создаем реестр игровых репозиториев
 	gameRepository := game_repos.NewGameRepositoriesRegistry()
@@ -257,7 +257,7 @@ func (app *App) createStageSelectState(
 	// Создаем репозиторий карт
 	mapsRepository := processed.NewMapsDataRepository(
 		fileRepository,
-		tilesetRegistry.Blocks(),
+		tilesetRegistry,
 	)
 
 	fontUseCases := app.fontUseCases

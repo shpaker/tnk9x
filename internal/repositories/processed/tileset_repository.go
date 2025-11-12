@@ -89,7 +89,7 @@ func NewTilesetDataRepository(
 	return repo, nil
 }
 
-func (tr *TilesetDataRepository) GetImage(
+func (tr *TilesetDataRepository) getImage(
 	id string,
 ) (image.Image, error) {
 	// Проверяем кэш
@@ -101,7 +101,7 @@ func (tr *TilesetDataRepository) GetImage(
 	return nil, fmt.Errorf("image '%s' not found", id)
 }
 
-func (tr *TilesetDataRepository) GetAnimationData(
+func (tr *TilesetDataRepository) getAnimationData(
 	id string,
 ) (types.AnimationData, error) {
 	// Получаем данные анимации
@@ -113,8 +113,8 @@ func (tr *TilesetDataRepository) GetAnimationData(
 	return animationData, nil
 }
 
-// GetAnimationConfig получает конфигурацию анимации
-func (tr *TilesetDataRepository) GetAnimationConfig(
+// getAnimationConfig получает конфигурацию анимации
+func (tr *TilesetDataRepository) getAnimationConfig(
 	id string,
 ) (types.AnimationConfig, error) {
 	config, exists := tr.animationsConfig[id]

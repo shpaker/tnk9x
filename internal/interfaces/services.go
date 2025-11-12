@@ -84,8 +84,8 @@ type ITileService interface {
 		animationFrames types.AnimationData,
 		config types.AnimationConfig,
 	) *image_providers.AnimationProvider
-	CreateAnimationTileFromRepo(
-		repo ITilesetRepository,
+	CreateAnimationTileFromTileset(
+		tilesetType string,
 		id string,
 	) (*image_providers.AnimationProvider, error)
 }

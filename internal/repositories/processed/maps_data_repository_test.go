@@ -8,26 +8,147 @@ import (
 
 	"github.com/shpaker/gonflict/internal/interfaces"
 	"github.com/shpaker/gonflict/internal/types"
+	image_providers "github.com/shpaker/gonflict/internal/types/image_providers"
 )
 
-// MockTilesetRepository - мок для тестирования
-type MockTilesetRepository struct{}
+// MockTilesetRepositoryRegistry - мок фасада для тестирования
+type MockTilesetRepositoryRegistry struct{}
 
-func (mtr *MockTilesetRepository) GetImage(id string) (image.Image, error) {
-	return nil, nil
+func (mtr *MockTilesetRepositoryRegistry) GetBlocksImage(
+	id string,
+) (types.IImageProvider, error) {
+	return &image_providers.StaticProvider{ImageID: id}, nil
 }
 
-func (mtr *MockTilesetRepository) GetAnimationData(
+func (mtr *MockTilesetRepositoryRegistry) GetBlocksAnimationData(
 	id string,
 ) (types.AnimationData, error) {
 	return types.AnimationData{}, nil
 }
 
-func (mtr *MockTilesetRepository) GetAnimationConfig(
+func (mtr *MockTilesetRepositoryRegistry) GetBlocksAnimationConfig(
 	id string,
 ) (types.AnimationConfig, error) {
 	return types.AnimationConfig{}, nil
 }
+
+func (mtr *MockTilesetRepositoryRegistry) GetPlayerImage(
+	id string,
+) (types.IImageProvider, error) {
+	return &image_providers.StaticProvider{ImageID: id}, nil
+}
+
+func (mtr *MockTilesetRepositoryRegistry) GetPlayerAnimationData(
+	id string,
+) (types.AnimationData, error) {
+	return types.AnimationData{}, nil
+}
+
+func (mtr *MockTilesetRepositoryRegistry) GetPlayerAnimationConfig(
+	id string,
+) (types.AnimationConfig, error) {
+	return types.AnimationConfig{}, nil
+}
+
+func (mtr *MockTilesetRepositoryRegistry) GetEnemyImage(
+	id string,
+) (types.IImageProvider, error) {
+	return &image_providers.StaticProvider{ImageID: id}, nil
+}
+
+func (mtr *MockTilesetRepositoryRegistry) GetEnemyAnimationData(
+	id string,
+) (types.AnimationData, error) {
+	return types.AnimationData{}, nil
+}
+
+func (mtr *MockTilesetRepositoryRegistry) GetEnemyAnimationConfig(
+	id string,
+) (types.AnimationConfig, error) {
+	return types.AnimationConfig{}, nil
+}
+
+func (mtr *MockTilesetRepositoryRegistry) GetBulletImage(
+	id string,
+) (types.IImageProvider, error) {
+	return &image_providers.StaticProvider{ImageID: id}, nil
+}
+
+func (mtr *MockTilesetRepositoryRegistry) GetBulletAnimationData(
+	id string,
+) (types.AnimationData, error) {
+	return types.AnimationData{}, nil
+}
+
+func (mtr *MockTilesetRepositoryRegistry) GetBulletAnimationConfig(
+	id string,
+) (types.AnimationConfig, error) {
+	return types.AnimationConfig{}, nil
+}
+
+func (mtr *MockTilesetRepositoryRegistry) GetSpawnerImage(
+	id string,
+) (types.IImageProvider, error) {
+	return &image_providers.StaticProvider{ImageID: id}, nil
+}
+
+func (mtr *MockTilesetRepositoryRegistry) GetSpawnerAnimationData(
+	id string,
+) (types.AnimationData, error) {
+	return types.AnimationData{}, nil
+}
+
+func (mtr *MockTilesetRepositoryRegistry) GetSpawnerAnimationConfig(
+	id string,
+) (types.AnimationConfig, error) {
+	return types.AnimationConfig{}, nil
+}
+
+func (mtr *MockTilesetRepositoryRegistry) GetExplosionImage(
+	id string,
+) (types.IImageProvider, error) {
+	return &image_providers.StaticProvider{ImageID: id}, nil
+}
+
+func (mtr *MockTilesetRepositoryRegistry) GetExplosionAnimationData(
+	id string,
+) (types.AnimationData, error) {
+	return types.AnimationData{}, nil
+}
+
+func (mtr *MockTilesetRepositoryRegistry) GetExplosionAnimationConfig(
+	id string,
+) (types.AnimationConfig, error) {
+	return types.AnimationConfig{}, nil
+}
+
+func (mtr *MockTilesetRepositoryRegistry) GetHQImage(
+	id string,
+) (types.IImageProvider, error) {
+	return &image_providers.StaticProvider{ImageID: id}, nil
+}
+
+func (mtr *MockTilesetRepositoryRegistry) GetHQAnimationData(
+	id string,
+) (types.AnimationData, error) {
+	return types.AnimationData{}, nil
+}
+
+func (mtr *MockTilesetRepositoryRegistry) GetHQAnimationConfig(
+	id string,
+) (types.AnimationConfig, error) {
+	return types.AnimationConfig{}, nil
+}
+
+func (mtr *MockTilesetRepositoryRegistry) GetImageData(
+	tilesetType string,
+	id string,
+) (image.Image, error) {
+	return nil, nil
+}
+
+// MockTilesetRepository - мок для тестирования (deprecated, используйте MockTilesetRepositoryRegistry)
+type MockTilesetRepository struct{}
 
 // MockImageProvider - мок для тестирования
 type MockImageProvider struct {
@@ -119,10 +240,10 @@ func TestGetLevel_Success(t *testing.T) {
 	mockFileRepo.AddFile("levels/1.bcmap", levelData)
 
 	// Создаем сервис уровней
-	mockTilesetRepo := &MockTilesetRepository{}
+	mockTilesetRegistry := &MockTilesetRepositoryRegistry{}
 	// Проверяем, что мок реализует интерфейс
-	var _ interfaces.ITilesetRepository = mockTilesetRepo
-	mapsService := NewMapsDataRepository(mockFileRepo, mockTilesetRepo)
+	var _ interfaces.ITilesetRepositoryRegistry = mockTilesetRegistry
+	mapsService := NewMapsDataRepository(mockFileRepo, mockTilesetRegistry)
 
 	// Вызываем функцию
 	tileBaseSize := 8
@@ -176,10 +297,10 @@ func TestGetLevel_InvalidSize(t *testing.T) {
 	mockFileRepo.AddFile("levels/1.bcmap", levelData)
 
 	// Создаем сервис уровней
-	mockTilesetRepo := &MockTilesetRepository{}
+	mockTilesetRegistry := &MockTilesetRepositoryRegistry{}
 	// Проверяем, что мок реализует интерфейс
-	var _ interfaces.ITilesetRepository = mockTilesetRepo
-	mapsService := NewMapsDataRepository(mockFileRepo, mockTilesetRepo)
+	var _ interfaces.ITilesetRepositoryRegistry = mockTilesetRegistry
+	mapsService := NewMapsDataRepository(mockFileRepo, mockTilesetRegistry)
 
 	// Вызываем функцию
 	tileBaseSize := 8

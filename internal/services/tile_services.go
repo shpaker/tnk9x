@@ -4,39 +4,41 @@ import (
 	"fmt"
 
 	"github.com/shpaker/gonflict/internal/interfaces"
+	"github.com/shpaker/gonflict/internal/repositories/processed"
 	"github.com/shpaker/gonflict/internal/types"
 	image_providers "github.com/shpaker/gonflict/internal/types/image_providers"
 )
 
 // TileService предоставляет логику создания тайлов и анимаций
 type TileService struct {
-	tilesRepository            interfaces.ITilesetRepository
-	enemyTilesetRepository     interfaces.ITilesetRepository
-	spawnerTilesetRepository   interfaces.ITilesetRepository
-	explosionTilesetRepository interfaces.ITilesetRepository
+	tilesetRegistry  interfaces.ITilesetRepositoryRegistry
+	tilesetType      processed.TilesetType
+	enemyTilesetType processed.TilesetType // Для специальных случаев, когда нужен fallback на enemy
 }
 
 // NewTileService создает новый сервис тайлов
 func NewTileService(
-	tilesRepository interfaces.ITilesetRepository,
+	tilesetRegistry interfaces.ITilesetRepositoryRegistry,
+	tilesetType processed.TilesetType,
 ) *TileService {
 	return &TileService{
-		tilesRepository: tilesRepository,
+		tilesetRegistry: tilesetRegistry,
+		tilesetType:     tilesetType,
 	}
 }
 
 // NewTileServiceWithSpecialRepos создает новый сервис тайлов с репозиториями для специальных анимаций
 func NewTileServiceWithSpecialRepos(
-	tilesRepository interfaces.ITilesetRepository,
-	enemyTilesetRepository interfaces.ITilesetRepository,
-	spawnerTilesetRepository interfaces.ITilesetRepository,
-	explosionTilesetRepository interfaces.ITilesetRepository,
+	tilesetRegistry interfaces.ITilesetRepositoryRegistry,
+	primaryTilesetType processed.TilesetType,
+	enemyTilesetType processed.TilesetType,
+	spawnerTilesetType processed.TilesetType,
+	explosionTilesetType processed.TilesetType,
 ) *TileService {
 	return &TileService{
-		tilesRepository:            tilesRepository,
-		enemyTilesetRepository:     enemyTilesetRepository,
-		spawnerTilesetRepository:   spawnerTilesetRepository,
-		explosionTilesetRepository: explosionTilesetRepository,
+		tilesetRegistry:  tilesetRegistry,
+		tilesetType:      primaryTilesetType,
+		enemyTilesetType: enemyTilesetType,
 	}
 }
 
@@ -44,18 +46,15 @@ func NewTileServiceWithSpecialRepos(
 func (s *TileService) GetTileAnimationFrames(
 	id string,
 ) (types.AnimationData, error) {
-	if s.tilesRepository != nil {
-		animationData, err := s.tilesRepository.GetAnimationData(id)
-		if err == nil {
-			return animationData, nil
-		}
-		if s.enemyTilesetRepository == nil {
-			return nil, err
-		}
+	// Пробуем получить из основного тайлсета
+	animationData, err := s.getAnimationDataFromTileset(s.tilesetType, id)
+	if err == nil {
+		return animationData, nil
 	}
 
-	if s.enemyTilesetRepository != nil {
-		return s.enemyTilesetRepository.GetAnimationData(id)
+	// Если не найдено и есть fallback на enemy, пробуем его
+	if s.enemyTilesetType != "" {
+		return s.getAnimationDataFromTileset(s.enemyTilesetType, id)
 	}
 
 	return nil, fmt.Errorf("animation '%s' not found", id)
@@ -65,36 +64,74 @@ func (s *TileService) GetTileAnimationFrames(
 func (s *TileService) GetAnimationConfig(
 	id string,
 ) (types.AnimationConfig, error) {
-	if s.tilesRepository != nil {
-		config, err := s.tilesRepository.GetAnimationConfig(id)
-		if err == nil {
-			return config, nil
-		}
-		if s.enemyTilesetRepository == nil {
-			return types.AnimationConfig{}, fmt.Errorf(
-				"animation config '%s' not found: %w",
-				id,
-				err,
-			)
-		}
+	// Пробуем получить из основного тайлсета
+	config, err := s.getAnimationConfigFromTileset(s.tilesetType, id)
+	if err == nil {
+		return config, nil
 	}
 
-	if s.enemyTilesetRepository != nil {
-		config, err := s.enemyTilesetRepository.GetAnimationConfig(id)
-		if err == nil {
-			return config, nil
-		}
-		return types.AnimationConfig{}, fmt.Errorf(
-			"animation config '%s' not found: %w",
-			id,
-			err,
-		)
+	// Если не найдено и есть fallback на enemy, пробуем его
+	if s.enemyTilesetType != "" {
+		return s.getAnimationConfigFromTileset(s.enemyTilesetType, id)
 	}
 
 	return types.AnimationConfig{}, fmt.Errorf(
 		"animation config '%s' not found",
 		id,
 	)
+}
+
+// getAnimationDataFromTileset получает данные анимации из указанного тайлсета
+func (s *TileService) getAnimationDataFromTileset(
+	tilesetType processed.TilesetType,
+	id string,
+) (types.AnimationData, error) {
+	switch tilesetType {
+	case processed.TilesetTypeBlocks:
+		return s.tilesetRegistry.GetBlocksAnimationData(id)
+	case processed.TilesetTypePlayer:
+		return s.tilesetRegistry.GetPlayerAnimationData(id)
+	case processed.TilesetTypeEnemy:
+		return s.tilesetRegistry.GetEnemyAnimationData(id)
+	case processed.TilesetTypeBullet:
+		return s.tilesetRegistry.GetBulletAnimationData(id)
+	case processed.TilesetTypeSpawner:
+		return s.tilesetRegistry.GetSpawnerAnimationData(id)
+	case processed.TilesetTypeExplosion:
+		return s.tilesetRegistry.GetExplosionAnimationData(id)
+	case processed.TilesetTypeHQ:
+		return s.tilesetRegistry.GetHQAnimationData(id)
+	default:
+		return nil, fmt.Errorf("unknown tileset type: %s", tilesetType)
+	}
+}
+
+// getAnimationConfigFromTileset получает конфигурацию анимации из указанного тайлсета
+func (s *TileService) getAnimationConfigFromTileset(
+	tilesetType processed.TilesetType,
+	id string,
+) (types.AnimationConfig, error) {
+	switch tilesetType {
+	case processed.TilesetTypeBlocks:
+		return s.tilesetRegistry.GetBlocksAnimationConfig(id)
+	case processed.TilesetTypePlayer:
+		return s.tilesetRegistry.GetPlayerAnimationConfig(id)
+	case processed.TilesetTypeEnemy:
+		return s.tilesetRegistry.GetEnemyAnimationConfig(id)
+	case processed.TilesetTypeBullet:
+		return s.tilesetRegistry.GetBulletAnimationConfig(id)
+	case processed.TilesetTypeSpawner:
+		return s.tilesetRegistry.GetSpawnerAnimationConfig(id)
+	case processed.TilesetTypeExplosion:
+		return s.tilesetRegistry.GetExplosionAnimationConfig(id)
+	case processed.TilesetTypeHQ:
+		return s.tilesetRegistry.GetHQAnimationConfig(id)
+	default:
+		return types.AnimationConfig{}, fmt.Errorf(
+			"unknown tileset type: %s",
+			tilesetType,
+		)
+	}
 }
 
 // CreateAnimationFromConfig создает анимацию на основе конфигурации и данных кадров
@@ -132,21 +169,23 @@ func (s *TileService) HasOffset(offset [2]float64) bool {
 	return offset[0] != 0 || offset[1] != 0
 }
 
-// CreateAnimationTileFromRepo создает анимированный тайл из указанного репозитория
-func (s *TileService) CreateAnimationTileFromRepo(
-	repo interfaces.ITilesetRepository,
+// CreateAnimationTileFromTileset создает анимированный тайл из указанного тайлсета
+func (s *TileService) CreateAnimationTileFromTileset(
+	tilesetType string,
 	id string,
 ) (*image_providers.AnimationProvider, error) {
-	if repo == nil {
-		return nil, fmt.Errorf("repository is nil")
-	}
-
-	config, err := repo.GetAnimationConfig(id)
+	config, err := s.getAnimationConfigFromTileset(
+		processed.TilesetType(tilesetType),
+		id,
+	)
 	if err != nil {
 		return nil, fmt.Errorf("animation config '%s' not found: %w", id, err)
 	}
 
-	animationFrames, err := repo.GetAnimationData(id)
+	animationFrames, err := s.getAnimationDataFromTileset(
+		processed.TilesetType(tilesetType),
+		id,
+	)
 	if err != nil {
 		return nil, fmt.Errorf("animation '%s' not found: %w", id, err)
 	}

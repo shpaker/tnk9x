@@ -20,21 +20,21 @@ var MapCharsBlocksMapping = map[string]types.BlockType{
 }
 
 type MapsDataRepository struct {
-	fileRepository    interfaces.IFileRepository
-	tilesetRepository interfaces.ITilesetRepository
-	width             uint
-	height            uint
+	fileRepository  interfaces.IFileRepository
+	tilesetRegistry interfaces.ITilesetRepositoryRegistry
+	width           uint
+	height          uint
 }
 
 func NewMapsDataRepository(
 	fileRepository interfaces.IFileRepository,
-	tilesetRepository interfaces.ITilesetRepository,
+	tilesetRegistry interfaces.ITilesetRepositoryRegistry,
 ) *MapsDataRepository {
 	return &MapsDataRepository{
-		fileRepository:    fileRepository,
-		tilesetRepository: tilesetRepository,
-		width:             0,
-		height:            0,
+		fileRepository:  fileRepository,
+		tilesetRegistry: tilesetRegistry,
+		width:           0,
+		height:          0,
 	}
 }
 
