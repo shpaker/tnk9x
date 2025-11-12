@@ -9,7 +9,6 @@ import (
 	"github.com/shpaker/gonflict/internal/use_cases"
 )
 
-// TankLifecycleUseCases отвечает за жизненный цикл танка (спавн, взрыв, анимации)
 type TankLifecycleUseCases struct {
 	tilesUseCases      *use_cases.TilesUseCases
 	renderUseCases     interfaces.ITankRenderUseCases
@@ -22,11 +21,6 @@ type TankLifecycleUseCases struct {
 	baseSize           types.Size
 }
 
-// ============================================================================
-// Конфигурация
-// ============================================================================
-
-// NewTankLifecycleUseCases создает новый экземпляр TankLifecycleUseCases
 func NewTankLifecycleUseCases(
 	tilesUseCases *use_cases.TilesUseCases,
 	renderUseCases interfaces.ITankRenderUseCases,
@@ -41,7 +35,6 @@ func NewTankLifecycleUseCases(
 	}
 }
 
-// SetSpawnConfiguration настраивает параметры спавна танков
 func (uc *TankLifecycleUseCases) SetSpawnConfiguration(
 	tanksRepository interfaces.ITanksRepository,
 	enemySpawners []types.Position,
@@ -56,26 +49,18 @@ func (uc *TankLifecycleUseCases) SetSpawnConfiguration(
 	uc.baseSize = baseSize
 }
 
-// SetCollisionUseCases устанавливает зависимость от use cases коллизий
 func (uc *TankLifecycleUseCases) SetCollisionUseCases(
 	collisionUseCases interfaces.ICollisionUseCases,
 ) {
 	uc.collisionUseCases = collisionUseCases
 }
 
-// SetTankCommonUseCases обновляет ссылку на общие use cases танков.
 func (uc *TankLifecycleUseCases) SetTankCommonUseCases(
 	tankCommonUseCases interfaces.ITankCommonUseCases,
 ) {
 	uc.tankCommonUseCases = tankCommonUseCases
 }
 
-// ============================================================================
-// Спавн игрока и врагов
-// ============================================================================
-
-// OnStageSetUpEnemiesSpawn спавнит до трех вражеских танков
-// OnStageSetUpEnemiesSpawn спавнит до трех вражеских танков
 func (uc *TankLifecycleUseCases) OnStageSetUpEnemiesSpawn() ([3]*types.TankEntity, error) {
 	var spawnedEnemies [3]*types.TankEntity
 
@@ -94,7 +79,6 @@ func (uc *TankLifecycleUseCases) OnStageSetUpEnemiesSpawn() ([3]*types.TankEntit
 	return spawnedEnemies, nil
 }
 
-// SpawnEnemy спавнит конкретного врага по индексу
 func (uc *TankLifecycleUseCases) SpawnEnemy(
 	index *int,
 	ignoreRespawnDelay bool,
@@ -144,7 +128,6 @@ func (uc *TankLifecycleUseCases) SpawnEnemy(
 	return &tank, nil
 }
 
-// SpawnPlayer1 создает и спавнит игрока из первого спавнера
 func (uc *TankLifecycleUseCases) SpawnPlayer1() (*types.TankEntity, error) {
 	if uc.tanksRepository == nil {
 		return nil, fmt.Errorf("tanks repository missing")
@@ -157,14 +140,13 @@ func (uc *TankLifecycleUseCases) SpawnPlayer1() (*types.TankEntity, error) {
 	if err != nil {
 		return nil, err
 	}
-	// Выделяем память в куче для танка
+
 	tankPtr := new(types.TankEntity)
 	*tankPtr = tank
 	uc.tanksRepository.SetPlayer(types.PlayerTankNumPlayer1, tankPtr)
 	return tankPtr, nil
 }
 
-// SpawnPlayer2 создает и спавнит игрока 2 из второго спавнера
 func (uc *TankLifecycleUseCases) SpawnPlayer2() (*types.TankEntity, error) {
 	if uc.tanksRepository == nil {
 		return nil, fmt.Errorf("tanks repository missing")
@@ -177,14 +159,13 @@ func (uc *TankLifecycleUseCases) SpawnPlayer2() (*types.TankEntity, error) {
 	if err != nil {
 		return nil, err
 	}
-	// Выделяем память в куче для танка
+
 	tankPtr := new(types.TankEntity)
 	*tankPtr = tank
 	uc.tanksRepository.SetPlayer(types.PlayerTankNumPlayer2, tankPtr)
 	return tankPtr, nil
 }
 
-// GetPlayerTank возвращает танк игрока по номеру из репозитория
 func (uc *TankLifecycleUseCases) GetPlayerTank(
 	num types.PlayerTankNum,
 ) *types.TankEntity {
@@ -194,7 +175,6 @@ func (uc *TankLifecycleUseCases) GetPlayerTank(
 	return uc.tanksRepository.GetPlayer(num)
 }
 
-// SetPlayerTank устанавливает танк игрока по номеру в репозитории
 func (uc *TankLifecycleUseCases) SetPlayerTank(
 	num types.PlayerTankNum,
 	tank *types.TankEntity,
@@ -205,11 +185,6 @@ func (uc *TankLifecycleUseCases) SetPlayerTank(
 	uc.tanksRepository.SetPlayer(num, tank)
 }
 
-// ============================================================================
-// Базовые операции жизненного цикла
-// ============================================================================
-
-// spawnTank создает танк и запускает процесс спавна с анимацией
 func (uc *TankLifecycleUseCases) spawnTank(
 	direction types.Direction,
 	spawnAt types.Position,
@@ -235,7 +210,6 @@ func (uc *TankLifecycleUseCases) spawnTank(
 	return tank, nil
 }
 
-// Explode устанавливает и запускает анимацию взрыва для танка
 func (uc *TankLifecycleUseCases) Explode(tank *types.TankEntity) error {
 	explosionAnim, err := uc.tilesUseCases.CreateExplosionAnimation()
 	if err != nil {
@@ -250,11 +224,6 @@ func (uc *TankLifecycleUseCases) Explode(tank *types.TankEntity) error {
 	return nil
 }
 
-// ============================================================================
-// Проверки завершения анимаций
-// ============================================================================
-
-// IsSpawnFinished проверяет и обновляет процесс спавна танка
 func (uc *TankLifecycleUseCases) IsSpawnFinished(
 	tank *types.TankEntity,
 	currentTime float64,
@@ -266,7 +235,6 @@ func (uc *TankLifecycleUseCases) IsSpawnFinished(
 	}
 }
 
-// IsExplosionFinished проверяет завершение анимации взрыва танка
 func (uc *TankLifecycleUseCases) IsExplosionFinished(tank *types.TankEntity) {
 	if tank.State == types.TankStateExploding {
 		if uc.renderUseCases.IsExplosionAnimationFinished(tank) {
@@ -275,7 +243,6 @@ func (uc *TankLifecycleUseCases) IsExplosionFinished(tank *types.TankEntity) {
 	}
 }
 
-// finishSpawnAnimation завершает анимацию спавна и устанавливает анимацию танка
 func (uc *TankLifecycleUseCases) finishSpawnAnimation(
 	tank *types.TankEntity,
 ) {
@@ -285,11 +252,6 @@ func (uc *TankLifecycleUseCases) finishSpawnAnimation(
 	tank.State = types.TankStateStopped
 }
 
-// ============================================================================
-// Обновление состояния всех танков
-// ============================================================================
-
-// UpdateAllTanksLifecycle обновляет жизненный цикл всех танков (спавн и взрыв)
 func (uc *TankLifecycleUseCases) UpdateAllTanksLifecycle() error {
 	if uc.tankCommonUseCases == nil {
 		return nil
@@ -304,7 +266,6 @@ func (uc *TankLifecycleUseCases) UpdateAllTanksLifecycle() error {
 	return nil
 }
 
-// updateTankSpawn проверяет и обновляет процесс спавна танка
 func (uc *TankLifecycleUseCases) updateTankSpawn(tank *types.TankEntity) {
 	if tank.State != types.TankStateSpawning {
 		return
@@ -319,7 +280,6 @@ func (uc *TankLifecycleUseCases) updateTankSpawn(tank *types.TankEntity) {
 	}
 }
 
-// updateTankExplosion проверяет завершение анимации взрыва танка
 func (uc *TankLifecycleUseCases) updateTankExplosion(tank *types.TankEntity) {
 	if tank.State != types.TankStateExploding {
 		return

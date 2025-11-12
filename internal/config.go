@@ -9,13 +9,11 @@ import (
 	"github.com/shpaker/gonflict/internal/types"
 )
 
-// configSchema структура для парсинга YAML файла
 type configSchema struct {
 	App  appConfigSchema  `yaml:"app"`
 	Game gameConfigSchema `yaml:"game"`
 }
 
-// appConfigSchema для парсинга app секции из YAML
 type appConfigSchema struct {
 	Name             string  `yaml:"name"`
 	LevelNumber      int     `yaml:"level_number"`
@@ -26,7 +24,6 @@ type appConfigSchema struct {
 	GameTitle        string  `yaml:"game_title"`
 }
 
-// gameConfigSchema для парсинга game секции из YAML
 type gameConfigSchema struct {
 	EnemySpawners          [][2]int `yaml:"enemy_spawners"`
 	Player1Spawn           [2]int   `yaml:"players_1_spawn_at"`
@@ -35,15 +32,12 @@ type gameConfigSchema struct {
 	AIUpdateIntervalTicks  int      `yaml:"ai_update_interval_ticks"`  // Интервал обновления AI в тиках (по умолчанию 60 тиков = 1000мс)
 	EnemyRespawnDelayTicks uint     `yaml:"enemy_respawn_delay_ticks"` // Задержка между спавнами врагов в тиках
 
-	// Игровые константы
 	BaseSizePx     uint    `yaml:"base_size_px"`
 	MapBlocksCount [2]int  `yaml:"map_blocks_count"` // Размер карты в блоках [width, height]
 	MapOffsets     [2]uint `yaml:"map_offsets_px"`   // Оффсеты игровой карты от угла экрана [x, y]
 }
 
-// Config содержит конфигурацию приложения
 type Config struct {
-	// App settings
 	Name             string
 	LevelNumber      int
 	ScreenPx         types.Size
@@ -52,7 +46,6 @@ type Config struct {
 	RegularFontSize  uint
 	GameTitle        string
 
-	// Game settings
 	EnemySpawners          []types.Position
 	Player1Spawn           types.Position
 	Player2Spawn           types.Position
@@ -60,38 +53,30 @@ type Config struct {
 	AIUpdateIntervalTicks  int
 	EnemyRespawnDelayTicks uint
 
-	// Game constants
 	BaseSizePx     uint
 	MapBlocksCount types.Size
 	MapOffsets     [2]uint
 
-	// Вычисляемые значения
-	TileBaseSize uint // Вычисляется как base_size_px / 2
+	TileBaseSize uint
 }
 
-// LoadConfig загружает конфигурацию из файла config.yml
 func LoadConfig() (*Config, error) {
-	// Определяем путь к файлу конфигурации
 	configPath := "config.yml"
 
-	// Проверяем существование файла
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
 		return nil, fmt.Errorf("config file not found: %s", configPath)
 	}
 
-	// Читаем файл конфигурации
 	data, err := os.ReadFile(configPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read config file: %w", err)
 	}
 
-	// Парсим YAML
 	var schema configSchema
 	if err := yaml.Unmarshal(data, &schema); err != nil {
 		return nil, fmt.Errorf("failed to parse config file: %w", err)
 	}
 
-	// Создаем конфигурацию
 	cfg := &Config{
 		Name:        schema.App.Name,
 		LevelNumber: schema.App.LevelNumber,
@@ -124,7 +109,6 @@ func LoadConfig() (*Config, error) {
 		MapOffsets: schema.Game.MapOffsets,
 	}
 
-	// Вычисляем TileBaseSize как base_size_px / 2
 	cfg.TileBaseSize = cfg.BaseSizePx / 2
 
 	if cfg.EnemyRespawnDelayTicks == 0 {
@@ -148,8 +132,6 @@ func convertCoordToPosition(coord [2]int) types.Position {
 		Y: float64(coord[1]),
 	}
 }
-
-// Геттеры для интерфейса IConfigProvider
 
 func (c *Config) GetEnemySpawners() []types.Position {
 	return c.EnemySpawners
@@ -207,22 +189,18 @@ func (c *Config) GetGameTitle() string {
 	return c.GameTitle
 }
 
-// ScreenWidth возвращает ширину экрана
 func (c *Config) ScreenWidth() int {
 	return c.ScreenPx.Width
 }
 
-// ScreenHeight возвращает высоту экрана
 func (c *Config) ScreenHeight() int {
 	return c.ScreenPx.Height
 }
 
-// GameSpeed возвращает скорость игры
 func (c *Config) GameSpeed() float64 {
 	return 1.0 / 60.0
 }
 
-// TileSize возвращает размер тайла
 func (c *Config) TileSize() int {
 	return int(c.TileBaseSize)
 }

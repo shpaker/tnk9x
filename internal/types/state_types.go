@@ -1,6 +1,5 @@
 package types
 
-// StateType тип состояния игры
 type StateType int
 
 const (

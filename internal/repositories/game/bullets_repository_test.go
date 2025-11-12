@@ -6,7 +6,6 @@ import (
 	"github.com/shpaker/gonflict/internal/types"
 )
 
-// MockImageProvider для тестирования
 type MockImageProvider struct {
 	id string
 }
@@ -31,12 +30,10 @@ func TestNewBulletsRepository(t *testing.T) {
 func TestAddAndGetBullets(t *testing.T) {
 	repo := NewBulletsRepository()
 
-	// Создаем тестовый танк
 	tank := &types.TankEntity{
 		Position: types.Position{X: 0, Y: 0},
 	}
 
-	// Создаем тестовую пулю с Image и Owner
 	bullet := types.NewBulletEntity(
 		types.Position{X: 100, Y: 100},
 		types.Size{Width: 4, Height: 4},
@@ -57,7 +54,6 @@ func TestAddAndGetBullets(t *testing.T) {
 		t.Errorf("Ожидалось 1 пуля, получено %d", len(bullets))
 	}
 
-	// Проверяем, что Image работает корректно
 	if bullets[0] == nil || bullets[0].Image == nil {
 		t.Error("Image не должен быть nil")
 	}
@@ -74,7 +70,6 @@ func TestAddAndGetBullets(t *testing.T) {
 func TestAddBulletWithoutOwner(t *testing.T) {
 	repo := NewBulletsRepository()
 
-	// Создаем пулю без owner
 	bullet := types.NewBulletEntity(
 		types.Position{X: 100, Y: 100},
 		types.Size{Width: 4, Height: 4},
@@ -82,7 +77,7 @@ func TestAddBulletWithoutOwner(t *testing.T) {
 		&MockImageProvider{id: "bullet"},
 		200.0,
 		types.DirectionUp,
-		nil, // Owner остается nil
+		nil,
 	)
 
 	err := repo.AddBullet(bullet)
@@ -94,12 +89,10 @@ func TestAddBulletWithoutOwner(t *testing.T) {
 func TestAddBulletDuplicateOwner(t *testing.T) {
 	repo := NewBulletsRepository()
 
-	// Создаем тестовый танк
 	tank := &types.TankEntity{
 		Position: types.Position{X: 0, Y: 0},
 	}
 
-	// Создаем первую пулю
 	bullet1 := types.NewBulletEntity(
 		types.Position{X: 100, Y: 100},
 		types.Size{Width: 4, Height: 4},
@@ -115,7 +108,6 @@ func TestAddBulletDuplicateOwner(t *testing.T) {
 		t.Errorf("Не ожидалась ошибка: %v", err)
 	}
 
-	// Пытаемся добавить вторую пулю от того же owner
 	bullet2 := types.NewBulletEntity(
 		types.Position{X: 200, Y: 200},
 		types.Size{Width: 4, Height: 4},
@@ -140,7 +132,6 @@ func TestAddBulletDuplicateOwner(t *testing.T) {
 func TestRemoveBullet(t *testing.T) {
 	repo := NewBulletsRepository()
 
-	// Создаем тестовые танки
 	tank1 := &types.TankEntity{
 		Position: types.Position{X: 0, Y: 0},
 	}
@@ -148,7 +139,6 @@ func TestRemoveBullet(t *testing.T) {
 		Position: types.Position{X: 10, Y: 10},
 	}
 
-	// Создаем тестовые пули с Image и Owner
 	bullet1 := types.NewBulletEntity(
 		types.Position{X: 100, Y: 100},
 		types.Size{Width: 4, Height: 4},
@@ -182,7 +172,6 @@ func TestRemoveBullet(t *testing.T) {
 		t.Errorf("Ожидалось 2 пули, получено %d", len(bullets))
 	}
 
-	// Удаляем первую пулю
 	err = repo.RemoveBullet(0)
 	if err != nil {
 		t.Errorf("Неожиданная ошибка при удалении: %v", err)
@@ -193,7 +182,6 @@ func TestRemoveBullet(t *testing.T) {
 		t.Errorf("Ожидалось 1 пуля после удаления, получено %d", len(bullets))
 	}
 
-	// Тест невалидного индекса
 	err = repo.RemoveBullet(5)
 	if err == nil {
 		t.Error("Ожидалась ошибка для невалидного индекса")

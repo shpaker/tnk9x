@@ -5,7 +5,6 @@ import (
 	"github.com/shpaker/gonflict/internal/types"
 )
 
-// WallCollisionService предоставляет логику обработки коллизий со стенами
 type WallCollisionService struct {
 	tankSpriteSize           int
 	tileMinSize              int
@@ -13,7 +12,6 @@ type WallCollisionService struct {
 	entitiesCollisionService interfaces.IEntitiesCollisionService
 }
 
-// NewWallCollisionService создает новый сервис коллизий со стенами
 func NewWallCollisionService(
 	tankSpriteSize int,
 	tileMinSize int,
@@ -28,8 +26,6 @@ func NewWallCollisionService(
 	}
 }
 
-// CheckTankWallCollision проверяет коллизию танка со стенами
-// Возвращает true, если была коллизия
 func (s *WallCollisionService) CheckTankWallCollision(
 	tank *types.TankEntity,
 	wall *types.BlockEntity,
@@ -37,6 +33,6 @@ func (s *WallCollisionService) CheckTankWallCollision(
 	if wall.Data == nil {
 		return false
 	}
-	// Блоки уже хранят позиции и размеры в пикселях, проверяем коллизию напрямую
+
 	return s.entitiesCollisionService.CheckColliders(tank, wall)
 }

@@ -6,17 +6,15 @@ import (
 	"github.com/shpaker/gonflict/internal/types"
 )
 
-// AnimationProvider представляет провайдер анимированных изображений
 type AnimationProvider struct {
 	CurrentFrame    uint
 	AnimationFrames types.AnimationData
 	CurrentTick     uint
 	IsAnimating     bool
 	LoopCount       *int
-	Offset          [2]float64 // Смещение анимации относительно сущности [x, y]
+	Offset          [2]float64
 }
 
-// GetImageID возвращает ID изображения текущего кадра (реализует IImageProvider)
 func (ap *AnimationProvider) GetImageID() (string, error) {
 	if len(ap.AnimationFrames) == 0 {
 		return "", errors.New("no animation frames available")
@@ -29,7 +27,6 @@ func (ap *AnimationProvider) GetImageID() (string, error) {
 	return ap.AnimationFrames[ap.CurrentFrame].Image, nil
 }
 
-// NewAnimationProvider создает новый экземпляр AnimationProvider с бесконечными циклами
 func NewAnimationProvider(
 	animationFrames types.AnimationData,
 ) *AnimationProvider {
@@ -38,12 +35,11 @@ func NewAnimationProvider(
 		AnimationFrames: animationFrames,
 		CurrentTick:     0,
 		IsAnimating:     false,
-		LoopCount:       nil,              // Бесконечно
-		Offset:          [2]float64{0, 0}, // Без смещения
+		LoopCount:       nil,
+		Offset:          [2]float64{0, 0},
 	}
 }
 
-// NewAnimationProviderWithLoops создает анимацию с заданным количеством циклов
 func NewAnimationProviderWithLoops(
 	animationFrames types.AnimationData,
 	loops int,
@@ -54,11 +50,10 @@ func NewAnimationProviderWithLoops(
 		CurrentTick:     0,
 		IsAnimating:     false,
 		LoopCount:       &loops,
-		Offset:          [2]float64{0, 0}, // Без смещения
+		Offset:          [2]float64{0, 0},
 	}
 }
 
-// NewAnimationProviderWithOffset создает анимацию с offset
 func NewAnimationProviderWithOffset(
 	animationFrames types.AnimationData,
 	offset [2]float64,
@@ -68,12 +63,11 @@ func NewAnimationProviderWithOffset(
 		AnimationFrames: animationFrames,
 		CurrentTick:     0,
 		IsAnimating:     false,
-		LoopCount:       nil, // Бесконечно
+		LoopCount:       nil,
 		Offset:          offset,
 	}
 }
 
-// NewAnimationProviderWithLoopsAndOffset создает анимацию с количеством циклов и offset
 func NewAnimationProviderWithLoopsAndOffset(
 	animationFrames types.AnimationData,
 	loops int,
@@ -89,7 +83,6 @@ func NewAnimationProviderWithLoopsAndOffset(
 	}
 }
 
-// IsFinished проверяет, завершилась ли анимация
 func (ap *AnimationProvider) IsFinished() bool {
 	return !ap.IsAnimating
 }

@@ -9,10 +9,8 @@ import (
 	image_providers "github.com/shpaker/gonflict/internal/types/image_providers"
 )
 
-// TilesetType представляет тип тайлсета
 type TilesetType string
 
-// Константы типов тайлсетов
 const (
 	TilesetTypeBlocks    TilesetType = "blocks"
 	TilesetTypePlayer    TilesetType = "player"
@@ -23,7 +21,6 @@ const (
 	TilesetTypeHQ        TilesetType = "hq"
 )
 
-// TilesetRepositoryRegistry является фасадом для работы с тайлсетами
 type TilesetRepositoryRegistry struct {
 	blocks    *TilesetDataRepository
 	player    *TilesetDataRepository
@@ -34,17 +31,14 @@ type TilesetRepositoryRegistry struct {
 	hq        *TilesetDataRepository
 }
 
-// NewTilesetRepositoryRegistry создает новый реестр тайлсетов
 func NewTilesetRepositoryRegistry(
 	fileRepo interfaces.IFileRepository,
 ) (*TilesetRepositoryRegistry, error) {
-	// Создаем репозиторий для блоков
 	blocksRepo, err := NewTilesetDataRepository(fileRepo, "tiles/blocks")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create blocks tileset: %w", err)
 	}
 
-	// Создаем репозиторий для танков игроков
 	playerRepo, err := NewTilesetDataRepository(fileRepo, "tiles/tanks_players")
 	if err != nil {
 		return nil, fmt.Errorf(
@@ -53,7 +47,6 @@ func NewTilesetRepositoryRegistry(
 		)
 	}
 
-	// Создаем репозиторий для танков врагов
 	enemyRepo, err := NewTilesetDataRepository(fileRepo, "tiles/tanks_enemies")
 	if err != nil {
 		return nil, fmt.Errorf(
@@ -62,25 +55,21 @@ func NewTilesetRepositoryRegistry(
 		)
 	}
 
-	// Создаем репозиторий для пуль
 	bulletRepo, err := NewTilesetDataRepository(fileRepo, "tiles/bullet")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create bullet tileset: %w", err)
 	}
 
-	// Создаем репозиторий для спавна
 	spawnerRepo, err := NewTilesetDataRepository(fileRepo, "tiles/spawner")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create spawner tileset: %w", err)
 	}
 
-	// Создаем репозиторий для взрыва
 	explosionRepo, err := NewTilesetDataRepository(fileRepo, "tiles/explosion")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create explosion tileset: %w", err)
 	}
 
-	// Создаем репозиторий для базы
 	hqRepo, err := NewTilesetDataRepository(fileRepo, "tiles/hq")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create hq tileset: %w", err)
@@ -97,7 +86,6 @@ func NewTilesetRepositoryRegistry(
 	}, nil
 }
 
-// getImageData получает image.Image по ImageID и типу тайлсета (для внутреннего использования)
 func (tr *TilesetRepositoryRegistry) getImageData(
 	tilesetType TilesetType,
 	id string,
@@ -143,7 +131,6 @@ func (tr *TilesetRepositoryRegistry) getImageData(
 	}
 }
 
-// GetImageData возвращает image.Image по типу тайлсета и ID (реализует ITilesetRepositoryRegistry)
 func (tr *TilesetRepositoryRegistry) GetImageData(
 	tilesetType string,
 	id string,
@@ -151,16 +138,13 @@ func (tr *TilesetRepositoryRegistry) GetImageData(
 	return tr.getImageData(TilesetType(tilesetType), id)
 }
 
-// === Методы фасада для блоков ===
-
-// GetBlocksImage возвращает провайдер изображения блока по ID
 func (tr *TilesetRepositoryRegistry) GetBlocksImage(
 	id string,
 ) (types.IImageProvider, error) {
 	if tr.blocks == nil {
 		return nil, fmt.Errorf("blocks repository not initialized")
 	}
-	// Проверяем, что изображение существует
+
 	_, err := tr.blocks.getImage(id)
 	if err != nil {
 		return nil, fmt.Errorf("image '%s' not found: %w", id, err)
@@ -170,7 +154,6 @@ func (tr *TilesetRepositoryRegistry) GetBlocksImage(
 	}, nil
 }
 
-// GetBlocksAnimationData возвращает данные анимации блока по ID
 func (tr *TilesetRepositoryRegistry) GetBlocksAnimationData(
 	id string,
 ) (types.AnimationData, error) {
@@ -180,7 +163,6 @@ func (tr *TilesetRepositoryRegistry) GetBlocksAnimationData(
 	return tr.blocks.getAnimationData(id)
 }
 
-// GetBlocksAnimationConfig возвращает конфигурацию анимации блока по ID
 func (tr *TilesetRepositoryRegistry) GetBlocksAnimationConfig(
 	id string,
 ) (types.AnimationConfig, error) {
@@ -192,16 +174,13 @@ func (tr *TilesetRepositoryRegistry) GetBlocksAnimationConfig(
 	return tr.blocks.getAnimationConfig(id)
 }
 
-// === Методы фасада для игрока ===
-
-// GetPlayerImage возвращает провайдер изображения игрока по ID
 func (tr *TilesetRepositoryRegistry) GetPlayerImage(
 	id string,
 ) (types.IImageProvider, error) {
 	if tr.player == nil {
 		return nil, fmt.Errorf("player repository not initialized")
 	}
-	// Проверяем, что изображение существует
+
 	_, err := tr.player.getImage(id)
 	if err != nil {
 		return nil, fmt.Errorf("image '%s' not found: %w", id, err)
@@ -211,7 +190,6 @@ func (tr *TilesetRepositoryRegistry) GetPlayerImage(
 	}, nil
 }
 
-// GetPlayerAnimationData возвращает данные анимации игрока по ID
 func (tr *TilesetRepositoryRegistry) GetPlayerAnimationData(
 	id string,
 ) (types.AnimationData, error) {
@@ -221,7 +199,6 @@ func (tr *TilesetRepositoryRegistry) GetPlayerAnimationData(
 	return tr.player.getAnimationData(id)
 }
 
-// GetPlayerAnimationConfig возвращает конфигурацию анимации игрока по ID
 func (tr *TilesetRepositoryRegistry) GetPlayerAnimationConfig(
 	id string,
 ) (types.AnimationConfig, error) {
@@ -233,16 +210,13 @@ func (tr *TilesetRepositoryRegistry) GetPlayerAnimationConfig(
 	return tr.player.getAnimationConfig(id)
 }
 
-// === Методы фасада для врагов ===
-
-// GetEnemyImage возвращает провайдер изображения врага по ID
 func (tr *TilesetRepositoryRegistry) GetEnemyImage(
 	id string,
 ) (types.IImageProvider, error) {
 	if tr.enemy == nil {
 		return nil, fmt.Errorf("enemy repository not initialized")
 	}
-	// Проверяем, что изображение существует
+
 	_, err := tr.enemy.getImage(id)
 	if err != nil {
 		return nil, fmt.Errorf("image '%s' not found: %w", id, err)
@@ -252,7 +226,6 @@ func (tr *TilesetRepositoryRegistry) GetEnemyImage(
 	}, nil
 }
 
-// GetEnemyAnimationData возвращает данные анимации врага по ID
 func (tr *TilesetRepositoryRegistry) GetEnemyAnimationData(
 	id string,
 ) (types.AnimationData, error) {
@@ -262,7 +235,6 @@ func (tr *TilesetRepositoryRegistry) GetEnemyAnimationData(
 	return tr.enemy.getAnimationData(id)
 }
 
-// GetEnemyAnimationConfig возвращает конфигурацию анимации врага по ID
 func (tr *TilesetRepositoryRegistry) GetEnemyAnimationConfig(
 	id string,
 ) (types.AnimationConfig, error) {
@@ -274,16 +246,13 @@ func (tr *TilesetRepositoryRegistry) GetEnemyAnimationConfig(
 	return tr.enemy.getAnimationConfig(id)
 }
 
-// === Методы фасада для пуль ===
-
-// GetBulletImage возвращает провайдер изображения пули по ID
 func (tr *TilesetRepositoryRegistry) GetBulletImage(
 	id string,
 ) (types.IImageProvider, error) {
 	if tr.bullet == nil {
 		return nil, fmt.Errorf("bullet repository not initialized")
 	}
-	// Проверяем, что изображение существует
+
 	_, err := tr.bullet.getImage(id)
 	if err != nil {
 		return nil, fmt.Errorf("image '%s' not found: %w", id, err)
@@ -293,7 +262,6 @@ func (tr *TilesetRepositoryRegistry) GetBulletImage(
 	}, nil
 }
 
-// GetBulletAnimationData возвращает данные анимации пули по ID
 func (tr *TilesetRepositoryRegistry) GetBulletAnimationData(
 	id string,
 ) (types.AnimationData, error) {
@@ -303,7 +271,6 @@ func (tr *TilesetRepositoryRegistry) GetBulletAnimationData(
 	return tr.bullet.getAnimationData(id)
 }
 
-// GetBulletAnimationConfig возвращает конфигурацию анимации пули по ID
 func (tr *TilesetRepositoryRegistry) GetBulletAnimationConfig(
 	id string,
 ) (types.AnimationConfig, error) {
@@ -315,16 +282,13 @@ func (tr *TilesetRepositoryRegistry) GetBulletAnimationConfig(
 	return tr.bullet.getAnimationConfig(id)
 }
 
-// === Методы фасада для спавна ===
-
-// GetSpawnerImage возвращает провайдер изображения спавна по ID
 func (tr *TilesetRepositoryRegistry) GetSpawnerImage(
 	id string,
 ) (types.IImageProvider, error) {
 	if tr.spawner == nil {
 		return nil, fmt.Errorf("spawner repository not initialized")
 	}
-	// Проверяем, что изображение существует
+
 	_, err := tr.spawner.getImage(id)
 	if err != nil {
 		return nil, fmt.Errorf("image '%s' not found: %w", id, err)
@@ -334,7 +298,6 @@ func (tr *TilesetRepositoryRegistry) GetSpawnerImage(
 	}, nil
 }
 
-// GetSpawnerAnimationData возвращает данные анимации спавна по ID
 func (tr *TilesetRepositoryRegistry) GetSpawnerAnimationData(
 	id string,
 ) (types.AnimationData, error) {
@@ -344,7 +307,6 @@ func (tr *TilesetRepositoryRegistry) GetSpawnerAnimationData(
 	return tr.spawner.getAnimationData(id)
 }
 
-// GetSpawnerAnimationConfig возвращает конфигурацию анимации спавна по ID
 func (tr *TilesetRepositoryRegistry) GetSpawnerAnimationConfig(
 	id string,
 ) (types.AnimationConfig, error) {
@@ -356,16 +318,13 @@ func (tr *TilesetRepositoryRegistry) GetSpawnerAnimationConfig(
 	return tr.spawner.getAnimationConfig(id)
 }
 
-// === Методы фасада для взрыва ===
-
-// GetExplosionImage возвращает провайдер изображения взрыва по ID
 func (tr *TilesetRepositoryRegistry) GetExplosionImage(
 	id string,
 ) (types.IImageProvider, error) {
 	if tr.explosion == nil {
 		return nil, fmt.Errorf("explosion repository not initialized")
 	}
-	// Проверяем, что изображение существует
+
 	_, err := tr.explosion.getImage(id)
 	if err != nil {
 		return nil, fmt.Errorf("image '%s' not found: %w", id, err)
@@ -375,7 +334,6 @@ func (tr *TilesetRepositoryRegistry) GetExplosionImage(
 	}, nil
 }
 
-// GetExplosionAnimationData возвращает данные анимации взрыва по ID
 func (tr *TilesetRepositoryRegistry) GetExplosionAnimationData(
 	id string,
 ) (types.AnimationData, error) {
@@ -385,7 +343,6 @@ func (tr *TilesetRepositoryRegistry) GetExplosionAnimationData(
 	return tr.explosion.getAnimationData(id)
 }
 
-// GetExplosionAnimationConfig возвращает конфигурацию анимации взрыва по ID
 func (tr *TilesetRepositoryRegistry) GetExplosionAnimationConfig(
 	id string,
 ) (types.AnimationConfig, error) {
@@ -397,16 +354,13 @@ func (tr *TilesetRepositoryRegistry) GetExplosionAnimationConfig(
 	return tr.explosion.getAnimationConfig(id)
 }
 
-// === Методы фасада для базы ===
-
-// GetHQImage возвращает провайдер изображения базы по ID
 func (tr *TilesetRepositoryRegistry) GetHQImage(
 	id string,
 ) (types.IImageProvider, error) {
 	if tr.hq == nil {
 		return nil, fmt.Errorf("hq repository not initialized")
 	}
-	// Проверяем, что изображение существует
+
 	_, err := tr.hq.getImage(id)
 	if err != nil {
 		return nil, fmt.Errorf("image '%s' not found: %w", id, err)
@@ -416,7 +370,6 @@ func (tr *TilesetRepositoryRegistry) GetHQImage(
 	}, nil
 }
 
-// GetHQAnimationData возвращает данные анимации базы по ID
 func (tr *TilesetRepositoryRegistry) GetHQAnimationData(
 	id string,
 ) (types.AnimationData, error) {
@@ -426,7 +379,6 @@ func (tr *TilesetRepositoryRegistry) GetHQAnimationData(
 	return tr.hq.getAnimationData(id)
 }
 
-// GetHQAnimationConfig возвращает конфигурацию анимации базы по ID
 func (tr *TilesetRepositoryRegistry) GetHQAnimationConfig(
 	id string,
 ) (types.AnimationConfig, error) {

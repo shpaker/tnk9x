@@ -5,14 +5,12 @@ import (
 	"github.com/shpaker/gonflict/internal/types"
 )
 
-// BulletUseCases реализация интерфейса BulletUseCases
 type BulletUseCases struct {
 	bulletsRepository interfaces.IBulletsRepository
 	tilesUseCases     interfaces.ITilesUseCases
 	tankSpriteSize    uint
 }
 
-// NewBulletUseCases создает новый экземпляр BulletUseCases
 func NewBulletUseCases(
 	bulletsRepository interfaces.IBulletsRepository,
 	tilesUseCases interfaces.ITilesUseCases,
@@ -25,24 +23,19 @@ func NewBulletUseCases(
 	}
 }
 
-// ShootBullet создает новую пулю от указанного танка
 func (uc *BulletUseCases) ShootBullet(tank *types.TankEntity) error {
-	// Проверяем, активен ли танк
 	if !tank.IsActive() {
-		return nil // Просто игнорируем выстрел
+		return nil
 	}
 
-	// Создаем тайл для пули с ID "bullet"
 	bulletImageGetter, err := uc.tilesUseCases.CreateStaticTile("bullet")
 	if err != nil {
 		return err
 	}
 
-	// Вычисляем позицию пули в зависимости от направления танка
 	bulletX := tank.Position.X + float64(uc.tankSpriteSize)/2 - 2
 	bulletY := tank.Position.Y + float64(uc.tankSpriteSize)/2 - 2
 
-	// Корректируем позицию в зависимости от направления
 	switch tank.Direction {
 	case types.DirectionUp:
 		bulletY = tank.Position.Y - 4
@@ -60,19 +53,17 @@ func (uc *BulletUseCases) ShootBullet(tank *types.TankEntity) error {
 			Y: bulletY,
 		},
 		types.Size{Width: 4, Height: 4},
-		types.SURFACE, // Пули на уровне поверхности
+		types.SURFACE,
 		bulletImageGetter,
-		120.0, // Скорость пули
+		120.0,
 		tank.Direction,
 		tank,
 	)
 
-	// Игнорируем ошибку от AddBullet (если пуля не добавлена - просто не стреляем)
 	_ = uc.bulletsRepository.AddBullet(bullet)
 	return nil
 }
 
-// UpdateBullets обновляет позиции всех пуль
 func (uc *BulletUseCases) UpdateBullets(dt float64) error {
 	bullets := uc.bulletsRepository.GetAllBullets()
 	for i := len(bullets) - 1; i >= 0; i-- {
@@ -81,7 +72,6 @@ func (uc *BulletUseCases) UpdateBullets(dt float64) error {
 			continue
 		}
 
-		// Вычисляем новую позицию
 		delta := bullet.Speed * dt
 		switch bullet.Direction {
 		case types.DirectionUp:
@@ -97,12 +87,10 @@ func (uc *BulletUseCases) UpdateBullets(dt float64) error {
 	return nil
 }
 
-// GetBullets возвращает все активные пули
 func (uc *BulletUseCases) GetBullets() []*types.BulletEntity {
 	return uc.bulletsRepository.GetAllBullets()
 }
 
-// RemoveBullet удаляет пулю по индексу
 func (uc *BulletUseCases) RemoveBullet(index int) error {
 	return uc.bulletsRepository.RemoveBullet(index)
 }

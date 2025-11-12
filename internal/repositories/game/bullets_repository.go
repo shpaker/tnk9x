@@ -16,15 +16,11 @@ func NewBulletsRepository() *BulletsRepository {
 	}
 }
 
-// AddBullet добавляет пулю в репозиторий
-// Возвращает ошибку если у пули нет owner или если у этого owner уже есть пуля
 func (br *BulletsRepository) AddBullet(bullet *types.BulletEntity) error {
-	// Проверяем наличие owner
 	if bullet == nil || bullet.GetOwner() == nil {
 		return fmt.Errorf("bullet owner is nil")
 	}
 
-	// Проверяем, есть ли уже пуля от этого owner
 	for _, existingBullet := range br.bullets {
 		if existingBullet != nil &&
 			existingBullet.GetOwner() == bullet.GetOwner() {
@@ -36,12 +32,10 @@ func (br *BulletsRepository) AddBullet(bullet *types.BulletEntity) error {
 	return nil
 }
 
-// GetAllBullets возвращает все пули
 func (br *BulletsRepository) GetAllBullets() []*types.BulletEntity {
 	return br.bullets
 }
 
-// RemoveBullet удаляет пулю по индексу
 func (br *BulletsRepository) RemoveBullet(index int) error {
 	if index < 0 || index >= len(br.bullets) {
 		return fmt.Errorf(

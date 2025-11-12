@@ -14,14 +14,12 @@ func NewAnimationsRepository() *AnimationsRepository {
 	}
 }
 
-// AddAnimation добавляет анимацию в репозиторий
 func (ar *AnimationsRepository) AddAnimation(
 	animation *image_providers.AnimationProvider,
 ) {
 	ar.animations = append(ar.animations, animation)
 }
 
-// GetAllAnimations возвращает все анимации
 func (ar *AnimationsRepository) GetAllAnimations() []*image_providers.AnimationProvider {
 	return ar.animations
 }

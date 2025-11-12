@@ -5,13 +5,11 @@ import (
 	"github.com/shpaker/gonflict/internal/types"
 )
 
-// BulletCollisionService предоставляет логику обработки коллизий пуль
 type BulletCollisionService struct {
 	tileMinSize              int
 	entitiesCollisionService interfaces.IEntitiesCollisionService
 }
 
-// NewBulletCollisionService создает новый сервис коллизий пуль
 func NewBulletCollisionService(
 	tileMinSize int,
 	entitiesCollisionService interfaces.IEntitiesCollisionService,
@@ -22,8 +20,6 @@ func NewBulletCollisionService(
 	}
 }
 
-// CheckBulletBlockCollision проверяет коллизию пули с блоком
-// Возвращает true, если была коллизия
 func (s *BulletCollisionService) CheckBulletBlockCollision(
 	bullet *types.BulletEntity,
 	block *types.BlockEntity,
@@ -34,8 +30,6 @@ func (s *BulletCollisionService) CheckBulletBlockCollision(
 	return s.entitiesCollisionService.CheckColliders(bullet, block)
 }
 
-// CheckBulletTankCollision проверяет коллизию пули с танком
-// Возвращает true, если была коллизия
 func (s *BulletCollisionService) CheckBulletTankCollision(
 	bullet *types.BulletEntity,
 	tank *types.TankEntity,
@@ -45,15 +39,13 @@ func (s *BulletCollisionService) CheckBulletTankCollision(
 		owner == tank {
 		return false
 	}
-	// Пули врагов проходят сквозь врагов, пули игрока проходят сквозь игрока
+
 	if tank.IsEnemy() && owner.IsEnemy() == tank.IsEnemy() {
 		return false
 	}
 	return s.entitiesCollisionService.CheckColliders(bullet, tank)
 }
 
-// CheckBulletHQCollision проверяет коллизию пули с базой
-// Возвращает true, если была коллизия
 func (s *BulletCollisionService) CheckBulletHQCollision(
 	bullet *types.BulletEntity,
 	hq *types.HQEntity,

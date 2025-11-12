@@ -8,13 +8,11 @@ import (
 	"github.com/shpaker/gonflict/internal/interfaces"
 )
 
-// FontUseCases реализует IFontUseCases и обеспечивает доступ к шрифтам приложения.
 type FontUseCases struct {
 	fontsRepository interfaces.IFontsRepository
 	baseFont        *opentype.Font
 }
 
-// NewFontUseCases создает новый экземпляр FontUseCases.
 func NewFontUseCases(
 	fontsRepository interfaces.IFontsRepository,
 ) *FontUseCases {
@@ -23,7 +21,6 @@ func NewFontUseCases(
 	}
 }
 
-// GetFont возвращает opentype.Font для шрифта PressStart2P.
 func (uc *FontUseCases) GetFont() (*opentype.Font, error) {
 	if uc == nil || uc.fontsRepository == nil {
 		return nil, fmt.Errorf("fonts repository is not initialized")

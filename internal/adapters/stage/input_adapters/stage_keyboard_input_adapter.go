@@ -8,7 +8,6 @@ import (
 	"github.com/shpaker/gonflict/internal/types"
 )
 
-// StageKeyboardInputAdapter адаптер для обработки пользовательского ввода с клавиатуры
 type StageKeyboardInputAdapter struct {
 	tankActions   interfaces.ITankActionsUseCases
 	stageUseCases interfaces.IStageUseCases
@@ -23,12 +22,10 @@ type StageKeyboardInputAdapter struct {
 	pauseButton ebiten.Key
 }
 
-// SetPlayerTank назначает танк игрока для управления клавиатурой
 func (a *StageKeyboardInputAdapter) SetPlayerTank(tank *types.TankEntity) {
 	a.tank = tank
 }
 
-// NewStageKeyboardInputAdapter создает новый экземпляр StageKeyboardInputAdapter
 func NewStageKeyboardInputAdapter(
 	tankActions interfaces.ITankActionsUseCases,
 	tank *types.TankEntity,
@@ -53,7 +50,6 @@ func NewStageKeyboardInputAdapter(
 	}
 }
 
-// Update обрабатывает пользовательский ввод
 func (a *StageKeyboardInputAdapter) Update(dt float64) {
 	a.handlePauseToggle()
 	a.keyPressedEvents()
@@ -69,23 +65,19 @@ func (a *StageKeyboardInputAdapter) handlePauseToggle() {
 	}
 }
 
-// keyPressedEvents обрабатывает события нажатия клавиш
 func (a *StageKeyboardInputAdapter) keyPressedEvents() {
 	if a.stageUseCases != nil && a.stageUseCases.IsPaused() {
 		return
 	}
 
-	// Проверяем нажатие клавиши стрельбы
 	if inpututil.IsKeyJustPressed(a.shootButton) {
 		a.tankShoot()
 	}
 
-	// Пропускаем если танка нет
 	if a.tank == nil {
 		return
 	}
 
-	// Rotate the tank if the key is pressed
 	tankRotated := false
 	if ebiten.IsKeyPressed(a.upButton) && !tankRotated {
 		_ = a.tankActions.Rotate(a.tank, types.DirectionUp)
@@ -105,13 +97,11 @@ func (a *StageKeyboardInputAdapter) keyPressedEvents() {
 	if ebiten.IsKeyPressed(a.rightButton) && !tankRotated {
 		_ = a.tankActions.Rotate(a.tank, types.DirectionRight)
 		_ = a.tankActions.Move(a.tank)
-		// tankRotated = true // Не устанавливаем здесь, так как это последняя проверка
+
 	}
 }
 
-// keyReleasedEvents обрабатывает события отпускания клавиш
 func (a *StageKeyboardInputAdapter) keyReleasedEvents() {
-	// Stop the tank if the key is released
 	if a.tank == nil {
 		return
 	}
@@ -139,7 +129,6 @@ func (a *StageKeyboardInputAdapter) keyReleasedEvents() {
 	}
 }
 
-// tankShoot обрабатывает стрельбу танка
 func (a *StageKeyboardInputAdapter) tankShoot() {
 	if a.tank == nil {
 		return

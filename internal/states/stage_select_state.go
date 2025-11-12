@@ -14,7 +14,6 @@ import (
 	"github.com/shpaker/gonflict/internal/types/session_entities"
 )
 
-// StageSelectState представляет состояние выбора уровня
 type StageSelectState struct {
 	config             interfaces.IConfigProvider
 	selector           *types.StageSelectorEntity
@@ -23,7 +22,7 @@ type StageSelectState struct {
 	Session            *session_entities.GameSessionEntity
 	inputAdapter       *stage_select.StageSelectKeyboardInputAdapter
 	rendererAdapter    *stage_select.StageSelectRendererAdapter
-	isSetUp            bool // Флаг для отслеживания, был ли вызван SetUp
+	isSetUp            bool
 	activeMenuItem     stageSelectMenuItem
 	playerCount        int
 	maxActiveEnemies   uint
@@ -37,7 +36,6 @@ const (
 	stageSelectMenuItemMaxEnemies
 )
 
-// NewStageSelectState создает новое состояние выбора уровня
 func NewStageSelectState(
 	config interfaces.IConfigProvider,
 	selectorUseCases *use_cases.StageSelectorUseCases,
@@ -46,8 +44,6 @@ func NewStageSelectState(
 	fontUseCases interfaces.IFontUseCases,
 	mapsRepository interfaces.IMapsDataRepository,
 ) (*StageSelectState, error) {
-	// Получаем размеры экрана через type assertion к конкретному типу Config
-	// (в интерфейсе нет этих методов, но они есть в реализации)
 	type screenConfig interface {
 		ScreenWidth() int
 		ScreenHeight() int
@@ -57,19 +53,17 @@ func NewStageSelectState(
 		screenWidth = screenCfg.ScreenWidth()
 		screenHeight = screenCfg.ScreenHeight()
 	} else {
-		// Fallback значения
+
 		screenWidth = 800
 		screenHeight = 600
 	}
 
-	// Получаем максимальное количество уровней из репозитория карт
 	levelsCount, err := mapsRepository.GetLevelsCount()
 	if err != nil {
 		return nil, err
 	}
 	maxStages := uint(levelsCount)
 
-	// Создаем селектор уровней
 	selector := types.NewStageSelector(maxStages)
 
 	baseFont, err := fontUseCases.GetFont()
@@ -100,7 +94,6 @@ func NewStageSelectState(
 
 	textFace := text.NewGoXFace(fontFace)
 
-	// Создаем адаптер рендеринга (вся работа с графикой, включая загрузку шрифта, в адаптере)
 	rendererAdapter, err := stage_select.NewStageSelectRendererAdapter(
 		selector,
 		selectorUseCases,
@@ -140,14 +133,10 @@ func NewStageSelectState(
 	return state, nil
 }
 
-// SetUp запускается один раз на старте состояния
 func (s *StageSelectState) SetUp() {
-	// Метод для инициализации состояния при первом вызове Update
 }
 
-// Update обновляет состояние выбора уровня
 func (s *StageSelectState) Update() {
-	// Вызываем SetUp один раз на старте состояния
 	if !s.isSetUp {
 		s.SetUp()
 		s.isSetUp = true
@@ -155,7 +144,6 @@ func (s *StageSelectState) Update() {
 
 	s.handleMenuNavigation()
 
-	// Обрабатываем ввод в зависимости от активного пункта меню
 	if s.activeMenuItem == stageSelectMenuItemLevel {
 		s.inputAdapter.Update(0)
 	} else if s.activeMenuItem == stageSelectMenuItemPlayers {
@@ -164,10 +152,9 @@ func (s *StageSelectState) Update() {
 		s.handleMaxActiveEnemiesSelection()
 	}
 
-	// Обрабатываем переход к игре по Enter
 	if inpututil.IsKeyJustPressed(ebiten.KeyEnter) {
 		selectedLevel := s.selectorUseCases.Select(s.selector)
-		// Устанавливаем настройки в StageSessionEntity перед переходом
+
 		if s.Session != nil && s.Session.StageSession() != nil {
 			s.Session.StageSession().SetMaxActiveEnemies(s.maxActiveEnemies)
 			s.Session.StageSession().SetPlayerCount(uint(s.playerCount))
@@ -176,7 +163,6 @@ func (s *StageSelectState) Update() {
 	}
 }
 
-// Draw отрисовывает экран выбора уровня
 func (s *StageSelectState) Draw(screen *ebiten.Image) {
 	if s.rendererAdapter != nil {
 		isLevelActive := s.activeMenuItem == stageSelectMenuItemLevel

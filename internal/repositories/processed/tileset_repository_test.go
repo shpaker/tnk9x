@@ -9,7 +9,6 @@ import (
 	"github.com/shpaker/gonflict/internal/repositories/raw"
 )
 
-// MockTilesetFileRepository - мок для тестирования TilesetRepository
 type MockTilesetFileRepository struct {
 	files  map[string][]byte
 	images map[string]image.Image
@@ -50,16 +49,13 @@ func (m *MockTilesetFileRepository) CountFiles(
 	dirPath string,
 	pattern string,
 ) (int, error) {
-	// Простая реализация для тестов
 	return 0, nil
 }
 
-// Создаем тестовое изображение
 func createTestImage(width, height int) image.Image {
 	return image.NewRGBA(image.Rect(0, 0, width, height))
 }
 
-// Создаем тестовую конфигурацию блоков
 func createTestBlocksConfig() []byte {
 	return []byte(`---
 size: 8
@@ -73,7 +69,6 @@ animations:
 `)
 }
 
-// Создаем тестовую конфигурацию игрока
 func createTestPlayerConfig() []byte {
 	return []byte(`---
 size: 16
@@ -89,7 +84,6 @@ animations:
 `)
 }
 
-// createTestRegistryWithBlocks создает тестовый фасад с одним тайлсетом blocks
 func createTestRegistryWithBlocks(
 	mockFileRepo *MockTilesetFileRepository,
 ) (*TilesetRepositoryRegistry, error) {
@@ -100,7 +94,6 @@ func createTestRegistryWithBlocks(
 	return &TilesetRepositoryRegistry{blocks: blocksRepo}, nil
 }
 
-// createTestRegistryWithPlayer создает тестовый фасад с одним тайлсетом player
 func createTestRegistryWithPlayer(
 	mockFileRepo *MockTilesetFileRepository,
 ) (*TilesetRepositoryRegistry, error) {
@@ -112,16 +105,12 @@ func createTestRegistryWithPlayer(
 }
 
 func TestNewTilesetRepository_Success(t *testing.T) {
-	// Создаем мок репозитория
 	mockFileRepo := NewMockTilesetFileRepository()
 
-	// Добавляем тестовые файлы
 	mockFileRepo.AddFile("blocks.yml", createTestBlocksConfig())
 	mockFileRepo.AddImage("blocks", createTestImage(32, 32))
 
-	// Создаем репозиторий
 	repo, err := NewTilesetDataRepository(mockFileRepo, "blocks")
-	// Проверяем результат
 	if err != nil {
 		t.Fatalf("NewTilesetRepository вернул ошибку: %v", err)
 	}
@@ -130,61 +119,48 @@ func TestNewTilesetRepository_Success(t *testing.T) {
 		t.Fatal("Репозиторий не создан")
 	}
 
-	// Проверяем, что изображения закешированы
 	if len(repo.imagesCache) == 0 {
 		t.Fatal("Изображения не закешированы")
 	}
 
-	// Проверяем, что данные анимаций загружены (если есть)
-	// В createTestBlocksConfig() анимаций нет, поэтому проверяем только что поле существует
 	if repo.animationsData == nil {
 		t.Fatal("Поле animationsData не инициализировано")
 	}
 }
 
 func TestNewTilesetRepository_ConfigNotFound(t *testing.T) {
-	// Создаем мок репозитория без конфигурации
 	mockFileRepo := NewMockTilesetFileRepository()
 	mockFileRepo.AddImage("blocks", createTestImage(32, 32))
 
-	// Создаем репозиторий
 	_, err := NewTilesetDataRepository(mockFileRepo, "blocks")
 
-	// Проверяем, что получили ошибку
 	if err == nil {
 		t.Fatal("Ожидалась ошибка для отсутствующей конфигурации")
 	}
 }
 
 func TestNewTilesetRepository_ImageNotFound(t *testing.T) {
-	// Создаем мок репозитория без изображения
 	mockFileRepo := NewMockTilesetFileRepository()
 	mockFileRepo.AddFile("blocks.yml", createTestBlocksConfig())
 
-	// Создаем репозиторий
 	_, err := NewTilesetDataRepository(mockFileRepo, "blocks")
 
-	// Проверяем, что получили ошибку
 	if err == nil {
 		t.Fatal("Ожидалась ошибка для отсутствующего изображения")
 	}
 }
 
 func TestGetImage_Success(t *testing.T) {
-	// Создаем мок репозитория
 	mockFileRepo := NewMockTilesetFileRepository()
 	mockFileRepo.AddFile("blocks.yml", createTestBlocksConfig())
 	mockFileRepo.AddImage("blocks", createTestImage(32, 32))
 
-	// Создаем фасад
 	registry, err := createTestRegistryWithBlocks(mockFileRepo)
 	if err != nil {
 		t.Fatalf("Не удалось создать фасад: %v", err)
 	}
 
-	// Получаем провайдер изображения через фасад
 	provider, err := registry.GetBlocksImage("brick")
-	// Проверяем результат
 	if err != nil {
 		t.Fatalf("GetBlocksImage вернул ошибку: %v", err)
 	}
@@ -193,7 +169,6 @@ func TestGetImage_Success(t *testing.T) {
 		t.Fatal("Провайдер не получен")
 	}
 
-	// Получаем image.Image через GetImageData
 	imageID, err := provider.GetImageID()
 	if err != nil {
 		t.Fatalf("GetImageID вернул ошибку: %v", err)
@@ -208,7 +183,6 @@ func TestGetImage_Success(t *testing.T) {
 		t.Fatal("Изображение не получено")
 	}
 
-	// Проверяем размер изображения (8x8 для размера тайла 8)
 	bounds := img.Bounds()
 	if bounds.Dx() != 8 || bounds.Dy() != 8 {
 		t.Errorf("Ожидался размер 8x8, получен %dx%d", bounds.Dx(), bounds.Dy())
@@ -216,21 +190,17 @@ func TestGetImage_Success(t *testing.T) {
 }
 
 func TestGetImage_NotFound(t *testing.T) {
-	// Создаем мок репозитория
 	mockFileRepo := NewMockTilesetFileRepository()
 	mockFileRepo.AddFile("blocks.yml", createTestBlocksConfig())
 	mockFileRepo.AddImage("blocks", createTestImage(32, 32))
 
-	// Создаем фасад
 	registry, err := createTestRegistryWithBlocks(mockFileRepo)
 	if err != nil {
 		t.Fatalf("Не удалось создать фасад: %v", err)
 	}
 
-	// Пытаемся получить несуществующее изображение через фасад
 	_, err = registry.GetBlocksImage("nonexistent")
 
-	// Проверяем, что получили ошибку
 	if err == nil {
 		t.Fatal("Ожидалась ошибка для несуществующего изображения")
 	}
@@ -246,20 +216,16 @@ func TestGetImage_NotFound(t *testing.T) {
 }
 
 func TestGetAnimationData_Success(t *testing.T) {
-	// Создаем мок репозитория
 	mockFileRepo := NewMockTilesetFileRepository()
 	mockFileRepo.AddFile("player.yml", createTestPlayerConfig())
 	mockFileRepo.AddImage("player", createTestImage(64, 32))
 
-	// Создаем фасад
 	registry, err := createTestRegistryWithPlayer(mockFileRepo)
 	if err != nil {
 		t.Fatalf("Не удалось создать фасад: %v", err)
 	}
 
-	// Получаем данные анимации через фасад
 	animationData, err := registry.GetPlayerAnimationData("base_tank")
-	// Проверяем результат
 	if err != nil {
 		t.Fatalf("GetPlayerAnimationData вернул ошибку: %v", err)
 	}
@@ -268,8 +234,6 @@ func TestGetAnimationData_Success(t *testing.T) {
 		t.Fatal("Данные анимации не получены")
 	}
 
-	// Проверяем, что первая анимация имеет правильные данные
-	// В новом формате frames конвертируется в AnimationData
 	if animationData[0].Image != "tank_base" {
 		t.Errorf(
 			"Ожидался image 'tank_base', получен '%s'",
@@ -284,7 +248,6 @@ func TestGetAnimationData_Success(t *testing.T) {
 		)
 	}
 
-	// Проверяем второй кадр
 	if len(animationData) < 2 {
 		t.Fatal("Ожидалось 2 кадра")
 	}
@@ -297,21 +260,17 @@ func TestGetAnimationData_Success(t *testing.T) {
 }
 
 func TestGetAnimationData_NotFound(t *testing.T) {
-	// Создаем мок репозитория
 	mockFileRepo := NewMockTilesetFileRepository()
 	mockFileRepo.AddFile("player.yml", createTestPlayerConfig())
 	mockFileRepo.AddImage("player", createTestImage(64, 32))
 
-	// Создаем фасад
 	registry, err := createTestRegistryWithPlayer(mockFileRepo)
 	if err != nil {
 		t.Fatalf("Не удалось создать фасад: %v", err)
 	}
 
-	// Пытаемся получить несуществующую анимацию через фасад
 	_, err = registry.GetPlayerAnimationData("nonexistent")
 
-	// Проверяем, что получили ошибку
 	if err == nil {
 		t.Fatal("Ожидалась ошибка для несуществующей анимации")
 	}
@@ -327,7 +286,6 @@ func TestGetAnimationData_NotFound(t *testing.T) {
 }
 
 func TestGetAnimationData_EmptyFrames(t *testing.T) {
-	// Создаем конфигурацию с пустыми кадрами анимации
 	configWithEmptyFrames := []byte(`---
 size: 16
 
@@ -340,20 +298,16 @@ animations:
     frames: []
 `)
 
-	// Создаем мок репозитория
 	mockFileRepo := NewMockTilesetFileRepository()
 	mockFileRepo.AddFile("player.yml", configWithEmptyFrames)
 	mockFileRepo.AddImage("player", createTestImage(32, 32))
 
-	// Создаем фасад
 	registry, err := createTestRegistryWithPlayer(mockFileRepo)
 	if err != nil {
 		t.Fatalf("Не удалось создать фасад: %v", err)
 	}
 
-	// Получаем данные анимации через фасад
 	animationData, err := registry.GetPlayerAnimationData("base_tank")
-	// Проверяем результат
 	if err != nil {
 		t.Fatalf("GetPlayerAnimationData вернул ошибку: %v", err)
 	}
@@ -366,25 +320,20 @@ animations:
 	}
 }
 
-// Интеграционный тест с реальными файлами
 func TestTilesetRepository_Integration(t *testing.T) {
-	// Пропускаем тест, если нет реальных файлов
 	if _, err := os.Stat("assets/tiles/blocks.yml"); os.IsNotExist(err) {
 		t.Skip(
 			"Пропуск интеграционного теста: файлы assets/tiles/blocks.yml не найдены",
 		)
 	}
 
-	// Создаем реальный файловый репозиторий
 	fileRepo := raw.NewFileRepository("assets")
 
-	// Создаем фасад
 	registry, err := NewTilesetRepositoryRegistry(fileRepo)
 	if err != nil {
 		t.Fatalf("Не удалось создать фасад: %v", err)
 	}
 
-	// Тестируем получение изображения через фасад
 	provider, err := registry.GetBlocksImage("brick")
 	if err != nil {
 		t.Fatalf("Не удалось получить изображение brick: %v", err)
@@ -394,7 +343,6 @@ func TestTilesetRepository_Integration(t *testing.T) {
 		t.Fatal("Провайдер brick не получен")
 	}
 
-	// Получаем image.Image через GetImageData
 	imageID, err := provider.GetImageID()
 	if err != nil {
 		t.Fatalf("GetImageID вернул ошибку: %v", err)
@@ -409,28 +357,23 @@ func TestTilesetRepository_Integration(t *testing.T) {
 		t.Fatal("Изображение brick не получено")
 	}
 
-	// Проверяем размер
 	bounds := img.Bounds()
 	if bounds.Dx() != 8 || bounds.Dy() != 8 {
 		t.Errorf("Ожидался размер 8x8, получен %dx%d", bounds.Dx(), bounds.Dy())
 	}
 }
 
-// Тест кэширования изображений
 func TestTilesetRepository_Cache(t *testing.T) {
-	// Создаем мок репозитория
 	mockFileRepo := NewMockTilesetFileRepository()
 	mockFileRepo.AddFile("blocks.yml", createTestBlocksConfig())
 	mockFileRepo.AddImage("blocks", createTestImage(32, 32))
 
-	// Создаем фасад
 	registry, err := createTestRegistryWithBlocks(mockFileRepo)
 	if err != nil {
 		t.Fatalf("Не удалось создать фасад: %v", err)
 	}
 
-	// Проверяем, что все изображения предварительно закешированы
-	expectedCacheSize := 3 // brick, steel, water из createTestBlocksConfig
+	expectedCacheSize := 3
 	if len(registry.blocks.imagesCache) != expectedCacheSize {
 		t.Errorf(
 			"Ожидалось %d элементов в кэше, получено %d",
@@ -439,13 +382,11 @@ func TestTilesetRepository_Cache(t *testing.T) {
 		)
 	}
 
-	// Получаем изображение первый раз через фасад
 	img1, err := registry.GetBlocksImage("brick")
 	if err != nil {
 		t.Fatalf("Не удалось получить изображение: %v", err)
 	}
 
-	// Проверяем, что размер кэша не изменился (предварительное кэширование)
 	if len(registry.blocks.imagesCache) != expectedCacheSize {
 		t.Errorf(
 			"Ожидалось %d элементов в кэше, получено %d",
@@ -454,18 +395,15 @@ func TestTilesetRepository_Cache(t *testing.T) {
 		)
 	}
 
-	// Получаем то же изображение второй раз через фасад
 	img2, err := registry.GetBlocksImage("brick")
 	if err != nil {
 		t.Fatalf("Не удалось получить изображение: %v", err)
 	}
 
-	// Проверяем, что это тот же объект (из кэша)
 	if img1 != img2 {
 		t.Error("Изображения должны быть одинаковыми (из кэша)")
 	}
 
-	// Проверяем, что размер кэша все еще не изменился
 	if len(registry.blocks.imagesCache) != expectedCacheSize {
 		t.Errorf(
 			"Ожидалось %d элементов в кэше, получено %d",
@@ -474,13 +412,11 @@ func TestTilesetRepository_Cache(t *testing.T) {
 		)
 	}
 
-	// Получаем другое изображение через фасад
 	img3, err := registry.GetBlocksImage("steel")
 	if err != nil {
 		t.Fatalf("Не удалось получить изображение steel: %v", err)
 	}
 
-	// Проверяем, что размер кэша все еще не изменился
 	if len(registry.blocks.imagesCache) != expectedCacheSize {
 		t.Errorf(
 			"Ожидалось %d элементов в кэше, получено %d",
@@ -489,7 +425,6 @@ func TestTilesetRepository_Cache(t *testing.T) {
 		)
 	}
 
-	// Проверяем, что это разные объекты
 	if img1 == img3 {
 		t.Error("Изображения brick и steel должны быть разными")
 	}

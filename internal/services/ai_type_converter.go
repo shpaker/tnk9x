@@ -9,12 +9,10 @@ import (
 	"github.com/shpaker/gonflict/internal/types"
 )
 
-// aiTypeConverter реализация IAITypeConverter
 type aiTypeConverter struct {
 	luaEngine interfaces.ILuaEngine
 }
 
-// NewAITypeConverter создает новый конвертер типов AI
 func NewAITypeConverter(
 	luaEngine interfaces.ILuaEngine,
 ) interfaces.IAITypeConverter {
@@ -23,7 +21,6 @@ func NewAITypeConverter(
 	}
 }
 
-// TankToLua конвертирует TankEntity в Lua таблицу
 func (c *aiTypeConverter) TankToLua(
 	tank *types.TankEntity,
 ) (*lua.LTable, error) {
@@ -40,7 +37,6 @@ func (c *aiTypeConverter) TankToLua(
 	return t, nil
 }
 
-// LuaToDecision конвертирует результаты Lua функции в EnemyAIDecision
 func (c *aiTypeConverter) LuaToDecision(
 	results []lua.LValue,
 ) (types.EnemyAIDecision, error) {

@@ -10,7 +10,6 @@ import (
 	image_providers "github.com/shpaker/gonflict/internal/types/image_providers"
 )
 
-// TilesUseCases содержит бизнес-логику для работы с тайлами и анимациями
 type TilesUseCases struct {
 	tilesetRegistry      interfaces.ITilesetRepositoryRegistry
 	tilesetType          processed.TilesetType
@@ -21,7 +20,6 @@ type TilesUseCases struct {
 	animationService     interfaces.IAnimationService
 }
 
-// NewTilesUseCases создает новый экземпляр TilesUseCases
 func NewTilesUseCases(
 	tilesetRegistry interfaces.ITilesetRepositoryRegistry,
 	tilesetType processed.TilesetType,
@@ -36,7 +34,6 @@ func NewTilesUseCases(
 	}
 }
 
-// NewTilesUseCasesWithAnimations создает новый экземпляр TilesUseCases с поддержкой анимаций
 func NewTilesUseCasesWithAnimations(
 	tilesetRegistry interfaces.ITilesetRepositoryRegistry,
 	tilesetType processed.TilesetType,
@@ -59,12 +56,10 @@ func NewTilesUseCasesWithAnimations(
 	return tuc
 }
 
-// GetImage возвращает изображение по ID
 func (tuc *TilesUseCases) GetImage(id string) (image.Image, error) {
 	return tuc.getImageFromTileset(tuc.tilesetType, id)
 }
 
-// GetTankImage возвращает изображение танка по ID, выбирая правильный тайлсет в зависимости от типа танка
 func (tuc *TilesUseCases) GetTankImage(
 	id string,
 	isEnemy bool,
@@ -76,11 +71,9 @@ func (tuc *TilesUseCases) GetTankImage(
 	return tuc.getImageFromTileset(tilesetType, id)
 }
 
-// CreateStaticTile создает статический тайл по ID изображения
 func (tuc *TilesUseCases) CreateStaticTile(
 	id string,
 ) (types.IImageProvider, error) {
-	// Проверяем, что изображение существует
 	_, err := tuc.getImageFromTileset(tuc.tilesetType, id)
 	if err != nil {
 		return nil, fmt.Errorf("image '%s' not found: %w", id, err)
@@ -91,12 +84,10 @@ func (tuc *TilesUseCases) CreateStaticTile(
 	}, nil
 }
 
-// getImageFromTileset получает изображение из указанного тайлсета
 func (tuc *TilesUseCases) getImageFromTileset(
 	tilesetType processed.TilesetType,
 	id string,
 ) (image.Image, error) {
-	// Получаем провайдер из фасада для проверки существования
 	var provider types.IImageProvider
 	var err error
 
@@ -123,17 +114,14 @@ func (tuc *TilesUseCases) getImageFromTileset(
 		return nil, err
 	}
 
-	// Получаем ImageID из провайдера
 	imageID, err := provider.GetImageID()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get image ID from provider: %w", err)
 	}
 
-	// Получаем image.Image через метод GetImageData
 	return tuc.tilesetRegistry.GetImageData(string(tilesetType), imageID)
 }
 
-// CreateAnimationTile создает анимированный тайл по ID анимации
 func (tuc *TilesUseCases) CreateAnimationTile(
 	id string,
 ) (*image_providers.AnimationProvider, error) {
@@ -153,7 +141,6 @@ func (tuc *TilesUseCases) CreateAnimationTile(
 	), nil
 }
 
-// CreateTankAnimationTile создает анимированный тайл танка по ID анимации, выбирая правильный тайлсет
 func (tuc *TilesUseCases) CreateTankAnimationTile(
 	id string,
 	isEnemy bool,
@@ -168,9 +155,6 @@ func (tuc *TilesUseCases) CreateTankAnimationTile(
 	)
 }
 
-// === Методы для работы с анимациями из AnimationUseCases ===
-
-// AddAnimation добавляет анимацию в репозиторий
 func (tuc *TilesUseCases) AddAnimation(
 	animation *image_providers.AnimationProvider,
 ) {
@@ -180,7 +164,6 @@ func (tuc *TilesUseCases) AddAnimation(
 	tuc.animationsRepository.AddAnimation(animation)
 }
 
-// UpdateAnimations обновляет все анимации в репозитории
 func (tuc *TilesUseCases) UpdateAnimations() {
 	if tuc.animationsRepository == nil {
 		return
@@ -193,7 +176,6 @@ func (tuc *TilesUseCases) UpdateAnimations() {
 	}
 }
 
-// StartAnimation запускает анимацию объекта
 func (tuc *TilesUseCases) StartAnimation(
 	animation *image_providers.AnimationProvider,
 ) {
@@ -201,14 +183,10 @@ func (tuc *TilesUseCases) StartAnimation(
 		return
 	}
 	animation.IsAnimating = true
-	// Если у анимации есть repeats, сбрасываем счетчик при каждом запуске
-	// Восстанавливаем оригинальное значение repeats из конфигурации
-	// Но мы не можем это сделать здесь, так как не храним оригинальное значение
-	// Это будет обработано на уровне Use Cases при пересоздании анимации
-	_ = animation.LoopCount // Используем для избежания пустой ветки
+
+	_ = animation.LoopCount
 }
 
-// StopAnimation останавливает анимацию объекта
 func (tuc *TilesUseCases) StopAnimation(
 	animation *image_providers.AnimationProvider,
 ) {
@@ -218,13 +196,11 @@ func (tuc *TilesUseCases) StopAnimation(
 	animation.IsAnimating = false
 }
 
-// CreateSpawnAnimation создает анимацию спавна
 func (tuc *TilesUseCases) CreateSpawnAnimation() (*image_providers.AnimationProvider, error) {
 	if tuc.spawnerTilesetType == "" {
 		return nil, fmt.Errorf("spawner tileset type not initialized")
 	}
 
-	// Используем tileService для создания анимации из специального тайлсета
 	animation, err := tuc.tileService.CreateAnimationTileFromTileset(
 		string(tuc.spawnerTilesetType),
 		"spawner",
@@ -237,13 +213,11 @@ func (tuc *TilesUseCases) CreateSpawnAnimation() (*image_providers.AnimationProv
 	return animation, nil
 }
 
-// CreateExplosionAnimation создает анимацию взрыва
 func (tuc *TilesUseCases) CreateExplosionAnimation() (*image_providers.AnimationProvider, error) {
 	if tuc.explosionTilesetType == "" {
 		return nil, fmt.Errorf("explosion tileset type not initialized")
 	}
 
-	// Используем tileService для создания анимации из специального тайлсета
 	animation, err := tuc.tileService.CreateAnimationTileFromTileset(
 		string(tuc.explosionTilesetType),
 		"explosion",

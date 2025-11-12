@@ -26,32 +26,27 @@ import (
 type App struct {
 	config        *Config
 	State         interfaces.IState
-	luaEngine     interfaces.ILuaEngine               // Lua Engine для AI (существует весь срок жизни App)
-	session       *session_entities.GameSessionEntity // Сессия игры
+	luaEngine     interfaces.ILuaEngine
+	session       *session_entities.GameSessionEntity
 	fontUseCases  interfaces.IFontUseCases
 	debugUseCases *use_cases.DebugUseCases
 }
 
-// ebiten game interface
 func (app *App) Layout(outsideWidth, outsideHeight int) (int, int) {
 	return app.config.ScreenWidth() / 3, app.config.ScreenHeight() / 3
 }
 
 func (app *App) Update() error {
-	// Обработка ESC для выхода из приложения
 	if ebiten.IsKeyPressed(ebiten.KeyEscape) {
 		return errors.New("exit application")
 	}
 
-	// Переключаем режим отладки по F1
 	if inpututil.IsKeyJustPressed(ebiten.KeyF1) {
 		Debug = !Debug
 	}
 
-	// Обновляем текущее состояние
 	app.State.Update()
 
-	// Проверяем переходы через session.GetTargetState() (автоматически обнуляется)
 	targetState := app.session.GetTargetState()
 	if targetState != nil {
 		newState, err := app.createStateFromTarget(app.session, targetState)
@@ -90,10 +85,8 @@ func (app *App) Draw(screen *ebiten.Image) {
 }
 
 func New(cfg *Config) *App {
-	// Создаем файловый репозиторий
 	fileRepository := raw.NewFileRepository("assets")
 
-	// Создаем реестр тайлсетов
 	tilesetRegistry, err := processed.NewTilesetRepositoryRegistry(
 		fileRepository,
 	)
@@ -102,7 +95,6 @@ func New(cfg *Config) *App {
 		panic(err)
 	}
 
-	// Создаем репозиторий карт
 	mapsRepository := processed.NewMapsDataRepository(
 		fileRepository,
 		tilesetRegistry,
@@ -110,17 +102,13 @@ func New(cfg *Config) *App {
 	fontsRepository := processed.NewFontsRepository(fileRepository)
 	fontUseCases := use_cases.NewFontUseCases(fontsRepository)
 
-	// Создаем Lua engine для AI (общий для всех StageState, существует весь срок жизни App)
 	luaEngine := ai.NewLuaEngine()
 
-	// Создаем GameSessionEntity
 	session := session_entities.NewGameSessionEntity()
 
-	// Создаем Use Cases для выбор уровня
 	stageSelectorUseCases := use_cases.NewStageSelectorUseCases()
 	stateTransitionUseCases := use_cases.NewStateTransitionUseCases()
 
-	// Создаем StageSelectState как дефолтное состояние
 	stageSelectState, err := states.NewStageSelectState(
 		cfg,
 		stageSelectorUseCases,
@@ -147,13 +135,12 @@ func New(cfg *Config) *App {
 	}
 }
 
-// createStateFromTarget создает состояние на основе TargetState
 func (app *App) createStateFromTarget(
 	session *session_entities.GameSessionEntity,
 	targetState *types.StateType,
 ) (interfaces.IState, error) {
 	if targetState == nil {
-		return nil, nil // Нет перехода
+		return nil, nil
 	}
 
 	switch *targetState {
@@ -166,14 +153,11 @@ func (app *App) createStateFromTarget(
 	}
 }
 
-// createStageState создает игровое состояние
 func (app *App) createStageState(
 	session *session_entities.GameSessionEntity,
 ) (interfaces.IState, error) {
-	// Создаем все необходимые зависимости для StageState
 	fileRepository := raw.NewFileRepository("assets")
 
-	// Создаем реестр тайлсетов
 	tilesetRegistry, err := processed.NewTilesetRepositoryRegistry(
 		fileRepository,
 	)
@@ -181,18 +165,15 @@ func (app *App) createStageState(
 		return nil, fmt.Errorf("failed to create tileset registry: %w", err)
 	}
 
-	// Создаем репозиторий скриптов
 	scriptsRepository := processed.NewScriptsRepository(fileRepository)
 
-	// Создаем репозиторий карт
 	mapsRepository := processed.NewMapsDataRepository(
 		fileRepository,
 		tilesetRegistry,
 	)
-	// Создаем реестр игровых репозиториев
+
 	gameRepository := game_repos.NewGameRepositoriesRegistry()
 
-	// Создаем сервисы
 	mapWidthHeight := app.config.MapBlocksCount.Width * int(
 		app.config.TileBaseSize,
 	)
@@ -217,7 +198,6 @@ func (app *App) createStageState(
 		)
 	}
 
-	// Создаем StageState
 	stageStatePtr, err := states.NewStageState(
 		mapsRepository,
 		scriptsRepository,
@@ -240,13 +220,11 @@ func (app *App) createStageState(
 	return stageStatePtr, nil
 }
 
-// createStageSelectState создает состояние выбора уровня
 func (app *App) createStageSelectState(
 	session *session_entities.GameSessionEntity,
 ) (interfaces.IState, error) {
 	fileRepository := raw.NewFileRepository("assets")
 
-	// Создаем реестр тайлсетов
 	tilesetRegistry, err := processed.NewTilesetRepositoryRegistry(
 		fileRepository,
 	)
@@ -254,7 +232,6 @@ func (app *App) createStageSelectState(
 		return nil, fmt.Errorf("failed to create tileset registry: %w", err)
 	}
 
-	// Создаем репозиторий карт
 	mapsRepository := processed.NewMapsDataRepository(
 		fileRepository,
 		tilesetRegistry,
@@ -290,13 +267,11 @@ func (app *App) Run(ctx context.Context) error {
 
 	err := ebiten.RunGame(app)
 
-	// Закрываем luaEngine при завершении App
 	defer app.Close()
 
 	return err
 }
 
-// Close освобождает ресурсы App, включая Lua engine
 func (app *App) Close() {
 	if app.luaEngine != nil {
 		app.luaEngine.Close()

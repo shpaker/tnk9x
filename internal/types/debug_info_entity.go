@@ -1,6 +1,5 @@
 package types
 
-// DebugInfoData хранит сведения для отладки игры
 type DebugInfoData struct {
 	FPS                float64
 	TPS                float64

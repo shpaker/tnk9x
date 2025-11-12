@@ -10,27 +10,19 @@ const (
 	defaultStagePlayer2Lives = 3
 )
 
-// StageSessionEntity хранит состояние текущего уровня
-// TODO: добавить методы доступа по мере внедрения механик волн/врагов
-
 type StageSessionEntity struct {
-	// Прогресс уровня
 	totalEnemies     uint
 	spawnedEnemies   uint
 	destroyedEnemies uint
 
-	// Состояние игроков (массив жизней)
 	playerLives        []uint
 	playerInitialLives []uint
 
-	// Параметры респавна
 	enemyRespawnDelay uint
 	enemySpawnTicks   uint
 
-	// Ограничения
 	maxActiveEnemies uint
 
-	// Количество игроков
 	playerCount uint
 }
 
@@ -38,7 +30,6 @@ func NewStageSessionEntity() *StageSessionEntity {
 	playerLives := make([]uint, 2)
 	playerInitialLives := make([]uint, 2)
 
-	// Инициализируем жизни для каждого игрока
 	playerLives[types.PlayerTankNumPlayer1] = defaultStagePlayer1Lives
 	playerInitialLives[types.PlayerTankNumPlayer1] = defaultStagePlayer1Lives
 	playerLives[types.PlayerTankNumPlayer2] = defaultStagePlayer2Lives
@@ -56,9 +47,6 @@ func NewStageSessionEntity() *StageSessionEntity {
 	}
 }
 
-// --- Проверки прогресса уровня ---
-
-// AreAllEnemiesDefeated возвращает true, если все враги уровня уничтожены
 func (s *StageSessionEntity) AreAllEnemiesDefeated() bool {
 	return s.destroyedEnemies >= s.totalEnemies
 }
@@ -79,12 +67,10 @@ func (s *StageSessionEntity) EnemiesForSpawnCount() uint {
 	return s.totalEnemies - s.spawnedEnemies
 }
 
-// --- Управление состоянием ---
-
 func (s *StageSessionEntity) Reset() {
 	s.spawnedEnemies = 0
 	s.destroyedEnemies = 0
-	// Сбрасываем жизни игроков в зависимости от выбранного количества
+
 	playerCount := int(s.GetPlayerCount())
 	if playerCount < 1 {
 		playerCount = 1
@@ -98,9 +84,6 @@ func (s *StageSessionEntity) Reset() {
 	s.ResetEnemySpawnCountdown()
 }
 
-// --- Управление жизнями игроков по номеру ---
-
-// GetPlayerLives возвращает количество жизней игрока по номеру
 func (s *StageSessionEntity) GetPlayerLives(num types.PlayerTankNum) uint {
 	if int(num) >= 0 && int(num) < len(s.playerLives) {
 		return s.playerLives[num]
@@ -108,13 +91,11 @@ func (s *StageSessionEntity) GetPlayerLives(num types.PlayerTankNum) uint {
 	return 0
 }
 
-// GetPlayerInitialLives возвращает начальное количество жизней игрока по номеру
 func (s *StageSessionEntity) GetPlayerInitialLives(
 	num types.PlayerTankNum,
 ) uint {
 	if int(num) >= 0 && int(num) < len(s.playerInitialLives) {
 		if s.playerInitialLives[num] == 0 {
-			// Возвращаем значение по умолчанию в зависимости от номера
 			if num == types.PlayerTankNumPlayer1 {
 				return defaultStagePlayer1Lives
 			} else if num == types.PlayerTankNumPlayer2 {
@@ -126,12 +107,10 @@ func (s *StageSessionEntity) GetPlayerInitialLives(
 	return 0
 }
 
-// IsPlayerDefeated возвращает true, если у игрока не осталось жизней
 func (s *StageSessionEntity) IsPlayerDefeated(num types.PlayerTankNum) bool {
 	return s.GetPlayerLives(num) == 0
 }
 
-// SetPlayerLives устанавливает количество жизней игрока по номеру
 func (s *StageSessionEntity) SetPlayerLives(
 	num types.PlayerTankNum,
 	lives uint,
@@ -141,7 +120,6 @@ func (s *StageSessionEntity) SetPlayerLives(
 	}
 }
 
-// DecrementPlayerLives уменьшает количество жизней игрока по номеру
 func (s *StageSessionEntity) DecrementPlayerLives(num types.PlayerTankNum) {
 	if int(num) >= 0 && int(num) < len(s.playerLives) {
 		if s.playerLives[num] == 0 {
@@ -194,15 +172,11 @@ func (s *StageSessionEntity) ResetEnemySpawnCountdown() {
 	s.enemySpawnTicks = s.enemyRespawnDelay
 }
 
-// --- Геттеры ограничений ---
-
 func (s *StageSessionEntity) GetMaxActiveEnemies() uint {
 	return s.maxActiveEnemies
 }
 
-// SetMaxActiveEnemies устанавливает максимальное количество активных врагов
 func (s *StageSessionEntity) SetMaxActiveEnemies(value uint) {
-	// Ограничиваем значение диапазоном от 3 до 10
 	if value < 3 {
 		value = 3
 	}
@@ -212,14 +186,11 @@ func (s *StageSessionEntity) SetMaxActiveEnemies(value uint) {
 	s.maxActiveEnemies = value
 }
 
-// GetPlayerCount возвращает количество игроков
 func (s *StageSessionEntity) GetPlayerCount() uint {
 	return s.playerCount
 }
 
-// SetPlayerCount устанавливает количество игроков и обнуляет жизни второго игрока, если выбран один игрок
 func (s *StageSessionEntity) SetPlayerCount(count uint) {
-	// Ограничиваем значение диапазоном от 1 до 2
 	if count < 1 {
 		count = 1
 	}
@@ -228,12 +199,10 @@ func (s *StageSessionEntity) SetPlayerCount(count uint) {
 	}
 	s.playerCount = count
 
-	// Если выбран один игрок, обнуляем жизни второго игрока
 	if count == 1 {
 		s.playerLives[types.PlayerTankNumPlayer2] = 0
 		s.playerInitialLives[types.PlayerTankNumPlayer2] = 0
 	} else {
-		// Если выбран второй игрок, восстанавливаем жизни по умолчанию
 		if s.playerInitialLives[types.PlayerTankNumPlayer2] == 0 {
 			s.playerLives[types.PlayerTankNumPlayer2] = defaultStagePlayer2Lives
 			s.playerInitialLives[types.PlayerTankNumPlayer2] = defaultStagePlayer2Lives

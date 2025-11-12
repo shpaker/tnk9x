@@ -5,13 +5,11 @@ import (
 	image_providers "github.com/shpaker/gonflict/internal/types/image_providers"
 )
 
-// HQUseCases отвечает за обработку действий базы и рендеринг
 type HQUseCases struct {
 	tilesUseCases *TilesUseCases
 	hq            *types.HQEntity
 }
 
-// NewHQUseCases создает новый экземпляр HQUseCases
 func NewHQUseCases(
 	tilesUseCases *TilesUseCases,
 	hq *types.HQEntity,
@@ -22,7 +20,6 @@ func NewHQUseCases(
 	}
 }
 
-// Explode запускает анимацию взрыва базы
 func (uc *HQUseCases) Explode(hq *types.HQEntity) error {
 	if hq == nil || hq.State == types.HQStateExploding ||
 		hq.IsDestroyed() {
@@ -34,7 +31,6 @@ func (uc *HQUseCases) Explode(hq *types.HQEntity) error {
 		return err
 	}
 
-	// Сохраняем анимацию в entity
 	hq.Image = explosionAnim
 	hq.State = types.HQStateExploding
 
@@ -42,13 +38,11 @@ func (uc *HQUseCases) Explode(hq *types.HQEntity) error {
 	return nil
 }
 
-// IsExplosionAnimationFinished возвращает true если анимация взрыва завершена
 func (uc *HQUseCases) IsExplosionAnimationFinished(hq *types.HQEntity) bool {
 	if hq == nil || hq.Image == nil {
 		return true
 	}
 
-	// Проверяем, что анимация завершена
 	if tileAnim, ok := hq.Image.(*image_providers.AnimationProvider); ok {
 		return tileAnim.IsFinished()
 	}
@@ -56,30 +50,27 @@ func (uc *HQUseCases) IsExplosionAnimationFinished(hq *types.HQEntity) bool {
 	return true
 }
 
-// IsExplosionFinished проверяет завершение анимации взрыва базы
 func (uc *HQUseCases) IsExplosionFinished(hq *types.HQEntity) {
 	if hq != nil && hq.State == types.HQStateExploding {
 		if uc.IsExplosionAnimationFinished(hq) {
-			// Создаем статическое изображение разрушенной базы
+
 			destroyedImage, err := uc.tilesUseCases.CreateStaticTile(
 				"hq_destroyed",
 			)
 			if err == nil {
 				hq.Image = destroyedImage
 			}
-			// Устанавливаем состояние на разрушенное и высоту на SURFACE (как у танков)
+
 			hq.State = types.HQStateDestroyed
 			hq.Altitude = types.SURFACE
 		}
 	}
 }
 
-// GetHQ возвращает HQ entity
 func (uc *HQUseCases) GetHQ() *types.HQEntity {
 	return uc.hq
 }
 
-// IsDestroyed возвращает true, если база уничтожена
 func (uc *HQUseCases) IsDestroyed() bool {
 	if uc == nil || uc.hq == nil {
 		return false

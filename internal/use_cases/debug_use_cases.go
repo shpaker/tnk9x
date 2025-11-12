@@ -10,13 +10,11 @@ import (
 	"github.com/shpaker/gonflict/internal/types/session_entities"
 )
 
-// DebugUseCases формирует отладочную информацию
 type DebugUseCases struct {
 	session *session_entities.GameSessionEntity
 	version string
 }
 
-// NewDebugUseCases создаёт UseCase для отладочной информации
 func NewDebugUseCases(
 	session *session_entities.GameSessionEntity,
 	version string,
@@ -27,7 +25,6 @@ func NewDebugUseCases(
 	}
 }
 
-// BuildDebugInfo возвращает строку для вывода отладочной информации
 func (uc *DebugUseCases) BuildDebugInfo() string {
 	if uc == nil {
 		return ""
@@ -50,7 +47,6 @@ func (uc *DebugUseCases) BuildDebugInfo() string {
 	return strings.Join(debugLines, "\n")
 }
 
-// collectDebugData собирает данные для отладки
 func (uc *DebugUseCases) collectDebugData() types.DebugInfoData {
 	data := types.DebugInfoData{
 		FPS: ebiten.ActualFPS(),

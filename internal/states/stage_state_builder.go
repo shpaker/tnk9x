@@ -21,38 +21,29 @@ import (
 	"github.com/shpaker/gonflict/internal/types/session_entities"
 )
 
-// StageStateBuilder создает все компоненты StageState
 type StageStateBuilder struct {
-	// Репозитории
 	mapsRepository    interfaces.IMapsDataRepository
 	scriptsRepository interfaces.IScriptsRepository
 	gameRepository    interfaces.IGameRepositoriesRegistry
 	tilesetRegistry   interfaces.ITilesetRepositoryRegistry
 
-	// Конфигурация
 	config      interfaces.IConfigProvider
 	levelNumber int
 
-	// Шрифты
 	fontUseCases interfaces.IFontUseCases
 
-	// Карта уровня
 	mapEntity *types.MapEntity
 
-	// Сервисы
 	boundaryCollisionService interfaces.IBoundaryCollisionService
 	wallCollisionService     interfaces.IWallCollisionService
 	coordinateService        interfaces.ICoordinateService
 	tankBrakingService       interfaces.ITankBrakingService
 
-	// Lua Engine для AI (существует весь срок жизни App)
 	luaEngine interfaces.ILuaEngine
 
-	// Сессия
 	session *session_entities.GameSessionEntity
 }
 
-// NewStageStateBuilder создает новый builder
 func NewStageStateBuilder(
 	mapsRepository interfaces.IMapsDataRepository,
 	scriptsRepository interfaces.IScriptsRepository,
@@ -85,36 +76,29 @@ func NewStageStateBuilder(
 	}
 }
 
-// Build создает и возвращает новый экземпляр StageState
 func (b *StageStateBuilder) Build() (*StageState, error) {
-	// Загружаем уровень
 	if err := b.loadLevel(); err != nil {
 		return nil, err
 	}
 
-	// Создаем сервисы для тайлов
 	tilesUseCasesWithAnimations, err := b.buildTileServices()
 	if err != nil {
 		return nil, err
 	}
 
-	// Создаем Use Cases для пуль
 	bulletUseCases, baseSizePx, err := b.buildBulletUseCases()
 	if err != nil {
 		return nil, err
 	}
 
-	// Создаем общие use cases для всех танков
 	entitiesCollisionService := collision_services.NewEntitiesCollisionService()
 
 	enemyRespawnDelay := b.config.GetEnemyRespawnDelayTicks()
 
-	// Создаем финальный tankRenderUseCases
 	tankRenderUseCases := tank_use_cases.NewTankRenderUseCases(
 		tilesUseCasesWithAnimations,
 	)
 
-	// Создаем финальный tankCommonUseCases с финальным tankRenderUseCases
 	tankCommonUseCases := tank_use_cases.NewTankCommonUseCases(
 		bulletUseCases,
 		b.tankBrakingService,
@@ -123,7 +107,6 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 		b.gameRepository.GetTanksRepository(),
 	)
 
-	// Создаем финальный tankLifecycleUseCases с финальными зависимостями
 	tankLifecycleUseCases := tank_use_cases.NewTankLifecycleUseCases(
 		tilesUseCasesWithAnimations,
 		tankRenderUseCases,
@@ -131,7 +114,6 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 		enemyRespawnDelay,
 	)
 
-	// Создаем Use Cases для карты
 	mapUseCases := use_cases.NewMapUseCases(
 		b.mapEntity,
 	)
@@ -145,7 +127,6 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 		mapUseCases,
 	)
 
-	// Создаем HQ TilesUseCases для работы с HQ tileset и анимациями взрыва
 	hqTileService := services.NewTileServiceWithSpecialRepos(
 		b.tilesetRegistry,
 		processed.TilesetTypePlayer,
@@ -164,10 +145,8 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 		hqAnimationService,
 	)
 
-	// Создаем базу
 	hq := b.createHQ(hqTilesUseCases, baseSizePx)
 
-	// Получаем размеры карты (в блоках) из MapEntity
 	if b.mapEntity == nil {
 		return nil, fmt.Errorf("map entity is nil")
 	}
@@ -176,19 +155,16 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 	mapBlocksWidth := sizePx.Width / tileBaseSize
 	mapBlocksHeight := sizePx.Height / tileBaseSize
 
-	// Устанавливаем глобальные переменные размера карты и базового размера в Lua
 	b.luaEngine.SetGlobal("MAP_X_BLOCKS_COUNT", lua.LNumber(mapBlocksWidth))
 	b.luaEngine.SetGlobal("MAP_Y_BLOCKS_COUNT", lua.LNumber(mapBlocksHeight))
 	b.luaEngine.SetGlobal("TANK_SIZE_PX", lua.LNumber(baseSizePx))
 	b.luaEngine.SetGlobal("BLOCK_SIZE_PX", lua.LNumber(baseSizePx/2))
 
-	// Загружаем скрипт AI для врагов
 	enemyScript, err := b.scriptsRepository.GetScript("enemies")
 	if err != nil {
 		return nil, err
 	}
 
-	// Выполняем скрипт AI в общем Lua engine (существует весь срок жизни App)
 	if err := b.luaEngine.Execute(enemyScript); err != nil {
 		return nil, err
 	}
@@ -223,7 +199,6 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 		baseSize,
 	)
 
-	// Создаем сервисы коллизий
 	collisionUseCases, hqUseCases, err := b.buildCollisionServices(
 		bulletUseCases,
 		tankActionsUseCases,
@@ -256,7 +231,6 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 	)
 	stageUseCases := &stageUseCasesValue
 
-	// Создаем адаптер ввода игрока 1
 	inputAdapter1 := input_adapters.NewStageKeyboardInputAdapter(
 		tankActionsUseCases,
 		nil,
@@ -269,7 +243,6 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 		ebiten.KeyP,
 	)
 
-	// Создаем адаптер ввода игрока 2 (стрелки)
 	inputAdapter2 := input_adapters.NewStageKeyboardInputAdapter(
 		tankActionsUseCases,
 		nil,
@@ -279,10 +252,9 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 		ebiten.KeyArrowLeft,
 		ebiten.KeyArrowRight,
 		ebiten.KeyEnter,
-		ebiten.KeyP, // Пауза общая для обоих игроков
+		ebiten.KeyP,
 	)
 
-	// Создаем TilesUseCases для рендера
 	renderAnimationService := services.NewAnimationService()
 	mapTilesUseCases := use_cases.NewTilesUseCases(
 		b.tilesetRegistry,
@@ -357,7 +329,6 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 		int(b.config.GetRegularFontSize()),
 	)
 
-	// Собираем финальный StageState
 	stageState := b.buildStageState(
 		hq,
 		hqUseCases,
@@ -372,17 +343,15 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 		enemyInputAdapter,
 	)
 
-	// Инициализируем массив адаптеров
 	stageState.inputAdapters = make([]interfaces.IInputAdapter, 2)
 	stageState.inputAdapters[types.PlayerTankNumPlayer1] = inputAdapter1
-	stageState.inputAdapters[types.PlayerTankNumPlayer2] = inputAdapter2 // Может быть nil, если игра на одного игрока
+	stageState.inputAdapters[types.PlayerTankNumPlayer2] = inputAdapter2
 	stageState.RendererAdapter = rendererAdapter
 	stageState.stageUseCases = stageUseCases
 
 	return stageState, nil
 }
 
-// loadLevel загружает уровень и заполняет репозиторий блоков
 func (b *StageStateBuilder) loadLevel() error {
 	tileBaseSize := int(b.config.GetTileBaseSize())
 	mapEntity, err := b.mapsRepository.GetLevel(b.levelNumber, tileBaseSize)
@@ -394,7 +363,6 @@ func (b *StageStateBuilder) loadLevel() error {
 	return nil
 }
 
-// buildTileServices создает сервисы для тайлов и анимаций
 func (b *StageStateBuilder) buildTileServices() (*use_cases.TilesUseCases, error) {
 	tileService := services.NewTileServiceWithSpecialRepos(
 		b.tilesetRegistry,
@@ -418,7 +386,6 @@ func (b *StageStateBuilder) buildTileServices() (*use_cases.TilesUseCases, error
 	return tilesUseCasesWithAnimations, nil
 }
 
-// buildBulletUseCases создает Use Cases для пуль
 func (b *StageStateBuilder) buildBulletUseCases() (*use_cases.BulletUseCases, uint, error) {
 	baseSizePx := b.config.GetBaseSizePx()
 
@@ -442,7 +409,6 @@ func (b *StageStateBuilder) buildBulletUseCases() (*use_cases.BulletUseCases, ui
 	return bulletUseCases, baseSizePx, nil
 }
 
-// createHQ создает базу из конфига
 func (b *StageStateBuilder) createHQ(
 	tilesUseCases *use_cases.TilesUseCases,
 	baseSizePx uint,
@@ -457,10 +423,9 @@ func (b *StageStateBuilder) createHQ(
 		Y: float64(hqPos[1]) * float64(baseSizePx),
 	}
 
-	// Создаем Image для базы
 	var imageGetter types.IImageProvider
 	if tilesUseCases != nil {
-		// Создаем статический тайл для HQ
+
 		hqImageGetter, err := tilesUseCases.CreateStaticTile("hq_intact")
 		if err == nil {
 			imageGetter = hqImageGetter
@@ -476,7 +441,6 @@ func (b *StageStateBuilder) createHQ(
 	}
 }
 
-// buildCollisionServices создает сервисы коллизий
 func (b *StageStateBuilder) buildCollisionServices(
 	bulletUseCases *use_cases.BulletUseCases,
 	playerTankActions interfaces.ITankActionsUseCases,
@@ -487,13 +451,11 @@ func (b *StageStateBuilder) buildCollisionServices(
 	hq *types.HQEntity,
 	entitiesCollisionService interfaces.IEntitiesCollisionService,
 ) (*use_cases.CollisionUseCases, interfaces.IHQUseCases, error) {
-	// Создаем BulletCollisionService с EntitiesCollisionService
 	bulletCollisionService := collision_services.NewBulletCollisionService(
 		int(b.config.GetTileBaseSize()),
 		entitiesCollisionService,
 	)
 
-	// Создаем HQUseCases с hqTilesUseCases
 	var hqUseCases interfaces.IHQUseCases
 	if hq != nil {
 		hqUseCases = use_cases.NewHQUseCases(
@@ -502,7 +464,6 @@ func (b *StageStateBuilder) buildCollisionServices(
 		)
 	}
 
-	// Создаем CollisionUseCases с правильным BulletCollisionService
 	collisionUseCases := use_cases.NewCollisionUseCases(
 		bulletUseCases,
 		playerTankActions,
@@ -519,7 +480,6 @@ func (b *StageStateBuilder) buildCollisionServices(
 	return collisionUseCases, hqUseCases, nil
 }
 
-// buildStageState собирает финальный StageState
 func (b *StageStateBuilder) buildStageState(
 	hq *types.HQEntity,
 	hqUseCases interfaces.IHQUseCases,

@@ -8,15 +8,12 @@ import (
 	"github.com/shpaker/gonflict/internal/types"
 )
 
-// ImageService предоставляет логику работы с изображениями
 type ImageService struct{}
 
-// NewImageService создает новый сервис изображений
 func NewImageService() *ImageService {
 	return &ImageService{}
 }
 
-// RotateImage поворачивает изображение в зависимости от направления
 func (s *ImageService) RotateImage(
 	image interface{},
 	direction types.Direction,
@@ -46,7 +43,6 @@ func (s *ImageService) RotateImage(
 	return rotatedImage
 }
 
-// RotateImageByAngle поворачивает изображение на указанный угол
 func (s *ImageService) RotateImageByAngle(
 	image interface{},
 	angle float64,
@@ -55,29 +51,23 @@ func (s *ImageService) RotateImageByAngle(
 	if !ok {
 		return image, nil
 	}
-	// Получаем размеры изображения
+
 	bounds := img.Bounds()
 	width := bounds.Dx()
 	height := bounds.Dy()
 
-	// Создаем новое изображение с теми же размерами
 	rotatedImage := ebiten.NewImage(width, height)
 
-	// Создаем опции для поворота
 	op := &ebiten.DrawImageOptions{}
 
-	// Перемещаем центр изображения в (0,0)
 	centerX := float64(width) / 2
 	centerY := float64(height) / 2
 	op.GeoM.Translate(-centerX, -centerY)
 
-	// Поворачиваем изображение
 	op.GeoM.Rotate(angle)
 
-	// Перемещаем обратно в центр
 	op.GeoM.Translate(centerX, centerY)
 
-	// Отрисовываем повернутое изображение
 	rotatedImage.DrawImage(img, op)
 
 	return rotatedImage, nil

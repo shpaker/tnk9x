@@ -1,7 +1,7 @@
 package types
 
 type StageSelectorEntity struct {
-	CurrentStage uint // Текущий выбранный уровень
+	CurrentStage uint
 	min          uint
 	max          uint
 }

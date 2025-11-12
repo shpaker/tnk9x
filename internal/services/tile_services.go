@@ -9,14 +9,12 @@ import (
 	image_providers "github.com/shpaker/gonflict/internal/types/image_providers"
 )
 
-// TileService предоставляет логику создания тайлов и анимаций
 type TileService struct {
 	tilesetRegistry  interfaces.ITilesetRepositoryRegistry
 	tilesetType      processed.TilesetType
-	enemyTilesetType processed.TilesetType // Для специальных случаев, когда нужен fallback на enemy
+	enemyTilesetType processed.TilesetType
 }
 
-// NewTileService создает новый сервис тайлов
 func NewTileService(
 	tilesetRegistry interfaces.ITilesetRepositoryRegistry,
 	tilesetType processed.TilesetType,
@@ -27,7 +25,6 @@ func NewTileService(
 	}
 }
 
-// NewTileServiceWithSpecialRepos создает новый сервис тайлов с репозиториями для специальных анимаций
 func NewTileServiceWithSpecialRepos(
 	tilesetRegistry interfaces.ITilesetRepositoryRegistry,
 	primaryTilesetType processed.TilesetType,
@@ -42,17 +39,14 @@ func NewTileServiceWithSpecialRepos(
 	}
 }
 
-// GetTileAnimationFrames возвращает данные анимации по ID
 func (s *TileService) GetTileAnimationFrames(
 	id string,
 ) (types.AnimationData, error) {
-	// Пробуем получить из основного тайлсета
 	animationData, err := s.getAnimationDataFromTileset(s.tilesetType, id)
 	if err == nil {
 		return animationData, nil
 	}
 
-	// Если не найдено и есть fallback на enemy, пробуем его
 	if s.enemyTilesetType != "" {
 		return s.getAnimationDataFromTileset(s.enemyTilesetType, id)
 	}
@@ -60,17 +54,14 @@ func (s *TileService) GetTileAnimationFrames(
 	return nil, fmt.Errorf("animation '%s' not found", id)
 }
 
-// GetAnimationConfig получает конфигурацию анимации по ID
 func (s *TileService) GetAnimationConfig(
 	id string,
 ) (types.AnimationConfig, error) {
-	// Пробуем получить из основного тайлсета
 	config, err := s.getAnimationConfigFromTileset(s.tilesetType, id)
 	if err == nil {
 		return config, nil
 	}
 
-	// Если не найдено и есть fallback на enemy, пробуем его
 	if s.enemyTilesetType != "" {
 		return s.getAnimationConfigFromTileset(s.enemyTilesetType, id)
 	}
@@ -81,7 +72,6 @@ func (s *TileService) GetAnimationConfig(
 	)
 }
 
-// getAnimationDataFromTileset получает данные анимации из указанного тайлсета
 func (s *TileService) getAnimationDataFromTileset(
 	tilesetType processed.TilesetType,
 	id string,
@@ -106,7 +96,6 @@ func (s *TileService) getAnimationDataFromTileset(
 	}
 }
 
-// getAnimationConfigFromTileset получает конфигурацию анимации из указанного тайлсета
 func (s *TileService) getAnimationConfigFromTileset(
 	tilesetType processed.TilesetType,
 	id string,
@@ -134,7 +123,6 @@ func (s *TileService) getAnimationConfigFromTileset(
 	}
 }
 
-// CreateAnimationFromConfig создает анимацию на основе конфигурации и данных кадров
 func (s *TileService) CreateAnimationFromConfig(
 	animationFrames types.AnimationData,
 	config types.AnimationConfig,
@@ -164,12 +152,10 @@ func (s *TileService) CreateAnimationFromConfig(
 	}
 }
 
-// HasOffset проверяет, есть ли непустое смещение
 func (s *TileService) HasOffset(offset [2]float64) bool {
 	return offset[0] != 0 || offset[1] != 0
 }
 
-// CreateAnimationTileFromTileset создает анимированный тайл из указанного тайлсета
 func (s *TileService) CreateAnimationTileFromTileset(
 	tilesetType string,
 	id string,

@@ -6,7 +6,6 @@ import (
 	"github.com/shpaker/gonflict/internal/types"
 )
 
-// MockImageProvider для тестирования
 type MockImageProvider struct {
 	id string
 }

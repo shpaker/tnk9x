@@ -23,7 +23,6 @@ func TestNewAnimationsRepository(t *testing.T) {
 func TestAddAnimation(t *testing.T) {
 	repo := NewAnimationsRepository()
 
-	// Create test animation
 	animation := image_providers.NewAnimationProviderWithLoops(
 		types.AnimationData{
 			types.AnimationDataFrame{
@@ -38,10 +37,8 @@ func TestAddAnimation(t *testing.T) {
 		5,
 	)
 
-	// Add animation
 	repo.AddAnimation(animation)
 
-	// Check if animation was added
 	animations := repo.GetAllAnimations()
 	if len(animations) != 1 {
 		t.Errorf("Expected 1 animation, got %d", len(animations))
@@ -55,7 +52,6 @@ func TestAddAnimation(t *testing.T) {
 func TestAddMultipleAnimations(t *testing.T) {
 	repo := NewAnimationsRepository()
 
-	// Create multiple animations
 	anim1 := image_providers.NewAnimationProviderWithLoops(
 		types.AnimationData{
 			types.AnimationDataFrame{
@@ -89,18 +85,15 @@ func TestAddMultipleAnimations(t *testing.T) {
 		10,
 	)
 
-	// Add animations
 	repo.AddAnimation(anim1)
 	repo.AddAnimation(anim2)
 	repo.AddAnimation(anim3)
 
-	// Check if all animations were added
 	animations := repo.GetAllAnimations()
 	if len(animations) != 3 {
 		t.Errorf("Expected 3 animations, got %d", len(animations))
 	}
 
-	// Check if they are in correct order
 	if animations[0] != anim1 {
 		t.Error("First animation does not match")
 	}
@@ -117,13 +110,11 @@ func TestAddMultipleAnimations(t *testing.T) {
 func TestGetAllAnimations(t *testing.T) {
 	repo := NewAnimationsRepository()
 
-	// Initially should be empty
 	animations := repo.GetAllAnimations()
 	if len(animations) != 0 {
 		t.Errorf("Expected 0 animations initially, got %d", len(animations))
 	}
 
-	// Create and add animations
 	anim1 := image_providers.NewAnimationProvider(
 		types.AnimationData{
 			types.AnimationDataFrame{
@@ -145,7 +136,6 @@ func TestGetAllAnimations(t *testing.T) {
 	repo.AddAnimation(anim1)
 	repo.AddAnimation(anim2)
 
-	// Get all animations
 	animations = repo.GetAllAnimations()
 	if len(animations) != 2 {
 		t.Errorf("Expected 2 animations, got %d", len(animations))
@@ -155,7 +145,6 @@ func TestGetAllAnimations(t *testing.T) {
 func TestGetAllAnimationsReturnsSliceReference(t *testing.T) {
 	repo := NewAnimationsRepository()
 
-	// Create and add animation
 	anim := image_providers.NewAnimationProvider(
 		types.AnimationData{
 			types.AnimationDataFrame{
@@ -167,16 +156,13 @@ func TestGetAllAnimationsReturnsSliceReference(t *testing.T) {
 
 	repo.AddAnimation(anim)
 
-	// Get animations and modify them
 	animations := repo.GetAllAnimations()
 	if len(animations) == 0 {
 		t.Fatal("Expected at least one animation")
 	}
 
-	// Modify the animation
 	animations[0].IsAnimating = true
 
-	// Get again and check if modification persisted
 	animations2 := repo.GetAllAnimations()
 	if !animations2[0].IsAnimating {
 		t.Error("Modification of animation did not persist")

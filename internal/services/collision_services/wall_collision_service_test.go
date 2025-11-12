@@ -6,7 +6,6 @@ import (
 	"github.com/shpaker/gonflict/internal/types"
 )
 
-// MockCoordinateService для тестирования
 type MockCoordinateService struct{}
 
 func (m *MockCoordinateService) RoundToNearestMultipleOf4(

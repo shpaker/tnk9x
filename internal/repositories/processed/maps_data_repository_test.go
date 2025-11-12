@@ -11,7 +11,6 @@ import (
 	image_providers "github.com/shpaker/gonflict/internal/types/image_providers"
 )
 
-// MockTilesetRepositoryRegistry - мок фасада для тестирования
 type MockTilesetRepositoryRegistry struct{}
 
 func (mtr *MockTilesetRepositoryRegistry) GetBlocksImage(
@@ -147,10 +146,8 @@ func (mtr *MockTilesetRepositoryRegistry) GetImageData(
 	return nil, nil
 }
 
-// MockTilesetRepository - мок для тестирования (deprecated, используйте MockTilesetRepositoryRegistry)
 type MockTilesetRepository struct{}
 
-// MockImageProvider - мок для тестирования
 type MockImageProvider struct {
 	id string
 }
@@ -159,7 +156,6 @@ func (mig *MockImageProvider) GetImageID() (string, error) {
 	return mig.id, nil
 }
 
-// MockFileRepository - простой мок для тестирования
 type MockFileRepository struct {
 	files map[string][]byte
 }
@@ -190,7 +186,7 @@ func (m *MockFileRepository) CountFiles(
 	pattern string,
 ) (int, error) {
 	count := 0
-	// Простая реализация для тестов - считаем файлы с нужным расширением
+
 	patternExt := ""
 	if strings.HasPrefix(pattern, "*") {
 		patternExt = pattern[1:]
@@ -206,10 +202,8 @@ func (m *MockFileRepository) CountFiles(
 }
 
 func TestGetLevel_Success(t *testing.T) {
-	// Создаем мок репозитория
 	mockFileRepo := NewMockFileRepository()
 
-	// Создаем тестовую карту 26x26
 	levelData := []byte(`..........................
 ..........................
 ..##..##..##..##..##..##..
@@ -239,16 +233,13 @@ func TestGetLevel_Success(t *testing.T) {
 
 	mockFileRepo.AddFile("levels/1.bcmap", levelData)
 
-	// Создаем сервис уровней
 	mockTilesetRegistry := &MockTilesetRepositoryRegistry{}
-	// Проверяем, что мок реализует интерфейс
+
 	var _ interfaces.ITilesetRepositoryRegistry = mockTilesetRegistry
 	mapsService := NewMapsDataRepository(mockFileRepo, mockTilesetRegistry)
 
-	// Вызываем функцию
 	tileBaseSize := 8
 	mapEntity, err := mapsService.GetLevel(1, tileBaseSize)
-	// Проверяем результат
 	if err != nil {
 		t.Fatalf("GetLevel вернул ошибку: %v", err)
 	}
@@ -264,10 +255,8 @@ func TestGetLevel_Success(t *testing.T) {
 }
 
 func TestGetLevel_InvalidSize(t *testing.T) {
-	// Создаем мок репозитория
 	mockFileRepo := NewMockFileRepository()
 
-	// Создаем карту с неправильным размером строки (последняя строка короче)
 	levelData := []byte(`..........................
 ..........................
 ..##..##..##..##..##..##..
@@ -296,17 +285,14 @@ func TestGetLevel_InvalidSize(t *testing.T) {
 
 	mockFileRepo.AddFile("levels/1.bcmap", levelData)
 
-	// Создаем сервис уровней
 	mockTilesetRegistry := &MockTilesetRepositoryRegistry{}
-	// Проверяем, что мок реализует интерфейс
+
 	var _ interfaces.ITilesetRepositoryRegistry = mockTilesetRegistry
 	mapsService := NewMapsDataRepository(mockFileRepo, mockTilesetRegistry)
 
-	// Вызываем функцию
 	tileBaseSize := 8
 	_, err := mapsService.GetLevel(1, tileBaseSize)
 
-	// Проверяем, что получили ошибку (неправильная длина строки)
 	if err == nil {
 		t.Fatal("Ожидалась ошибка для неправильного размера")
 	}

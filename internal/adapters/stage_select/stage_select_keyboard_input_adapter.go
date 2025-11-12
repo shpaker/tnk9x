@@ -8,7 +8,6 @@ import (
 	"github.com/shpaker/gonflict/internal/use_cases"
 )
 
-// StageSelectKeyboardInputAdapter адаптер для обработки пользовательского ввода при выборе уровня
 type StageSelectKeyboardInputAdapter struct {
 	selector         *types.StageSelectorEntity
 	selectorUseCases *use_cases.StageSelectorUseCases
@@ -17,7 +16,6 @@ type StageSelectKeyboardInputAdapter struct {
 	enterButton      ebiten.Key
 }
 
-// NewStageSelectKeyboardInputAdapter создает новый экземпляр StageSelectKeyboardInputAdapter
 func NewStageSelectKeyboardInputAdapter(
 	selector *types.StageSelectorEntity,
 	selectorUseCases *use_cases.StageSelectorUseCases,
@@ -34,13 +32,11 @@ func NewStageSelectKeyboardInputAdapter(
 	}
 }
 
-// Update обрабатывает пользовательский ввод
 func (a *StageSelectKeyboardInputAdapter) Update(dt float64) {
 	if a.selector == nil || a.selectorUseCases == nil {
 		return
 	}
 
-	// Обрабатываем нажатия клавиш
 	if inpututil.IsKeyJustPressed(a.previousButton) ||
 		inpututil.IsKeyJustPressed(ebiten.KeyLeft) ||
 		inpututil.IsKeyJustPressed(ebiten.KeyA) {
@@ -53,7 +49,6 @@ func (a *StageSelectKeyboardInputAdapter) Update(dt float64) {
 		a.selectorUseCases.Next(a.selector)
 	}
 
-	// Обрабатываем подтверждение выбора (Enter)
 	if inpututil.IsKeyJustPressed(a.enterButton) {
 		a.selectorUseCases.Select(a.selector)
 	}

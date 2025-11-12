@@ -9,11 +9,6 @@ import (
 	image_providers "github.com/shpaker/gonflict/internal/types/image_providers"
 )
 
-// ============================================================================
-// ДРУГИЕ USE CASES
-// ============================================================================
-
-// IBulletUseCases интерфейс для операций с пулями
 type IBulletUseCases interface {
 	ShootBullet(tank *types.TankEntity) error
 	UpdateBullets(dt float64) error
@@ -21,21 +16,18 @@ type IBulletUseCases interface {
 	RemoveBullet(index int) error
 }
 
-// IMapUseCases интерфейс для операций с картой
 type IMapUseCases interface {
 	GetBlocks() types.MapBlocks
 	RemoveBlock(block *types.BlockEntity) error
 	GetSizePx() types.Size
 }
 
-// ICollisionUseCases интерфейс для операций с коллизиями
 type ICollisionUseCases interface {
 	UpdateCollisions()
 	HasTankCollision(candidate *types.TankEntity) bool
 	IsSpawnerBlocked(position types.Position, size types.Size) bool
 }
 
-// ITilesUseCases интерфейс для работы с тайлами и анимациями
 type ITilesUseCases interface {
 	CreateStaticTile(id string) (IImageProvider, error)
 	CreateAnimationTile(id string) (*image_providers.AnimationProvider, error)
@@ -47,18 +39,12 @@ type ITilesUseCases interface {
 	StartAnimation(animation *image_providers.AnimationProvider)
 }
 
-// ============================================================================
-// TANK USE CASES INTERFACES
-// ============================================================================
-
-// ITankCommonUseCases интерфейс для общих операций с танком (движение)
 type ITankCommonUseCases interface {
 	Update(tank *types.TankEntity, dt float64) error
 	UpdateAllTanks(dt float64) error
 	GetAllTanks() []*types.TankEntity
 }
 
-// ITankRenderUseCases интерфейс для графики и рендеринга танка
 type ITankRenderUseCases interface {
 	IsSpawnAnimationFinished(tank *types.TankEntity) bool
 	IsExplosionAnimationFinished(tank *types.TankEntity) bool
@@ -66,7 +52,6 @@ type ITankRenderUseCases interface {
 	SyncAnimationWithState(tank *types.TankEntity)
 }
 
-// ITankLifecycleUseCases интерфейс для жизненного цикла танка
 type ITankLifecycleUseCases interface {
 	OnStageSetUpEnemiesSpawn() ([3]*types.TankEntity, error)
 	SpawnEnemy(index *int, ignoreRespawnDelay bool) (*types.TankEntity, error)
@@ -80,7 +65,6 @@ type ITankLifecycleUseCases interface {
 	UpdateAllTanksLifecycle() error
 }
 
-// ITankActionsUseCases интерфейс для действий танка
 type ITankActionsUseCases interface {
 	Update(tank *types.TankEntity, dt float64) error
 	Rotate(tank *types.TankEntity, direction types.Direction) error
@@ -94,13 +78,11 @@ type ITankActionsUseCases interface {
 	SetMaxYPosition(tank *types.TankEntity)
 }
 
-// IAIUseCases интерфейс для операций с AI логикой
 type IAIUseCases interface {
 	ExecuteAI(tank *types.TankEntity) (types.EnemyAIDecision, error)
 	Close()
 }
 
-// IHQUseCases интерфейс для операций с базой
 type IHQUseCases interface {
 	GetHQ() *types.HQEntity
 	Explode(hq *types.HQEntity) error
@@ -108,12 +90,10 @@ type IHQUseCases interface {
 	IsDestroyed() bool
 }
 
-// IFontUseCases интерфейс для работы со шрифтами
 type IFontUseCases interface {
 	GetFont() (*opentype.Font, error)
 }
 
-// IStageUseCases интерфейс для операций с состоянием уровня
 type IStageUseCases interface {
 	SpawnPlayerTank(role types.TankRole) *types.TankEntity
 	SpawnInitialEnemyTanks() []*types.TankEntity

@@ -11,7 +11,6 @@ import (
 	"github.com/shpaker/gonflict/internal/use_cases"
 )
 
-// StageSelectRendererAdapter адаптер для рендеринга экрана выбора уровня
 type StageSelectRendererAdapter struct {
 	selector         *types.StageSelectorEntity
 	selectorUseCases *use_cases.StageSelectorUseCases
@@ -24,7 +23,6 @@ type StageSelectRendererAdapter struct {
 	gameTitle        string
 }
 
-// NewStageSelectRendererAdapter создает новый экземпляр StageSelectRendererAdapter
 func NewStageSelectRendererAdapter(
 	selector *types.StageSelectorEntity,
 	selectorUseCases *use_cases.StageSelectorUseCases,
@@ -63,7 +61,6 @@ func NewStageSelectRendererAdapter(
 	}, nil
 }
 
-// DrawAll отрисовывает все элементы экрана выбора уровня
 func (r *StageSelectRendererAdapter) DrawAll(
 	screen *ebiten.Image,
 	levelActive bool,
@@ -75,15 +72,12 @@ func (r *StageSelectRendererAdapter) DrawAll(
 		return
 	}
 
-	// Получаем реальный размер экрана из screen
 	screenBounds := screen.Bounds()
 	actualWidth := float64(screenBounds.Dx())
 	actualHeight := float64(screenBounds.Dy())
 
-	// Очищаем экран черным фоном для видимости
 	screen.Fill(color.Black)
 
-	// Отрисовываем заголовок
 	titleText := r.gameTitle
 	titleWidth, _ := text.Measure(titleText, r.fontFace, 0)
 	titleX := (actualWidth - titleWidth) / 2
@@ -94,13 +88,10 @@ func (r *StageSelectRendererAdapter) DrawAll(
 	titleOp.ColorScale.ScaleWithColor(color.White)
 	text.Draw(screen, titleText, r.fontFace, titleOp)
 
-	// Отрисовываем текст выбранного уровня
 	stageText := r.selectorUseCases.String(r.selector)
 
-	// Измеряем текст для центрирования используя text/v2 API
 	textWidth, textHeight := text.Measure(stageText, r.fontFace, 0)
 
-	// Центрируем текст по горизонтали и вертикали
 	scale := float64(r.regularFontSize) / float64(r.titleFontSize)
 	if scale <= 0 {
 		scale = 1
@@ -110,7 +101,6 @@ func (r *StageSelectRendererAdapter) DrawAll(
 	x := (actualWidth - scaledWidth) / 2
 	y := (actualHeight-scaledHeight)/2 + float64(r.regularFontSize)
 
-	// Отрисовываем текст используя text/v2
 	stageColor := color.NRGBA{R: 150, G: 150, B: 150, A: 255}
 	if levelActive {
 		stageColor = color.NRGBA{R: 255, G: 255, B: 255, A: 255}
@@ -122,7 +112,6 @@ func (r *StageSelectRendererAdapter) DrawAll(
 	op.ColorScale.ScaleWithColor(stageColor)
 	text.Draw(screen, stageText, r.fontFace, op)
 
-	// Отрисовываем выбор количества игроков
 	if playerCount < 1 {
 		playerCount = 1
 	}
@@ -148,7 +137,6 @@ func (r *StageSelectRendererAdapter) DrawAll(
 	playerOp.ColorScale.ScaleWithColor(playerColor)
 	text.Draw(screen, playerText, r.fontFace, playerOp)
 
-	// Отрисовываем выбор максимального количества врагов
 	if maxActiveEnemies < 3 {
 		maxActiveEnemies = 3
 	}
@@ -174,7 +162,6 @@ func (r *StageSelectRendererAdapter) DrawAll(
 	maxEnemiesOp.ColorScale.ScaleWithColor(maxEnemiesColor)
 	text.Draw(screen, maxEnemiesText, r.fontFace, maxEnemiesOp)
 
-	// Отрисовываем подсказку
 	subtitleText := "PRESS ENTER TO START"
 	subtitleWidth, _ := text.Measure(subtitleText, r.fontFace, 0)
 	subtitleScale := float64(r.subtitleFontSize) / float64(r.titleFontSize)

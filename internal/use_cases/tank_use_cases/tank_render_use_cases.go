@@ -6,12 +6,10 @@ import (
 	"github.com/shpaker/gonflict/internal/use_cases"
 )
 
-// TankRenderUseCases отвечает за графику и рендеринг танка
 type TankRenderUseCases struct {
 	tilesUseCases *use_cases.TilesUseCases
 }
 
-// NewTankRenderUseCases создает новый экземпляр TankRenderUseCases
 func NewTankRenderUseCases(
 	tilesUseCases *use_cases.TilesUseCases,
 ) *TankRenderUseCases {
@@ -20,7 +18,6 @@ func NewTankRenderUseCases(
 	}
 }
 
-// IsSpawnAnimationFinished проверяет, завершена ли анимация спавна
 func (uc *TankRenderUseCases) IsSpawnAnimationFinished(
 	tank *types.TankEntity,
 ) bool {
@@ -33,7 +30,6 @@ func (uc *TankRenderUseCases) IsSpawnAnimationFinished(
 	return false
 }
 
-// IsExplosionAnimationFinished проверяет, завершена ли анимация взрыва
 func (uc *TankRenderUseCases) IsExplosionAnimationFinished(
 	tank *types.TankEntity,
 ) bool {
@@ -46,7 +42,6 @@ func (uc *TankRenderUseCases) IsExplosionAnimationFinished(
 	return false
 }
 
-// UpdateTankAnimation пересоздает анимацию танка в соответствии с текущим направлением.
 func (uc *TankRenderUseCases) UpdateTankAnimation(
 	tank *types.TankEntity,
 ) {
@@ -75,7 +70,6 @@ func (uc *TankRenderUseCases) UpdateTankAnimation(
 	uc.SyncAnimationWithState(tank)
 }
 
-// SyncAnimationWithState синхронизирует анимацию гусениц с состоянием танка
 func (uc *TankRenderUseCases) SyncAnimationWithState(
 	tank *types.TankEntity,
 ) {
@@ -91,7 +85,6 @@ func (uc *TankRenderUseCases) SyncAnimationWithState(
 		return
 	}
 
-	// Если танк стоит - анимация должна быть остановлена
 	if tank.State == types.TankStateStopped {
 		if anim.IsAnimating {
 			uc.tilesUseCases.StopAnimation(anim)
@@ -99,12 +92,9 @@ func (uc *TankRenderUseCases) SyncAnimationWithState(
 		return
 	}
 
-	// Определяем, должна ли анимация быть запущена
 	shouldAnimate := tank.State == types.TankStateMoving ||
 		tank.State == types.TankStateBraking
 
-	// Синхронизируем: если состояние требует анимации, но она остановлена - запускаем
-	// Если состояние не требует анимации, но она запущена - останавливаем
 	if shouldAnimate && !anim.IsAnimating {
 		uc.tilesUseCases.StartAnimation(anim)
 	} else if !shouldAnimate && anim.IsAnimating {

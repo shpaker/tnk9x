@@ -7,7 +7,6 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
-// MockTilesetRepository для тестирования
 type MockTilesetRepository struct{}
 
 func (mtr *MockTilesetRepository) GetImage(id string) (*ebiten.Image, error) {
@@ -23,7 +22,6 @@ func (mtr *MockTilesetRepository) GetAnimationData(
 	return AnimationData{}, nil
 }
 
-// MockImageProvider для тестирования
 type MockImageProvider struct {
 	id string
 }
@@ -33,7 +31,6 @@ func (mig *MockImageProvider) GetImageID() (string, error) {
 }
 
 func TestBlockEntity_GetImageID_NilImage(t *testing.T) {
-	// Создаем блок с nil Image
 	block := &BlockEntity{
 		Image: nil,
 		Data: &BlockData{
@@ -44,10 +41,8 @@ func TestBlockEntity_GetImageID_NilImage(t *testing.T) {
 		Altitude: SURFACE,
 	}
 
-	// Пытаемся получить ID изображения
 	_, err := block.GetImageID()
 
-	// Проверяем, что возвращается ошибка
 	if err == nil {
 		t.Error("Ожидалась ошибка для nil Image")
 	}
@@ -63,7 +58,6 @@ func TestBlockEntity_GetImageID_NilImage(t *testing.T) {
 }
 
 func TestBlockEntity_GetImageID_EmptyImageID(t *testing.T) {
-	// Создаем блок с Image, который возвращает пустой ID
 	block := &BlockEntity{
 		Image: &MockImageProvider{id: ""},
 		Data: &BlockData{
@@ -74,9 +68,7 @@ func TestBlockEntity_GetImageID_EmptyImageID(t *testing.T) {
 		Altitude: SURFACE,
 	}
 
-	// Пытаемся получить ID изображения
 	imageID, err := block.GetImageID()
-	// Проверяем, что ошибки нет и возвращается пустая строка
 	if err != nil {
 		t.Errorf("Не ожидалась ошибка: %v", err)
 	}
@@ -89,7 +81,6 @@ func TestBlockEntity_GetImageID_EmptyImageID(t *testing.T) {
 }
 
 func TestBlockEntity_GetImageID_ValidImageID(t *testing.T) {
-	// Создаем блок с валидным Image
 	block := &BlockEntity{
 		Image: &MockImageProvider{id: "valid"},
 		Data: &BlockData{
@@ -100,9 +91,7 @@ func TestBlockEntity_GetImageID_ValidImageID(t *testing.T) {
 		Altitude: SURFACE,
 	}
 
-	// Пытаемся получить ID изображения
 	imageID, err := block.GetImageID()
-	// Проверяем, что ошибки нет и ID получен корректно
 	if err != nil {
 		t.Errorf("Не ожидалась ошибка: %v", err)
 	}

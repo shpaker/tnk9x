@@ -13,40 +13,31 @@ import (
 	"github.com/shpaker/gonflict/internal/use_cases"
 )
 
-// StageState представляет состояние уровня
-// Объединяет логику управления игровыми объектами и интеграцию с Ebiten
 type StageState struct {
-	// Entities
 	HQEntity *types.HQEntity
 
-	// Use Cases
 	HQUseCases            interfaces.IHQUseCases
-	TankActionsUseCases   interfaces.ITankActionsUseCases   // Общий use case для действий танков
-	TankCommonUseCases    interfaces.ITankCommonUseCases    // Общий use case для движения танков
-	TankRenderUseCases    interfaces.ITankRenderUseCases    // Общий use case для рендеринга танков
-	TankLifecycleUseCases interfaces.ITankLifecycleUseCases // Use case для жизненного цикла и спавна
+	TankActionsUseCases   interfaces.ITankActionsUseCases
+	TankCommonUseCases    interfaces.ITankCommonUseCases
+	TankRenderUseCases    interfaces.ITankRenderUseCases
+	TankLifecycleUseCases interfaces.ITankLifecycleUseCases
 	BulletUseCases        interfaces.IBulletUseCases
 	MapUseCases           *use_cases.MapUseCases
 	CollisionUseCases     *use_cases.CollisionUseCases
 	TilesUseCases         *use_cases.TilesUseCases
 
-	// Адаптеры
-	inputAdapters     []interfaces.IInputAdapter // Адаптеры ввода игроков (массив из двух элементов)
+	inputAdapters     []interfaces.IInputAdapter
 	RendererAdapter   *game.StageRendererAdapter
-	EnemyInputAdapter interfaces.IAiInputAdapter // AI адаптер врагов
+	EnemyInputAdapter interfaces.IAiInputAdapter
 
-	// Метаданные
 	StartTime time.Time
-	isSetUp   bool // Флаг для отслеживания, был ли вызван SetUp
+	isSetUp   bool
 
-	// Use cases
 	stageUseCases interfaces.IStageUseCases
 
-	// Сессия
 	session *session_entities.GameSessionEntity
 }
 
-// NewStageState создает новое состояние уровня через билдер
 func NewStageState(
 	mapsRepository interfaces.IMapsDataRepository,
 	scriptsRepository interfaces.IScriptsRepository,
@@ -80,13 +71,11 @@ func NewStageState(
 	return builder.Build()
 }
 
-// SetUp запускается один раз на старте состояния
 func (state *StageState) SetUp() {
 	if state.stageUseCases == nil {
 		return
 	}
 
-	// Определяем количество игроков из StageSessionEntity
 	playerCount := 2
 	if state.session != nil && state.session.StageSession() != nil {
 		playerCount = int(state.session.StageSession().GetPlayerCount())
@@ -98,7 +87,6 @@ func (state *StageState) SetUp() {
 		}
 	}
 
-	// Спавним игроков в зависимости от выбранного количества
 	for i := 0; i < playerCount; i++ {
 		num := types.PlayerTankNum(i)
 		role := types.PlayerTankNumToRole(num)
@@ -125,24 +113,20 @@ func (state *StageState) SetUp() {
 	}
 }
 
-// Update обновляет состояние игры (вызывается Ebiten каждый кадр)
 func (state *StageState) Update() {
-	// Вызываем SetUp один раз на старте состояния
 	if !state.isSetUp {
 		state.SetUp()
 		state.isSetUp = true
 	}
 
-	// Вычисляем delta time из ActualTPS
 	tps := ebiten.ActualTPS()
 	var dt float64
 	if tps > 0 {
 		dt = 1.0 / tps
 	} else {
-		dt = 1.0 / 60.0 // Fallback если TPS равен 0
+		dt = 1.0 / 60.0
 	}
 
-	// Обновляем ввод игроков через итерацию
 	for _, adapter := range state.inputAdapters {
 		if adapter != nil {
 			adapter.Update(dt)
@@ -164,18 +148,15 @@ func (state *StageState) Update() {
 
 	paused := state.stageUseCases != nil && state.stageUseCases.IsPaused()
 
-	// Обновляем игровые объекты (танки, пули, коллизии, AI)
 	if state.TankLifecycleUseCases != nil && state.stageUseCases != nil &&
 		!paused {
 		_ = state.TankLifecycleUseCases.UpdateAllTanksLifecycle()
 		_ = state.TankCommonUseCases.UpdateAllTanks(dt)
 		state.stageUseCases.UpdateGameObjects(dt)
 
-		// Пытаемся респавнить обоих игроков через TryRespawnPlayersTanks
 		respawned1, respawned2 := state.stageUseCases.TryRespawnPlayersTanks()
 		respawnedTanks := []*types.TankEntity{respawned1, respawned2}
 
-		// Обновляем адаптеры для респавненных игроков через итерацию
 		for i, respawned := range respawnedTanks {
 			if respawned != nil && i < len(state.inputAdapters) &&
 				state.inputAdapters[i] != nil {
@@ -187,7 +168,6 @@ func (state *StageState) Update() {
 			}
 		}
 
-		// Проверяем завершение игры после попытки респавна (жизни могли закончиться)
 		if state.stageUseCases != nil && state.stageUseCases.IsStageFinished() {
 			if !state.stageUseCases.IsPaused() {
 				state.stageUseCases.PauseStageState()
@@ -205,7 +185,6 @@ func (state *StageState) Update() {
 		state.EnemyInputAdapter.Update(dt)
 	}
 
-	// Обновляем все анимации
 	if !paused && state.TilesUseCases != nil {
 		state.TilesUseCases.UpdateAnimations()
 	}

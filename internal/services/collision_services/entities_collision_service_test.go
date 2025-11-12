@@ -10,7 +10,6 @@ func TestEntitiesCollisionService_CheckColliders(t *testing.T) {
 	service := NewEntitiesCollisionService()
 
 	t.Run("коллизия", func(t *testing.T) {
-		// Создаем два объекта, которые пересекаются
 		tank := &types.TankEntity{
 			Position: types.Position{X: 10, Y: 10},
 			Size:     types.Size{Width: 16, Height: 16},
@@ -18,7 +17,7 @@ func TestEntitiesCollisionService_CheckColliders(t *testing.T) {
 		}
 
 		bullet := types.NewBulletEntity(
-			types.Position{X: 15, Y: 15}, // Пуля внутри танка
+			types.Position{X: 15, Y: 15},
 			types.Size{Width: 4, Height: 4},
 			types.SURFACE,
 			nil,
@@ -34,7 +33,6 @@ func TestEntitiesCollisionService_CheckColliders(t *testing.T) {
 	})
 
 	t.Run("нет коллизии", func(t *testing.T) {
-		// Создаем два объекта, которые не пересекаются
 		tank := &types.TankEntity{
 			Position: types.Position{X: 10, Y: 10},
 			Size:     types.Size{Width: 16, Height: 16},
@@ -42,7 +40,7 @@ func TestEntitiesCollisionService_CheckColliders(t *testing.T) {
 		}
 
 		bullet := types.NewBulletEntity(
-			types.Position{X: 50, Y: 50}, // Пуля далеко от танка
+			types.Position{X: 50, Y: 50},
 			types.Size{Width: 4, Height: 4},
 			types.SURFACE,
 			nil,
@@ -72,7 +70,7 @@ func TestEntitiesCollisionService_ResolveCollisionPosition(t *testing.T) {
 			Position: types.Position{
 				X: 30,
 				Y: 10,
-			}, // Препятствие справа от сущности
+			},
 			Size:     types.Size{Width: 16, Height: 16},
 			Altitude: types.SURFACE,
 		}
@@ -101,7 +99,7 @@ func TestEntitiesCollisionService_ResolveCollisionPosition(t *testing.T) {
 		}
 
 		obstacle := &types.BlockEntity{
-			Position: types.Position{X: 10, Y: 0}, // Препятствие выше сущности
+			Position: types.Position{X: 10, Y: 0},
 			Size:     types.Size{Width: 16, Height: 16},
 			Altitude: types.SURFACE,
 		}
@@ -114,7 +112,7 @@ func TestEntitiesCollisionService_ResolveCollisionPosition(t *testing.T) {
 		if err != nil {
 			t.Errorf("не ожидалась ошибка, но получили: %v", err)
 		}
-		// При движении вверх позиция Y должна быть скорректирована
+
 		if result.Y != 16.0 {
 			t.Errorf("ожидалась Y=16.0, но получили Y=%f", result.Y)
 		}
@@ -134,12 +132,11 @@ func TestEntitiesCollisionService_ResolveCollisionPosition(t *testing.T) {
 			Position: types.Position{
 				X: 0,
 				Y: 10,
-			}, // Препятствие слева от сущности
+			},
 			Size:     types.Size{Width: 16, Height: 16},
 			Altitude: types.SURFACE,
 		}
 
-		// Движение вправо, но препятствие слева - должна быть ошибка
 		_, err := service.ResolveCollisionPosition(
 			entity,
 			obstacle,
@@ -165,7 +162,7 @@ func TestEntitiesCollisionService_IsObstacleInDirection(t *testing.T) {
 			Position: types.Position{
 				X: 30,
 				Y: 10,
-			}, // Препятствие справа от сущности
+			},
 			Size:     types.Size{Width: 16, Height: 16},
 			Altitude: types.SURFACE,
 		}
@@ -191,7 +188,7 @@ func TestEntitiesCollisionService_IsObstacleInDirection(t *testing.T) {
 			Position: types.Position{
 				X: 0,
 				Y: 10,
-			}, // Препятствие слева от сущности
+			},
 			Size:     types.Size{Width: 16, Height: 16},
 			Altitude: types.SURFACE,
 		}
@@ -214,7 +211,7 @@ func TestEntitiesCollisionService_IsObstacleInDirection(t *testing.T) {
 		}
 
 		obstacle := &types.BlockEntity{
-			Position: types.Position{X: 10, Y: 0}, // Препятствие выше сущности
+			Position: types.Position{X: 10, Y: 0},
 			Size:     types.Size{Width: 16, Height: 16},
 			Altitude: types.SURFACE,
 		}
@@ -237,7 +234,7 @@ func TestEntitiesCollisionService_IsObstacleInDirection(t *testing.T) {
 		}
 
 		obstacle := &types.BlockEntity{
-			Position: types.Position{X: 10, Y: 30}, // Препятствие ниже сущности
+			Position: types.Position{X: 10, Y: 30},
 			Size:     types.Size{Width: 16, Height: 16},
 			Altitude: types.SURFACE,
 		}
@@ -267,7 +264,7 @@ func TestEntitiesCollisionService_CalculateCorrectedPosition(t *testing.T) {
 			Position: types.Position{
 				X: 30,
 				Y: 10,
-			}, // Препятствие справа от сущности
+			},
 			Size:     types.Size{Width: 16, Height: 16},
 			Altitude: types.SURFACE,
 		}
@@ -293,7 +290,7 @@ func TestEntitiesCollisionService_CalculateCorrectedPosition(t *testing.T) {
 		}
 
 		obstacle := &types.BlockEntity{
-			Position: types.Position{X: 10, Y: 0}, // Препятствие выше сущности
+			Position: types.Position{X: 10, Y: 0},
 			Size:     types.Size{Width: 16, Height: 16},
 			Altitude: types.SURFACE,
 		}
@@ -324,7 +321,7 @@ func TestEntitiesCollisionService_CalculateCorrectedPosition(t *testing.T) {
 				Position: types.Position{
 					X: 30,
 					Y: 10,
-				}, // Препятствие справа от сущности
+				},
 				Size:     types.Size{Width: 16, Height: 16},
 				Altitude: types.SURFACE,
 			}
@@ -334,14 +331,14 @@ func TestEntitiesCollisionService_CalculateCorrectedPosition(t *testing.T) {
 				obstacle,
 				types.DirectionRight,
 			)
-			// При движении вправо Y координата не должна изменяться
+
 			if result.Y != 10.0 {
 				t.Errorf(
 					"Y координата не должна изменяться при движении вправо, ожидалась Y=10.0, но получили Y=%f",
 					result.Y,
 				)
 			}
-			// X координата должна быть скорректирована
+
 			if result.X == 10.0 {
 				t.Errorf(
 					"X координата должна быть скорректирована, но осталась X=10.0",
@@ -363,7 +360,7 @@ func TestEntitiesCollisionService_CalculateCorrectedPosition(t *testing.T) {
 				Position: types.Position{
 					X: 10,
 					Y: 0,
-				}, // Препятствие выше сущности
+				},
 				Size:     types.Size{Width: 16, Height: 16},
 				Altitude: types.SURFACE,
 			}
@@ -373,14 +370,14 @@ func TestEntitiesCollisionService_CalculateCorrectedPosition(t *testing.T) {
 				obstacle,
 				types.DirectionUp,
 			)
-			// При движении вверх X координата не должна изменяться
+
 			if result.X != 10.0 {
 				t.Errorf(
 					"X координата не должна изменяться при движении вверх, ожидалась X=10.0, но получили X=%f",
 					result.X,
 				)
 			}
-			// Y координата должна быть скорректирована
+
 			if result.Y == 10.0 {
 				t.Errorf(
 					"Y координата должна быть скорректирована, но осталась Y=10.0",

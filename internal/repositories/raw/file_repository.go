@@ -54,7 +54,6 @@ func (fr *FileRepository) ReadImage(name string) (image.Image, error) {
 	return img, nil
 }
 
-// CountFiles возвращает количество файлов в указанной директории по маске (например, "*.bcmap")
 func (fr *FileRepository) CountFiles(
 	dirPath string,
 	pattern string,
@@ -70,7 +69,7 @@ func (fr *FileRepository) CountFiles(
 	}
 
 	count := 0
-	// Извлекаем расширение из паттерна (например, ".bcmap" из "*.bcmap")
+
 	patternExt := ""
 	if strings.HasPrefix(pattern, "*") {
 		patternExt = pattern[1:]
@@ -80,13 +79,13 @@ func (fr *FileRepository) CountFiles(
 		if entry.IsDir() {
 			continue
 		}
-		// Проверяем, соответствует ли файл паттерну
+
 		if patternExt != "" {
 			if strings.HasSuffix(entry.Name(), patternExt) {
 				count++
 			}
 		} else {
-			// Если паттерн не содержит *, используем filepath.Match
+
 			matched, err := filepath.Match(pattern, entry.Name())
 			if err != nil {
 				return 0, err
