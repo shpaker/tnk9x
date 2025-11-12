@@ -157,7 +157,7 @@ func TestBulletCollisionService_CheckBulletHQCollision(t *testing.T) {
 			nil,
 			0,
 			types.DirectionUp,
-			owner,
+			&owner,
 		)
 
 		hq := &types.HQEntity{
@@ -187,7 +187,7 @@ func TestBulletCollisionService_CheckBulletHQCollision(t *testing.T) {
 			nil,
 			0,
 			types.DirectionUp,
-			owner,
+			&owner,
 		)
 
 		hq := &types.HQEntity{
