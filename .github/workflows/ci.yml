@@ -30,7 +30,8 @@ jobs:
             libxrandr-dev \
             libxinerama-dev \
             libxi-dev \
-            libxcursor-dev
+            libxcursor-dev \
+            libxxf86vm-dev
 
       - name: Setup Just
         uses: extractions/setup-just@v3
@@ -67,7 +68,8 @@ jobs:
             libxrandr-dev \
             libxinerama-dev \
             libxi-dev \
-            libxcursor-dev
+            libxcursor-dev \
+            libxxf86vm-dev
 
       - name: Setup Just
         uses: extractions/setup-just@v3
@@ -104,7 +106,8 @@ jobs:
             libxrandr-dev \
             libxinerama-dev \
             libxi-dev \
-            libxcursor-dev
+            libxcursor-dev \
+            libxxf86vm-dev
 
       - name: Setup Just
         uses: extractions/setup-just@v3
@@ -142,7 +145,8 @@ jobs:
             libxrandr-dev \
             libxinerama-dev \
             libxi-dev \
-            libxcursor-dev
+            libxcursor-dev \
+            libxxf86vm-dev
 
       - name: Setup Just
         uses: extractions/setup-just@v3
