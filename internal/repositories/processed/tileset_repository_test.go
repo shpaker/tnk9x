@@ -382,7 +382,7 @@ func TestTilesetRepository_Cache(t *testing.T) {
 		)
 	}
 
-	img1, err := registry.GetBlocksImage("brick")
+	provider1, err := registry.GetBlocksImage("brick")
 	if err != nil {
 		t.Fatalf("Не удалось получить изображение: %v", err)
 	}
@@ -395,9 +395,37 @@ func TestTilesetRepository_Cache(t *testing.T) {
 		)
 	}
 
-	img2, err := registry.GetBlocksImage("brick")
+	imageID1, err := provider1.GetImageID()
+	if err != nil {
+		t.Fatalf("GetImageID вернул ошибку: %v", err)
+	}
+
+	img1, err := registry.GetImageData("blocks", imageID1)
+	if err != nil {
+		t.Fatalf("GetImageData вернул ошибку: %v", err)
+	}
+
+	provider2, err := registry.GetBlocksImage("brick")
 	if err != nil {
 		t.Fatalf("Не удалось получить изображение: %v", err)
+	}
+
+	if len(registry.blocks.imagesCache) != expectedCacheSize {
+		t.Errorf(
+			"Ожидалось %d элементов в кэше, получено %d",
+			expectedCacheSize,
+			len(registry.blocks.imagesCache),
+		)
+	}
+
+	imageID2, err := provider2.GetImageID()
+	if err != nil {
+		t.Fatalf("GetImageID вернул ошибку: %v", err)
+	}
+
+	img2, err := registry.GetImageData("blocks", imageID2)
+	if err != nil {
+		t.Fatalf("GetImageData вернул ошибку: %v", err)
 	}
 
 	if img1 != img2 {
@@ -412,7 +440,7 @@ func TestTilesetRepository_Cache(t *testing.T) {
 		)
 	}
 
-	img3, err := registry.GetBlocksImage("steel")
+	provider3, err := registry.GetBlocksImage("steel")
 	if err != nil {
 		t.Fatalf("Не удалось получить изображение steel: %v", err)
 	}
@@ -423,6 +451,16 @@ func TestTilesetRepository_Cache(t *testing.T) {
 			expectedCacheSize,
 			len(registry.blocks.imagesCache),
 		)
+	}
+
+	imageID3, err := provider3.GetImageID()
+	if err != nil {
+		t.Fatalf("GetImageID вернул ошибку: %v", err)
+	}
+
+	img3, err := registry.GetImageData("blocks", imageID3)
+	if err != nil {
+		t.Fatalf("GetImageData вернул ошибку: %v", err)
 	}
 
 	if img1 == img3 {

@@ -147,7 +147,7 @@ func (tr *TilesetRepositoryRegistry) GetBlocksImage(
 
 	_, err := tr.blocks.getImage(id)
 	if err != nil {
-		return nil, fmt.Errorf("image '%s' not found: %w", id, err)
+		return nil, err
 	}
 	return &image_providers.StaticProvider{
 		ImageID: id,
