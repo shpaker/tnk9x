@@ -46,6 +46,7 @@ jobs:
             libglfw3-dev \
             libglu1-mesa-dev \
             mesa-common-dev \
+            libx11-dev \
             libxrandr-dev \
             libxinerama-dev \
             libxi-dev \
