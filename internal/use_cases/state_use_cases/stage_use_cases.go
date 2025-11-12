@@ -159,10 +159,13 @@ func (uc *StageUseCases) TryRespawnPlayerTank() *types.TankEntity {
 
 	respawned := uc.SpawnPlayerTank()
 	if respawned == nil {
-		// Возвращаем жизнь, если возродить не удалось
-		uc.stageSession.SetPlayer1Lives(
-			uc.stageSession.GetPlayer1Lives() + 1,
-		)
+		// Возвращаем жизнь, если возродить не удалось И жизни еще остались
+		// Если жизни закончились (стали 0), не возвращаем жизнь - игра должна завершиться
+		if !uc.stageSession.IsPlayer1Defeated() {
+			uc.stageSession.SetPlayer1Lives(
+				uc.stageSession.GetPlayer1Lives() + 1,
+			)
+		}
 	}
 
 	return respawned

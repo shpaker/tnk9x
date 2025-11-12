@@ -158,6 +158,13 @@ func (state *StageState) Update() {
 			}
 		}
 
+		// Проверяем завершение игры после попытки респавна (жизни могли закончиться)
+		if state.stageUseCases != nil && state.stageUseCases.IsStageFinished() {
+			if !state.stageUseCases.IsPaused() {
+				state.stageUseCases.PauseStageState()
+			}
+		}
+
 		if spawned := state.stageUseCases.TrySpawnEnemy(); spawned != nil {
 			if state.EnemyInputAdapter != nil {
 				state.EnemyInputAdapter.AddTank(spawned)
@@ -184,7 +191,7 @@ func (state *StageState) Draw(screen *ebiten.Image) {
 	if state.stageUseCases.IsStageFinished() {
 		label := "DEFEAT"
 		if state.stageUseCases.IsStageWon() {
-			label = "WIN"
+			label = "VICTORY"
 		}
 		state.RendererAdapter.DrawStageEndOverlay(screen, label)
 		return

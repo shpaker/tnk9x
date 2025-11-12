@@ -238,7 +238,7 @@ func (uc *CollisionUseCases) checkTankTankCollision(
 ) {
 	for _, otherTank := range allTanks {
 		// Пропускаем проверку с самим собой и неактивными танками
-		if tank == otherTank || !otherTank.IsDestroyed() {
+		if tank == otherTank || otherTank.IsDestroyed() {
 			continue
 		}
 

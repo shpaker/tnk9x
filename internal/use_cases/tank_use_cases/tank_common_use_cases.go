@@ -53,6 +53,7 @@ func (uc *TankCommonUseCases) Update(tank *types.TankEntity, dt float64) error {
 	}
 
 	oldState := tank.State
+	oldDirection := tank.Direction
 
 	// Обрабатываем состояние Braking отдельно
 	if tank.State == types.TankStateBraking {
@@ -60,6 +61,10 @@ func (uc *TankCommonUseCases) Update(tank *types.TankEntity, dt float64) error {
 			return errors.New("brakingService is not initialized")
 		}
 		err := uc.brakingService.HandleBrakingState(tank, dt)
+		// Если изменилось направление (например, применился NextDirection), обновляем анимацию
+		if oldDirection != tank.Direction && uc.renderUseCases != nil {
+			uc.renderUseCases.UpdateTankAnimation(tank)
+		}
 		// Синхронизируем анимацию после обновления состояния (если оно изменилось)
 		if oldState != tank.State && uc.renderUseCases != nil {
 			uc.renderUseCases.SyncAnimationWithState(tank)

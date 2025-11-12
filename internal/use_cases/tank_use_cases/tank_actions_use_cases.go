@@ -64,6 +64,10 @@ func (uc *TankActionsUseCases) Rotate(
 	// Если танк в состоянии Braking, запоминаем новое направление
 	if tank.State == types.TankStateBraking {
 		uc.brakingService.HandleRotateWhileBraking(tank, direction)
+		// Обновляем анимацию, чтобы показать новое направление поворота
+		if uc.renderUseCases != nil {
+			uc.renderUseCases.UpdateTankAnimation(tank)
+		}
 		return nil
 	}
 
@@ -79,6 +83,10 @@ func (uc *TankActionsUseCases) Rotate(
 	directionCopy := direction
 	tank.NextDirection = &directionCopy
 	tank.State = types.TankStateBraking
+	// Обновляем анимацию, чтобы показать новое направление поворота
+	if uc.renderUseCases != nil {
+		uc.renderUseCases.UpdateTankAnimation(tank)
+	}
 	return nil
 }
 
