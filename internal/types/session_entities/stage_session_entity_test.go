@@ -1,6 +1,10 @@
 package session_entities
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/shpaker/gonflict/internal/types"
+)
 
 func TestStageSessionEntity_AreAllEnemiesDefeated(t *testing.T) {
 	session := &StageSessionEntity{
@@ -64,41 +68,45 @@ func TestStageSessionEntity_IncrementDestroyedEnemies(t *testing.T) {
 func TestStageSessionEntity_Player1Lives_Default(t *testing.T) {
 	session := NewStageSessionEntity()
 
-	if session.GetPlayer1Lives() != defaultStagePlayer1Lives {
+	if session.GetPlayerLives(
+		types.PlayerTankNumPlayer1,
+	) != defaultStagePlayer1Lives {
 		t.Fatalf(
 			"expected default player lives to be %d, got %d",
 			defaultStagePlayer1Lives,
-			session.GetPlayer1Lives(),
+			session.GetPlayerLives(types.PlayerTankNumPlayer1),
 		)
 	}
 
-	if session.IsPlayer1Defeated() {
+	if session.IsPlayerDefeated(types.PlayerTankNumPlayer1) {
 		t.Fatalf("expected player to have lives remaining by default")
 	}
 
-	if session.GetPlayer1InitialLives() != defaultStagePlayer1Lives {
+	if session.GetPlayerInitialLives(
+		types.PlayerTankNumPlayer1,
+	) != defaultStagePlayer1Lives {
 		t.Fatalf(
 			"expected initial player lives to be %d, got %d",
 			defaultStagePlayer1Lives,
-			session.GetPlayer1InitialLives(),
+			session.GetPlayerInitialLives(types.PlayerTankNumPlayer1),
 		)
 	}
 }
 
 func TestStageSessionEntity_Player1Lives_Decrement(t *testing.T) {
 	session := NewStageSessionEntity()
-	session.SetPlayer1Lives(1)
-	session.DecrementPlayer1Lives()
-	session.DecrementPlayer1Lives()
+	session.SetPlayerLives(types.PlayerTankNumPlayer1, 1)
+	session.DecrementPlayerLives(types.PlayerTankNumPlayer1)
+	session.DecrementPlayerLives(types.PlayerTankNumPlayer1)
 
-	if session.GetPlayer1Lives() != 0 {
+	if session.GetPlayerLives(types.PlayerTankNumPlayer1) != 0 {
 		t.Fatalf(
 			"expected player lives to stop at 0, got %d",
-			session.GetPlayer1Lives(),
+			session.GetPlayerLives(types.PlayerTankNumPlayer1),
 		)
 	}
 
-	if !session.IsPlayer1Defeated() {
+	if !session.IsPlayerDefeated(types.PlayerTankNumPlayer1) {
 		t.Fatalf("expected player to be defeated with zero lives")
 	}
 }

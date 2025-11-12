@@ -71,8 +71,9 @@ type ITankLifecycleUseCases interface {
 	OnStageSetUpEnemiesSpawn() ([3]*types.TankEntity, error)
 	SpawnEnemy(index *int, ignoreRespawnDelay bool) (*types.TankEntity, error)
 	SpawnPlayer1() (*types.TankEntity, error)
-	GetPlayerTank() *types.TankEntity
-	SetPlayerTank(tank *types.TankEntity)
+	GetPlayerTank(num types.PlayerTankNum) *types.TankEntity
+	SetPlayerTank(num types.PlayerTankNum, tank *types.TankEntity)
+	SpawnPlayer2() (*types.TankEntity, error)
 	Explode(tank *types.TankEntity) error
 	IsSpawnFinished(tank *types.TankEntity, currentTime float64)
 	IsExplosionFinished(tank *types.TankEntity)
@@ -114,10 +115,11 @@ type IFontUseCases interface {
 
 // IStageUseCases интерфейс для операций с состоянием уровня
 type IStageUseCases interface {
-	SpawnPlayerTank() *types.TankEntity
+	SpawnPlayerTank(role types.TankRole) *types.TankEntity
 	SpawnInitialEnemyTanks() []*types.TankEntity
 	TrySpawnEnemy() *types.TankEntity
-	TryRespawnPlayerTank() *types.TankEntity
+	TryRespawnPlayersTanks() (*types.TankEntity, *types.TankEntity)
+	GetPlayersTanks() []*types.TankEntity
 	UpdateGameObjects(dt float64)
 	TogglePause()
 	IsPaused() bool

@@ -66,8 +66,10 @@ func (uc *DebugUseCases) collectDebugData() types.DebugInfoData {
 		return data
 	}
 
-	data.PlayerLives = stageSession.GetPlayer1Lives()
-	data.PlayerInitialLives = stageSession.GetPlayer1InitialLives()
+	data.PlayerLives = stageSession.GetPlayerLives(types.PlayerTankNumPlayer1)
+	data.PlayerInitialLives = stageSession.GetPlayerInitialLives(
+		types.PlayerTankNumPlayer1,
+	)
 	data.TotalEnemies = stageSession.GetTotalEnemies()
 	data.RemainingEnemies = stageSession.GetRemainingEnemies()
 

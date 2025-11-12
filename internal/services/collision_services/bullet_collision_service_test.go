@@ -75,11 +75,12 @@ func TestBulletCollisionService_CheckBulletTankCollision(t *testing.T) {
 	service := NewBulletCollisionService(16, entitiesService)
 
 	t.Run("коллизия", func(t *testing.T) {
-		owner := &types.TankEntity{
-			Position: types.Position{X: 0, Y: 0},
-			Size:     types.Size{Width: 16, Height: 16},
-			IsEnemy:  false,
-		}
+		owner := types.NewDefaultTankEntity(
+			types.TankRolePlayer1,
+			types.DirectionUp,
+		)
+		owner.Position = types.Position{X: 0, Y: 0}
+		owner.Size = types.Size{Width: 16, Height: 16}
 
 		bullet := types.NewBulletEntity(
 			types.Position{X: 12, Y: 12},
@@ -88,28 +89,30 @@ func TestBulletCollisionService_CheckBulletTankCollision(t *testing.T) {
 			nil,
 			0,
 			types.DirectionUp,
-			owner,
+			&owner,
 		)
 
-		tank := &types.TankEntity{
-			Position: types.Position{X: 10, Y: 10},
-			Size:     types.Size{Width: 16, Height: 16},
-			Altitude: types.SURFACE,
-			IsEnemy:  true,
-		}
+		tank := types.NewDefaultTankEntity(
+			types.TankRoleEnemy,
+			types.DirectionUp,
+		)
+		tank.Position = types.Position{X: 10, Y: 10}
+		tank.Size = types.Size{Width: 16, Height: 16}
+		tank.Altitude = types.SURFACE
 
-		result := service.CheckBulletTankCollision(bullet, tank)
+		result := service.CheckBulletTankCollision(bullet, &tank)
 		if !result {
 			t.Errorf("ожидалась коллизия, но получили false")
 		}
 	})
 
 	t.Run("нет коллизии", func(t *testing.T) {
-		owner := &types.TankEntity{
-			Position: types.Position{X: 0, Y: 0},
-			Size:     types.Size{Width: 16, Height: 16},
-			IsEnemy:  false,
-		}
+		owner := types.NewDefaultTankEntity(
+			types.TankRolePlayer1,
+			types.DirectionUp,
+		)
+		owner.Position = types.Position{X: 0, Y: 0}
+		owner.Size = types.Size{Width: 16, Height: 16}
 
 		bullet := types.NewBulletEntity(
 			types.Position{X: 10, Y: 10},
@@ -118,16 +121,17 @@ func TestBulletCollisionService_CheckBulletTankCollision(t *testing.T) {
 			nil,
 			0,
 			types.DirectionUp,
-			owner,
+			&owner,
 		)
 
-		tank := &types.TankEntity{
-			Position: types.Position{X: 50, Y: 50},
-			Size:     types.Size{Width: 16, Height: 16},
-			IsEnemy:  true,
-		}
+		tank := types.NewDefaultTankEntity(
+			types.TankRoleEnemy,
+			types.DirectionUp,
+		)
+		tank.Position = types.Position{X: 50, Y: 50}
+		tank.Size = types.Size{Width: 16, Height: 16}
 
-		result := service.CheckBulletTankCollision(bullet, tank)
+		result := service.CheckBulletTankCollision(bullet, &tank)
 		if result {
 			t.Errorf("не ожидалась коллизия, но получили true")
 		}
@@ -139,10 +143,12 @@ func TestBulletCollisionService_CheckBulletHQCollision(t *testing.T) {
 	service := NewBulletCollisionService(16, entitiesService)
 
 	t.Run("коллизия", func(t *testing.T) {
-		owner := &types.TankEntity{
-			Position: types.Position{X: 0, Y: 0},
-			Size:     types.Size{Width: 16, Height: 16},
-		}
+		owner := types.NewDefaultTankEntity(
+			types.TankRolePlayer1,
+			types.DirectionUp,
+		)
+		owner.Position = types.Position{X: 0, Y: 0}
+		owner.Size = types.Size{Width: 16, Height: 16}
 
 		bullet := types.NewBulletEntity(
 			types.Position{X: 10, Y: 10},
@@ -167,10 +173,12 @@ func TestBulletCollisionService_CheckBulletHQCollision(t *testing.T) {
 	})
 
 	t.Run("нет коллизии", func(t *testing.T) {
-		owner := &types.TankEntity{
-			Position: types.Position{X: 0, Y: 0},
-			Size:     types.Size{Width: 16, Height: 16},
-		}
+		owner := types.NewDefaultTankEntity(
+			types.TankRolePlayer1,
+			types.DirectionUp,
+		)
+		owner.Position = types.Position{X: 0, Y: 0}
+		owner.Size = types.Size{Width: 16, Height: 16}
 
 		bullet := types.NewBulletEntity(
 			types.Position{X: 10, Y: 10},

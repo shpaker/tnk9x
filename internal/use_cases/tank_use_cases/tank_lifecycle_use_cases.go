@@ -18,6 +18,7 @@ type TankLifecycleUseCases struct {
 	collisionUseCases  interfaces.ICollisionUseCases
 	enemySpawners      []types.Position
 	player1Spawner     types.Position
+	player2Spawner     types.Position
 	baseSize           types.Size
 }
 
@@ -45,11 +46,13 @@ func (uc *TankLifecycleUseCases) SetSpawnConfiguration(
 	tanksRepository interfaces.ITanksRepository,
 	enemySpawners []types.Position,
 	player1Spawner types.Position,
+	player2Spawner types.Position,
 	baseSize types.Size,
 ) {
 	uc.tanksRepository = tanksRepository
 	uc.enemySpawners = enemySpawners
 	uc.player1Spawner = player1Spawner
+	uc.player2Spawner = player2Spawner
 	uc.baseSize = baseSize
 }
 
@@ -127,7 +130,11 @@ func (uc *TankLifecycleUseCases) SpawnEnemy(
 		return nil, nil
 	}
 
-	tank, err := uc.spawnTank(types.DirectionUp, spawnPosition, true)
+	tank, err := uc.spawnTank(
+		types.DirectionUp,
+		spawnPosition,
+		types.TankRoleEnemy,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -142,28 +149,60 @@ func (uc *TankLifecycleUseCases) SpawnPlayer1() (*types.TankEntity, error) {
 	if uc.tanksRepository == nil {
 		return nil, fmt.Errorf("tanks repository missing")
 	}
-	tank, err := uc.spawnTank(types.DirectionUp, uc.player1Spawner, false)
+	tank, err := uc.spawnTank(
+		types.DirectionUp,
+		uc.player1Spawner,
+		types.TankRolePlayer1,
+	)
 	if err != nil {
 		return nil, err
 	}
-	uc.tanksRepository.SetPlayer(&tank)
-	return &tank, nil
+	// Выделяем память в куче для танка
+	tankPtr := new(types.TankEntity)
+	*tankPtr = tank
+	uc.tanksRepository.SetPlayer(types.PlayerTankNumPlayer1, tankPtr)
+	return tankPtr, nil
 }
 
-// GetPlayerTank возвращает танк игрока из репозитория
-func (uc *TankLifecycleUseCases) GetPlayerTank() *types.TankEntity {
+// SpawnPlayer2 создает и спавнит игрока 2 из второго спавнера
+func (uc *TankLifecycleUseCases) SpawnPlayer2() (*types.TankEntity, error) {
+	if uc.tanksRepository == nil {
+		return nil, fmt.Errorf("tanks repository missing")
+	}
+	tank, err := uc.spawnTank(
+		types.DirectionUp,
+		uc.player2Spawner,
+		types.TankRolePlayer2,
+	)
+	if err != nil {
+		return nil, err
+	}
+	// Выделяем память в куче для танка
+	tankPtr := new(types.TankEntity)
+	*tankPtr = tank
+	uc.tanksRepository.SetPlayer(types.PlayerTankNumPlayer2, tankPtr)
+	return tankPtr, nil
+}
+
+// GetPlayerTank возвращает танк игрока по номеру из репозитория
+func (uc *TankLifecycleUseCases) GetPlayerTank(
+	num types.PlayerTankNum,
+) *types.TankEntity {
 	if uc.tanksRepository == nil {
 		return nil
 	}
-	return uc.tanksRepository.GetPlayer()
+	return uc.tanksRepository.GetPlayer(num)
 }
 
-// SetPlayerTank устанавливает танк игрока в репозитории
-func (uc *TankLifecycleUseCases) SetPlayerTank(tank *types.TankEntity) {
+// SetPlayerTank устанавливает танк игрока по номеру в репозитории
+func (uc *TankLifecycleUseCases) SetPlayerTank(
+	num types.PlayerTankNum,
+	tank *types.TankEntity,
+) {
 	if uc.tanksRepository == nil {
 		return
 	}
-	uc.tanksRepository.SetPlayer(tank)
+	uc.tanksRepository.SetPlayer(num, tank)
 }
 
 // ============================================================================
@@ -174,9 +213,9 @@ func (uc *TankLifecycleUseCases) SetPlayerTank(tank *types.TankEntity) {
 func (uc *TankLifecycleUseCases) spawnTank(
 	direction types.Direction,
 	spawnAt types.Position,
-	isEnemy bool,
+	role types.TankRole,
 ) (types.TankEntity, error) {
-	tank := types.NewDefaultTankEntity(isEnemy, direction)
+	tank := types.NewDefaultTankEntity(role, direction)
 	tank.Size = uc.baseSize
 	tank.Position = types.Position{
 		X: spawnAt.X * float64(uc.baseSize.Width),

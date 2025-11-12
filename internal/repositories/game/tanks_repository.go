@@ -5,32 +5,47 @@ import (
 )
 
 type TanksRepository struct {
-	player  *types.TankEntity   // Игрок
+	players []*types.TankEntity // Игроки (массив из двух элементов)
 	enemies []*types.TankEntity // Враги
 }
 
 func NewTanksRepository() *TanksRepository {
 	return &TanksRepository{
-		player:  nil,
+		players: make([]*types.TankEntity, 2),
 		enemies: make([]*types.TankEntity, 0),
 	}
 }
 
-// === Методы для работы с игроком ===
+// === Методы для работы с игроками по номеру ===
 
-// SetPlayer устанавливает танк игрока
-func (tr *TanksRepository) SetPlayer(player *types.TankEntity) {
-	tr.player = player
+// SetPlayer устанавливает танк игрока по номеру
+func (tr *TanksRepository) SetPlayer(
+	num types.PlayerTankNum,
+	player *types.TankEntity,
+) {
+	if int(num) >= 0 && int(num) < len(tr.players) {
+		tr.players[num] = player
+	}
 }
 
-// GetPlayer возвращает танк игрока
-func (tr *TanksRepository) GetPlayer() *types.TankEntity {
-	return tr.player
+// GetPlayer возвращает танк игрока по номеру
+func (tr *TanksRepository) GetPlayer(
+	num types.PlayerTankNum,
+) *types.TankEntity {
+	if int(num) >= 0 && int(num) < len(tr.players) {
+		return tr.players[num]
+	}
+	return nil
 }
 
-// HasPlayer возвращает true, если есть игрок
-func (tr *TanksRepository) HasPlayer() bool {
-	return tr.player != nil
+// HasPlayer возвращает true, если есть игрок с указанным номером
+func (tr *TanksRepository) HasPlayer(num types.PlayerTankNum) bool {
+	return tr.GetPlayer(num) != nil
+}
+
+// GetAllPlayers возвращает всех игроков
+func (tr *TanksRepository) GetAllPlayers() []*types.TankEntity {
+	return tr.players
 }
 
 // === Методы для работы с врагами ===
@@ -47,13 +62,15 @@ func (tr *TanksRepository) GetAllEnemies() []*types.TankEntity {
 
 // === Методы для работы со всеми танками ===
 
-// GetAllTanks возвращает все танки (игрок + враги)
+// GetAllTanks возвращает все танки (игроки + враги)
 func (tr *TanksRepository) GetAllTanks() []*types.TankEntity {
 	var allTanks []*types.TankEntity
 
-	// Добавляем игрока, если он есть
-	if tr.player != nil {
-		allTanks = append(allTanks, tr.player)
+	// Добавляем всех игроков через итерацию
+	for _, player := range tr.players {
+		if player != nil {
+			allTanks = append(allTanks, player)
+		}
 	}
 
 	// Добавляем всех врагов
@@ -61,8 +78,6 @@ func (tr *TanksRepository) GetAllTanks() []*types.TankEntity {
 
 	return allTanks
 }
-
-// === Методы для обратной совместимости ===
 
 // AddTank добавляет танк (по умолчанию как врага)
 func (tr *TanksRepository) AddTank(tank *types.TankEntity) {

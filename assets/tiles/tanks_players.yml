@@ -11,6 +11,15 @@ images:
   player1_regular_down_2: [5, 0]
   player1_regular_right_1: [6, 0]
   player1_regular_right_2: [7, 0]
+  # Игрок 2 (зеленый) - базовый танк
+  player2_regular_up_1: [0, 8]
+  player2_regular_up_2: [1, 8]
+  player2_regular_left_1: [2, 8]
+  player2_regular_left_2: [3, 8]
+  player2_regular_down_1: [4, 8]
+  player2_regular_down_2: [5, 8]
+  player2_regular_right_1: [6, 8]
+  player2_regular_right_2: [7, 8]
 
 animations:
   # Игрок 1 (желтый) - базовый танк
@@ -26,3 +35,16 @@ animations:
   player1_regular_tank_right:
     duration: 10
     frames: [player1_regular_right_1, player1_regular_right_2]
+  # Игрок 2 (зеленый) - базовый танк
+  player2_regular_tank_up:
+    duration: 10
+    frames: [player2_regular_up_1, player2_regular_up_2]
+  player2_regular_tank_left:
+    duration: 10
+    frames: [player2_regular_left_1, player2_regular_left_2]
+  player2_regular_tank_down:
+    duration: 10
+    frames: [player2_regular_down_1, player2_regular_down_2]
+  player2_regular_tank_right:
+    duration: 10
+    frames: [player2_regular_right_1, player2_regular_right_2]

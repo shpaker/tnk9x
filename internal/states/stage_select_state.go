@@ -26,6 +26,7 @@ type StageSelectState struct {
 	isSetUp            bool // Флаг для отслеживания, был ли вызван SetUp
 	activeMenuItem     stageSelectMenuItem
 	playerCount        int
+	maxActiveEnemies   uint
 }
 
 type stageSelectMenuItem int
@@ -33,6 +34,7 @@ type stageSelectMenuItem int
 const (
 	stageSelectMenuItemLevel stageSelectMenuItem = iota
 	stageSelectMenuItemPlayers
+	stageSelectMenuItemMaxEnemies
 )
 
 // NewStageSelectState создает новое состояние выбора уровня
@@ -132,6 +134,7 @@ func NewStageSelectState(
 		rendererAdapter:    rendererAdapter,
 		activeMenuItem:     stageSelectMenuItemLevel,
 		playerCount:        1,
+		maxActiveEnemies:   5,
 	}
 
 	return state, nil
@@ -155,13 +158,20 @@ func (s *StageSelectState) Update() {
 	// Обрабатываем ввод в зависимости от активного пункта меню
 	if s.activeMenuItem == stageSelectMenuItemLevel {
 		s.inputAdapter.Update(0)
-	} else {
+	} else if s.activeMenuItem == stageSelectMenuItemPlayers {
 		s.handlePlayerCountSelection()
+	} else if s.activeMenuItem == stageSelectMenuItemMaxEnemies {
+		s.handleMaxActiveEnemiesSelection()
 	}
 
 	// Обрабатываем переход к игре по Enter
 	if inpututil.IsKeyJustPressed(ebiten.KeyEnter) {
 		selectedLevel := s.selectorUseCases.Select(s.selector)
+		// Устанавливаем настройки в StageSessionEntity перед переходом
+		if s.Session != nil && s.Session.StageSession() != nil {
+			s.Session.StageSession().SetMaxActiveEnemies(s.maxActiveEnemies)
+			s.Session.StageSession().SetPlayerCount(uint(s.playerCount))
+		}
 		s.transitionUseCases.ToGame(s.Session, selectedLevel)
 	}
 }
@@ -170,10 +180,13 @@ func (s *StageSelectState) Update() {
 func (s *StageSelectState) Draw(screen *ebiten.Image) {
 	if s.rendererAdapter != nil {
 		isLevelActive := s.activeMenuItem == stageSelectMenuItemLevel
+		isPlayersActive := s.activeMenuItem == stageSelectMenuItemPlayers
 		s.rendererAdapter.DrawAll(
 			screen,
 			isLevelActive,
 			s.playerCount,
+			isPlayersActive,
+			s.maxActiveEnemies,
 		)
 	}
 }
@@ -185,10 +198,20 @@ func (s *StageSelectState) handleMenuNavigation() {
 		inpututil.IsKeyJustPressed(ebiten.KeyS)
 
 	if moveUp {
-		s.activeMenuItem = stageSelectMenuItemLevel
+		switch s.activeMenuItem {
+		case stageSelectMenuItemPlayers:
+			s.activeMenuItem = stageSelectMenuItemLevel
+		case stageSelectMenuItemMaxEnemies:
+			s.activeMenuItem = stageSelectMenuItemPlayers
+		}
 	}
 	if moveDown {
-		s.activeMenuItem = stageSelectMenuItemPlayers
+		switch s.activeMenuItem {
+		case stageSelectMenuItemLevel:
+			s.activeMenuItem = stageSelectMenuItemPlayers
+		case stageSelectMenuItemPlayers:
+			s.activeMenuItem = stageSelectMenuItemMaxEnemies
+		}
 	}
 }
 
@@ -201,5 +224,25 @@ func (s *StageSelectState) handlePlayerCountSelection() {
 	if inpututil.IsKeyJustPressed(ebiten.KeyRight) ||
 		inpututil.IsKeyJustPressed(ebiten.KeyD) {
 		s.playerCount = 2
+	}
+}
+
+func (s *StageSelectState) handleMaxActiveEnemiesSelection() {
+	if inpututil.IsKeyJustPressed(ebiten.KeyLeft) ||
+		inpututil.IsKeyJustPressed(ebiten.KeyA) {
+		if s.maxActiveEnemies > 3 {
+			s.maxActiveEnemies--
+		} else {
+			s.maxActiveEnemies = 10
+		}
+	}
+
+	if inpututil.IsKeyJustPressed(ebiten.KeyRight) ||
+		inpututil.IsKeyJustPressed(ebiten.KeyD) {
+		if s.maxActiveEnemies < 10 {
+			s.maxActiveEnemies++
+		} else {
+			s.maxActiveEnemies = 3
+		}
 	}
 }

@@ -42,10 +42,11 @@ type IAnimationsRepository interface {
 
 // ITanksRepository определяет интерфейс для работы с танками
 type ITanksRepository interface {
-	// === Методы для работы с игроком ===
-	SetPlayer(player *types.TankEntity)
-	GetPlayer() *types.TankEntity
-	HasPlayer() bool
+	// === Методы для работы с игроками по номеру ===
+	SetPlayer(num types.PlayerTankNum, player *types.TankEntity)
+	GetPlayer(num types.PlayerTankNum) *types.TankEntity
+	HasPlayer(num types.PlayerTankNum) bool
+	GetAllPlayers() []*types.TankEntity
 
 	// === Методы для работы с врагами ===
 	AddEnemy(enemy *types.TankEntity)

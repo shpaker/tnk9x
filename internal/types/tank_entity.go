@@ -2,6 +2,35 @@ package types
 
 import "fmt"
 
+// PlayerTankNum представляет номер игрока в массиве
+type PlayerTankNum int
+
+const (
+	PlayerTankNumPlayer1 PlayerTankNum = 0 // Игрок 1
+	PlayerTankNumPlayer2 PlayerTankNum = 1 // Игрок 2
+)
+
+// TankRole представляет роль танка (игрок 1, игрок 2 или враг)
+type TankRole string
+
+const (
+	TankRolePlayer1 TankRole = "player1" // Игрок 1
+	TankRolePlayer2 TankRole = "player2" // Игрок 2
+	TankRoleEnemy   TankRole = "enemy"   // Враг
+)
+
+// TankModelName представляет название модели танка
+type TankModelName string
+
+const (
+	TankModelNameRegular TankModelName = "regular" // Обычный танк
+)
+
+// TankModel представляет модель танка
+type TankModel struct {
+	name TankModelName
+}
+
 // TankState представляет состояние танка
 type TankState int
 
@@ -24,11 +53,12 @@ type TankEntity struct {
 	Direction     Direction
 	State         TankState
 	NextDirection *Direction
-	IsEnemy       bool
+	role          TankRole
+	model         TankModel
 }
 
 // NewDefaultTankEntity создает TankEntity с базовыми значениями
-func NewDefaultTankEntity(isEnemy bool, direction Direction) TankEntity {
+func NewDefaultTankEntity(role TankRole, direction Direction) TankEntity {
 	return TankEntity{
 		Position: Position{},
 		Size: Size{
@@ -39,8 +69,27 @@ func NewDefaultTankEntity(isEnemy bool, direction Direction) TankEntity {
 		Speed:     0,
 		Direction: direction,
 		State:     TankStateSpawning,
-		IsEnemy:   isEnemy,
+		role:      role,
+		model: TankModel{
+			name: TankModelNameRegular,
+		},
 	}
+}
+
+// IsEnemy возвращает true, если танк является врагом
+func (t *TankEntity) IsEnemy() bool {
+	if t == nil {
+		return false
+	}
+	return t.role == TankRoleEnemy
+}
+
+// GetRole возвращает роль танка
+func (t *TankEntity) GetRole() TankRole {
+	if t == nil {
+		return TankRolePlayer1
+	}
+	return t.role
 }
 
 // GetSize возвращает размер танка
@@ -84,11 +133,17 @@ func (t *TankEntity) GetTankAnimationName() string {
 		return "player1_regular_tank_up"
 	}
 
-	prefix := "player1_regular"
-	// Временно все танки используют анимации игрока
-	// if t.IsEnemy {
-	// 	prefix = "enemy_regular"
-	// }
+	modelName := string(t.model.name)
+	if modelName == "" {
+		modelName = "regular"
+	}
+
+	roleStr := string(t.role)
+	if roleStr == "" {
+		roleStr = "player1"
+	}
+
+	prefix := roleStr + "_" + modelName
 
 	var direction string
 	switch t.Direction {
@@ -105,4 +160,28 @@ func (t *TankEntity) GetTankAnimationName() string {
 	}
 
 	return fmt.Sprintf("%s_tank_%s", prefix, direction)
+}
+
+// PlayerTankNumToRole преобразует PlayerTankNum в TankRole
+func PlayerTankNumToRole(num PlayerTankNum) TankRole {
+	switch num {
+	case PlayerTankNumPlayer1:
+		return TankRolePlayer1
+	case PlayerTankNumPlayer2:
+		return TankRolePlayer2
+	default:
+		return TankRolePlayer1
+	}
+}
+
+// RoleToPlayerTankNum преобразует TankRole в PlayerTankNum
+func RoleToPlayerTankNum(role TankRole) PlayerTankNum {
+	switch role {
+	case TankRolePlayer1:
+		return PlayerTankNumPlayer1
+	case TankRolePlayer2:
+		return PlayerTankNumPlayer2
+	default:
+		return PlayerTankNumPlayer1
+	}
 }

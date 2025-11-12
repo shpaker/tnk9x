@@ -81,10 +81,12 @@ func TestGameRepositoriesRegistryTanks(t *testing.T) {
 	}
 
 	// Добавляем танк игрока
-	gameRepo.GetTanksRepository().SetPlayer(playerTank)
+	gameRepo.GetTanksRepository().
+		SetPlayer(types.PlayerTankNumPlayer1, playerTank)
 
 	// Проверяем, что танк добавлен
-	player := gameRepo.GetTanksRepository().GetPlayer()
+	player := gameRepo.GetTanksRepository().
+		GetPlayer(types.PlayerTankNumPlayer1)
 	if player == nil {
 		t.Error("Player tank should not be nil")
 	}

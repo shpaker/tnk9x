@@ -68,6 +68,8 @@ func (r *StageSelectRendererAdapter) DrawAll(
 	screen *ebiten.Image,
 	levelActive bool,
 	playerCount int,
+	isPlayersActive bool,
+	maxActiveEnemies uint,
 ) {
 	if r.selector == nil || r.selectorUseCases == nil {
 		return
@@ -136,7 +138,7 @@ func (r *StageSelectRendererAdapter) DrawAll(
 	playerY := y + scaledHeight + float64(r.regularFontSize)
 
 	playerColor := color.NRGBA{R: 150, G: 150, B: 150, A: 255}
-	if !levelActive {
+	if isPlayersActive {
 		playerColor = color.NRGBA{R: 255, G: 255, B: 255, A: 255}
 	}
 
@@ -145,6 +147,32 @@ func (r *StageSelectRendererAdapter) DrawAll(
 	playerOp.GeoM.Translate(playerX, playerY)
 	playerOp.ColorScale.ScaleWithColor(playerColor)
 	text.Draw(screen, playerText, r.fontFace, playerOp)
+
+	// Отрисовываем выбор максимального количества врагов
+	if maxActiveEnemies < 3 {
+		maxActiveEnemies = 3
+	}
+	if maxActiveEnemies > 10 {
+		maxActiveEnemies = 10
+	}
+
+	maxEnemiesText := fmt.Sprintf("MAX ENEMIES %d", maxActiveEnemies)
+	maxEnemiesWidth, _ := text.Measure(maxEnemiesText, r.fontFace, 0)
+	maxEnemiesScale := scale
+	maxEnemiesScaledWidth := maxEnemiesWidth * maxEnemiesScale
+	maxEnemiesX := (actualWidth - maxEnemiesScaledWidth) / 2
+	maxEnemiesY := playerY + scaledHeight + float64(r.regularFontSize)
+
+	maxEnemiesColor := color.NRGBA{R: 150, G: 150, B: 150, A: 255}
+	if !levelActive && !isPlayersActive {
+		maxEnemiesColor = color.NRGBA{R: 255, G: 255, B: 255, A: 255}
+	}
+
+	maxEnemiesOp := &text.DrawOptions{}
+	maxEnemiesOp.GeoM.Scale(maxEnemiesScale, maxEnemiesScale)
+	maxEnemiesOp.GeoM.Translate(maxEnemiesX, maxEnemiesY)
+	maxEnemiesOp.ColorScale.ScaleWithColor(maxEnemiesColor)
+	text.Draw(screen, maxEnemiesText, r.fontFace, maxEnemiesOp)
 
 	// Отрисовываем подсказку
 	subtitleText := "PRESS ENTER TO START"

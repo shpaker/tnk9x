@@ -186,7 +186,10 @@ func (uc *CollisionUseCases) IsSpawnerBlocked(
 		return false
 	}
 
-	candidate := types.NewDefaultTankEntity(true, types.DirectionUp)
+	candidate := types.NewDefaultTankEntity(
+		types.TankRoleEnemy,
+		types.DirectionUp,
+	)
 	candidate.Size = size
 	candidate.Position = types.Position{
 		X: position.X * float64(size.Width),

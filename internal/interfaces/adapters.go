@@ -12,6 +12,7 @@ import (
 type IConfigProvider interface {
 	GetEnemySpawners() []types.Position
 	GetPlayer1Spawn() types.Position
+	GetPlayer2Spawn() types.Position
 	GetHQPosition() [2]int
 	GetAIUpdateIntervalTicks() int
 	GetEnemyRespawnDelayTicks() uint

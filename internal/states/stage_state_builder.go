@@ -211,13 +211,15 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 	}
 
 	enemySpawners := b.config.GetEnemySpawners()
-	playerSpawner := b.config.GetPlayer1Spawn()
+	player1Spawner := b.config.GetPlayer1Spawn()
+	player2Spawner := b.config.GetPlayer2Spawn()
 	baseSize := types.Size{Width: int(baseSizePx), Height: int(baseSizePx)}
 
 	tankLifecycleUseCases.SetSpawnConfiguration(
 		b.gameRepository.GetTanksRepository(),
 		enemySpawners,
-		playerSpawner,
+		player1Spawner,
+		player2Spawner,
 		baseSize,
 	)
 
@@ -254,8 +256,8 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 	)
 	stageUseCases := &stageUseCasesValue
 
-	// Создаем адаптер ввода игрока
-	inputAdapter := input_adapters.NewStageKeyboardInputAdapter(
+	// Создаем адаптер ввода игрока 1
+	inputAdapter1 := input_adapters.NewStageKeyboardInputAdapter(
 		tankActionsUseCases,
 		nil,
 		stageUseCases,
@@ -267,6 +269,19 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 		ebiten.KeyP,
 	)
 
+	// Создаем адаптер ввода игрока 2 (стрелки)
+	inputAdapter2 := input_adapters.NewStageKeyboardInputAdapter(
+		tankActionsUseCases,
+		nil,
+		stageUseCases,
+		ebiten.KeyArrowUp,
+		ebiten.KeyArrowDown,
+		ebiten.KeyArrowLeft,
+		ebiten.KeyArrowRight,
+		ebiten.KeyEnter,
+		ebiten.KeyP, // Пауза общая для обоих игроков
+	)
+
 	// Создаем TilesUseCases для рендера
 	renderAnimationService := services.NewAnimationService()
 	mapTilesUseCases := use_cases.NewTilesUseCases(
@@ -275,7 +290,7 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 		services.NewTileService(b.tilesetRegistry, processed.TilesetTypeBlocks),
 		renderAnimationService,
 	)
-	playerTilesUseCases := use_cases.NewTilesUseCases(
+	tankTilesUseCases := use_cases.NewTilesUseCases(
 		b.tilesetRegistry,
 		processed.TilesetTypePlayer,
 		services.NewTileService(b.tilesetRegistry, processed.TilesetTypePlayer),
@@ -326,7 +341,7 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 		tankRenderUseCases,
 		bulletUseCases,
 		mapTilesUseCases,
-		playerTilesUseCases,
+		tankTilesUseCases,
 		bulletTilesUseCases,
 		spawnerTilesUseCases,
 		explosionTilesUseCases,
@@ -357,7 +372,10 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 		enemyInputAdapter,
 	)
 
-	stageState.InputAdapter = inputAdapter
+	// Инициализируем массив адаптеров
+	stageState.inputAdapters = make([]interfaces.IInputAdapter, 2)
+	stageState.inputAdapters[types.PlayerTankNumPlayer1] = inputAdapter1
+	stageState.inputAdapters[types.PlayerTankNumPlayer2] = inputAdapter2 // Может быть nil, если игра на одного игрока
 	stageState.RendererAdapter = rendererAdapter
 	stageState.stageUseCases = stageUseCases
 
@@ -526,7 +544,7 @@ func (b *StageStateBuilder) buildStageState(
 		MapUseCases:           mapUseCases,
 		CollisionUseCases:     collisionUseCases,
 		TilesUseCases:         tilesUseCasesWithAnimations,
-		InputAdapter:          nil,
+		inputAdapters:         make([]interfaces.IInputAdapter, 2),
 		RendererAdapter:       nil,
 		EnemyInputAdapter:     enemyInputAdapter,
 		StartTime:             time.Now(),

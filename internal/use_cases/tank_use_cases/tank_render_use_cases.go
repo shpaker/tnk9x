@@ -55,7 +55,10 @@ func (uc *TankRenderUseCases) UpdateTankAnimation(
 	}
 
 	animationName := tank.GetTankAnimationName()
-	tankAnimation, err := uc.tilesUseCases.CreateAnimationTile(animationName)
+	tankAnimation, err := uc.tilesUseCases.CreateTankAnimationTile(
+		animationName,
+		tank.IsEnemy(),
+	)
 	if err != nil {
 		return
 	}

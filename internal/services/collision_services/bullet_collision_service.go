@@ -46,7 +46,7 @@ func (s *BulletCollisionService) CheckBulletTankCollision(
 		return false
 	}
 	// Пули врагов проходят сквозь врагов, пули игрока проходят сквозь игрока
-	if tank.IsEnemy && owner.IsEnemy == tank.IsEnemy {
+	if tank.IsEnemy() && owner.IsEnemy() == tank.IsEnemy() {
 		return false
 	}
 	return s.entitiesCollisionService.CheckColliders(bullet, tank)

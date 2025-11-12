@@ -31,7 +31,7 @@ type StageState struct {
 	TilesUseCases         *use_cases.TilesUseCases
 
 	// Адаптеры
-	InputAdapter      interfaces.IInputAdapter
+	inputAdapters     []interfaces.IInputAdapter // Адаптеры ввода игроков (массив из двух элементов)
 	RendererAdapter   *game.StageRendererAdapter
 	EnemyInputAdapter interfaces.IAiInputAdapter // AI адаптер врагов
 
@@ -85,14 +85,35 @@ func (state *StageState) SetUp() {
 	if state.stageUseCases == nil {
 		return
 	}
-	playerTank := state.stageUseCases.SpawnPlayerTank()
-	if playerTank != nil && state.InputAdapter != nil {
-		if keyboardAdapter, ok := state.InputAdapter.(interface {
-			SetPlayerTank(*types.TankEntity)
-		}); ok {
-			keyboardAdapter.SetPlayerTank(playerTank)
+
+	// Определяем количество игроков из StageSessionEntity
+	playerCount := 2
+	if state.session != nil && state.session.StageSession() != nil {
+		playerCount = int(state.session.StageSession().GetPlayerCount())
+		if playerCount < 1 {
+			playerCount = 1
+		}
+		if playerCount > 2 {
+			playerCount = 2
 		}
 	}
+
+	// Спавним игроков в зависимости от выбранного количества
+	for i := 0; i < playerCount; i++ {
+		num := types.PlayerTankNum(i)
+		role := types.PlayerTankNumToRole(num)
+		playerTank := state.stageUseCases.SpawnPlayerTank(role)
+
+		if playerTank != nil && i < len(state.inputAdapters) &&
+			state.inputAdapters[i] != nil {
+			if keyboardAdapter, ok := state.inputAdapters[i].(interface {
+				SetPlayerTank(*types.TankEntity)
+			}); ok {
+				keyboardAdapter.SetPlayerTank(playerTank)
+			}
+		}
+	}
+
 	enemies := state.stageUseCases.SpawnInitialEnemyTanks()
 	for _, enemy := range enemies {
 		if enemy == nil {
@@ -121,9 +142,11 @@ func (state *StageState) Update() {
 		dt = 1.0 / 60.0 // Fallback если TPS равен 0
 	}
 
-	// Обновляем ввод
-	if state.InputAdapter != nil {
-		state.InputAdapter.Update(dt)
+	// Обновляем ввод игроков через итерацию
+	for _, adapter := range state.inputAdapters {
+		if adapter != nil {
+			adapter.Update(dt)
+		}
 	}
 
 	stageFinished := false
@@ -148,9 +171,15 @@ func (state *StageState) Update() {
 		_ = state.TankCommonUseCases.UpdateAllTanks(dt)
 		state.stageUseCases.UpdateGameObjects(dt)
 
-		if respawned := state.stageUseCases.TryRespawnPlayerTank(); respawned != nil {
-			if state.InputAdapter != nil {
-				if keyboardAdapter, ok := state.InputAdapter.(interface {
+		// Пытаемся респавнить обоих игроков через TryRespawnPlayersTanks
+		respawned1, respawned2 := state.stageUseCases.TryRespawnPlayersTanks()
+		respawnedTanks := []*types.TankEntity{respawned1, respawned2}
+
+		// Обновляем адаптеры для респавненных игроков через итерацию
+		for i, respawned := range respawnedTanks {
+			if respawned != nil && i < len(state.inputAdapters) &&
+				state.inputAdapters[i] != nil {
+				if keyboardAdapter, ok := state.inputAdapters[i].(interface {
 					SetPlayerTank(*types.TankEntity)
 				}); ok {
 					keyboardAdapter.SetPlayerTank(respawned)

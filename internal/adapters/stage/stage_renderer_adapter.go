@@ -24,7 +24,7 @@ type StageRendererAdapter struct {
 	tankRenderUseCases     interfaces.ITankRenderUseCases // Общий use case для графики всех танков
 	bulletUseCases         interfaces.IBulletUseCases
 	mapTilesUseCases       *use_cases.TilesUseCases
-	playerTilesUseCases    *use_cases.TilesUseCases
+	tankTilesUseCases      *use_cases.TilesUseCases
 	bulletTilesUseCases    *use_cases.TilesUseCases
 	spawnerTilesUseCases   *use_cases.TilesUseCases
 	explosionTilesUseCases *use_cases.TilesUseCases
@@ -50,7 +50,7 @@ func NewStageRendererAdapter(
 	tankRenderUseCases interfaces.ITankRenderUseCases,
 	bulletUseCases interfaces.IBulletUseCases,
 	mapTilesUseCases *use_cases.TilesUseCases,
-	playerTilesUseCases *use_cases.TilesUseCases,
+	tankTilesUseCases *use_cases.TilesUseCases,
 	bulletTilesUseCases *use_cases.TilesUseCases,
 	spawnerTilesUseCases *use_cases.TilesUseCases,
 	explosionTilesUseCases *use_cases.TilesUseCases,
@@ -83,7 +83,7 @@ func NewStageRendererAdapter(
 		tankRenderUseCases:     tankRenderUseCases,
 		bulletUseCases:         bulletUseCases,
 		mapTilesUseCases:       mapTilesUseCases,
-		playerTilesUseCases:    playerTilesUseCases,
+		tankTilesUseCases:      tankTilesUseCases,
 		bulletTilesUseCases:    bulletTilesUseCases,
 		spawnerTilesUseCases:   spawnerTilesUseCases,
 		explosionTilesUseCases: explosionTilesUseCases,
@@ -131,8 +131,11 @@ func (r *StageRendererAdapter) drawTanks(screen *ebiten.Image) {
 			continue
 		}
 
-		// Получаем изображение танка через playerTilesUseCases (для всех танков)
-		imageData, err := r.playerTilesUseCases.GetImage(imageID)
+		// Получаем изображение танка через tankTilesUseCases, выбирая правильный тайлсет
+		imageData, err := r.tankTilesUseCases.GetTankImage(
+			imageID,
+			tank.IsEnemy(),
+		)
 		if err != nil {
 			continue
 		}

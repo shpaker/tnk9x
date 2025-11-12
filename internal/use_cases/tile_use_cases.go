@@ -64,6 +64,18 @@ func (tuc *TilesUseCases) GetImage(id string) (image.Image, error) {
 	return tuc.getImageFromTileset(tuc.tilesetType, id)
 }
 
+// GetTankImage возвращает изображение танка по ID, выбирая правильный тайлсет в зависимости от типа танка
+func (tuc *TilesUseCases) GetTankImage(
+	id string,
+	isEnemy bool,
+) (image.Image, error) {
+	tilesetType := processed.TilesetTypePlayer
+	if isEnemy {
+		tilesetType = processed.TilesetTypeEnemy
+	}
+	return tuc.getImageFromTileset(tilesetType, id)
+}
+
 // CreateStaticTile создает статический тайл по ID изображения
 func (tuc *TilesUseCases) CreateStaticTile(
 	id string,
@@ -139,6 +151,21 @@ func (tuc *TilesUseCases) CreateAnimationTile(
 		animationFrames,
 		config,
 	), nil
+}
+
+// CreateTankAnimationTile создает анимированный тайл танка по ID анимации, выбирая правильный тайлсет
+func (tuc *TilesUseCases) CreateTankAnimationTile(
+	id string,
+	isEnemy bool,
+) (*image_providers.AnimationProvider, error) {
+	tilesetType := processed.TilesetTypePlayer
+	if isEnemy {
+		tilesetType = processed.TilesetTypeEnemy
+	}
+	return tuc.tileService.CreateAnimationTileFromTileset(
+		string(tilesetType),
+		id,
+	)
 }
 
 // === Методы для работы с анимациями из AnimationUseCases ===

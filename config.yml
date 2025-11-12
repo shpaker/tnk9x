@@ -14,6 +14,7 @@ game:
     - [6, 0]   # Центр сверху
     - [12, 0]  # Правый верхний угол
   players_1_spawn_at: [4, 12]
+  players_2_spawn_at: [8, 12]
   hq_position: [6, 12]
   ai_update_interval_ticks: 20  # Интервал обновления AI в тиках (60 тиков = 1000мс при 60 FPS)
 
