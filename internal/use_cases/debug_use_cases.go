@@ -6,8 +6,8 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 
-	"github.com/shpaker/gonflict/internal/types"
-	"github.com/shpaker/gonflict/internal/types/session_entities"
+	"github.com/shpaker/tnk25/internal/types"
+	"github.com/shpaker/tnk25/internal/types/session_entities"
 )
 
 type DebugUseCases struct {

@@ -3,8 +3,8 @@ package interfaces
 import (
 	lua "github.com/yuin/gopher-lua"
 
-	"github.com/shpaker/gonflict/internal/types"
-	image_providers "github.com/shpaker/gonflict/internal/types/image_providers"
+	"github.com/shpaker/tnk25/internal/types"
+	image_providers "github.com/shpaker/tnk25/internal/types/image_providers"
 )
 
 type ITankBrakingService interface {

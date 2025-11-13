@@ -5,7 +5,7 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 
-	"github.com/shpaker/gonflict/internal/types"
+	"github.com/shpaker/tnk25/internal/types"
 )
 
 type IConfigProvider interface {

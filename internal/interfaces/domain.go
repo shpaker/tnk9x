@@ -1,6 +1,6 @@
 package interfaces
 
-import "github.com/shpaker/gonflict/internal/types"
+import "github.com/shpaker/tnk25/internal/types"
 
 type IImageProvider = types.IImageProvider
 

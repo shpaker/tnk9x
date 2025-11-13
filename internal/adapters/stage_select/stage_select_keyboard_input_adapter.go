@@ -4,8 +4,8 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 
-	"github.com/shpaker/gonflict/internal/types"
-	"github.com/shpaker/gonflict/internal/use_cases"
+	"github.com/shpaker/tnk25/internal/types"
+	"github.com/shpaker/tnk25/internal/use_cases"
 )
 
 type StageSelectKeyboardInputAdapter struct {

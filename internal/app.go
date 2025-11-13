@@ -9,18 +9,18 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 
-	"github.com/shpaker/gonflict/internal/adapters/stage/input_adapters/ai"
-	"github.com/shpaker/gonflict/internal/interfaces"
-	game_repos "github.com/shpaker/gonflict/internal/repositories/game"
-	"github.com/shpaker/gonflict/internal/repositories/processed"
-	"github.com/shpaker/gonflict/internal/repositories/raw"
-	"github.com/shpaker/gonflict/internal/services"
-	collision_services "github.com/shpaker/gonflict/internal/services/collision_services"
-	"github.com/shpaker/gonflict/internal/states"
-	"github.com/shpaker/gonflict/internal/types"
-	"github.com/shpaker/gonflict/internal/use_cases"
+	"github.com/shpaker/tnk25/internal/adapters/stage/input_adapters/ai"
+	"github.com/shpaker/tnk25/internal/interfaces"
+	game_repos "github.com/shpaker/tnk25/internal/repositories/game"
+	"github.com/shpaker/tnk25/internal/repositories/processed"
+	"github.com/shpaker/tnk25/internal/repositories/raw"
+	"github.com/shpaker/tnk25/internal/services"
+	collision_services "github.com/shpaker/tnk25/internal/services/collision_services"
+	"github.com/shpaker/tnk25/internal/states"
+	"github.com/shpaker/tnk25/internal/types"
+	"github.com/shpaker/tnk25/internal/use_cases"
 
-	"github.com/shpaker/gonflict/internal/types/session_entities"
+	"github.com/shpaker/tnk25/internal/types/session_entities"
 )
 
 type App struct {

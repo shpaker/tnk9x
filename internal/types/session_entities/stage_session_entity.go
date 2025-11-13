@@ -1,7 +1,7 @@
 package session_entities
 
 import (
-	"github.com/shpaker/gonflict/internal/types"
+	"github.com/shpaker/tnk25/internal/types"
 )
 
 const (

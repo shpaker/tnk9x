@@ -10,11 +10,11 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/vector"
 	"golang.org/x/image/font/opentype"
 
-	"github.com/shpaker/gonflict/internal/interfaces"
-	"github.com/shpaker/gonflict/internal/services"
-	"github.com/shpaker/gonflict/internal/types"
-	image_providers "github.com/shpaker/gonflict/internal/types/image_providers"
-	"github.com/shpaker/gonflict/internal/use_cases"
+	"github.com/shpaker/tnk25/internal/interfaces"
+	"github.com/shpaker/tnk25/internal/services"
+	"github.com/shpaker/tnk25/internal/types"
+	image_providers "github.com/shpaker/tnk25/internal/types/image_providers"
+	"github.com/shpaker/tnk25/internal/use_cases"
 )
 
 type StageRendererAdapter struct {

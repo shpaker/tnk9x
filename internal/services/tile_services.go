@@ -3,10 +3,10 @@ package services
 import (
 	"fmt"
 
-	"github.com/shpaker/gonflict/internal/interfaces"
-	"github.com/shpaker/gonflict/internal/repositories/processed"
-	"github.com/shpaker/gonflict/internal/types"
-	image_providers "github.com/shpaker/gonflict/internal/types/image_providers"
+	"github.com/shpaker/tnk25/internal/interfaces"
+	"github.com/shpaker/tnk25/internal/repositories/processed"
+	"github.com/shpaker/tnk25/internal/types"
+	image_providers "github.com/shpaker/tnk25/internal/types/image_providers"
 )
 
 type TileService struct {

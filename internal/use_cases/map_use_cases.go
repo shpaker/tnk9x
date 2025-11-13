@@ -1,7 +1,7 @@
 package use_cases
 
 import (
-	"github.com/shpaker/gonflict/internal/types"
+	"github.com/shpaker/tnk25/internal/types"
 )
 
 type MapUseCases struct {

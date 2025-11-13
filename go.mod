@@ -1,4 +1,4 @@
-module github.com/shpaker/gonflict
+module github.com/shpaker/tnk25
 
 go 1.24.3
 

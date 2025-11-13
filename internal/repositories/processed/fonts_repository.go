@@ -3,7 +3,7 @@ package processed
 import (
 	"fmt"
 
-	"github.com/shpaker/gonflict/internal/interfaces"
+	"github.com/shpaker/tnk25/internal/interfaces"
 )
 
 type FontsRepository struct {

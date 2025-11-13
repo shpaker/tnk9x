@@ -7,7 +7,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/shpaker/gonflict/internal"
+	"github.com/shpaker/tnk25/internal"
 )
 
 func main() {

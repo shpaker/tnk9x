@@ -7,18 +7,18 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	lua "github.com/yuin/gopher-lua"
 
-	game "github.com/shpaker/gonflict/internal/adapters/stage"
-	"github.com/shpaker/gonflict/internal/adapters/stage/input_adapters"
-	"github.com/shpaker/gonflict/internal/interfaces"
-	"github.com/shpaker/gonflict/internal/repositories/processed"
-	"github.com/shpaker/gonflict/internal/services"
-	collision_services "github.com/shpaker/gonflict/internal/services/collision_services"
-	"github.com/shpaker/gonflict/internal/types"
-	"github.com/shpaker/gonflict/internal/use_cases"
-	stateusecases "github.com/shpaker/gonflict/internal/use_cases/state_use_cases"
-	tank_use_cases "github.com/shpaker/gonflict/internal/use_cases/tank_use_cases"
+	game "github.com/shpaker/tnk25/internal/adapters/stage"
+	"github.com/shpaker/tnk25/internal/adapters/stage/input_adapters"
+	"github.com/shpaker/tnk25/internal/interfaces"
+	"github.com/shpaker/tnk25/internal/repositories/processed"
+	"github.com/shpaker/tnk25/internal/services"
+	collision_services "github.com/shpaker/tnk25/internal/services/collision_services"
+	"github.com/shpaker/tnk25/internal/types"
+	"github.com/shpaker/tnk25/internal/use_cases"
+	stateusecases "github.com/shpaker/tnk25/internal/use_cases/state_use_cases"
+	tank_use_cases "github.com/shpaker/tnk25/internal/use_cases/tank_use_cases"
 
-	"github.com/shpaker/gonflict/internal/types/session_entities"
+	"github.com/shpaker/tnk25/internal/types/session_entities"
 )
 
 type StageStateBuilder struct {

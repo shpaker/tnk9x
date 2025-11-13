@@ -6,8 +6,8 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/shpaker/gonflict/internal/interfaces"
-	"github.com/shpaker/gonflict/internal/types"
+	"github.com/shpaker/tnk25/internal/interfaces"
+	"github.com/shpaker/tnk25/internal/types"
 )
 
 type TilesetDataRepository struct {

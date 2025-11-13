@@ -3,7 +3,7 @@ package game
 import (
 	"fmt"
 
-	"github.com/shpaker/gonflict/internal/types"
+	"github.com/shpaker/tnk25/internal/types"
 )
 
 type BulletsRepository struct {

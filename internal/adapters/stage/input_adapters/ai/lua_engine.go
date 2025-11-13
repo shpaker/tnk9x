@@ -5,7 +5,7 @@ import (
 
 	lua "github.com/yuin/gopher-lua"
 
-	"github.com/shpaker/gonflict/internal/interfaces"
+	"github.com/shpaker/tnk25/internal/interfaces"
 )
 
 type luaEngine struct {

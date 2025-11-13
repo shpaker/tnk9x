@@ -3,7 +3,7 @@ package collision_services
 import (
 	"testing"
 
-	"github.com/shpaker/gonflict/internal/types"
+	"github.com/shpaker/tnk25/internal/types"
 )
 
 func TestEntitiesCollisionService_CheckColliders(t *testing.T) {

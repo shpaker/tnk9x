@@ -3,9 +3,9 @@ package input_adapters
 import (
 	"math"
 
-	"github.com/shpaker/gonflict/internal/interfaces"
-	"github.com/shpaker/gonflict/internal/types"
-	"github.com/shpaker/gonflict/internal/use_cases"
+	"github.com/shpaker/tnk25/internal/interfaces"
+	"github.com/shpaker/tnk25/internal/types"
+	"github.com/shpaker/tnk25/internal/use_cases"
 )
 
 var _ interfaces.IAiInputAdapter = (*AiInputAdapter)(nil)

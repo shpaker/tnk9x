@@ -1,8 +1,8 @@
 package use_cases
 
 import (
-	"github.com/shpaker/gonflict/internal/types"
-	image_providers "github.com/shpaker/gonflict/internal/types/image_providers"
+	"github.com/shpaker/tnk25/internal/types"
+	image_providers "github.com/shpaker/tnk25/internal/types/image_providers"
 )
 
 type HQUseCases struct {

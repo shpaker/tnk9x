@@ -4,7 +4,7 @@
 [![License](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](LICENSE)
 [![Ebiten](https://img.shields.io/badge/Ebiten-v2.9.1-orange.svg?style=flat-square)](https://ebiten.org/)
 
-Gonflict — ремейк Battle City на Go.
+tnk25 — ремейк Battle City на Go.
 
 ## Статус разработки
 
@@ -22,8 +22,8 @@ Gonflict — ремейк Battle City на Go.
 **Требования:** Go 1.24+, опционально — [Just](https://github.com/casey/just).
 
 ```bash
-git clone https://github.com/shpaker/gonflict.git
-cd gonflict
+git clone https://github.com/shpaker/tnk25.git
+cd tnk25
 go mod download
 ```
 
@@ -32,7 +32,7 @@ go mod download
 just run          # или go run cmd/main.go
 
 # Собрать бинарник
-just build        # бинарник появится в dist/gonflict
+just build        # бинарник появится в dist/tnk25
 
 # Проверки
 just fmt

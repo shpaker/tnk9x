@@ -3,7 +3,7 @@ package session_entities
 import (
 	"testing"
 
-	"github.com/shpaker/gonflict/internal/types"
+	"github.com/shpaker/tnk25/internal/types"
 )
 
 func TestStageSessionEntity_AreAllEnemiesDefeated(t *testing.T) {

@@ -5,9 +5,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/shpaker/gonflict/internal/interfaces"
-	"github.com/shpaker/gonflict/internal/types"
-	image_providers "github.com/shpaker/gonflict/internal/types/image_providers"
+	"github.com/shpaker/tnk25/internal/interfaces"
+	"github.com/shpaker/tnk25/internal/types"
+	image_providers "github.com/shpaker/tnk25/internal/types/image_providers"
 )
 
 var MapCharsBlocksMapping = map[string]types.BlockType{

@@ -1,9 +1,9 @@
 package tank_use_cases
 
 import (
-	"github.com/shpaker/gonflict/internal/types"
-	image_providers "github.com/shpaker/gonflict/internal/types/image_providers"
-	"github.com/shpaker/gonflict/internal/use_cases"
+	"github.com/shpaker/tnk25/internal/types"
+	image_providers "github.com/shpaker/tnk25/internal/types/image_providers"
+	"github.com/shpaker/tnk25/internal/use_cases"
 )
 
 type TankRenderUseCases struct {
