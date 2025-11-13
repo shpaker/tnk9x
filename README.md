@@ -4,22 +4,52 @@
 [![License](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](LICENSE)
 [![Ebiten](https://img.shields.io/badge/Ebiten-v2.9.1-orange.svg?style=flat-square)](https://ebiten.org/)
 
-tnk25 — ремейк Battle City на Go.
+tnk25 — a modern remake of the classic arcade game Battle City (NES, 1985), built with Go and Ebiten.
 
-## Статус разработки
+## Development Status
 
-| Категория | Готово | В работе |
+| Category | Completed | In Progress |
 | --- | --- | --- |
-| Игровой цикл | ✅ Обновление мира, столкновения, управление, спавн врагов с задержкой | ➖ Автоматическая прогрессия уровней |
-| Игрок | ✅ Система торможения, жизни, респавн, базовые бонусы (граната, танк) | ➖ Полная реализация бонусов (helmet, timer, shovel, star) |
-| Враги и AI | ✅ Спавн, движение, Lua-сценарии, враги с бонусами | ➖ Разные типы врагов (только regular) |
-| База HQ | ✅ Уязвимость, взрыв, оверлеи победы/поражения | ➖ Отдельный экран поражения |
-| UI | ✅ Экран выбора уровня, оверлеи паузы/результата | ➖ HUD (жизни, очки), главное меню, итоговые экраны |
-| Техническое | ✅ Clean Architecture, интерфейсы, DI, unit-тесты сервисов коллизий, аудио | ➖ Расширение покрытия тестами и автоматизация |
+| Game Loop | ✅ World updates, collisions, controls, enemy spawning with delay | ➖ Automatic level progression |
+| Player | ✅ Braking system, lives, respawn, basic bonuses (grenade, tank) | ➖ Full bonus implementation (helmet, timer, shovel, star) |
+| Enemies & AI | ✅ Spawning, movement, Lua scripts, enemies with bonuses | ➖ Different enemy types (only regular) |
+| HQ Base | ✅ Vulnerability, explosion, victory/defeat overlays | ➖ Separate defeat screen |
+| UI | ✅ Level selection screen, pause/result overlays | ➖ HUD (lives, score), main menu, final screens |
+| Technical | ✅ Clean Architecture, interfaces, DI, unit tests for collision services, audio | ➖ Extended test coverage and automation |
 
-## Установка и запуск
+## Installation and Running
 
-**Требования:** Go 1.24+, опционально — [Just](https://github.com/casey/just).
+**Requirements:** Go 1.24+, optionally — [Just](https://github.com/casey/just).
+
+### System Dependencies
+
+System libraries are required for building the project (especially for Linux, where CGO is used for audio):
+
+**Linux (Ubuntu/Debian):**
+```bash
+sudo apt-get update
+sudo apt-get install -y \
+  libglfw3 \
+  libglfw3-dev \
+  libglu1-mesa-dev \
+  mesa-common-dev \
+  libx11-dev \
+  libxrandr-dev \
+  libxinerama-dev \
+  libxi-dev \
+  libxcursor-dev \
+  libxxf86vm-dev \
+  libasound2-dev \
+  pkg-config
+```
+
+**macOS:**
+Dependencies are usually installed automatically via Homebrew when installing Go and Ebiten.
+
+**Windows:**
+No additional dependencies required.
+
+### Build and Run
 
 ```bash
 git clone https://github.com/shpaker/tnk25.git
@@ -28,47 +58,47 @@ go mod download
 ```
 
 ```bash
-# Запустить игру
-just run          # или go run cmd/main.go
+# Run the game
+just run          # or go run cmd/main.go
 
-# Собрать бинарник
-just build        # бинарник появится в dist/tnk25
+# Build binary
+just build        # binary will be in dist/tnk25
 
-# Проверки
+# Checks
 just fmt
 just lint
 just test
 ```
 
-## Архитектура
+## Architecture
 
-Проект следует принципам Clean Architecture: ядро (`Domain`) описывает чистые сущности, слой `Application` управляет бизнес-логикой через интерфейсы, а внешние слои (`Presentation`, `Infrastructure`) зависят только от публичных контрактов внутренних слоев.
+The project follows Clean Architecture principles: the core (`Domain`) describes pure entities, the `Application` layer manages business logic through interfaces, and external layers (`Presentation`, `Infrastructure`) depend only on public contracts of internal layers.
 
 ```text
 internal/
-├── types/            # Domain: сущности (танки, пули, HQ, карты)
-│   └── session_entities/ # Сущности игровых и стадийных сессий
-├── interfaces/       # Контракты между слоями
-├── use_cases/        # Application: stateless бизнес-логика
-├── services/         # Application: специализированные сервисы (коллизии, анимации, координаты)
-├── adapters/         # Presentation: реализация ввода/вывода
+├── types/            # Domain: entities (tanks, bullets, HQ, maps)
+│   └── session_entities/ # Game and stage session entities
+├── interfaces/       # Contracts between layers
+├── use_cases/        # Application: stateless business logic
+├── services/         # Application: specialized services (collisions, animations, coordinates)
+├── adapters/         # Presentation: input/output implementation
 │   ├── stage/        # StageRendererAdapter, StageKeyboardInputAdapter, AI adapters
-│   └── stage_select/ # Экран выбора уровня: рендер и ввод
-├── states/           # Presentation: StageSelectState, StageState и др.
-└── repositories/     # Infrastructure: raw, processed, game-хранилища
+│   └── stage_select/ # Level selection screen: render and input
+├── states/           # Presentation: StageSelectState, StageState, etc.
+└── repositories/     # Infrastructure: raw, processed, game storage
 ```
 
-Взаимодействие слоев (зависимости направлены внутрь):
+Layer interaction (dependencies point inward):
 
 ```
 [ Presentation ]  adapters + states
-        │   (реализация IState, IInputAdapter, IRendererAdapter)
+        │   (implementation of IState, IInputAdapter, IRendererAdapter)
         ▼
-[ Application ]   use_cases + services (через interfaces.*)
-        │   (манипулируют Domain, обращаются к инфраструктуре через интерфейсы)
+[ Application ]   use_cases + services (via interfaces.*)
+        │   (manipulate Domain, access infrastructure through interfaces)
         ▼
 [ Domain ]        types (entity, value objects, session entities)
         ▲
-        │   (репозитории читают/пишут данные, реализуя интерфейсы Application)
+        │   (repositories read/write data, implementing Application interfaces)
 [ Infrastructure ] repositories/raw/processed/game
 ```
