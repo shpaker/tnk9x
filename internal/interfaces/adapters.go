@@ -50,6 +50,14 @@ type ILuaEngine interface {
 	Close()
 }
 
+type ISoundPlayerAdapter interface {
+	Play(soundID types.SoundID) error
+	PlayLoop(soundID types.SoundID) error
+	Stop(soundID types.SoundID) error
+	StopAll()
+	Update() error
+}
+
 type IState interface {
 	SetUp()
 	Update()

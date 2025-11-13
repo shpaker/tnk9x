@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/audio"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 
 	game "github.com/shpaker/tnk25/internal/adapters/stage"
@@ -37,6 +38,9 @@ type StageState struct {
 
 	session           *session_entities.GameSessionEntity
 	bonusesRepository interfaces.IBonusesRepository
+
+	soundUseCases      *use_cases.SoundUseCases
+	soundPlayerAdapter interfaces.ISoundPlayerAdapter
 }
 
 func NewStageState(
@@ -53,6 +57,8 @@ func NewStageState(
 	tankBrakingService interfaces.ITankBrakingService,
 	luaEngine interfaces.ILuaEngine,
 	session *session_entities.GameSessionEntity,
+	fileRepository interfaces.IFileRepository,
+	audioContext *audio.Context,
 ) (*StageState, error) {
 	builder := NewStageStateBuilder(
 		mapsRepository,
@@ -68,6 +74,8 @@ func NewStageState(
 		fontUseCases,
 		luaEngine,
 		session,
+		fileRepository,
+		audioContext,
 	)
 	return builder.Build()
 }
@@ -75,6 +83,12 @@ func NewStageState(
 func (state *StageState) SetUp() {
 	if state.stageUseCases == nil {
 		return
+	}
+
+	// Запускаем фоновую музыку при старте уровня
+	if state.soundUseCases != nil {
+		state.soundUseCases.RequestSound(types.SoundIDGameStart, false)
+		state.soundUseCases.RequestSound(types.SoundIDBackground, true)
 	}
 
 	// Сбрасываем сессию перед спавном танков, чтобы восстановить жизни игроков
@@ -223,6 +237,19 @@ func (state *StageState) Update() {
 			state.RenderUseCases.UpdateBlink(blinkObjects)
 		}
 	}
+
+	// Обработка звуковых событий
+	if state.soundUseCases != nil && state.soundPlayerAdapter != nil {
+		events := state.soundUseCases.GetEvents()
+		for _, event := range events {
+			if event.Loop {
+				_ = state.soundPlayerAdapter.PlayLoop(event.SoundID)
+			} else {
+				_ = state.soundPlayerAdapter.Play(event.SoundID)
+			}
+		}
+		_ = state.soundPlayerAdapter.Update()
+	}
 }
 
 func (state *StageState) Draw(screen *ebiten.Image) {
@@ -235,6 +262,11 @@ func (state *StageState) Draw(screen *ebiten.Image) {
 		label := "DEFEAT"
 		if state.stageUseCases.IsStageWon() {
 			label = "VICTORY"
+		} else {
+			// Проигрываем звук поражения
+			if state.soundUseCases != nil {
+				state.soundUseCases.RequestSound(types.SoundIDGameOver, false)
+			}
 		}
 		state.RendererAdapter.DrawStageEndOverlay(screen, label)
 		return

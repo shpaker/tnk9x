@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/audio"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 
@@ -23,6 +24,8 @@ import (
 	"github.com/shpaker/tnk25/internal/types/session_entities"
 )
 
+const audioSampleRate = 44100
+
 type App struct {
 	config        *Config
 	State         interfaces.IState
@@ -30,6 +33,7 @@ type App struct {
 	session       *session_entities.GameSessionEntity
 	fontUseCases  interfaces.IFontUseCases
 	debugUseCases *use_cases.DebugUseCases
+	audioContext  *audio.Context
 }
 
 func (app *App) Layout(outsideWidth, outsideHeight int) (int, int) {
@@ -85,6 +89,9 @@ func (app *App) Draw(screen *ebiten.Image) {
 }
 
 func New(cfg *Config) *App {
+	// Создаем audio context один раз на приложение
+	audioContext := audio.NewContext(audioSampleRate)
+
 	fileRepository := raw.NewFileRepository("assets")
 
 	tilesetRegistry, err := processed.NewTilesetRepositoryRegistry(
@@ -132,6 +139,7 @@ func New(cfg *Config) *App {
 			session,
 			Version,
 		),
+		audioContext: audioContext,
 	}
 }
 
@@ -212,6 +220,8 @@ func (app *App) createStageState(
 		tankBrakingService,
 		app.luaEngine,
 		session,
+		fileRepository,
+		app.audioContext,
 	)
 	if err != nil {
 		return nil, err

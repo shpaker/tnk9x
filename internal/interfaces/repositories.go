@@ -99,6 +99,10 @@ type IFontsRepository interface {
 	GetFont(name string) ([]byte, error)
 }
 
+type ISoundsRepository interface {
+	GetSound(name string) ([]byte, error)
+}
+
 type IFileRepository interface {
 	ReadFile(name string) ([]byte, error)
 

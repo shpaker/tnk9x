@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/audio"
 	lua "github.com/yuin/gopher-lua"
 
 	game "github.com/shpaker/tnk25/internal/adapters/stage"
@@ -26,6 +27,7 @@ type StageStateBuilder struct {
 	scriptsRepository interfaces.IScriptsRepository
 	gameRepository    interfaces.IGameRepositoriesRegistry
 	tilesetRegistry   interfaces.ITilesetRepositoryRegistry
+	fileRepository    interfaces.IFileRepository
 
 	config      interfaces.IConfigProvider
 	levelNumber int
@@ -41,7 +43,8 @@ type StageStateBuilder struct {
 
 	luaEngine interfaces.ILuaEngine
 
-	session *session_entities.GameSessionEntity
+	session      *session_entities.GameSessionEntity
+	audioContext *audio.Context
 }
 
 func NewStageStateBuilder(
@@ -58,12 +61,15 @@ func NewStageStateBuilder(
 	fontUseCases interfaces.IFontUseCases,
 	luaEngine interfaces.ILuaEngine,
 	session *session_entities.GameSessionEntity,
+	fileRepository interfaces.IFileRepository,
+	audioContext *audio.Context,
 ) *StageStateBuilder {
 	return &StageStateBuilder{
 		mapsRepository:           mapsRepository,
 		scriptsRepository:        scriptsRepository,
 		gameRepository:           gameRepository,
 		tilesetRegistry:          tilesetRegistry,
+		fileRepository:           fileRepository,
 		config:                   config,
 		levelNumber:              levelNumber,
 		boundaryCollisionService: boundaryCollisionService,
@@ -73,6 +79,7 @@ func NewStageStateBuilder(
 		fontUseCases:             fontUseCases,
 		luaEngine:                luaEngine,
 		session:                  session,
+		audioContext:             audioContext,
 	}
 }
 
@@ -80,6 +87,17 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 	if err := b.loadLevel(); err != nil {
 		return nil, err
 	}
+
+	// Создаем звуковые компоненты заранее для передачи в use cases
+	soundsRepository := processed.NewSoundsRepository(b.fileRepository)
+	soundAdapter, err := game.NewStageSoundAdapter(
+		soundsRepository,
+		b.audioContext,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create sound adapter: %w", err)
+	}
+	soundUseCases := use_cases.NewSoundUseCases()
 
 	tilesUseCasesWithAnimations, err := b.buildTileServices()
 	if err != nil {
@@ -133,6 +151,7 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 		tankCommonUseCases,
 		renderUseCases,
 		mapUseCases,
+		soundUseCases,
 	)
 
 	hqTileService := services.NewTileServiceWithSpecialRepos(
@@ -226,6 +245,7 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 		bonusesRepository,
 		b.config,
 		bonusTilesUseCasesForBonus,
+		soundUseCases,
 	)
 
 	collisionUseCases, hqUseCases, err := b.buildCollisionServices(
@@ -238,6 +258,7 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 		hq,
 		entitiesCollisionService,
 		bonusUseCases,
+		soundUseCases,
 	)
 	if err != nil {
 		return nil, err
@@ -381,12 +402,16 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 		enemyInputAdapter,
 	)
 
+	// Звуковой адаптер уже создан выше, используем его
+
 	stageState.inputAdapters = make([]interfaces.IInputAdapter, 2)
 	stageState.inputAdapters[types.PlayerTankNumPlayer1] = inputAdapter1
 	stageState.inputAdapters[types.PlayerTankNumPlayer2] = inputAdapter2
 	stageState.RendererAdapter = rendererAdapter
 	stageState.stageUseCases = stageUseCases
 	stageState.bonusesRepository = b.gameRepository.GetBonusesRepository()
+	stageState.soundUseCases = soundUseCases
+	stageState.soundPlayerAdapter = soundAdapter
 
 	return stageState, nil
 }
@@ -506,6 +531,7 @@ func (b *StageStateBuilder) buildCollisionServices(
 	hq *types.HQEntity,
 	entitiesCollisionService interfaces.IEntitiesCollisionService,
 	bonusUseCases *use_cases.BonusUseCases,
+	soundUseCases *use_cases.SoundUseCases,
 ) (*use_cases.CollisionUseCases, interfaces.IHQUseCases, error) {
 	bulletCollisionService := collision_services.NewBulletCollisionService(
 		int(b.config.GetTileBaseSize()),
@@ -536,6 +562,7 @@ func (b *StageStateBuilder) buildCollisionServices(
 		hqUseCases,
 		bonusUseCases,
 		bonusesRepository,
+		soundUseCases,
 	)
 
 	return collisionUseCases, hqUseCases, nil

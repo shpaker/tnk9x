@@ -18,6 +18,7 @@ type CollisionUseCases struct {
 	entitiesCollisionService interfaces.IEntitiesCollisionService
 	bonusUseCases            *BonusUseCases
 	bonusesRepository        interfaces.IBonusesRepository
+	soundUseCases            *SoundUseCases
 }
 
 func NewCollisionUseCases(
@@ -33,6 +34,7 @@ func NewCollisionUseCases(
 	hqUseCases interfaces.IHQUseCases,
 	bonusUseCases *BonusUseCases,
 	bonusesRepository interfaces.IBonusesRepository,
+	soundUseCases *SoundUseCases,
 ) *CollisionUseCases {
 	uc := &CollisionUseCases{
 		bulletUseCases:           bulletUseCases,
@@ -47,6 +49,7 @@ func NewCollisionUseCases(
 		entitiesCollisionService: entitiesCollisionService,
 		bonusUseCases:            bonusUseCases,
 		bonusesRepository:        bonusesRepository,
+		soundUseCases:            soundUseCases,
 	}
 
 	return uc
@@ -145,6 +148,9 @@ func (uc *CollisionUseCases) checkTankBulletCollisions(
 		) {
 			_ = uc.bulletUseCases.RemoveBullet(index)
 			if tank.IsActive() {
+				if uc.soundUseCases != nil {
+					uc.soundUseCases.RequestSound(types.SoundIDExplosion, false)
+				}
 				_ = uc.tankLifecycleUseCases.Explode(tank)
 			}
 			return
@@ -298,8 +304,17 @@ func (uc *CollisionUseCases) checkBulletWallCollision(
 			block,
 		) {
 
-			if block.Data != nil && block.Data.Name == types.Brick {
-				_ = uc.mapUseCases.RemoveBlock(block)
+			if block.Data != nil {
+				if block.Data.Name == types.Brick {
+					_ = uc.mapUseCases.RemoveBlock(block)
+					if uc.soundUseCases != nil {
+						uc.soundUseCases.RequestSound(types.SoundIDBrick, false)
+					}
+				} else if block.Data.Name == types.Steel {
+					if uc.soundUseCases != nil {
+						uc.soundUseCases.RequestSound(types.SoundIDSteel, false)
+					}
+				}
 			}
 
 			return true

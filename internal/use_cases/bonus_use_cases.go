@@ -15,6 +15,7 @@ type BonusUseCases struct {
 	bonusesRepository     interfaces.IBonusesRepository
 	configProvider        interfaces.IConfigProvider
 	tilesUseCases         interfaces.ITilesUseCases
+	soundUseCases         *SoundUseCases
 }
 
 func NewBonusUseCases(
@@ -24,6 +25,7 @@ func NewBonusUseCases(
 	bonusesRepository interfaces.IBonusesRepository,
 	configProvider interfaces.IConfigProvider,
 	tilesUseCases interfaces.ITilesUseCases,
+	soundUseCases *SoundUseCases,
 ) *BonusUseCases {
 	return &BonusUseCases{
 		tankCommonUseCases:    tankCommonUseCases,
@@ -32,6 +34,7 @@ func NewBonusUseCases(
 		bonusesRepository:     bonusesRepository,
 		configProvider:        configProvider,
 		tilesUseCases:         tilesUseCases,
+		soundUseCases:         soundUseCases,
 	}
 }
 
@@ -41,6 +44,10 @@ func (uc *BonusUseCases) Apply(
 ) {
 	if bonus == nil || tank == nil {
 		return
+	}
+
+	if uc.soundUseCases != nil {
+		uc.soundUseCases.RequestSound(types.SoundIDBonus, false)
 	}
 
 	switch bonus.GetType() {

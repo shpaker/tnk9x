@@ -5,6 +5,7 @@ import (
 
 	"github.com/shpaker/tnk25/internal/interfaces"
 	"github.com/shpaker/tnk25/internal/types"
+	"github.com/shpaker/tnk25/internal/use_cases"
 )
 
 type TankActionsUseCases struct {
@@ -14,6 +15,7 @@ type TankActionsUseCases struct {
 	commonUseCases    interfaces.ITankCommonUseCases
 	renderUseCases    interfaces.IRenderUseCases
 	mapUseCases       interfaces.IMapUseCases
+	soundUseCases     *use_cases.SoundUseCases
 }
 
 func NewTankActionsUseCases(
@@ -23,6 +25,7 @@ func NewTankActionsUseCases(
 	commonUseCases interfaces.ITankCommonUseCases,
 	renderUseCases interfaces.IRenderUseCases,
 	mapUseCases interfaces.IMapUseCases,
+	soundUseCases *use_cases.SoundUseCases,
 ) *TankActionsUseCases {
 	return &TankActionsUseCases{
 		brakingService:    brakingService,
@@ -31,6 +34,7 @@ func NewTankActionsUseCases(
 		commonUseCases:    commonUseCases,
 		renderUseCases:    renderUseCases,
 		mapUseCases:       mapUseCases,
+		soundUseCases:     soundUseCases,
 	}
 }
 
@@ -116,6 +120,9 @@ func (uc *TankActionsUseCases) Stop(tank *types.TankEntity, byCollision bool) {
 func (uc *TankActionsUseCases) Shoot(tank *types.TankEntity) error {
 	if !tank.IsActive() {
 		return errors.New("tank is not active")
+	}
+	if uc.soundUseCases != nil {
+		uc.soundUseCases.RequestSound(types.SoundIDFire, false)
 	}
 	return uc.bulletUseCases.ShootBullet(tank)
 }
