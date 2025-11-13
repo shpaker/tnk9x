@@ -1,16 +1,24 @@
 package types
 
+import "math/rand"
+
 type MapBlocks []*BlockEntity
 
 type MapEntity struct {
-	sizePx Size
-	blocks MapBlocks
+	sizePx              Size
+	blocks              MapBlocks
+	bonusSpawnPositions []Position
 }
 
-func NewMapEntity(sizePx Size, blocks MapBlocks) *MapEntity {
+func NewMapEntity(
+	sizePx Size,
+	blocks MapBlocks,
+	bonusSpawnPositions []Position,
+) *MapEntity {
 	return &MapEntity{
-		sizePx: sizePx,
-		blocks: blocks,
+		sizePx:              sizePx,
+		blocks:              blocks,
+		bonusSpawnPositions: bonusSpawnPositions,
 	}
 }
 
@@ -43,4 +51,11 @@ func (m *MapEntity) RemoveBlock(block *BlockEntity) error {
 	}
 
 	return nil
+}
+
+func (m *MapEntity) GetRandomBonusSpawnPosition() Position {
+	if len(m.bonusSpawnPositions) == 0 {
+		return Position{X: 0, Y: 0}
+	}
+	return m.bonusSpawnPositions[rand.Intn(len(m.bonusSpawnPositions))]
 }

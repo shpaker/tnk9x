@@ -106,6 +106,8 @@ func (tuc *TilesUseCases) getImageFromTileset(
 		provider, err = tuc.tilesetRegistry.GetExplosionImage(id)
 	case processed.TilesetTypeHQ:
 		provider, err = tuc.tilesetRegistry.GetHQImage(id)
+	case processed.TilesetTypeBonuses:
+		provider, err = tuc.tilesetRegistry.GetBonusesImage(id)
 	default:
 		return nil, fmt.Errorf("unknown tileset type: %s", tilesetType)
 	}

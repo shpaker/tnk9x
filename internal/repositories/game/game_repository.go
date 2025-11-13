@@ -8,6 +8,7 @@ type GameRepositoriesRegistry struct {
 	bulletsRepository    interfaces.IBulletsRepository
 	animationsRepository interfaces.IAnimationsRepository
 	tanksRepository      interfaces.ITanksRepository
+	bonusesRepository    interfaces.IBonusesRepository
 }
 
 func NewGameRepositoriesRegistry() *GameRepositoriesRegistry {
@@ -15,6 +16,7 @@ func NewGameRepositoriesRegistry() *GameRepositoriesRegistry {
 		bulletsRepository:    NewBulletsRepository(),
 		animationsRepository: NewAnimationsRepository(),
 		tanksRepository:      NewTanksRepository(),
+		bonusesRepository:    NewBonusesRepository(),
 	}
 }
 
@@ -28,4 +30,8 @@ func (gr *GameRepositoriesRegistry) GetAnimationsRepository() interfaces.IAnimat
 
 func (gr *GameRepositoriesRegistry) GetTanksRepository() interfaces.ITanksRepository {
 	return gr.tanksRepository
+}
+
+func (gr *GameRepositoriesRegistry) GetBonusesRepository() interfaces.IBonusesRepository {
+	return gr.bonusesRepository
 }

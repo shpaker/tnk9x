@@ -11,7 +11,7 @@ import (
 
 type TankLifecycleUseCases struct {
 	tilesUseCases      *use_cases.TilesUseCases
-	renderUseCases     interfaces.ITankRenderUseCases
+	renderUseCases     interfaces.IRenderUseCases
 	tankCommonUseCases interfaces.ITankCommonUseCases
 	tanksRepository    interfaces.ITanksRepository
 	collisionUseCases  interfaces.ICollisionUseCases
@@ -23,7 +23,7 @@ type TankLifecycleUseCases struct {
 
 func NewTankLifecycleUseCases(
 	tilesUseCases *use_cases.TilesUseCases,
-	renderUseCases interfaces.ITankRenderUseCases,
+	renderUseCases interfaces.IRenderUseCases,
 	tankCommonUseCases interfaces.ITankCommonUseCases,
 	enemyRespawnDelay uint,
 ) *TankLifecycleUseCases {
@@ -229,7 +229,7 @@ func (uc *TankLifecycleUseCases) IsSpawnFinished(
 	currentTime float64,
 ) {
 	if tank.State == types.TankStateSpawning {
-		if uc.renderUseCases.IsSpawnAnimationFinished(tank) {
+		if uc.renderUseCases.IsTankSpawnAnimationFinished(tank) {
 			uc.finishSpawnAnimation(tank)
 		}
 	}
@@ -237,7 +237,7 @@ func (uc *TankLifecycleUseCases) IsSpawnFinished(
 
 func (uc *TankLifecycleUseCases) IsExplosionFinished(tank *types.TankEntity) {
 	if tank.State == types.TankStateExploding {
-		if uc.renderUseCases.IsExplosionAnimationFinished(tank) {
+		if uc.renderUseCases.IsTankExplosionAnimationFinished(tank) {
 			tank.State = types.TankStateExploded
 		}
 	}
@@ -275,7 +275,7 @@ func (uc *TankLifecycleUseCases) updateTankSpawn(tank *types.TankEntity) {
 		return
 	}
 
-	if uc.renderUseCases.IsSpawnAnimationFinished(tank) {
+	if uc.renderUseCases.IsTankSpawnAnimationFinished(tank) {
 		uc.finishSpawnAnimation(tank)
 	}
 }
@@ -289,7 +289,7 @@ func (uc *TankLifecycleUseCases) updateTankExplosion(tank *types.TankEntity) {
 		return
 	}
 
-	if uc.renderUseCases.IsExplosionAnimationFinished(tank) {
+	if uc.renderUseCases.IsTankExplosionAnimationFinished(tank) {
 		tank.State = types.TankStateExploded
 	}
 }

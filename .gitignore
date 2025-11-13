@@ -44,9 +44,11 @@ Thumbs.db
 .env
 
 # Binary files
-gonflict
+tnk25
+tnk
 main
-gonflict_unix
+tnk25_unix
+tnk_unix
 
 # Logs
 *.log

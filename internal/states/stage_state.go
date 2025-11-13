@@ -19,7 +19,7 @@ type StageState struct {
 	HQUseCases            interfaces.IHQUseCases
 	TankActionsUseCases   interfaces.ITankActionsUseCases
 	TankCommonUseCases    interfaces.ITankCommonUseCases
-	TankRenderUseCases    interfaces.ITankRenderUseCases
+	RenderUseCases        interfaces.IRenderUseCases
 	TankLifecycleUseCases interfaces.ITankLifecycleUseCases
 	BulletUseCases        interfaces.IBulletUseCases
 	MapUseCases           *use_cases.MapUseCases
@@ -35,7 +35,8 @@ type StageState struct {
 
 	stageUseCases interfaces.IStageUseCases
 
-	session *session_entities.GameSessionEntity
+	session           *session_entities.GameSessionEntity
+	bonusesRepository interfaces.IBonusesRepository
 }
 
 func NewStageState(
@@ -74,6 +75,11 @@ func NewStageState(
 func (state *StageState) SetUp() {
 	if state.stageUseCases == nil {
 		return
+	}
+
+	// Сбрасываем сессию перед спавном танков, чтобы восстановить жизни игроков
+	if state.session != nil && state.session.StageSession() != nil {
+		state.session.StageSession().Reset()
 	}
 
 	playerCount := 2
@@ -187,6 +193,35 @@ func (state *StageState) Update() {
 
 	if !paused && state.TilesUseCases != nil {
 		state.TilesUseCases.UpdateAnimations()
+	}
+
+	// Обновляем мигание бонусов и танков с бонусом
+	if !paused && state.RenderUseCases != nil {
+		var blinkObjects []types.IBlink
+
+		// Добавляем бонусы
+		if state.bonusesRepository != nil {
+			bonuses := state.bonusesRepository.GetAllBonuses()
+			for _, bonus := range bonuses {
+				if bonus != nil {
+					blinkObjects = append(blinkObjects, bonus)
+				}
+			}
+		}
+
+		// Добавляем танки с бонусом
+		if state.TankCommonUseCases != nil {
+			allTanks := state.TankCommonUseCases.GetAllTanks()
+			for _, tank := range allTanks {
+				if tank != nil && tank.IsEnemy() && tank.GetWithBonus() {
+					blinkObjects = append(blinkObjects, tank)
+				}
+			}
+		}
+
+		if len(blinkObjects) > 0 {
+			state.RenderUseCases.UpdateBlink(blinkObjects)
+		}
 	}
 }
 

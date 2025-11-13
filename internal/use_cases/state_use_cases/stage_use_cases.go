@@ -3,6 +3,7 @@ package stateusecases
 import (
 	"github.com/shpaker/tnk25/internal/interfaces"
 	"github.com/shpaker/tnk25/internal/types"
+	"github.com/shpaker/tnk25/internal/use_cases"
 
 	"github.com/shpaker/tnk25/internal/types/session_entities"
 )
@@ -19,6 +20,10 @@ type StageUseCases struct {
 	stageSession *session_entities.StageSessionEntity
 
 	destroyedEnemies map[*types.TankEntity]struct{}
+
+	bonusesRepository interfaces.IBonusesRepository
+	mapUseCases       interfaces.IMapUseCases
+	bonusUseCases     *use_cases.BonusUseCases
 }
 
 func NewStageUseCases(
@@ -29,6 +34,9 @@ func NewStageUseCases(
 	hqUseCases interfaces.IHQUseCases,
 	stageSession *session_entities.StageSessionEntity,
 	enemyRespawnDelay uint,
+	bonusesRepository interfaces.IBonusesRepository,
+	mapUseCases interfaces.IMapUseCases,
+	bonusUseCases *use_cases.BonusUseCases,
 ) StageUseCases {
 	if enemyRespawnDelay == 0 {
 		enemyRespawnDelay = 3 * 60
@@ -45,6 +53,9 @@ func NewStageUseCases(
 		hqUseCases:            hqUseCases,
 		stageSession:          stageSession,
 		destroyedEnemies:      make(map[*types.TankEntity]struct{}),
+		bonusesRepository:     bonusesRepository,
+		mapUseCases:           mapUseCases,
+		bonusUseCases:         bonusUseCases,
 	}
 }
 
@@ -96,10 +107,8 @@ func (uc *StageUseCases) SpawnInitialEnemyTanks() []*types.TankEntity {
 		return nil
 	}
 
-	if uc.stageSession != nil {
-		uc.stageSession.Reset()
-		uc.destroyedEnemies = make(map[*types.TankEntity]struct{})
-	}
+	// Очищаем карту уничтоженных врагов при спавне начальных врагов
+	uc.destroyedEnemies = make(map[*types.TankEntity]struct{})
 
 	enemies, err := uc.tankLifecycleUseCases.OnStageSetUpEnemiesSpawn()
 	if err != nil {
@@ -110,6 +119,10 @@ func (uc *StageUseCases) SpawnInitialEnemyTanks() []*types.TankEntity {
 	for _, enemy := range enemies {
 		if enemy == nil {
 			continue
+		}
+		enemyNumber := uc.getNextEnemyNumber()
+		if uc.shouldHaveBonus(enemyNumber) {
+			enemy.SetWithBonus(true)
 		}
 		uc.registerEnemySpawned()
 		result = append(result, enemy)
@@ -216,6 +229,10 @@ func (uc *StageUseCases) TrySpawnEnemy() *types.TankEntity {
 		return nil
 	}
 
+	enemyNumber := uc.getNextEnemyNumber()
+	if uc.shouldHaveBonus(enemyNumber) {
+		spawned.SetWithBonus(true)
+	}
 	uc.registerEnemySpawned()
 	return spawned
 }
@@ -237,6 +254,40 @@ func (uc *StageUseCases) registerEnemySpawned() {
 	if uc.stageSession != nil {
 		uc.stageSession.RegisterEnemySpawned()
 	}
+}
+
+func (uc *StageUseCases) getNextEnemyNumber() uint {
+	if uc.stageSession != nil {
+		return uc.stageSession.GetNextEnemyNumber()
+	}
+	return 0
+}
+
+// shouldHaveBonus проверяет, должен ли враг с данным номером иметь бонус
+// Логика: первый враг с бонусом = 4, затем каждый следующий = предыдущий + (4+i),
+// где i увеличивается на 1 после каждого спауна с бонусом
+// Последовательность: 4, 4+5=9, 9+6=15, 15+7=22, ...
+func (uc *StageUseCases) shouldHaveBonus(enemyNumber uint) bool {
+	if enemyNumber < 4 {
+		return false
+	}
+	if enemyNumber == 4 {
+		return true
+	}
+
+	// Вычисляем последовательность номеров с бонусом
+	// Первый: 4
+	// Второй: 4 + 5 = 9 (где 5 = 4+1)
+	// Третий: 9 + 6 = 15 (где 6 = 4+2)
+	// Четвертый: 15 + 7 = 22 (где 7 = 4+3)
+	// И так далее...
+	currentBonusNumber := uint(4)
+	i := uint(1)
+	for currentBonusNumber < enemyNumber {
+		currentBonusNumber = currentBonusNumber + (4 + i)
+		i++
+	}
+	return currentBonusNumber == enemyNumber
 }
 
 func (uc *StageUseCases) IsStageWon() bool {
@@ -318,8 +369,108 @@ func (uc *StageUseCases) trackDestroyedEnemies() {
 			}
 			uc.stageSession.IncrementDestroyedEnemies()
 			uc.destroyedEnemies[tank] = struct{}{}
+
+			// Если враг с бонусом уничтожен, удаляем все бонусы без owner'а и спавним новый
+			if tank.GetWithBonus() {
+				uc.handleEnemyWithBonusDestroyed()
+			}
 		}
 	}
+}
+
+func (uc *StageUseCases) handleEnemyWithBonusDestroyed() {
+	// Удаляем все бонусы без owner'а
+	if uc.bonusesRepository != nil {
+		uc.bonusesRepository.RemoveBonusesWithoutOwner()
+	}
+
+	// Спавним новый рандомный бонус используя BonusUseCases.SpawnRandomBonusEntity
+	if uc.mapUseCases == nil || uc.bonusUseCases == nil {
+		return
+	}
+
+	// Получаем размер базового тайла для проверки коллизий
+	baseSizePx := uint(16)
+	bonusSize := types.Size{
+		Width:  int(baseSizePx),
+		Height: int(baseSizePx),
+	}
+
+	const maxAttempts = 3
+	for attempt := 0; attempt < maxAttempts; attempt++ {
+		// Получаем случайную позицию для спавна бонуса
+		position := uc.mapUseCases.GetRandomBonusSpawnPosition()
+
+		// Создаем временную сущность бонуса для проверки коллизий
+		bonusCandidate := types.NewBonusEntity(
+			types.BonusTypeGrenade, // Тип не важен для проверки коллизий
+			position,
+			bonusSize,
+			nil, // Изображение не нужно для проверки коллизий
+		)
+
+		// Проверяем коллизии с танками используя collisionUseCases
+		hasTankCollision := false
+		if uc.collisionUseCases != nil {
+			hasTankCollision = uc.collisionUseCases.IsSpawnerBlocked(
+				types.Position{
+					X: position.X / float64(bonusSize.Width),
+					Y: position.Y / float64(bonusSize.Height),
+				},
+				bonusSize,
+			)
+		}
+
+		if hasTankCollision {
+			continue
+		}
+
+		// Проверяем коллизии с блоками
+		blocks := uc.mapUseCases.GetBlocks()
+		hasBlockCollision := false
+		// Используем collisionUseCases для проверки коллизий с блоками
+		// Для этого нужно проверить каждый блок
+		for _, block := range blocks {
+			if block == nil {
+				continue
+			}
+			// Используем простую проверку пересечения прямоугольников
+			if uc.checkBonusBlockCollision(bonusCandidate, block) {
+				hasBlockCollision = true
+				break
+			}
+		}
+
+		if !hasBlockCollision {
+			// Используем BonusUseCases для создания бонуса
+			bonus := uc.bonusUseCases.SpawnRandomBonusEntity(position)
+			if bonus != nil && uc.bonusesRepository != nil {
+				uc.bonusesRepository.AddBonus(bonus)
+				return
+			}
+		}
+	}
+}
+
+// checkBonusBlockCollision проверяет коллизию бонуса с блоком
+func (uc *StageUseCases) checkBonusBlockCollision(
+	bonus *types.BonusEntity,
+	block *types.BlockEntity,
+) bool {
+	if bonus == nil || block == nil {
+		return false
+	}
+
+	bonusPos := bonus.GetPosition()
+	bonusSize := bonus.GetSize()
+	blockPos := block.GetPosition()
+	blockSize := block.GetSize()
+
+	// Простая проверка пересечения прямоугольников
+	return bonusPos.X < blockPos.X+float64(blockSize.Width) &&
+		bonusPos.X+float64(bonusSize.Width) > blockPos.X &&
+		bonusPos.Y < blockPos.Y+float64(blockSize.Height) &&
+		bonusPos.Y+float64(bonusSize.Height) > blockPos.Y
 }
 
 func (uc *StageUseCases) GetPlayersTanks() []*types.TankEntity {

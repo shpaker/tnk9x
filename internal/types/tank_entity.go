@@ -49,6 +49,9 @@ type TankEntity struct {
 	NextDirection *Direction
 	role          TankRole
 	model         TankModel
+	withBonus     bool
+	blinkCounter  int  // Счетчик тиков для мигания
+	blinkFlag     bool // Флаг видимости
 }
 
 func NewDefaultTankEntity(role TankRole, direction Direction) TankEntity {
@@ -167,3 +170,38 @@ func RoleToPlayerTankNum(role TankRole) PlayerTankNum {
 		return PlayerTankNumPlayer1
 	}
 }
+
+func (t *TankEntity) GetWithBonus() bool {
+	if t == nil {
+		return false
+	}
+	return t.withBonus
+}
+
+func (t *TankEntity) SetWithBonus(withBonus bool) {
+	if t == nil {
+		return
+	}
+	t.withBonus = withBonus
+}
+
+func (t *TankEntity) GetBlinkFlag() bool {
+	if t == nil {
+		return false
+	}
+	return t.blinkFlag
+}
+
+func (t *TankEntity) UpdateBlink() {
+	if t == nil {
+		return
+	}
+	t.blinkCounter++
+	if t.blinkCounter >= 10 {
+		t.blinkCounter = 0
+		t.blinkFlag = !t.blinkFlag
+	}
+}
+
+// Реализация интерфейса IBlink
+var _ IBlink = (*TankEntity)(nil)

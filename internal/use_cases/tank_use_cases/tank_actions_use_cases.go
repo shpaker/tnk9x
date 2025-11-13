@@ -12,7 +12,7 @@ type TankActionsUseCases struct {
 	coordinateService interfaces.ICoordinateService
 	bulletUseCases    interfaces.IBulletUseCases
 	commonUseCases    interfaces.ITankCommonUseCases
-	renderUseCases    interfaces.ITankRenderUseCases
+	renderUseCases    interfaces.IRenderUseCases
 	mapUseCases       interfaces.IMapUseCases
 }
 
@@ -21,7 +21,7 @@ func NewTankActionsUseCases(
 	coordinateService interfaces.ICoordinateService,
 	bulletUseCases interfaces.IBulletUseCases,
 	commonUseCases interfaces.ITankCommonUseCases,
-	renderUseCases interfaces.ITankRenderUseCases,
+	renderUseCases interfaces.IRenderUseCases,
 	mapUseCases interfaces.IMapUseCases,
 ) *TankActionsUseCases {
 	return &TankActionsUseCases{

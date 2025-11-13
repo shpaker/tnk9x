@@ -16,6 +16,8 @@ type CollisionUseCases struct {
 	wallCollisionService     interfaces.IWallCollisionService
 	bulletCollisionService   interfaces.IBulletCollisionService
 	entitiesCollisionService interfaces.IEntitiesCollisionService
+	bonusUseCases            *BonusUseCases
+	bonusesRepository        interfaces.IBonusesRepository
 }
 
 func NewCollisionUseCases(
@@ -29,6 +31,8 @@ func NewCollisionUseCases(
 	bulletCollisionService interfaces.IBulletCollisionService,
 	entitiesCollisionService interfaces.IEntitiesCollisionService,
 	hqUseCases interfaces.IHQUseCases,
+	bonusUseCases *BonusUseCases,
+	bonusesRepository interfaces.IBonusesRepository,
 ) *CollisionUseCases {
 	uc := &CollisionUseCases{
 		bulletUseCases:           bulletUseCases,
@@ -41,6 +45,8 @@ func NewCollisionUseCases(
 		wallCollisionService:     wallCollisionService,
 		bulletCollisionService:   bulletCollisionService,
 		entitiesCollisionService: entitiesCollisionService,
+		bonusUseCases:            bonusUseCases,
+		bonusesRepository:        bonusesRepository,
 	}
 
 	return uc
@@ -55,16 +61,19 @@ func (uc *CollisionUseCases) UpdateCollisions() {
 
 	mapBlocks := uc.mapUseCases.GetBlocks()
 
+	bonuses := uc.getBonuses()
+
 	uc.checkBulletsCollisions(bullets, hq, mapBlocks)
 
 	bullets = uc.bulletUseCases.GetBullets()
-	uc.checkTanksCollisions(allTanks, bullets, mapBlocks)
+	uc.checkTanksCollisions(allTanks, bullets, mapBlocks, bonuses)
 }
 
 func (uc *CollisionUseCases) checkTanksCollisions(
 	allTanks []*types.TankEntity,
 	bullets []*types.BulletEntity,
 	mapBlocks types.MapBlocks,
+	bonuses []*types.BonusEntity,
 ) {
 	for _, tank := range allTanks {
 
@@ -75,6 +84,7 @@ func (uc *CollisionUseCases) checkTanksCollisions(
 		uc.checkTankBlockCollisions(tank, mapBlocks)
 		uc.checkTankTankCollision(tank, allTanks)
 		uc.checkTankBulletCollisions(tank, bullets)
+		uc.checkTankBonusCollisions(tank, bonuses)
 	}
 }
 
@@ -311,4 +321,38 @@ func (uc *CollisionUseCases) checkBulletHQCollision(
 		return true
 	}
 	return false
+}
+
+func (uc *CollisionUseCases) getBonuses() []*types.BonusEntity {
+	if uc.bonusesRepository == nil {
+		return nil
+	}
+	return uc.bonusesRepository.GetAllBonuses()
+}
+
+func (uc *CollisionUseCases) checkTankBonusCollisions(
+	tank *types.TankEntity,
+	bonuses []*types.BonusEntity,
+) {
+	if uc.bonusUseCases == nil || tank == nil {
+		return
+	}
+
+	// Вражеские танки не могут подбирать бонусы
+	if tank.IsEnemy() {
+		return
+	}
+
+	for _, bonus := range bonuses {
+		if bonus == nil {
+			continue
+		}
+
+		if uc.entitiesCollisionService.CheckColliders(tank, bonus) {
+			// Применяем бонус
+			uc.bonusUseCases.Apply(bonus, tank)
+			// Бонус будет удален внутри Apply для гранаты и танка
+			return
+		}
+	}
 }

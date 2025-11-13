@@ -11,6 +11,7 @@ type IGameRepositoriesRegistry interface {
 	GetBulletsRepository() IBulletsRepository
 	GetAnimationsRepository() IAnimationsRepository
 	GetTanksRepository() ITanksRepository
+	GetBonusesRepository() IBonusesRepository
 }
 
 type IBulletsRepository interface {
@@ -39,6 +40,13 @@ type ITanksRepository interface {
 	GetAllTanks() []*types.TankEntity
 
 	AddTank(tank *types.TankEntity)
+}
+
+type IBonusesRepository interface {
+	AddBonus(bonus *types.BonusEntity)
+	GetAllBonuses() []*types.BonusEntity
+	RemoveBonus(bonus *types.BonusEntity) error
+	RemoveBonusesWithoutOwner()
 }
 
 type IMapsDataRepository interface {
@@ -75,6 +83,10 @@ type ITilesetRepositoryRegistry interface {
 	GetHQImage(id string) (types.IImageProvider, error)
 	GetHQAnimationData(id string) (types.AnimationData, error)
 	GetHQAnimationConfig(id string) (types.AnimationConfig, error)
+
+	GetBonusesImage(id string) (types.IImageProvider, error)
+	GetBonusesAnimationData(id string) (types.AnimationData, error)
+	GetBonusesAnimationConfig(id string) (types.AnimationConfig, error)
 
 	GetImageData(tilesetType string, id string) (image.Image, error)
 }

@@ -20,6 +20,8 @@ type IMapUseCases interface {
 	GetBlocks() types.MapBlocks
 	RemoveBlock(block *types.BlockEntity) error
 	GetSizePx() types.Size
+	SpawnBonus(baseSizePx uint) (*types.BonusEntity, error)
+	GetRandomBonusSpawnPosition() types.Position
 }
 
 type ICollisionUseCases interface {
@@ -45,11 +47,12 @@ type ITankCommonUseCases interface {
 	GetAllTanks() []*types.TankEntity
 }
 
-type ITankRenderUseCases interface {
-	IsSpawnAnimationFinished(tank *types.TankEntity) bool
-	IsExplosionAnimationFinished(tank *types.TankEntity) bool
+type IRenderUseCases interface {
+	IsTankSpawnAnimationFinished(tank *types.TankEntity) bool
+	IsTankExplosionAnimationFinished(tank *types.TankEntity) bool
 	UpdateTankAnimation(tank *types.TankEntity)
-	SyncAnimationWithState(tank *types.TankEntity)
+	SyncTankAnimationWithState(tank *types.TankEntity)
+	UpdateBlink(blinkObjects []types.IBlink)
 }
 
 type ITankLifecycleUseCases interface {

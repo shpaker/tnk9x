@@ -19,6 +19,7 @@ const (
 	TilesetTypeSpawner   TilesetType = "spawner"
 	TilesetTypeExplosion TilesetType = "explosion"
 	TilesetTypeHQ        TilesetType = "hq"
+	TilesetTypeBonuses   TilesetType = "bonuses"
 )
 
 type TilesetRepositoryRegistry struct {
@@ -29,6 +30,7 @@ type TilesetRepositoryRegistry struct {
 	spawner   *TilesetDataRepository
 	explosion *TilesetDataRepository
 	hq        *TilesetDataRepository
+	bonuses   *TilesetDataRepository
 }
 
 func NewTilesetRepositoryRegistry(
@@ -75,6 +77,11 @@ func NewTilesetRepositoryRegistry(
 		return nil, fmt.Errorf("failed to create hq tileset: %w", err)
 	}
 
+	bonusesRepo, err := NewTilesetDataRepository(fileRepo, "tiles/bonuses")
+	if err != nil {
+		return nil, fmt.Errorf("failed to create bonuses tileset: %w", err)
+	}
+
 	return &TilesetRepositoryRegistry{
 		blocks:    blocksRepo,
 		player:    playerRepo,
@@ -83,6 +90,7 @@ func NewTilesetRepositoryRegistry(
 		spawner:   spawnerRepo,
 		explosion: explosionRepo,
 		hq:        hqRepo,
+		bonuses:   bonusesRepo,
 	}, nil
 }
 
@@ -126,6 +134,11 @@ func (tr *TilesetRepositoryRegistry) getImageData(
 			return nil, fmt.Errorf("hq repository not initialized")
 		}
 		return tr.hq.getImage(id)
+	case TilesetTypeBonuses:
+		if tr.bonuses == nil {
+			return nil, fmt.Errorf("bonuses repository not initialized")
+		}
+		return tr.bonuses.getImage(id)
 	default:
 		return nil, fmt.Errorf("unknown tileset type: %s", tilesetType)
 	}
@@ -368,6 +381,42 @@ func (tr *TilesetRepositoryRegistry) GetHQImage(
 	return &image_providers.StaticProvider{
 		ImageID: id,
 	}, nil
+}
+
+func (tr *TilesetRepositoryRegistry) GetBonusesImage(
+	id string,
+) (types.IImageProvider, error) {
+	if tr.bonuses == nil {
+		return nil, fmt.Errorf("bonuses repository not initialized")
+	}
+
+	_, err := tr.bonuses.getImage(id)
+	if err != nil {
+		return nil, fmt.Errorf("image '%s' not found: %w", id, err)
+	}
+	return &image_providers.StaticProvider{
+		ImageID: id,
+	}, nil
+}
+
+func (tr *TilesetRepositoryRegistry) GetBonusesAnimationData(
+	id string,
+) (types.AnimationData, error) {
+	if tr.bonuses == nil {
+		return nil, fmt.Errorf("bonuses repository not initialized")
+	}
+	return tr.bonuses.getAnimationData(id)
+}
+
+func (tr *TilesetRepositoryRegistry) GetBonusesAnimationConfig(
+	id string,
+) (types.AnimationConfig, error) {
+	if tr.bonuses == nil {
+		return types.AnimationConfig{}, fmt.Errorf(
+			"bonuses repository not initialized",
+		)
+	}
+	return tr.bonuses.getAnimationConfig(id)
 }
 
 func (tr *TilesetRepositoryRegistry) GetHQAnimationData(

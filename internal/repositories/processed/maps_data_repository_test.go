@@ -139,6 +139,24 @@ func (mtr *MockTilesetRepositoryRegistry) GetHQAnimationConfig(
 	return types.AnimationConfig{}, nil
 }
 
+func (mtr *MockTilesetRepositoryRegistry) GetBonusesImage(
+	id string,
+) (types.IImageProvider, error) {
+	return &image_providers.StaticProvider{ImageID: id}, nil
+}
+
+func (mtr *MockTilesetRepositoryRegistry) GetBonusesAnimationData(
+	id string,
+) (types.AnimationData, error) {
+	return types.AnimationData{}, nil
+}
+
+func (mtr *MockTilesetRepositoryRegistry) GetBonusesAnimationConfig(
+	id string,
+) (types.AnimationConfig, error) {
+	return types.AnimationConfig{}, nil
+}
+
 func (mtr *MockTilesetRepositoryRegistry) GetImageData(
 	tilesetType string,
 	id string,

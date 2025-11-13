@@ -90,18 +90,19 @@ func (mdr *MapsDataRepository) createBlockFromChar(
 func (mdr *MapsDataRepository) parseLevelLines(
 	lines []string,
 	tileBaseSize int,
-) (types.MapBlocks, error) {
+) (types.MapBlocks, []types.Position, error) {
 	var level types.MapBlocks
+	var bonusSpawnPositions []types.Position
 
 	if len(lines) == 0 {
-		return level, fmt.Errorf("empty level file")
+		return level, bonusSpawnPositions, fmt.Errorf("empty level file")
 	}
 
 	mdr.height = uint(len(lines))
 
 	firstLine := strings.TrimSpace(lines[0])
 	if len(firstLine) == 0 {
-		return level, fmt.Errorf("first line is empty")
+		return level, bonusSpawnPositions, fmt.Errorf("first line is empty")
 	}
 	mdr.width = uint(len(firstLine))
 
@@ -109,7 +110,7 @@ func (mdr *MapsDataRepository) parseLevelLines(
 		line = strings.TrimSpace(line)
 
 		if len(line) != int(mdr.width) {
-			return level, fmt.Errorf(
+			return level, bonusSpawnPositions, fmt.Errorf(
 				"invalid row %d length: expected %d, got %d",
 				y+1,
 				mdr.width,
@@ -122,16 +123,27 @@ func (mdr *MapsDataRepository) parseLevelLines(
 
 			block, err := mdr.createBlockFromChar(charStr, x, y, tileBaseSize)
 			if err != nil {
-				return level, err
+				return level, bonusSpawnPositions, err
 			}
 
 			if block != nil {
 				level = append(level, block)
+			} else if charStr == "." {
+				// Позиция не занята блоком - можно спавнить бонус
+				// Добавляем только координаты четных блоков
+				if x%2 == 0 && y%2 == 0 {
+					positionX := float64(x) * float64(tileBaseSize)
+					positionY := float64(y) * float64(tileBaseSize)
+					bonusSpawnPositions = append(bonusSpawnPositions, types.Position{
+						X: positionX,
+						Y: positionY,
+					})
+				}
 			}
 		}
 	}
 
-	return level, nil
+	return level, bonusSpawnPositions, nil
 }
 
 func (mdr *MapsDataRepository) GetLevel(
@@ -143,7 +155,7 @@ func (mdr *MapsDataRepository) GetLevel(
 		return nil, err
 	}
 
-	blocks, err := mdr.parseLevelLines(lines, tileBaseSize)
+	blocks, bonusSpawnPositions, err := mdr.parseLevelLines(lines, tileBaseSize)
 	if err != nil {
 		return nil, err
 	}
@@ -153,7 +165,7 @@ func (mdr *MapsDataRepository) GetLevel(
 		Height: int(mdr.height) * tileBaseSize,
 	}
 
-	mapEntity := types.NewMapEntity(sizePx, blocks)
+	mapEntity := types.NewMapEntity(sizePx, blocks, bonusSpawnPositions)
 
 	return mapEntity, nil
 }

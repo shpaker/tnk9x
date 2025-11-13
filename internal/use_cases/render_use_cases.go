@@ -1,24 +1,23 @@
-package tank_use_cases
+package use_cases
 
 import (
 	"github.com/shpaker/tnk25/internal/types"
 	image_providers "github.com/shpaker/tnk25/internal/types/image_providers"
-	"github.com/shpaker/tnk25/internal/use_cases"
 )
 
-type TankRenderUseCases struct {
-	tilesUseCases *use_cases.TilesUseCases
+type RenderUseCases struct {
+	tilesUseCases *TilesUseCases
 }
 
-func NewTankRenderUseCases(
-	tilesUseCases *use_cases.TilesUseCases,
-) *TankRenderUseCases {
-	return &TankRenderUseCases{
+func NewRenderUseCases(
+	tilesUseCases *TilesUseCases,
+) *RenderUseCases {
+	return &RenderUseCases{
 		tilesUseCases: tilesUseCases,
 	}
 }
 
-func (uc *TankRenderUseCases) IsSpawnAnimationFinished(
+func (uc *RenderUseCases) IsTankSpawnAnimationFinished(
 	tank *types.TankEntity,
 ) bool {
 	if tank.Image == nil {
@@ -30,7 +29,7 @@ func (uc *TankRenderUseCases) IsSpawnAnimationFinished(
 	return false
 }
 
-func (uc *TankRenderUseCases) IsExplosionAnimationFinished(
+func (uc *RenderUseCases) IsTankExplosionAnimationFinished(
 	tank *types.TankEntity,
 ) bool {
 	if tank.Image == nil {
@@ -42,7 +41,7 @@ func (uc *TankRenderUseCases) IsExplosionAnimationFinished(
 	return false
 }
 
-func (uc *TankRenderUseCases) UpdateTankAnimation(
+func (uc *RenderUseCases) UpdateTankAnimation(
 	tank *types.TankEntity,
 ) {
 	if uc.tilesUseCases == nil || tank == nil {
@@ -67,10 +66,10 @@ func (uc *TankRenderUseCases) UpdateTankAnimation(
 	tank.Image = tankAnimation
 	uc.tilesUseCases.AddAnimation(tankAnimation)
 
-	uc.SyncAnimationWithState(tank)
+	uc.SyncTankAnimationWithState(tank)
 }
 
-func (uc *TankRenderUseCases) SyncAnimationWithState(
+func (uc *RenderUseCases) SyncTankAnimationWithState(
 	tank *types.TankEntity,
 ) {
 	if uc.tilesUseCases == nil {
@@ -99,5 +98,17 @@ func (uc *TankRenderUseCases) SyncAnimationWithState(
 		uc.tilesUseCases.StartAnimation(anim)
 	} else if !shouldAnimate && anim.IsAnimating {
 		uc.tilesUseCases.StopAnimation(anim)
+	}
+}
+
+func (uc *RenderUseCases) UpdateBlink(blinkObjects []types.IBlink) {
+	if blinkObjects == nil {
+		return
+	}
+
+	for _, blinkObj := range blinkObjects {
+		if blinkObj != nil {
+			blinkObj.UpdateBlink()
+		}
 	}
 }

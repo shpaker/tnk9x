@@ -11,7 +11,7 @@ type TankCommonUseCases struct {
 	brakingService    interfaces.ITankBrakingService
 	coordinateService interfaces.ICoordinateService
 	bulletUseCases    interfaces.IBulletUseCases
-	renderUseCases    interfaces.ITankRenderUseCases
+	renderUseCases    interfaces.IRenderUseCases
 	tanksRepository   interfaces.ITanksRepository
 }
 
@@ -19,7 +19,7 @@ func NewTankCommonUseCases(
 	bulletUseCases interfaces.IBulletUseCases,
 	brakingService interfaces.ITankBrakingService,
 	coordinateService interfaces.ICoordinateService,
-	renderUseCases interfaces.ITankRenderUseCases,
+	renderUseCases interfaces.IRenderUseCases,
 	tanksRepository interfaces.ITanksRepository,
 ) *TankCommonUseCases {
 	uc := &TankCommonUseCases{
@@ -39,7 +39,7 @@ func (uc *TankCommonUseCases) Update(tank *types.TankEntity, dt float64) error {
 	}
 
 	if uc.renderUseCases != nil {
-		uc.renderUseCases.SyncAnimationWithState(tank)
+		uc.renderUseCases.SyncTankAnimationWithState(tank)
 	}
 
 	oldState := tank.State
@@ -56,7 +56,7 @@ func (uc *TankCommonUseCases) Update(tank *types.TankEntity, dt float64) error {
 		}
 
 		if oldState != tank.State && uc.renderUseCases != nil {
-			uc.renderUseCases.SyncAnimationWithState(tank)
+			uc.renderUseCases.SyncTankAnimationWithState(tank)
 		}
 		return err
 	}
@@ -77,7 +77,7 @@ func (uc *TankCommonUseCases) Update(tank *types.TankEntity, dt float64) error {
 	}
 
 	if uc.renderUseCases != nil {
-		uc.renderUseCases.SyncAnimationWithState(tank)
+		uc.renderUseCases.SyncTankAnimationWithState(tank)
 	}
 
 	return nil

@@ -9,3 +9,8 @@ type IEntityCollider interface {
 	GetPosition() Position
 	GetAltitude() Altitude
 }
+
+type IBlink interface {
+	UpdateBlink()
+	GetBlinkFlag() bool
+}

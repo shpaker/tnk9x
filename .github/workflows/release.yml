@@ -13,7 +13,7 @@ jobs:
       APP_VERSION: ${{ github.ref_name }}
     strategy:
       matrix:
-        os: [windows, linux]
+        os: [windows, linux, macos]
         build_type: [debug, prod]
         include:
           - os: windows
@@ -24,6 +24,10 @@ jobs:
             runner: ubuntu-latest
             goos: linux
             goarch: amd64
+          - os: macos
+            runner: macos-latest
+            goos: darwin
+            goarch: arm64
 
     steps:
       - name: Checkout code
@@ -83,6 +87,21 @@ jobs:
             go build -trimpath -ldflags "-s -w -X github.com/shpaker/tnk25/internal.Version=$APP_VERSION" -o dist/gonflict ./cmd
           fi
 
+      - name: Build executable (macOS)
+        if: matrix.os == 'macos'
+        shell: bash
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          APP_VERSION: ${{ github.ref_name }}
+        run: |
+          export CGO_ENABLED=1
+          if [ "${{ matrix.build_type }}" = "debug" ]; then
+            go build -ldflags "-X github.com/shpaker/tnk25/internal.Version=$APP_VERSION -X github.com/shpaker/tnk25/internal.DebugFlag=true" -o dist/gonflict ./cmd
+          else
+            go build -trimpath -ldflags "-s -w -X github.com/shpaker/tnk25/internal.Version=$APP_VERSION" -o dist/gonflict ./cmd
+          fi
+
       - name: Package artifacts (Windows)
         shell: pwsh
         if: matrix.os == 'windows'
@@ -107,6 +126,22 @@ jobs:
         run: |
           suffix="${{ matrix.build_type }}"
           zip_name="bc_linux_${suffix}_${TAG_NAME}.zip"
+
+          mkdir -p package/assets
+          cp dist/gonflict package/
+          cp config.yml package/
+          cp -r assets/* package/assets/
+          (cd package && zip -r "../${zip_name}" .)
+          echo "PACKAGE_NAME=${zip_name}" >> "$GITHUB_ENV"
+
+      - name: Package artifacts (macOS)
+        if: matrix.os == 'macos'
+        shell: bash
+        env:
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          suffix="${{ matrix.build_type }}"
+          zip_name="bc_macos_${suffix}_${TAG_NAME}.zip"
 
           mkdir -p package/assets
           cp dist/gonflict package/

@@ -20,7 +20,7 @@ import (
 type StageRendererAdapter struct {
 	mapUseCases            interfaces.IMapUseCases
 	tankCommonUseCases     interfaces.ITankCommonUseCases
-	tankRenderUseCases     interfaces.ITankRenderUseCases
+	renderUseCases         interfaces.IRenderUseCases
 	bulletUseCases         interfaces.IBulletUseCases
 	mapTilesUseCases       *use_cases.TilesUseCases
 	tankTilesUseCases      *use_cases.TilesUseCases
@@ -29,6 +29,8 @@ type StageRendererAdapter struct {
 	explosionTilesUseCases *use_cases.TilesUseCases
 	hqTilesUseCases        *use_cases.TilesUseCases
 	hqUseCases             interfaces.IHQUseCases
+	bonusesRepository      interfaces.IBonusesRepository
+	bonusTilesUseCases     *use_cases.TilesUseCases
 	imageCache             map[string]*ebiten.Image
 	imageService           *services.ImageService
 	fontUseCases           interfaces.IFontUseCases
@@ -45,7 +47,7 @@ type StageRendererAdapter struct {
 func NewStageRendererAdapter(
 	mapUseCases interfaces.IMapUseCases,
 	tankCommonUseCases interfaces.ITankCommonUseCases,
-	tankRenderUseCases interfaces.ITankRenderUseCases,
+	renderUseCases interfaces.IRenderUseCases,
 	bulletUseCases interfaces.IBulletUseCases,
 	mapTilesUseCases *use_cases.TilesUseCases,
 	tankTilesUseCases *use_cases.TilesUseCases,
@@ -54,6 +56,8 @@ func NewStageRendererAdapter(
 	explosionTilesUseCases *use_cases.TilesUseCases,
 	hqTilesUseCases *use_cases.TilesUseCases,
 	hqUseCases interfaces.IHQUseCases,
+	bonusesRepository interfaces.IBonusesRepository,
+	bonusTilesUseCases *use_cases.TilesUseCases,
 	fontUseCases interfaces.IFontUseCases,
 	tileMinSize int,
 	mapOffsetX int,
@@ -78,7 +82,7 @@ func NewStageRendererAdapter(
 	return &StageRendererAdapter{
 		mapUseCases:            mapUseCases,
 		tankCommonUseCases:     tankCommonUseCases,
-		tankRenderUseCases:     tankRenderUseCases,
+		renderUseCases:         renderUseCases,
 		bulletUseCases:         bulletUseCases,
 		mapTilesUseCases:       mapTilesUseCases,
 		tankTilesUseCases:      tankTilesUseCases,
@@ -87,6 +91,8 @@ func NewStageRendererAdapter(
 		explosionTilesUseCases: explosionTilesUseCases,
 		hqTilesUseCases:        hqTilesUseCases,
 		hqUseCases:             hqUseCases,
+		bonusesRepository:      bonusesRepository,
+		bonusTilesUseCases:     bonusTilesUseCases,
 		fontUseCases:           fontUseCases,
 		imageCache:             make(map[string]*ebiten.Image),
 		imageService:           services.NewImageService(),
@@ -114,6 +120,11 @@ func (r *StageRendererAdapter) drawTanks(screen *ebiten.Image) {
 
 		if tank.State == types.TankStateSpawning {
 			r.drawSpawnAnimation(screen, tank)
+			continue
+		}
+
+		// Проверяем мигание для танков с бонусом
+		if tank.IsEnemy() && tank.GetWithBonus() && !tank.GetBlinkFlag() {
 			continue
 		}
 
@@ -375,6 +386,45 @@ func (r *StageRendererAdapter) drawBullets(screen *ebiten.Image) {
 	}
 }
 
+func (r *StageRendererAdapter) drawBonuses(screen *ebiten.Image) {
+	if r.bonusesRepository == nil || r.bonusTilesUseCases == nil {
+		return
+	}
+
+	bonuses := r.bonusesRepository.GetAllBonuses()
+	for _, bonus := range bonuses {
+		if bonus == nil || bonus.GetImage() == nil {
+			continue
+		}
+
+		// Проверяем видимость перед отрисовкой
+		if !bonus.GetBlinkFlag() {
+			continue
+		}
+
+		imageID, err := bonus.GetImage().GetImageID()
+		if err != nil {
+			continue
+		}
+
+		imageData, err := r.bonusTilesUseCases.GetImage(imageID)
+		if err != nil {
+			continue
+		}
+
+		img := ebiten.NewImageFromImage(imageData)
+
+		position := bonus.GetPosition()
+		screenX := float64(r.mapOffsetX) + position.X
+		screenY := float64(r.mapOffsetY) + position.Y
+
+		op := &ebiten.DrawImageOptions{}
+		op.GeoM.Translate(screenX, screenY)
+
+		screen.DrawImage(img, op)
+	}
+}
+
 func (r *StageRendererAdapter) DrawAll(screen *ebiten.Image) {
 	r.drawScreenBackground(screen)
 
@@ -389,6 +439,8 @@ func (r *StageRendererAdapter) DrawAll(screen *ebiten.Image) {
 	r.drawBullets(screen)
 
 	r.drawBlocksByAltitude(screen, types.SURFACE)
+
+	r.drawBonuses(screen)
 
 	r.drawExplosions(screen)
 

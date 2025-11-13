@@ -95,7 +95,7 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 
 	enemyRespawnDelay := b.config.GetEnemyRespawnDelayTicks()
 
-	tankRenderUseCases := tank_use_cases.NewTankRenderUseCases(
+	renderUseCases := use_cases.NewRenderUseCases(
 		tilesUseCasesWithAnimations,
 	)
 
@@ -103,19 +103,27 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 		bulletUseCases,
 		b.tankBrakingService,
 		b.coordinateService,
-		tankRenderUseCases,
+		renderUseCases,
 		b.gameRepository.GetTanksRepository(),
 	)
 
 	tankLifecycleUseCases := tank_use_cases.NewTankLifecycleUseCases(
 		tilesUseCasesWithAnimations,
-		tankRenderUseCases,
+		renderUseCases,
 		tankCommonUseCases,
 		enemyRespawnDelay,
 	)
 
-	mapUseCases := use_cases.NewMapUseCases(
+	bonusTilesUseCasesForMap, err := b.buildBonusTilesUseCases()
+	if err != nil {
+		return nil, fmt.Errorf("failed to build bonus tiles use cases: %w", err)
+	}
+
+	mapUseCases := use_cases.NewMapUseCasesWithCollision(
 		b.mapEntity,
+		entitiesCollisionService,
+		tankCommonUseCases,
+		bonusTilesUseCasesForMap,
 	)
 
 	tankActionsUseCases := tank_use_cases.NewTankActionsUseCases(
@@ -123,7 +131,7 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 		b.coordinateService,
 		bulletUseCases,
 		tankCommonUseCases,
-		tankRenderUseCases,
+		renderUseCases,
 		mapUseCases,
 	)
 
@@ -199,6 +207,27 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 		baseSize,
 	)
 
+	var stageSession *session_entities.StageSessionEntity
+	if b.session != nil {
+		stageSession = b.session.StageSession()
+	}
+
+	bonusesRepository := b.gameRepository.GetBonusesRepository()
+
+	// Создаем BonusUseCases для использования в StageUseCases и buildCollisionServices
+	bonusTilesUseCasesForBonus, err := b.buildBonusTilesUseCases()
+	if err != nil {
+		return nil, fmt.Errorf("failed to build bonus tiles use cases: %w", err)
+	}
+	bonusUseCases := use_cases.NewBonusUseCases(
+		tankCommonUseCases,
+		tankLifecycleUseCases,
+		stageSession,
+		bonusesRepository,
+		b.config,
+		bonusTilesUseCasesForBonus,
+	)
+
 	collisionUseCases, hqUseCases, err := b.buildCollisionServices(
 		bulletUseCases,
 		tankActionsUseCases,
@@ -208,17 +237,13 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 		hqTilesUseCases,
 		hq,
 		entitiesCollisionService,
+		bonusUseCases,
 	)
 	if err != nil {
 		return nil, err
 	}
 
 	tankLifecycleUseCases.SetCollisionUseCases(collisionUseCases)
-
-	var stageSession *session_entities.StageSessionEntity
-	if b.session != nil {
-		stageSession = b.session.StageSession()
-	}
 
 	stageUseCasesValue := stateusecases.NewStageUseCases(
 		tankLifecycleUseCases,
@@ -228,6 +253,9 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 		hqUseCases,
 		stageSession,
 		enemyRespawnDelay,
+		bonusesRepository,
+		mapUseCases,
+		bonusUseCases,
 	)
 	stageUseCases := &stageUseCasesValue
 
@@ -298,6 +326,15 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 		services.NewTileService(b.tilesetRegistry, processed.TilesetTypeHQ),
 		renderAnimationService,
 	)
+	bonusTilesUseCasesForRenderer := use_cases.NewTilesUseCases(
+		b.tilesetRegistry,
+		processed.TilesetTypeBonuses,
+		services.NewTileService(
+			b.tilesetRegistry,
+			processed.TilesetTypeBonuses,
+		),
+		renderAnimationService,
+	)
 
 	mapBlocksCount := b.config.GetMapBlocksCount()
 	rendererTileSize := int(b.config.GetTileBaseSize())
@@ -309,7 +346,7 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 	rendererAdapter := game.NewStageRendererAdapter(
 		mapUseCases,
 		tankCommonUseCases,
-		tankRenderUseCases,
+		renderUseCases,
 		bulletUseCases,
 		mapTilesUseCases,
 		tankTilesUseCases,
@@ -318,6 +355,8 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 		explosionTilesUseCases,
 		hqTilesUseCasesForRenderer,
 		hqUseCases,
+		b.gameRepository.GetBonusesRepository(),
+		bonusTilesUseCasesForRenderer,
 		b.fontUseCases,
 		rendererTileSize,
 		mapOffsetX,
@@ -333,7 +372,7 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 		hqUseCases,
 		tankActionsUseCases,
 		tankCommonUseCases,
-		tankRenderUseCases,
+		renderUseCases,
 		tankLifecycleUseCases,
 		bulletUseCases,
 		mapUseCases,
@@ -347,6 +386,7 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 	stageState.inputAdapters[types.PlayerTankNumPlayer2] = inputAdapter2
 	stageState.RendererAdapter = rendererAdapter
 	stageState.stageUseCases = stageUseCases
+	stageState.bonusesRepository = b.gameRepository.GetBonusesRepository()
 
 	return stageState, nil
 }
@@ -408,6 +448,22 @@ func (b *StageStateBuilder) buildBulletUseCases() (*use_cases.BulletUseCases, ui
 	return bulletUseCases, baseSizePx, nil
 }
 
+func (b *StageStateBuilder) buildBonusTilesUseCases() (*use_cases.TilesUseCases, error) {
+	bonusTileService := services.NewTileService(
+		b.tilesetRegistry,
+		processed.TilesetTypeBonuses,
+	)
+	bonusAnimationService := services.NewAnimationService()
+	bonusTilesUseCases := use_cases.NewTilesUseCases(
+		b.tilesetRegistry,
+		processed.TilesetTypeBonuses,
+		bonusTileService,
+		bonusAnimationService,
+	)
+
+	return bonusTilesUseCases, nil
+}
+
 func (b *StageStateBuilder) createHQ(
 	tilesUseCases *use_cases.TilesUseCases,
 	baseSizePx uint,
@@ -449,6 +505,7 @@ func (b *StageStateBuilder) buildCollisionServices(
 	hqTilesUseCases *use_cases.TilesUseCases,
 	hq *types.HQEntity,
 	entitiesCollisionService interfaces.IEntitiesCollisionService,
+	bonusUseCases *use_cases.BonusUseCases,
 ) (*use_cases.CollisionUseCases, interfaces.IHQUseCases, error) {
 	bulletCollisionService := collision_services.NewBulletCollisionService(
 		int(b.config.GetTileBaseSize()),
@@ -463,6 +520,9 @@ func (b *StageStateBuilder) buildCollisionServices(
 		)
 	}
 
+	bonusesRepository := b.gameRepository.GetBonusesRepository()
+	// BonusUseCases уже создан выше и передан как параметр
+
 	collisionUseCases := use_cases.NewCollisionUseCases(
 		bulletUseCases,
 		playerTankActions,
@@ -474,6 +534,8 @@ func (b *StageStateBuilder) buildCollisionServices(
 		bulletCollisionService,
 		entitiesCollisionService,
 		hqUseCases,
+		bonusUseCases,
+		bonusesRepository,
 	)
 
 	return collisionUseCases, hqUseCases, nil
@@ -484,7 +546,7 @@ func (b *StageStateBuilder) buildStageState(
 	hqUseCases interfaces.IHQUseCases,
 	tankActionsUseCases interfaces.ITankActionsUseCases,
 	tankCommonUseCases interfaces.ITankCommonUseCases,
-	tankRenderUseCases interfaces.ITankRenderUseCases,
+	renderUseCases interfaces.IRenderUseCases,
 	tankLifecycleUseCases interfaces.ITankLifecycleUseCases,
 	bulletUseCases *use_cases.BulletUseCases,
 	mapUseCases *use_cases.MapUseCases,
@@ -497,7 +559,7 @@ func (b *StageStateBuilder) buildStageState(
 		HQUseCases:            hqUseCases,
 		TankActionsUseCases:   tankActionsUseCases,
 		TankCommonUseCases:    tankCommonUseCases,
-		TankRenderUseCases:    tankRenderUseCases,
+		RenderUseCases:        renderUseCases,
 		TankLifecycleUseCases: tankLifecycleUseCases,
 		BulletUseCases:        bulletUseCases,
 		MapUseCases:           mapUseCases,
