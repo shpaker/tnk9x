@@ -33,7 +33,9 @@ jobs:
             libxinerama-dev \
             libxi-dev \
             libxcursor-dev \
-            libxxf86vm-dev
+            libxxf86vm-dev \
+            libasound2-dev \
+            pkg-config
 
       - name: Setup Just
         uses: extractions/setup-just@v3
@@ -87,7 +89,9 @@ jobs:
             libxinerama-dev \
             libxi-dev \
             libxcursor-dev \
-            libxxf86vm-dev
+            libxxf86vm-dev \
+            libasound2-dev \
+            pkg-config
 
       - name: Setup Just
         uses: extractions/setup-just@v3
@@ -138,7 +142,9 @@ jobs:
             libxinerama-dev \
             libxi-dev \
             libxcursor-dev \
-            libxxf86vm-dev
+            libxxf86vm-dev \
+            libasound2-dev \
+            pkg-config
 
       - name: Setup Just
         uses: extractions/setup-just@v3
@@ -190,6 +196,8 @@ jobs:
             libxi-dev \
             libxcursor-dev \
             libxxf86vm-dev \
+            libasound2-dev \
+            pkg-config \
             xvfb
 
       - name: Setup Just
@@ -245,7 +253,9 @@ jobs:
             libxinerama-dev \
             libxi-dev \
             libxcursor-dev \
-            libxxf86vm-dev
+            libxxf86vm-dev \
+            libasound2-dev \
+            pkg-config
 
       - name: Setup Just
         uses: extractions/setup-just@v3
