@@ -61,7 +61,10 @@ jobs:
             pkg-config
 
       - name: Build executable (Windows)
-        if: matrix.os == 'windows'
+        if: |
+          matrix.os == 'windows' &&
+          ((contains(github.ref_name, 'a') && matrix.build_type == 'debug') ||
+           (!contains(github.ref_name, 'a') && matrix.build_type == 'prod'))
         shell: pwsh
         env:
           GOOS: ${{ matrix.goos }}
@@ -75,7 +78,10 @@ jobs:
           }
 
       - name: Build executable (Linux)
-        if: matrix.os == 'linux'
+        if: |
+          matrix.os == 'linux' &&
+          ((contains(github.ref_name, 'a') && matrix.build_type == 'debug') ||
+           (!contains(github.ref_name, 'a') && matrix.build_type == 'prod'))
         shell: bash
         env:
           GOOS: ${{ matrix.goos }}
@@ -90,7 +96,10 @@ jobs:
           fi
 
       - name: Build executable (macOS)
-        if: matrix.os == 'macos'
+        if: |
+          matrix.os == 'macos' &&
+          ((contains(github.ref_name, 'a') && matrix.build_type == 'debug') ||
+           (!contains(github.ref_name, 'a') && matrix.build_type == 'prod'))
         shell: bash
         env:
           GOOS: ${{ matrix.goos }}
@@ -106,7 +115,10 @@ jobs:
 
       - name: Package artifacts (Windows)
         shell: pwsh
-        if: matrix.os == 'windows'
+        if: |
+          matrix.os == 'windows' &&
+          ((contains(github.ref_name, 'a') && matrix.build_type == 'debug') ||
+           (!contains(github.ref_name, 'a') && matrix.build_type == 'prod'))
         run: |
           $tag = "${{ github.ref_name }}"
           $suffix = "${{ matrix.build_type }}"
@@ -121,7 +133,10 @@ jobs:
           "PACKAGE_NAME=$zipName" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: Package artifacts (Linux)
-        if: matrix.os == 'linux'
+        if: |
+          matrix.os == 'linux' &&
+          ((contains(github.ref_name, 'a') && matrix.build_type == 'debug') ||
+           (!contains(github.ref_name, 'a') && matrix.build_type == 'prod'))
         shell: bash
         env:
           TAG_NAME: ${{ github.ref_name }}
@@ -137,7 +152,10 @@ jobs:
           echo "PACKAGE_NAME=${zip_name}" >> "$GITHUB_ENV"
 
       - name: Package artifacts (macOS)
-        if: matrix.os == 'macos'
+        if: |
+          matrix.os == 'macos' &&
+          ((contains(github.ref_name, 'a') && matrix.build_type == 'debug') ||
+           (!contains(github.ref_name, 'a') && matrix.build_type == 'prod'))
         shell: bash
         env:
           TAG_NAME: ${{ github.ref_name }}
@@ -153,6 +171,9 @@ jobs:
           echo "PACKAGE_NAME=${zip_name}" >> "$GITHUB_ENV"
 
       - name: Upload artifact
+        if: |
+          (contains(github.ref_name, 'a') && matrix.build_type == 'debug') ||
+          (!contains(github.ref_name, 'a') && matrix.build_type == 'prod')
         uses: actions/upload-artifact@v4
         with:
           name: build-${{ matrix.os }}-${{ matrix.build_type }}
