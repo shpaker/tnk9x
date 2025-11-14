@@ -4,7 +4,7 @@
 [![License](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](LICENSE)
 [![Ebiten](https://img.shields.io/badge/Ebiten-v2.9.1-orange.svg?style=flat-square)](https://ebiten.org/)
 
-A modern remake of the classic arcade game Battle City (NES, 1985), built with Go and Ebiten. This is an educational project focused on learning Go language, Clean Architecture principles, and game development.
+A modern remake and tribute to the classic arcade game Battle City (NES, 1985), built with Go and Ebiten. This project combines a passion for the original game with learning Go, Clean Architecture principles, and game development.
 
 ## Development Status
 
@@ -100,53 +100,53 @@ The project follows **Clean Architecture** principles with clear separation of c
 ### Dependency Flow
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│  Presentation Layer                                     │
+┌────────────────────────────────────────────────────────┐
+│  Presentation Layer                                    │
 │  ┌──────────────┐  ┌──────────────┐                    │
 │  │   States     │  │   Adapters   │                    │
 │  │              │  │              │                    │
 │  │ StageState   │  │ Renderer     │                    │
 │  │ StageSelect  │  │ Input        │                    │
 │  │              │  │ Sound        │                    │
-│  └──────┬───────┘  └──────┬───────┘                    │
-│         │                  │                             │
-│         └──────────┬───────┘                             │
-│                   │ (depends on)                        │
-│                   ▼                                     │
-└─────────────────────────────────────────────────────────┘
-                   │
-┌──────────────────▼──────────────────────────────────────┐
+│  └──────┬───────┘  └───────┬──────┘                    │
+│         │                  │                           │
+│         └─────────┬────────┘                           │
+│                   │ (depends on)                       │
+│                   ▼                                    │
+└────────────────────────────────────────────────────────┘
+                    │
+┌───────────────────▼─────────────────────────────────────┐
 │  Application Layer                                      │
-│  ┌──────────────┐  ┌──────────────┐                    │
-│  │  Use Cases   │  │   Services   │                    │
-│  │              │  │              │                    │
-│  │ TankActions  │  │ Collision    │                    │
-│  │ Collision    │  │ Animation    │                    │
-│  │ Sound        │  │ Coordinate   │                    │
-│  └──────┬───────┘  └──────┬───────┘                    │
-│         │                  │                             │
-│         └──────────┬───────┘                             │
+│  ┌──────────────┐  ┌──────────────┐                     │
+│  │  Use Cases   │  │   Services   │                     │
+│  │              │  │              │                     │
+│  │ TankActions  │  │ Collision    │                     │
+│  │ Collision    │  │ Animation    │                     │
+│  │ Sound        │  │ Coordinate   │                     │
+│  └──────┬───────┘  └──────┬───────┘                     │
+│         │                 │                             │
+│         └─────────┬───────┘                             │
 │                   │ (manipulates)                       │
 │                   ▼                                     │
 └─────────────────────────────────────────────────────────┘
-                   │
-┌──────────────────▼──────────────────────────────────────┐
+                    │
+┌───────────────────▼─────────────────────────────────────┐
 │  Domain Layer                                           │
-│  ┌──────────────────────────────────────────────────┐  │
-│  │  Entities (Tank, Bullet, Block, HQ, etc.)        │  │
-│  │  Value Objects (Position, Size, Direction)       │  │
+│  ┌───────────────────────────────────────────────────┐  │
+│  │  Entities (Tank, Bullet, Block, HQ, etc.)         │  │
+│  │  Value Objects (Position, Size, Direction)        │  │
 │  │  Session Entities (GameSession, StageSession)     │  │
-│  └──────────────────────────────────────────────────┘  │
+│  └───────────────────────────────────────────────────┘  │
 │                   ▲                                     │
 └───────────────────┼─────────────────────────────────────┘
-                   │ (reads/writes)
-┌──────────────────▼──────────────────────────────────────┐
-│  Infrastructure Layer                                  │
-│  ┌──────────────┐  ┌──────────────┐                    │
-│  │ Repositories │  │   Raw Files  │                    │
-│  │              │  │              │                    │
-│  │ Game         │  │ FileSystem   │                    │
-│  │ Processed    │  │              │                    │
-│  └──────────────┘  └──────────────┘                    │
+                    │ (reads/writes)
+┌───────────────────▼─────────────────────────────────────┐
+│  Infrastructure Layer                                   │
+│  ┌──────────────┐  ┌──────────────┐                     │
+│  │ Repositories │  │   Raw Files  │                     │
+│  │              │  │              │                     │
+│  │ Game         │  │ FileSystem   │                     │
+│  │ Processed    │  │              │                     │
+│  └──────────────┘  └──────────────┘                     │
 └─────────────────────────────────────────────────────────┘
 ```
