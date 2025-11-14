@@ -126,33 +126,115 @@ just test
 
 ## Architecture
 
-The project follows Clean Architecture principles: the core (`Domain`) describes pure entities, the `Application` layer manages business logic through interfaces, and external layers (`Presentation`, `Infrastructure`) depend only on public contracts of internal layers.
+The project follows **Clean Architecture** principles with clear separation of concerns across four layers. Dependencies point inward: outer layers depend on inner layers through interfaces.
+
+### Layer Structure
 
 ```text
 internal/
-├── types/            # Domain: entities (tanks, bullets, HQ, maps)
-│   └── session_entities/ # Game and stage session entities
-├── interfaces/       # Contracts between layers
-├── use_cases/        # Application: stateless business logic
-├── services/         # Application: specialized services (collisions, animations, coordinates)
-├── adapters/         # Presentation: input/output implementation
-│   ├── stage/        # StageRendererAdapter, StageKeyboardInputAdapter, AI adapters
-│   └── stage_select/ # Level selection screen: render and input
-├── states/           # Presentation: StageSelectState, StageState, etc.
-└── repositories/     # Infrastructure: raw, processed, game storage
+├── types/                    # Domain Layer - Pure business entities
+│   ├── image_providers/      # Image provider implementations
+│   ├── session_entities/     # Game and stage session management
+│   └── *.go                  # Core entities (Tank, Bullet, Block, HQ, etc.)
+│
+├── interfaces/                # Contracts between layers
+│   ├── adapters.go           # IInputAdapter, ISoundPlayerAdapter, etc.
+│   ├── domain.go             # Domain interfaces (IBlink, IImageProvider)
+│   ├── repositories.go       # IGameRepositoriesRegistry, ITanksRepository, etc.
+│   ├── services.go           # ISoundPlayerAdapter, collision services
+│   └── use_cases.go          # ITankCommonUseCases, IStageUseCases, etc.
+│
+├── use_cases/                # Application Layer - Stateless business logic
+│   ├── tank_use_cases/       # Tank-specific use cases
+│   │   ├── tank_actions_use_cases.go
+│   │   ├── tank_common_use_cases.go
+│   │   └── tank_lifecycle_use_cases.go
+│   ├── state_use_cases/      # Stage state management
+│   └── *.go                  # Other use cases (collision, bonus, sound, etc.)
+│
+├── services/                 # Application Layer - Specialized services
+│   ├── collision_services/   # Collision detection services
+│   ├── animation_services.go
+│   ├── coordinate_services.go
+│   ├── tank_braking_services.go
+│   └── tile_services.go
+│
+├── adapters/                 # Presentation Layer - External system adapters
+│   ├── stage/
+│   │   ├── input_adapters/   # Keyboard and AI input adapters
+│   │   ├── sound_adapter.go  # Audio playback adapter
+│   │   └── stage_renderer_adapter.go
+│   └── stage_select/         # Level selection screen adapters
+│
+├── states/                   # Presentation Layer - Application states
+│   ├── stage_state.go        # Main game state
+│   ├── stage_state_builder.go
+│   └── stage_select_state.go
+│
+└── repositories/             # Infrastructure Layer - Data access
+    ├── raw/                  # Direct file system access
+    ├── processed/            # Processed resources (tilesets, maps, sounds)
+    └── game/                 # In-memory game state (tanks, bullets, bonuses)
 ```
 
-Layer interaction (dependencies point inward):
+### Dependency Flow
 
 ```
-[ Presentation ]  adapters + states
-        │   (implementation of IState, IInputAdapter, IRendererAdapter)
-        ▼
-[ Application ]   use_cases + services (via interfaces.*)
-        │   (manipulate Domain, access infrastructure through interfaces)
-        ▼
-[ Domain ]        types (entity, value objects, session entities)
-        ▲
-        │   (repositories read/write data, implementing Application interfaces)
-[ Infrastructure ] repositories/raw/processed/game
+┌─────────────────────────────────────────────────────────┐
+│  Presentation Layer                                     │
+│  ┌──────────────┐  ┌──────────────┐                    │
+│  │   States     │  │   Adapters   │                    │
+│  │              │  │              │                    │
+│  │ StageState   │  │ Renderer     │                    │
+│  │ StageSelect  │  │ Input        │                    │
+│  │              │  │ Sound        │                    │
+│  └──────┬───────┘  └──────┬───────┘                    │
+│         │                  │                             │
+│         └──────────┬───────┘                             │
+│                   │ (depends on)                        │
+│                   ▼                                     │
+└─────────────────────────────────────────────────────────┘
+                   │
+┌──────────────────▼──────────────────────────────────────┐
+│  Application Layer                                      │
+│  ┌──────────────┐  ┌──────────────┐                    │
+│  │  Use Cases   │  │   Services   │                    │
+│  │              │  │              │                    │
+│  │ TankActions  │  │ Collision    │                    │
+│  │ Collision    │  │ Animation    │                    │
+│  │ Sound        │  │ Coordinate   │                    │
+│  └──────┬───────┘  └──────┬───────┘                    │
+│         │                  │                             │
+│         └──────────┬───────┘                             │
+│                   │ (manipulates)                       │
+│                   ▼                                     │
+└─────────────────────────────────────────────────────────┘
+                   │
+┌──────────────────▼──────────────────────────────────────┐
+│  Domain Layer                                           │
+│  ┌──────────────────────────────────────────────────┐  │
+│  │  Entities (Tank, Bullet, Block, HQ, etc.)        │  │
+│  │  Value Objects (Position, Size, Direction)       │  │
+│  │  Session Entities (GameSession, StageSession)     │  │
+│  └──────────────────────────────────────────────────┘  │
+│                   ▲                                     │
+└───────────────────┼─────────────────────────────────────┘
+                   │ (reads/writes)
+┌──────────────────▼──────────────────────────────────────┐
+│  Infrastructure Layer                                  │
+│  ┌──────────────┐  ┌──────────────┐                    │
+│  │ Repositories │  │   Raw Files  │                    │
+│  │              │  │              │                    │
+│  │ Game         │  │ FileSystem   │                    │
+│  │ Processed    │  │              │                    │
+│  └──────────────┘  └──────────────┘                    │
+└─────────────────────────────────────────────────────────┘
 ```
+
+### Key Principles
+
+- **Dependency Inversion**: All dependencies point inward through interfaces
+- **Stateless Use Cases**: Use cases don't store entity state; entities are passed as parameters
+- **Single Responsibility**: Each use case handles one domain area
+- **Interface Segregation**: Small, focused interfaces for each responsibility
+- **Repository Pattern**: Data access abstracted through repository interfaces
