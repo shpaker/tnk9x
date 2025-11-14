@@ -305,15 +305,11 @@ func (uc *CollisionUseCases) checkBulletWallCollision(
 		) {
 
 			if block.Data != nil {
-				if block.Data.Name == types.Brick {
+				if block.Data.Name == types.Brick && uc.soundUseCases != nil {
 					_ = uc.mapUseCases.RemoveBlock(block)
-					if uc.soundUseCases != nil {
-						uc.soundUseCases.RequestSound(types.SoundIDBrick, false)
-					}
+					uc.soundUseCases.RequestSound(types.SoundIDBrick, false)
 				} else if block.Data.Name == types.Steel {
-					if uc.soundUseCases != nil {
-						uc.soundUseCases.RequestSound(types.SoundIDSteel, false)
-					}
+					uc.soundUseCases.RequestSound(types.SoundIDSteel, false)
 				}
 			}
 

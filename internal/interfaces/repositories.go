@@ -33,6 +33,7 @@ type ITanksRepository interface {
 	GetPlayer(num types.PlayerTankNum) *types.TankEntity
 	HasPlayer(num types.PlayerTankNum) bool
 	GetAllPlayers() []*types.TankEntity
+	GetActivePlayerTanks() []*types.TankEntity
 
 	AddEnemy(enemy *types.TankEntity)
 	GetAllEnemies() []*types.TankEntity

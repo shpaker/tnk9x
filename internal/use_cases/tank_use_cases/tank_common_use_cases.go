@@ -101,3 +101,22 @@ func (uc *TankCommonUseCases) GetAllTanks() []*types.TankEntity {
 	}
 	return uc.tanksRepository.GetAllTanks()
 }
+
+// GetAllPlayerTanks возвращает все танки игроков (не врагов)
+func (uc *TankCommonUseCases) GetAllPlayerTanks() []*types.TankEntity {
+	if uc.tanksRepository == nil {
+		return []*types.TankEntity{}
+	}
+	return uc.tanksRepository.GetActivePlayerTanks()
+}
+
+// IsAnyPlayerTankMoving проверяет, двигается ли хотя бы один танк игрока
+func (uc *TankCommonUseCases) IsAnyPlayerTankMoving() bool {
+	playerTanks := uc.GetAllPlayerTanks()
+	for _, tank := range playerTanks {
+		if tank != nil && tank.State == types.TankStateMoving {
+			return true
+		}
+	}
+	return false
+}

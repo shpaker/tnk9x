@@ -88,15 +88,17 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 		return nil, err
 	}
 
-	// Создаем звуковые компоненты заранее для передачи в use cases
+	// Создаем звуковой адаптер
 	soundsRepository := processed.NewSoundsRepository(b.fileRepository)
-	soundAdapter, err := game.NewStageSoundAdapter(
+	soundAdapter, err := game.NewSoundAdapter(
 		soundsRepository,
 		b.audioContext,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create sound adapter: %w", err)
 	}
+
+	// Создаем SoundUseCases для использования в других use cases
 	soundUseCases := use_cases.NewSoundUseCases()
 
 	tilesUseCasesWithAnimations, err := b.buildTileServices()

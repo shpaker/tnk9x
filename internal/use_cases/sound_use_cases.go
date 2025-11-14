@@ -1,6 +1,9 @@
 package use_cases
 
-import "github.com/shpaker/tnk25/internal/types"
+import (
+	"github.com/shpaker/tnk25/internal/interfaces"
+	"github.com/shpaker/tnk25/internal/types"
+)
 
 type SoundUseCases struct {
 	events []types.SoundEntity
@@ -23,4 +26,15 @@ func (uc *SoundUseCases) GetEvents() []types.SoundEntity {
 	events := uc.events
 	uc.events = uc.events[:0] // Очищаем после получения
 	return events
+}
+
+// StopAll останавливает все проигрываемые звуки через звуковой адаптер
+func (uc *SoundUseCases) StopAll(
+	soundPlayerAdapter interfaces.ISoundPlayerAdapter,
+) {
+	if soundPlayerAdapter != nil {
+		soundPlayerAdapter.StopAll()
+	}
+	// Очищаем очередь событий, чтобы не проигрывать запланированные звуки
+	uc.events = uc.events[:0]
 }

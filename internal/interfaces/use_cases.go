@@ -45,6 +45,8 @@ type ITankCommonUseCases interface {
 	Update(tank *types.TankEntity, dt float64) error
 	UpdateAllTanks(dt float64) error
 	GetAllTanks() []*types.TankEntity
+	GetAllPlayerTanks() []*types.TankEntity
+	IsAnyPlayerTankMoving() bool
 }
 
 type IRenderUseCases interface {

@@ -41,6 +41,8 @@ type StageState struct {
 
 	soundUseCases      *use_cases.SoundUseCases
 	soundPlayerAdapter interfaces.ISoundPlayerAdapter
+
+	defeatSoundPlayed bool
 }
 
 func NewStageState(
@@ -85,10 +87,13 @@ func (state *StageState) SetUp() {
 		return
 	}
 
+	// Сбрасываем флаг проигрывания звука поражения для нового уровня
+	state.defeatSoundPlayed = false
+
 	// Запускаем фоновую музыку при старте уровня
 	if state.soundUseCases != nil {
+		state.soundUseCases.StopAll(state.soundPlayerAdapter)
 		state.soundUseCases.RequestSound(types.SoundIDGameStart, false)
-		state.soundUseCases.RequestSound(types.SoundIDBackground, true)
 	}
 
 	// Сбрасываем сессию перед спавном танков, чтобы восстановить жизни игроков
@@ -159,10 +164,25 @@ func (state *StageState) Update() {
 		if stageFinished && !state.stageUseCases.IsPaused() {
 			state.stageUseCases.PauseStageState()
 		}
-		if stageFinished && state.session != nil &&
-			len(inpututil.AppendJustPressedKeys(nil)) > 0 {
-			target := types.StateTypeStageSelect
-			state.session.SetTargetState(&target)
+		if stageFinished {
+			// Проигрываем звук поражения один раз при завершении уровня поражением
+			if !state.stageUseCases.IsStageWon() &&
+				!state.defeatSoundPlayed && state.soundUseCases != nil {
+				// Останавливаем все звуки перед проигрыванием звука поражения
+				if state.soundPlayerAdapter != nil {
+					state.soundPlayerAdapter.StopAll()
+				}
+				// Очищаем очередь событий, чтобы не проигрывать другие звуки
+
+				// Запрашиваем звук поражения
+				state.soundUseCases.RequestSound(types.SoundIDGameOver, false)
+				state.defeatSoundPlayed = true
+			}
+			if state.session != nil &&
+				len(inpututil.AppendJustPressedKeys(nil)) > 0 {
+				target := types.StateTypeStageSelect
+				state.session.SetTargetState(&target)
+			}
 		}
 	}
 
@@ -238,6 +258,19 @@ func (state *StageState) Update() {
 		}
 	}
 
+	// Управление звуком двигателя
+	if !paused && state.TankCommonUseCases != nil &&
+		state.soundUseCases != nil && state.soundPlayerAdapter != nil {
+		isAnyPlayerMoving := state.TankCommonUseCases.IsAnyPlayerTankMoving()
+		if isAnyPlayerMoving {
+			// Запускаем звук двигателя с зацикливанием, если он еще не играет
+			state.soundUseCases.RequestSound(types.SoundIDEngine, true)
+		} else {
+			// Останавливаем звук двигателя, когда все игроки остановлены
+			_ = state.soundPlayerAdapter.Stop(types.SoundIDEngine)
+		}
+	}
+
 	// Обработка звуковых событий
 	if state.soundUseCases != nil && state.soundPlayerAdapter != nil {
 		events := state.soundUseCases.GetEvents()
@@ -259,14 +292,9 @@ func (state *StageState) Draw(screen *ebiten.Image) {
 	}
 
 	if state.stageUseCases.IsStageFinished() {
-		label := "DEFEAT"
-		if state.stageUseCases.IsStageWon() {
-			label = "VICTORY"
-		} else {
-			// Проигрываем звук поражения
-			if state.soundUseCases != nil {
-				state.soundUseCases.RequestSound(types.SoundIDGameOver, false)
-			}
+		label := "VICTORY"
+		if !state.stageUseCases.IsStageWon() {
+			label = "DEFEAT"
 		}
 		state.RendererAdapter.DrawStageEndOverlay(screen, label)
 		return

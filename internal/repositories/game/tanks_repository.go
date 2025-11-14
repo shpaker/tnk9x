@@ -42,6 +42,17 @@ func (tr *TanksRepository) GetAllPlayers() []*types.TankEntity {
 	return tr.players
 }
 
+// GetActivePlayerTanks возвращает все активные танки игроков (без nil и неактивных)
+func (tr *TanksRepository) GetActivePlayerTanks() []*types.TankEntity {
+	activePlayers := make([]*types.TankEntity, 0)
+	for _, player := range tr.players {
+		if player != nil && player.IsActive() {
+			activePlayers = append(activePlayers, player)
+		}
+	}
+	return activePlayers
+}
+
 func (tr *TanksRepository) AddEnemy(enemy *types.TankEntity) {
 	tr.enemies = append(tr.enemies, enemy)
 }

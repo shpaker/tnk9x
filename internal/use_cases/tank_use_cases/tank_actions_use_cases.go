@@ -121,7 +121,7 @@ func (uc *TankActionsUseCases) Shoot(tank *types.TankEntity) error {
 	if !tank.IsActive() {
 		return errors.New("tank is not active")
 	}
-	if uc.soundUseCases != nil {
+	if uc.soundUseCases != nil && !tank.IsEnemy() {
 		uc.soundUseCases.RequestSound(types.SoundIDFire, false)
 	}
 	return uc.bulletUseCases.ShootBullet(tank)
