@@ -15,11 +15,12 @@ type configSchema struct {
 }
 
 type appConfigSchema struct {
-	ScreenPx         [2]uint `yaml:"screen_px"`
-	TitleFontSize    uint    `yaml:"title_font_size"`
-	SubtitleFontSize uint    `yaml:"subtitle_font_size"`
-	RegularFontSize  uint    `yaml:"regular_font_size"`
-	GameTitle        string  `yaml:"game_title"`
+	ScreenPx         [2]uint  `yaml:"screen_px"`
+	TitleFontSize    uint     `yaml:"title_font_size"`
+	SubtitleFontSize uint     `yaml:"subtitle_font_size"`
+	RegularFontSize  uint     `yaml:"regular_font_size"`
+	GameTitle        string   `yaml:"game_title"`
+	Volume           *float64 `yaml:"volume"`
 }
 
 type gameConfigSchema struct {
@@ -40,6 +41,7 @@ type Config struct {
 	SubtitleFontSize uint
 	RegularFontSize  uint
 	GameTitle        string
+	Volume           float64
 
 	EnemySpawners          []types.Position
 	Player1Spawn           types.Position
@@ -80,6 +82,7 @@ func LoadConfig() (*Config, error) {
 		SubtitleFontSize: schema.App.SubtitleFontSize,
 		RegularFontSize:  schema.App.RegularFontSize,
 		GameTitle:        schema.App.GameTitle,
+		Volume:           1.0, // Значение по умолчанию
 		EnemySpawners: convertCoordsToPositions(
 			schema.Game.EnemySpawners,
 		),
@@ -104,6 +107,17 @@ func LoadConfig() (*Config, error) {
 
 	if cfg.EnemyRespawnDelayTicks == 0 {
 		cfg.EnemyRespawnDelayTicks = 3 * 60
+	}
+
+	// Если громкость указана в конфиге, используем её значение
+	if schema.App.Volume != nil {
+		cfg.Volume = *schema.App.Volume
+		// Валидация громкости: должна быть от 0.0 до 1.0
+		if cfg.Volume < 0.0 {
+			cfg.Volume = 0.0
+		} else if cfg.Volume > 1.0 {
+			cfg.Volume = 1.0
+		}
 	}
 
 	return cfg, nil
@@ -174,6 +188,10 @@ func (c *Config) GetRegularFontSize() uint {
 
 func (c *Config) GetGameTitle() string {
 	return c.GameTitle
+}
+
+func (c *Config) GetVolume() float64 {
+	return c.Volume
 }
 
 func (c *Config) ScreenWidth() int {

@@ -22,6 +22,7 @@ type IConfigProvider interface {
 	GetSubtitleFontSize() uint
 	GetRegularFontSize() uint
 	GetGameTitle() string
+	GetVolume() float64
 }
 
 type IInputAdapter interface {
