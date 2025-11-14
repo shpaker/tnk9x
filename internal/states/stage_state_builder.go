@@ -93,6 +93,7 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 	soundAdapter, err := game.NewSoundAdapter(
 		soundsRepository,
 		b.audioContext,
+		b.config.GetVolume(),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create sound adapter: %w", err)

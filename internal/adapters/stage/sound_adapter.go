@@ -14,6 +14,7 @@ import (
 type SoundAdapter struct {
 	soundsRepository interfaces.ISoundsRepository
 	audioContext     *audio.Context
+	volume           float64
 	players          map[types.SoundID]*audio.Player
 	loopPlayers      map[types.SoundID]*audio.Player
 	soundStreams     map[types.SoundID]*vorbis.Stream
@@ -22,14 +23,23 @@ type SoundAdapter struct {
 func NewSoundAdapter(
 	soundsRepository interfaces.ISoundsRepository,
 	audioContext *audio.Context,
+	volume float64,
 ) (*SoundAdapter, error) {
 	if audioContext == nil {
 		return nil, fmt.Errorf("audio context is required")
 	}
 
+	// Валидация громкости: должна быть от 0.0 до 1.0
+	if volume < 0.0 {
+		volume = 0.0
+	} else if volume > 1.0 {
+		volume = 1.0
+	}
+
 	return &SoundAdapter{
 		soundsRepository: soundsRepository,
 		audioContext:     audioContext,
+		volume:           volume,
 		players:          make(map[types.SoundID]*audio.Player),
 		loopPlayers:      make(map[types.SoundID]*audio.Player),
 		soundStreams:     make(map[types.SoundID]*vorbis.Stream),
@@ -80,6 +90,7 @@ func (a *SoundAdapter) Play(soundID types.SoundID) error {
 	}
 
 	a.players[soundID] = player
+	player.SetVolume(a.volume)
 	player.Play()
 
 	return nil
@@ -110,6 +121,7 @@ func (a *SoundAdapter) PlayLoop(soundID types.SoundID) error {
 	}
 
 	a.loopPlayers[soundID] = player
+	player.SetVolume(a.volume)
 	player.Play()
 
 	return nil

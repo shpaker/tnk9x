@@ -5,7 +5,7 @@ app:
   subtitle_font_size: 12
   regular_font_size: 12
   game_title: "TNK25"
-  volume: 1.0  # Уровень громкости от 0.0 до 1.0
+  volume: 0.5  # Уровень громкости от 0.0 до 1.0
 
 game:
   enemy_spawners:
