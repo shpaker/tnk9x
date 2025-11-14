@@ -50,6 +50,48 @@ build-all: build-macos build-windows
     #!/bin/bash
     echo "macOS и Windows сборки готовы"
 
+package-macos:
+    #!/bin/bash
+    set -euo pipefail
+    out_dir="_build/macos"
+    if [ ! -f "$out_dir/{{binary_name}}_darwin_arm64" ]; then
+        echo "Error: macOS binary not found. Run 'just build-macos' first."
+        exit 1
+    fi
+    VERSION="dev-$(date -u +%Y-%m-%dT%H:%M)"
+    archive_name="{{binary_name}}_darwin_arm64_${VERSION}.tar.gz"
+    echo "Creating macOS archive: $archive_name"
+    cd "$out_dir"
+    cp ../README.md .
+    cp ../LICENSE .
+    tar -czf "$archive_name" {{binary_name}}_darwin_arm64 README.md LICENSE
+    rm README.md LICENSE
+    mv "$archive_name" ..
+    echo "Archive created: _build/$archive_name"
+
+package-windows:
+    #!/bin/bash
+    set -euo pipefail
+    out_dir="_build/windows"
+    if [ ! -f "$out_dir/{{binary_name}}_windows_amd64.exe" ]; then
+        echo "Error: Windows binary not found. Run 'just build-windows' first."
+        exit 1
+    fi
+    VERSION="dev-$(date -u +%Y-%m-%dT%H:%M)"
+    archive_name="{{binary_name}}_windows_amd64_${VERSION}.zip"
+    echo "Creating Windows archive: $archive_name"
+    cd "$out_dir"
+    cp ../README.md .
+    cp ../LICENSE .
+    zip -q "$archive_name" {{binary_name}}_windows_amd64.exe README.md LICENSE
+    rm README.md LICENSE
+    mv "$archive_name" ..
+    echo "Archive created: _build/$archive_name"
+
+package-all: package-macos package-windows
+    #!/bin/bash
+    echo "All packages created in _build/"
+
 clean:
     #!/bin/bash
     echo "Cleaning build artifacts..."

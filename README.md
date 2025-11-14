@@ -1,8 +1,4 @@
-# tnk25
-
-[![Go Version](https://img.shields.io/badge/Go-1.24+-00ADD8?style=flat-square&logo=go)](https://go.dev/)
-[![License](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](LICENSE)
-[![Ebiten](https://img.shields.io/badge/Ebiten-v2.9.1-orange.svg?style=flat-square)](https://ebiten.org/)
+# [tnk25](https://github.com/shpaker/tnk25)
 
 A modern remake and tribute to the classic arcade game Battle City (NES, 1985), built with Go and Ebiten. This project combines a passion for the original game with learning Go, Clean Architecture principles, and game development.
 
@@ -150,3 +146,7 @@ The project follows **Clean Architecture** principles with clear separation of c
 │  └──────────────┘  └──────────────┘                     │
 └─────────────────────────────────────────────────────────┘
 ```
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

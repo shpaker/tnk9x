@@ -127,6 +127,8 @@ jobs:
           New-Item -ItemType Directory -Force -Path package | Out-Null
           Copy-Item dist/tnk25.exe package/
           Copy-Item config.yml package/
+          Copy-Item README.md package/
+          Copy-Item LICENSE package/
           Copy-Item assets package/assets -Recurse
 
           Compress-Archive -Path package/* -DestinationPath $zipName
@@ -147,6 +149,8 @@ jobs:
           mkdir -p package/assets
           cp dist/tnk25 package/
           cp config.yml package/
+          cp README.md package/
+          cp LICENSE package/
           cp -r assets/* package/assets/
           (cd package && zip -r "../${zip_name}" .)
           echo "PACKAGE_NAME=${zip_name}" >> "$GITHUB_ENV"
@@ -166,6 +170,8 @@ jobs:
           mkdir -p package/assets
           cp dist/tnk25 package/
           cp config.yml package/
+          cp README.md package/
+          cp LICENSE package/
           cp -r assets/* package/assets/
           (cd package && zip -r "../${zip_name}" .)
           echo "PACKAGE_NAME=${zip_name}" >> "$GITHUB_ENV"
