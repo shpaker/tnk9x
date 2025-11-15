@@ -24,18 +24,25 @@ func TestNewGameRepositoriesRegistry(t *testing.T) {
 func TestGameRepositoriesRegistryBullets(t *testing.T) {
 	gameRepo := game.NewGameRepositoriesRegistry()
 
-	tank := &types.TankEntity{
-		Position: types.Position{X: 0, Y: 0},
-	}
+	tank := types.NewDefaultTankEntity(types.TankRolePlayer1, types.DirectionUp)
+	tank.Position = types.Position{X: 0, Y: 0}
+	tankPtr := &tank
 
+	specs := types.NewSpecsEntity(
+		0, // Уровень 0
+		32.0,
+		false, // Пули не усиленные
+		100.0, // Скорость пули
+		1,     // Лимит пуль: 1
+	)
 	bullet := types.NewBulletEntity(
 		types.Position{X: 10, Y: 20},
 		types.Size{Width: 4, Height: 4},
 		types.SURFACE,
 		nil,
-		100.0,
 		types.DirectionUp,
-		tank,
+		specs,
+		tankPtr,
 	)
 
 	err := gameRepo.GetBulletsRepository().AddBullet(bullet)
@@ -69,7 +76,6 @@ func TestGameRepositoriesRegistryTanks(t *testing.T) {
 	playerTank := &types.TankEntity{
 		Position:  types.Position{X: 100, Y: 200},
 		Direction: types.DirectionUp,
-		Speed:     0,
 	}
 
 	gameRepo.GetTanksRepository().
@@ -84,7 +90,6 @@ func TestGameRepositoriesRegistryTanks(t *testing.T) {
 	enemyTank := &types.TankEntity{
 		Position:  types.Position{X: 300, Y: 400},
 		Direction: types.DirectionDown,
-		Speed:     0,
 	}
 
 	gameRepo.GetTanksRepository().AddEnemy(enemyTank)

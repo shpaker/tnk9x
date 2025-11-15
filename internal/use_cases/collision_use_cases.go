@@ -3,6 +3,7 @@ package use_cases
 import (
 	"github.com/shpaker/tnk25/internal/interfaces"
 	"github.com/shpaker/tnk25/internal/types"
+	"github.com/shpaker/tnk25/internal/types/session_entities"
 )
 
 type CollisionUseCases struct {
@@ -19,6 +20,7 @@ type CollisionUseCases struct {
 	bonusUseCases            *BonusUseCases
 	bonusesRepository        interfaces.IBonusesRepository
 	soundUseCases            *SoundUseCases
+	stageSession             *session_entities.StageSessionEntity
 }
 
 func NewCollisionUseCases(
@@ -35,6 +37,7 @@ func NewCollisionUseCases(
 	bonusUseCases *BonusUseCases,
 	bonusesRepository interfaces.IBonusesRepository,
 	soundUseCases *SoundUseCases,
+	stageSession *session_entities.StageSessionEntity,
 ) *CollisionUseCases {
 	uc := &CollisionUseCases{
 		bulletUseCases:           bulletUseCases,
@@ -50,6 +53,7 @@ func NewCollisionUseCases(
 		bonusUseCases:            bonusUseCases,
 		bonusesRepository:        bonusesRepository,
 		soundUseCases:            soundUseCases,
+		stageSession:             stageSession,
 	}
 
 	return uc
@@ -148,10 +152,44 @@ func (uc *CollisionUseCases) checkTankBulletCollisions(
 		) {
 			_ = uc.bulletUseCases.RemoveBullet(index)
 			if tank.IsActive() {
-				if uc.soundUseCases != nil {
-					uc.soundUseCases.RequestSound(types.SoundIDExplosion, false)
+				// Для игроков понижаем уровень вместо взрыва
+				if !tank.IsEnemy() {
+					currentLevel := uint(0)
+					if tank.GetSpecs() != nil {
+						currentLevel = tank.GetSpecs().GetLevel()
+					}
+
+					if currentLevel > 0 {
+						// Понижаем уровень
+						if uc.tankCommonUseCases != nil {
+							uc.tankCommonUseCases.LevelDown(tank)
+						}
+						if uc.soundUseCases != nil {
+							uc.soundUseCases.RequestSound(
+								types.SoundIDExplosion,
+								false,
+							)
+						}
+					} else {
+						// Уровень уже минимальный - взрываем и уменьшаем жизни
+						if uc.soundUseCases != nil {
+							uc.soundUseCases.RequestSound(types.SoundIDExplosion, false)
+						}
+						_ = uc.tankLifecycleUseCases.Explode(tank)
+
+						// Уменьшаем жизни игрока
+						if uc.stageSession != nil {
+							playerNum := types.RoleToPlayerTankNum(tank.GetRole())
+							uc.stageSession.DecrementPlayerLives(playerNum)
+						}
+					}
+				} else {
+					// Для врагов взрываем сразу (старая логика)
+					if uc.soundUseCases != nil {
+						uc.soundUseCases.RequestSound(types.SoundIDExplosion, false)
+					}
+					_ = uc.tankLifecycleUseCases.Explode(tank)
 				}
-				_ = uc.tankLifecycleUseCases.Explode(tank)
 			}
 			return
 		}
@@ -309,7 +347,16 @@ func (uc *CollisionUseCases) checkBulletWallCollision(
 					_ = uc.mapUseCases.RemoveBlock(block)
 					uc.soundUseCases.RequestSound(types.SoundIDBrick, false)
 				} else if block.Data.Name == types.Steel {
-					uc.soundUseCases.RequestSound(types.SoundIDSteel, false)
+					if bullet.IsReinforced() && uc.mapUseCases != nil {
+						// Усиленные пули могут ломать стальные блоки
+						_ = uc.mapUseCases.RemoveBlock(block)
+						if uc.soundUseCases != nil {
+							uc.soundUseCases.RequestSound(types.SoundIDSteel, false)
+						}
+					} else if uc.soundUseCases != nil {
+						// Обычные пули только отскакивают от стальных блоков
+						uc.soundUseCases.RequestSound(types.SoundIDSteel, false)
+					}
 				}
 			}
 

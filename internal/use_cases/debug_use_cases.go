@@ -40,7 +40,16 @@ func (uc *DebugUseCases) BuildDebugInfo() string {
 		fmt.Sprintf("Version: %s", version),
 		fmt.Sprintf("FPS: %.2f", info.FPS),
 		fmt.Sprintf("TPS: %.2f", info.TPS),
-		fmt.Sprintf("Lives: %d/%d", info.PlayerLives, info.PlayerInitialLives),
+		fmt.Sprintf(
+			"Player1 Lives: %d/%d",
+			info.Player1Lives,
+			info.Player1InitialLives,
+		),
+		fmt.Sprintf(
+			"Player2 Lives: %d/%d",
+			info.Player2Lives,
+			info.Player2InitialLives,
+		),
 		fmt.Sprintf("Enemies: %d/%d", info.RemainingEnemies, info.TotalEnemies),
 	}
 
@@ -62,9 +71,13 @@ func (uc *DebugUseCases) collectDebugData() types.DebugInfoData {
 		return data
 	}
 
-	data.PlayerLives = stageSession.GetPlayerLives(types.PlayerTankNumPlayer1)
-	data.PlayerInitialLives = stageSession.GetPlayerInitialLives(
+	data.Player1Lives = stageSession.GetPlayerLives(types.PlayerTankNumPlayer1)
+	data.Player1InitialLives = stageSession.GetPlayerInitialLives(
 		types.PlayerTankNumPlayer1,
+	)
+	data.Player2Lives = stageSession.GetPlayerLives(types.PlayerTankNumPlayer2)
+	data.Player2InitialLives = stageSession.GetPlayerInitialLives(
+		types.PlayerTankNumPlayer2,
 	)
 	data.TotalEnemies = stageSession.GetTotalEnemies()
 	data.RemainingEnemies = stageSession.GetRemainingEnemies()

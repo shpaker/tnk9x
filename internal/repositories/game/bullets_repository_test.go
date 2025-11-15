@@ -30,18 +30,26 @@ func TestNewBulletsRepository(t *testing.T) {
 func TestAddAndGetBullets(t *testing.T) {
 	repo := NewBulletsRepository()
 
-	tank := &types.TankEntity{
-		Position: types.Position{X: 0, Y: 0},
-	}
+	tank := types.NewDefaultTankEntity(types.TankRolePlayer1, types.DirectionUp)
+	tank.Position = types.Position{X: 0, Y: 0}
+	tankPtr := &tank
 
+	// Создаем specs для теста с лимитом 1 пуля
+	specs := types.NewSpecsEntity(
+		0, // Уровень 0
+		32.0,
+		false, // Пули не усиленные
+		200.0, // Скорость пули
+		1,     // Лимит пуль: 1
+	)
 	bullet := types.NewBulletEntity(
 		types.Position{X: 100, Y: 100},
 		types.Size{Width: 4, Height: 4},
 		types.SURFACE,
 		&MockImageProvider{id: "bullet"},
-		200.0,
 		types.DirectionUp,
-		tank,
+		specs,
+		tankPtr,
 	)
 
 	err := repo.AddBullet(bullet)
@@ -75,8 +83,8 @@ func TestAddBulletWithoutOwner(t *testing.T) {
 		types.Size{Width: 4, Height: 4},
 		types.SURFACE,
 		&MockImageProvider{id: "bullet"},
-		200.0,
 		types.DirectionUp,
+		nil,
 		nil,
 	)
 
@@ -89,18 +97,26 @@ func TestAddBulletWithoutOwner(t *testing.T) {
 func TestAddBulletDuplicateOwner(t *testing.T) {
 	repo := NewBulletsRepository()
 
-	tank := &types.TankEntity{
-		Position: types.Position{X: 0, Y: 0},
-	}
+	tank := types.NewDefaultTankEntity(types.TankRolePlayer1, types.DirectionUp)
+	tank.Position = types.Position{X: 0, Y: 0}
+	tankPtr := &tank
 
+	// Создаем specs для теста с лимитом 1 пуля
+	specs := types.NewSpecsEntity(
+		0, // Уровень 0
+		32.0,
+		false, // Пули не усиленные
+		200.0, // Скорость пули
+		1,     // Лимит пуль: 1
+	)
 	bullet1 := types.NewBulletEntity(
 		types.Position{X: 100, Y: 100},
 		types.Size{Width: 4, Height: 4},
 		types.SURFACE,
 		&MockImageProvider{id: "bullet"},
-		200.0,
 		types.DirectionUp,
-		tank,
+		specs,
+		tankPtr,
 	)
 
 	err := repo.AddBullet(bullet1)
@@ -113,9 +129,9 @@ func TestAddBulletDuplicateOwner(t *testing.T) {
 		types.Size{Width: 4, Height: 4},
 		types.SURFACE,
 		&MockImageProvider{id: "bullet"},
-		200.0,
 		types.DirectionDown,
-		tank,
+		specs,
+		tankPtr,
 	)
 
 	err = repo.AddBullet(bullet2)
@@ -132,30 +148,44 @@ func TestAddBulletDuplicateOwner(t *testing.T) {
 func TestRemoveBullet(t *testing.T) {
 	repo := NewBulletsRepository()
 
-	tank1 := &types.TankEntity{
-		Position: types.Position{X: 0, Y: 0},
-	}
-	tank2 := &types.TankEntity{
-		Position: types.Position{X: 10, Y: 10},
-	}
+	tank1 := types.NewDefaultTankEntity(
+		types.TankRolePlayer1,
+		types.DirectionUp,
+	)
+	tank1.Position = types.Position{X: 0, Y: 0}
+	tank1Ptr := &tank1
 
+	tank2 := types.NewDefaultTankEntity(
+		types.TankRolePlayer2,
+		types.DirectionUp,
+	)
+	tank2.Position = types.Position{X: 10, Y: 10}
+	tank2Ptr := &tank2
+
+	specs := types.NewSpecsEntity(
+		0, // Уровень 0
+		32.0,
+		false, // Пули не усиленные
+		200.0, // Скорость пули
+		1,     // Лимит пуль: 1
+	)
 	bullet1 := types.NewBulletEntity(
 		types.Position{X: 100, Y: 100},
 		types.Size{Width: 4, Height: 4},
 		types.SURFACE,
 		&MockImageProvider{id: "bullet"},
-		200.0,
 		types.DirectionUp,
-		tank1,
+		specs,
+		tank1Ptr,
 	)
 	bullet2 := types.NewBulletEntity(
 		types.Position{X: 200, Y: 200},
 		types.Size{Width: 4, Height: 4},
 		types.SURFACE,
 		&MockImageProvider{id: "bullet"},
-		200.0,
 		types.DirectionDown,
-		tank2,
+		specs,
+		tank2Ptr,
 	)
 
 	err := repo.AddBullet(bullet1)

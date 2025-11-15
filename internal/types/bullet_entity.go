@@ -7,8 +7,8 @@ type BulletEntity struct {
 	Size      Size
 	Altitude  Altitude
 	Image     IImageProvider
-	Speed     float64
 	Direction Direction
+	specs     *SpecsEntity // Спецификации танка, из которого выпущена пуля
 	owner     *TankEntity
 }
 
@@ -38,13 +38,34 @@ func (b *BulletEntity) GetOwner() *TankEntity {
 	return b.owner
 }
 
+func (b *BulletEntity) GetSpecs() *SpecsEntity {
+	if b == nil {
+		return nil
+	}
+	return b.specs
+}
+
+func (b *BulletEntity) IsReinforced() bool {
+	if b == nil || b.specs == nil {
+		return false
+	}
+	return b.specs.GetBulletsReinforced()
+}
+
+func (b *BulletEntity) GetSpeed() float64 {
+	if b == nil || b.specs == nil {
+		return 120.0 // Значение по умолчанию
+	}
+	return b.specs.GetBulletsSpeed()
+}
+
 func NewBulletEntity(
 	position Position,
 	size Size,
 	altitude Altitude,
 	image IImageProvider,
-	speed float64,
 	direction Direction,
+	specs *SpecsEntity,
 	owner *TankEntity,
 ) *BulletEntity {
 	return &BulletEntity{
@@ -52,8 +73,8 @@ func NewBulletEntity(
 		Size:      size,
 		Altitude:  altitude,
 		Image:     image,
-		Speed:     speed,
 		Direction: direction,
+		specs:     specs,
 		owner:     owner,
 	}
 }

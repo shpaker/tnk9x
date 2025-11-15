@@ -38,8 +38,8 @@ func TestBulletEntity_GetImageID(t *testing.T) {
 				Size{},
 				SURFACE,
 				tt.imageGetter,
-				0,
 				DirectionUp,
+				nil,
 				nil,
 			)
 
@@ -67,8 +67,8 @@ func TestBulletEntity_GetSize(t *testing.T) {
 		Size{},
 		SURFACE,
 		nil,
-		0,
 		DirectionUp,
+		nil,
 		nil,
 	)
 	size := bullet.GetSize()
@@ -92,8 +92,8 @@ func TestBulletEntity_GetPosition(t *testing.T) {
 		Size{},
 		SURFACE,
 		nil,
-		0,
 		DirectionUp,
+		nil,
 		nil,
 	)
 

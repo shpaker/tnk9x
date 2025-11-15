@@ -1,19 +1,23 @@
 package use_cases
 
 import (
+	"github.com/shpaker/tnk25/internal/interfaces"
 	"github.com/shpaker/tnk25/internal/types"
 	image_providers "github.com/shpaker/tnk25/internal/types/image_providers"
 )
 
 type RenderUseCases struct {
-	tilesUseCases *TilesUseCases
+	tilesUseCases      *TilesUseCases
+	tankCommonUseCases interfaces.ITankAnimationNameProvider
 }
 
 func NewRenderUseCases(
 	tilesUseCases *TilesUseCases,
+	tankCommonUseCases interfaces.ITankAnimationNameProvider,
 ) *RenderUseCases {
 	return &RenderUseCases{
-		tilesUseCases: tilesUseCases,
+		tilesUseCases:      tilesUseCases,
+		tankCommonUseCases: tankCommonUseCases,
 	}
 }
 
@@ -48,7 +52,7 @@ func (uc *RenderUseCases) UpdateTankAnimation(
 		return
 	}
 
-	animationName := tank.GetTankAnimationName()
+	animationName := uc.tankCommonUseCases.GetTankAnimationName(tank)
 	tankAnimation, err := uc.tilesUseCases.CreateTankAnimationTile(
 		animationName,
 		tank.IsEnemy(),

@@ -43,6 +43,12 @@ type StageState struct {
 	soundPlayerAdapter interfaces.ISoundPlayerAdapter
 
 	defeatSoundPlayed bool
+	debugEnabled      bool // Флаг дебаг-режима
+}
+
+// SetDebugEnabled устанавливает флаг дебаг-режима
+func (state *StageState) SetDebugEnabled(enabled bool) {
+	state.debugEnabled = enabled
 }
 
 func NewStageState(
@@ -119,9 +125,7 @@ func (state *StageState) SetUp() {
 
 		if playerTank != nil && i < len(state.inputAdapters) &&
 			state.inputAdapters[i] != nil {
-			if keyboardAdapter, ok := state.inputAdapters[i].(interface {
-				SetPlayerTank(*types.TankEntity)
-			}); ok {
+			if keyboardAdapter, ok := state.inputAdapters[i].(interfaces.IInputAdapterWithTank); ok {
 				keyboardAdapter.SetPlayerTank(playerTank)
 			}
 		}
@@ -150,6 +154,21 @@ func (state *StageState) Update() {
 		dt = 1.0 / tps
 	} else {
 		dt = 1.0 / 60.0
+	}
+
+	// Обработка дебаг-команд
+	// Клавиша 0 повышает уровень игрока (только в режиме дебага)
+	if state.debugEnabled && inpututil.IsKeyJustPressed(ebiten.KeyDigit0) {
+		if state.TankCommonUseCases != nil && state.RenderUseCases != nil {
+			playerTanks := state.TankCommonUseCases.GetAllPlayerTanks()
+			// Повышаем уровень всех активных танков игроков
+			for _, tank := range playerTanks {
+				if tank != nil && tank.IsActive() {
+					state.TankCommonUseCases.LevelUp(tank)
+					// UpdateTankAnimation вызывается внутри LevelUp
+				}
+			}
+		}
 	}
 
 	for _, adapter := range state.inputAdapters {
@@ -200,9 +219,7 @@ func (state *StageState) Update() {
 		for i, respawned := range respawnedTanks {
 			if respawned != nil && i < len(state.inputAdapters) &&
 				state.inputAdapters[i] != nil {
-				if keyboardAdapter, ok := state.inputAdapters[i].(interface {
-					SetPlayerTank(*types.TankEntity)
-				}); ok {
+				if keyboardAdapter, ok := state.inputAdapters[i].(interfaces.IInputAdapterWithTank); ok {
 					keyboardAdapter.SetPlayerTank(respawned)
 				}
 			}

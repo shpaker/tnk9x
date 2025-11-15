@@ -16,6 +16,7 @@ type TankActionsUseCases struct {
 	renderUseCases    interfaces.IRenderUseCases
 	mapUseCases       interfaces.IMapUseCases
 	soundUseCases     *use_cases.SoundUseCases
+	specsUseCases     interfaces.ISpecsUseCases
 }
 
 func NewTankActionsUseCases(
@@ -26,6 +27,7 @@ func NewTankActionsUseCases(
 	renderUseCases interfaces.IRenderUseCases,
 	mapUseCases interfaces.IMapUseCases,
 	soundUseCases *use_cases.SoundUseCases,
+	specsUseCases interfaces.ISpecsUseCases,
 ) *TankActionsUseCases {
 	return &TankActionsUseCases{
 		brakingService:    brakingService,
@@ -35,6 +37,7 @@ func NewTankActionsUseCases(
 		renderUseCases:    renderUseCases,
 		mapUseCases:       mapUseCases,
 		soundUseCases:     soundUseCases,
+		specsUseCases:     specsUseCases,
 	}
 }
 
@@ -99,7 +102,6 @@ func (uc *TankActionsUseCases) Move(tank *types.TankEntity) error {
 		return nil
 	}
 
-	tank.Speed = 32.0
 	tank.State = types.TankStateMoving
 	return nil
 }
@@ -158,7 +160,6 @@ func (uc *TankActionsUseCases) SetMaxYPosition(tank *types.TankEntity) {
 }
 
 func (uc *TankActionsUseCases) handleStopByCollision(tank *types.TankEntity) {
-	tank.Speed = 0
 	tank.Position.X = uc.coordinateService.RoundToNearestMultipleOf4(
 		tank.Position.X,
 	)

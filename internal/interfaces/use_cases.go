@@ -47,6 +47,13 @@ type ITankCommonUseCases interface {
 	GetAllTanks() []*types.TankEntity
 	GetAllPlayerTanks() []*types.TankEntity
 	IsAnyPlayerTankMoving() bool
+	LevelUp(tank *types.TankEntity)
+	LevelDown(tank *types.TankEntity)
+	GetTankAnimationName(tank *types.TankEntity) string
+}
+
+type ITankAnimationNameProvider interface {
+	GetTankAnimationName(tank *types.TankEntity) string
 }
 
 type IRenderUseCases interface {
@@ -60,6 +67,11 @@ type IRenderUseCases interface {
 type ITankLifecycleUseCases interface {
 	OnStageSetUpEnemiesSpawn() ([3]*types.TankEntity, error)
 	SpawnEnemy(index *int, ignoreRespawnDelay bool) (*types.TankEntity, error)
+	SpawnEnemyWithLevel(
+		index *int,
+		ignoreRespawnDelay bool,
+		remainingEnemies uint,
+	) (*types.TankEntity, error)
 	SpawnPlayer1() (*types.TankEntity, error)
 	GetPlayerTank(num types.PlayerTankNum) *types.TankEntity
 	SetPlayerTank(num types.PlayerTankNum, tank *types.TankEntity)
@@ -113,4 +125,9 @@ type IStageUseCases interface {
 	IsStageWon() bool
 	IsStageLost() bool
 	IsStageFinished() bool
+}
+
+type ISpecsUseCases interface {
+	GetTankSpecs(isEnemy bool, level uint) *types.SpecsEntity
+	GetEnemyLevelByRemainingCount(remainingEnemies uint) uint
 }

@@ -1,7 +1,5 @@
 package types
 
-import "fmt"
-
 type PlayerTankNum int
 
 const (
@@ -16,16 +14,6 @@ const (
 	TankRolePlayer2 TankRole = "player2" // Игрок 2
 	TankRoleEnemy   TankRole = "enemy"   // Враг
 )
-
-type TankModelName string
-
-const (
-	TankModelNameRegular TankModelName = "regular" // Обычный танк
-)
-
-type TankModel struct {
-	name TankModelName
-}
 
 type TankState int
 
@@ -43,12 +31,11 @@ type TankEntity struct {
 	Size          Size
 	Altitude      Altitude
 	Image         IImageProvider
-	Speed         float64
 	Direction     Direction
 	State         TankState
 	NextDirection *Direction
 	role          TankRole
-	model         TankModel
+	specs         *SpecsEntity // Спецификации танка
 	withBonus     bool
 	blinkCounter  int  // Счетчик тиков для мигания
 	blinkFlag     bool // Флаг видимости
@@ -62,14 +49,25 @@ func NewDefaultTankEntity(role TankRole, direction Direction) TankEntity {
 			Height: 16,
 		},
 		Altitude:  SURFACE,
-		Speed:     0,
 		Direction: direction,
 		State:     TankStateSpawning,
 		role:      role,
-		model: TankModel{
-			name: TankModelNameRegular,
-		},
+		specs:     nil, // Будет установлено при создании танка
 	}
+}
+
+func (t *TankEntity) GetSpecs() *SpecsEntity {
+	if t == nil {
+		return nil
+	}
+	return t.specs
+}
+
+func (t *TankEntity) SetSpecs(specs *SpecsEntity) {
+	if t == nil {
+		return
+	}
+	t.specs = specs
 }
 
 func (t *TankEntity) IsEnemy() bool {
@@ -112,41 +110,7 @@ func (t *TankEntity) IsDestroyed() bool {
 }
 
 func (t *TankEntity) IsStopped() bool {
-	return t.Speed == 0 || t.State == TankStateStopped
-}
-
-func (t *TankEntity) GetTankAnimationName() string {
-	if t == nil {
-		return "player1_regular_tank_up"
-	}
-
-	modelName := string(t.model.name)
-	if modelName == "" {
-		modelName = "regular"
-	}
-
-	roleStr := string(t.role)
-	if roleStr == "" {
-		roleStr = "player1"
-	}
-
-	prefix := roleStr + "_" + modelName
-
-	var direction string
-	switch t.Direction {
-	case DirectionUp:
-		direction = "up"
-	case DirectionDown:
-		direction = "down"
-	case DirectionLeft:
-		direction = "left"
-	case DirectionRight:
-		direction = "right"
-	default:
-		direction = "up"
-	}
-
-	return fmt.Sprintf("%s_tank_%s", prefix, direction)
+	return t.State == TankStateStopped
 }
 
 func PlayerTankNumToRole(num PlayerTankNum) TankRole {

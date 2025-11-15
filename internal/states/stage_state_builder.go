@@ -102,12 +102,15 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 	// Создаем SoundUseCases для использования в других use cases
 	soundUseCases := use_cases.NewSoundUseCases()
 
+	// Создаем SpecsUseCases для управления характеристиками танков
+	specsUseCases := use_cases.NewSpecsUseCases()
+
 	tilesUseCasesWithAnimations, err := b.buildTileServices()
 	if err != nil {
 		return nil, err
 	}
 
-	bulletUseCases, baseSizePx, err := b.buildBulletUseCases()
+	bulletUseCases, baseSizePx, err := b.buildBulletUseCases(specsUseCases)
 	if err != nil {
 		return nil, err
 	}
@@ -116,23 +119,31 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 
 	enemyRespawnDelay := b.config.GetEnemyRespawnDelayTicks()
 
-	renderUseCases := use_cases.NewRenderUseCases(
-		tilesUseCasesWithAnimations,
-	)
-
+	// Создаем временный renderUseCases для tankCommonUseCases
+	// Он будет обновлен после создания полного renderUseCases
 	tankCommonUseCases := tank_use_cases.NewTankCommonUseCases(
 		bulletUseCases,
 		b.tankBrakingService,
 		b.coordinateService,
-		renderUseCases,
+		nil, // renderUseCases будет установлен позже
 		b.gameRepository.GetTanksRepository(),
+		specsUseCases,
 	)
+
+	renderUseCases := use_cases.NewRenderUseCases(
+		tilesUseCasesWithAnimations,
+		tankCommonUseCases,
+	)
+
+	// Обновляем renderUseCases в tankCommonUseCases
+	tankCommonUseCases.SetRenderUseCases(renderUseCases)
 
 	tankLifecycleUseCases := tank_use_cases.NewTankLifecycleUseCases(
 		tilesUseCasesWithAnimations,
 		renderUseCases,
 		tankCommonUseCases,
 		enemyRespawnDelay,
+		specsUseCases,
 	)
 
 	bonusTilesUseCasesForMap, err := b.buildBonusTilesUseCases()
@@ -155,6 +166,7 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 		renderUseCases,
 		mapUseCases,
 		soundUseCases,
+		specsUseCases,
 	)
 
 	hqTileService := services.NewTileServiceWithSpecialRepos(
@@ -248,6 +260,7 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 		bonusesRepository,
 		b.config,
 		bonusTilesUseCasesForBonus,
+		renderUseCases,
 		soundUseCases,
 	)
 
@@ -262,6 +275,7 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 		entitiesCollisionService,
 		bonusUseCases,
 		soundUseCases,
+		stageSession,
 	)
 	if err != nil {
 		return nil, err
@@ -415,6 +429,7 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 	stageState.bonusesRepository = b.gameRepository.GetBonusesRepository()
 	stageState.soundUseCases = soundUseCases
 	stageState.soundPlayerAdapter = soundAdapter
+	stageState.debugEnabled = false // По умолчанию выключен, будет установлен из app.go
 
 	return stageState, nil
 }
@@ -453,7 +468,9 @@ func (b *StageStateBuilder) buildTileServices() (*use_cases.TilesUseCases, error
 	return tilesUseCasesWithAnimations, nil
 }
 
-func (b *StageStateBuilder) buildBulletUseCases() (*use_cases.BulletUseCases, uint, error) {
+func (b *StageStateBuilder) buildBulletUseCases(
+	specsUseCases interfaces.ISpecsUseCases,
+) (*use_cases.BulletUseCases, uint, error) {
 	baseSizePx := b.config.GetBaseSizePx()
 
 	bulletTileService := services.NewTileService(
@@ -471,6 +488,7 @@ func (b *StageStateBuilder) buildBulletUseCases() (*use_cases.BulletUseCases, ui
 		b.gameRepository.GetBulletsRepository(),
 		bulletTilesUseCases,
 		baseSizePx,
+		specsUseCases,
 	)
 
 	return bulletUseCases, baseSizePx, nil
@@ -535,6 +553,7 @@ func (b *StageStateBuilder) buildCollisionServices(
 	entitiesCollisionService interfaces.IEntitiesCollisionService,
 	bonusUseCases *use_cases.BonusUseCases,
 	soundUseCases *use_cases.SoundUseCases,
+	stageSession *session_entities.StageSessionEntity,
 ) (*use_cases.CollisionUseCases, interfaces.IHQUseCases, error) {
 	bulletCollisionService := collision_services.NewBulletCollisionService(
 		int(b.config.GetTileBaseSize()),
@@ -566,6 +585,7 @@ func (b *StageStateBuilder) buildCollisionServices(
 		bonusUseCases,
 		bonusesRepository,
 		soundUseCases,
+		stageSession,
 	)
 
 	return collisionUseCases, hqUseCases, nil

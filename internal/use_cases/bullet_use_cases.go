@@ -9,17 +9,20 @@ type BulletUseCases struct {
 	bulletsRepository interfaces.IBulletsRepository
 	tilesUseCases     interfaces.ITilesUseCases
 	tankSpriteSize    uint
+	specsUseCases     interfaces.ISpecsUseCases
 }
 
 func NewBulletUseCases(
 	bulletsRepository interfaces.IBulletsRepository,
 	tilesUseCases interfaces.ITilesUseCases,
 	tankSpriteSize uint,
+	specsUseCases interfaces.ISpecsUseCases,
 ) *BulletUseCases {
 	return &BulletUseCases{
 		bulletsRepository: bulletsRepository,
 		tilesUseCases:     tilesUseCases,
 		tankSpriteSize:    tankSpriteSize,
+		specsUseCases:     specsUseCases,
 	}
 }
 
@@ -47,6 +50,9 @@ func (uc *BulletUseCases) ShootBullet(tank *types.TankEntity) error {
 		bulletX = tank.Position.X + float64(uc.tankSpriteSize)/2
 	}
 
+	// Получаем спецификации танка для пули
+	specs := tank.GetSpecs()
+
 	bullet := types.NewBulletEntity(
 		types.Position{
 			X: bulletX,
@@ -55,8 +61,8 @@ func (uc *BulletUseCases) ShootBullet(tank *types.TankEntity) error {
 		types.Size{Width: 4, Height: 4},
 		types.SURFACE,
 		bulletImageGetter,
-		120.0,
 		tank.Direction,
+		specs,
 		tank,
 	)
 
@@ -72,7 +78,7 @@ func (uc *BulletUseCases) UpdateBullets(dt float64) error {
 			continue
 		}
 
-		delta := bullet.Speed * dt
+		delta := bullet.GetSpeed() * dt
 		switch bullet.Direction {
 		case types.DirectionUp:
 			bullet.Position.Y -= delta

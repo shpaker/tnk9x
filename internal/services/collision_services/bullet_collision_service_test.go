@@ -24,8 +24,8 @@ func TestBulletCollisionService_CheckBulletBlockCollision(t *testing.T) {
 			types.Size{Width: 4, Height: 4},
 			types.SURFACE,
 			nil,
-			0,
 			types.DirectionUp,
+			nil,
 			nil,
 		)
 
@@ -49,8 +49,8 @@ func TestBulletCollisionService_CheckBulletBlockCollision(t *testing.T) {
 			types.Size{Width: 4, Height: 4},
 			types.SURFACE,
 			nil,
-			0,
 			types.DirectionUp,
+			nil,
 			nil,
 		)
 
@@ -86,8 +86,8 @@ func TestBulletCollisionService_CheckBulletTankCollision(t *testing.T) {
 			types.Size{Width: 4, Height: 4},
 			types.SURFACE,
 			nil,
-			0,
 			types.DirectionUp,
+			nil,
 			&owner,
 		)
 
@@ -118,8 +118,8 @@ func TestBulletCollisionService_CheckBulletTankCollision(t *testing.T) {
 			types.Size{Width: 4, Height: 4},
 			types.SURFACE,
 			nil,
-			0,
 			types.DirectionUp,
+			nil,
 			&owner,
 		)
 
@@ -154,8 +154,8 @@ func TestBulletCollisionService_CheckBulletHQCollision(t *testing.T) {
 			types.Size{Width: 4, Height: 4},
 			types.SURFACE,
 			nil,
-			0,
 			types.DirectionUp,
+			nil,
 			&owner,
 		)
 
@@ -184,8 +184,8 @@ func TestBulletCollisionService_CheckBulletHQCollision(t *testing.T) {
 			types.Size{Width: 4, Height: 4},
 			types.SURFACE,
 			nil,
-			0,
 			types.DirectionUp,
+			nil,
 			&owner,
 		)
 

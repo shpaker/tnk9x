@@ -21,8 +21,8 @@ func TestEntitiesCollisionService_CheckColliders(t *testing.T) {
 			types.Size{Width: 4, Height: 4},
 			types.SURFACE,
 			nil,
-			0,
 			types.DirectionUp,
+			nil,
 			nil,
 		)
 
@@ -44,8 +44,8 @@ func TestEntitiesCollisionService_CheckColliders(t *testing.T) {
 			types.Size{Width: 4, Height: 4},
 			types.SURFACE,
 			nil,
-			0,
 			types.DirectionUp,
+			nil,
 			nil,
 		)
 

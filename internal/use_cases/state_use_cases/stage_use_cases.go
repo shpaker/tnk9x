@@ -224,7 +224,17 @@ func (uc *StageUseCases) TrySpawnEnemy() *types.TankEntity {
 		return nil
 	}
 
-	spawned, err := uc.tankLifecycleUseCases.SpawnEnemy(nil, false)
+	// Получаем количество оставшихся врагов для определения уровня
+	remainingEnemies := uint(0)
+	if uc.stageSession != nil {
+		remainingEnemies = uc.stageSession.GetRemainingEnemies()
+	}
+
+	spawned, err := uc.tankLifecycleUseCases.SpawnEnemyWithLevel(
+		nil,
+		false,
+		remainingEnemies,
+	)
 	if err != nil || spawned == nil {
 		return nil
 	}

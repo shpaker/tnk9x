@@ -32,7 +32,12 @@ func (c *aiTypeConverter) TankToLua(
 	t.RawSetString("x", lua.LNumber(tank.Position.X))
 	t.RawSetString("y", lua.LNumber(tank.Position.Y))
 	t.RawSetString("direction", lua.LNumber(int(tank.Direction)))
-	t.RawSetString("speed", lua.LNumber(tank.Speed))
+	// Скорость получается из спецификаций танка
+	speed := float64(32.0) // Значение по умолчанию
+	if tank.GetSpecs() != nil {
+		speed = tank.GetSpecs().GetSpeed()
+	}
+	t.RawSetString("speed", lua.LNumber(speed))
 
 	return t, nil
 }

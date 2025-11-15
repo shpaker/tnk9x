@@ -15,6 +15,7 @@ type BonusUseCases struct {
 	bonusesRepository     interfaces.IBonusesRepository
 	configProvider        interfaces.IConfigProvider
 	tilesUseCases         interfaces.ITilesUseCases
+	renderUseCases        interfaces.IRenderUseCases
 	soundUseCases         *SoundUseCases
 }
 
@@ -25,6 +26,7 @@ func NewBonusUseCases(
 	bonusesRepository interfaces.IBonusesRepository,
 	configProvider interfaces.IConfigProvider,
 	tilesUseCases interfaces.ITilesUseCases,
+	renderUseCases interfaces.IRenderUseCases,
 	soundUseCases *SoundUseCases,
 ) *BonusUseCases {
 	return &BonusUseCases{
@@ -34,6 +36,7 @@ func NewBonusUseCases(
 		bonusesRepository:     bonusesRepository,
 		configProvider:        configProvider,
 		tilesUseCases:         tilesUseCases,
+		renderUseCases:        renderUseCases,
 		soundUseCases:         soundUseCases,
 	}
 }
@@ -59,6 +62,7 @@ func (uc *BonusUseCases) Apply(
 		uc.applyShovel(tank)
 	case types.BonusTypeStar:
 		uc.applyStar(tank)
+		uc.removeBonus(bonus)
 	case types.BonusTypeGrenade:
 		uc.applyGrenade(tank)
 		uc.removeBonus(bonus)
@@ -81,7 +85,19 @@ func (uc *BonusUseCases) applyShovel(tank *types.TankEntity) {
 }
 
 func (uc *BonusUseCases) applyStar(tank *types.TankEntity) {
-	// Улучшение танка - логика будет добавлена позже
+	// Улучшение танка - повышаем уровень на единицу
+	if tank == nil {
+		return
+	}
+
+	// Повышаем уровень танка (максимум 3)
+	if uc.tankCommonUseCases != nil {
+		uc.tankCommonUseCases.LevelUp(tank)
+	}
+	// Обновляем анимацию танка для отображения нового уровня
+	if uc.renderUseCases != nil {
+		uc.renderUseCases.UpdateTankAnimation(tank)
+	}
 }
 
 func (uc *BonusUseCases) applyGrenade(tank *types.TankEntity) {
@@ -126,6 +142,7 @@ func (uc *BonusUseCases) GetRandomBonusType() types.BonusType {
 	bonusTypes := []types.BonusType{
 		types.BonusTypeGrenade,
 		types.BonusTypeTank,
+		types.BonusTypeStar,
 	}
 	return bonusTypes[rand.Intn(len(bonusTypes))]
 }

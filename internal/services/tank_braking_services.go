@@ -96,7 +96,12 @@ func (s *TankBrakingService) moveTowardsTarget(
 	ctx brakingMovementContext,
 	dt float64,
 ) {
-	delta := tank.Speed * dt
+	// Получаем скорость танка из спецификаций
+	speed := float64(32.0) // Значение по умолчанию
+	if tank.GetSpecs() != nil {
+		speed = tank.GetSpecs().GetSpeed()
+	}
+	delta := speed * dt
 
 	if ctx.isMovingForward {
 		s.moveForwardToTarget(tank, ctx, delta)
@@ -148,7 +153,6 @@ func (s *TankBrakingService) moveBackwardToTarget(
 }
 
 func (s *TankBrakingService) completeBraking(tank *types.TankEntity) {
-	tank.Speed = 0
 	s.finishBraking(tank)
 }
 
@@ -157,9 +161,7 @@ func (s *TankBrakingService) finishBraking(tank *types.TankEntity) {
 		tank.Direction = *tank.NextDirection
 		tank.NextDirection = nil
 		tank.State = types.TankStateMoving
-		tank.Speed = 32.0
 	} else {
-
 		tank.State = types.TankStateStopped
 		tank.NextDirection = nil
 	}

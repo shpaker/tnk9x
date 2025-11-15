@@ -47,6 +47,10 @@ func (app *App) Update() error {
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyF1) {
 		Debug = !Debug
+		// Обновляем флаг дебаг-режима в текущем состоянии (если это StageState)
+		if stageState, ok := app.State.(*states.StageState); ok {
+			stageState.SetDebugEnabled(Debug)
+		}
 	}
 
 	app.State.Update()
@@ -226,6 +230,9 @@ func (app *App) createStageState(
 	if err != nil {
 		return nil, err
 	}
+
+	// Устанавливаем флаг дебаг-режима
+	stageStatePtr.SetDebugEnabled(Debug)
 
 	return stageStatePtr, nil
 }

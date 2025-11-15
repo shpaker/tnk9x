@@ -2,6 +2,7 @@ package tank_use_cases
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/shpaker/tnk25/internal/interfaces"
 	"github.com/shpaker/tnk25/internal/types"
@@ -13,6 +14,7 @@ type TankCommonUseCases struct {
 	bulletUseCases    interfaces.IBulletUseCases
 	renderUseCases    interfaces.IRenderUseCases
 	tanksRepository   interfaces.ITanksRepository
+	specsUseCases     interfaces.ISpecsUseCases
 }
 
 func NewTankCommonUseCases(
@@ -21,6 +23,7 @@ func NewTankCommonUseCases(
 	coordinateService interfaces.ICoordinateService,
 	renderUseCases interfaces.IRenderUseCases,
 	tanksRepository interfaces.ITanksRepository,
+	specsUseCases interfaces.ISpecsUseCases,
 ) *TankCommonUseCases {
 	uc := &TankCommonUseCases{
 		brakingService:    brakingService,
@@ -28,6 +31,7 @@ func NewTankCommonUseCases(
 		bulletUseCases:    bulletUseCases,
 		renderUseCases:    renderUseCases,
 		tanksRepository:   tanksRepository,
+		specsUseCases:     specsUseCases,
 	}
 
 	return uc
@@ -62,7 +66,12 @@ func (uc *TankCommonUseCases) Update(tank *types.TankEntity, dt float64) error {
 	}
 
 	if tank.State == types.TankStateMoving {
-		delta := tank.Speed * dt
+		// Получаем скорость танка из спецификаций
+		speed := float64(32.0) // Значение по умолчанию
+		if tank.GetSpecs() != nil {
+			speed = tank.GetSpecs().GetSpeed()
+		}
+		delta := speed * dt
 
 		switch tank.Direction {
 		case types.DirectionUp:
@@ -119,4 +128,97 @@ func (uc *TankCommonUseCases) IsAnyPlayerTankMoving() bool {
 		}
 	}
 	return false
+}
+
+// LevelUp повышает уровень танка на единицу (максимум 3)
+func (uc *TankCommonUseCases) LevelUp(tank *types.TankEntity) {
+	if tank == nil || tank.GetSpecs() == nil {
+		return
+	}
+	currentLevel := tank.GetSpecs().GetLevel()
+	if currentLevel < 3 {
+		// Получаем новые спецификации для следующего уровня
+		newSpecs := uc.specsUseCases.GetTankSpecs(
+			tank.IsEnemy(),
+			currentLevel+1,
+		)
+		if newSpecs != nil {
+			tank.SetSpecs(newSpecs)
+			// Обновляем анимацию танка для отображения нового уровня
+			if uc.renderUseCases != nil {
+				uc.renderUseCases.UpdateTankAnimation(tank)
+			}
+		}
+	}
+}
+
+// LevelDown понижает уровень танка на единицу (минимум 0)
+func (uc *TankCommonUseCases) LevelDown(tank *types.TankEntity) {
+	if tank == nil || tank.GetSpecs() == nil {
+		return
+	}
+	currentLevel := tank.GetSpecs().GetLevel()
+	if currentLevel > 0 {
+		// Получаем новые спецификации для предыдущего уровня
+		newSpecs := uc.specsUseCases.GetTankSpecs(
+			tank.IsEnemy(),
+			currentLevel-1,
+		)
+		if newSpecs != nil {
+			tank.SetSpecs(newSpecs)
+			// Обновляем анимацию танка для отображения нового уровня
+			if uc.renderUseCases != nil {
+				uc.renderUseCases.UpdateTankAnimation(tank)
+			}
+		}
+	}
+}
+
+// GetTankAnimationName возвращает имя анимации танка на основе его спецификаций
+func (uc *TankCommonUseCases) GetTankAnimationName(
+	tank *types.TankEntity,
+) string {
+	if tank == nil {
+		return "player1_level1_tank_up"
+	}
+
+	// Получаем уровень танка из спецификаций
+	tankLevel := uint(0)
+	if tank.GetSpecs() != nil {
+		tankLevel = tank.GetSpecs().GetLevel()
+	}
+	if tankLevel > 3 {
+		tankLevel = 3
+	}
+	modelName := fmt.Sprintf("level%d", tankLevel+1)
+
+	roleStr := string(tank.GetRole())
+	if roleStr == "" {
+		roleStr = "player1"
+	}
+
+	prefix := roleStr + "_" + modelName
+
+	var direction string
+	switch tank.Direction {
+	case types.DirectionUp:
+		direction = "up"
+	case types.DirectionDown:
+		direction = "down"
+	case types.DirectionLeft:
+		direction = "left"
+	case types.DirectionRight:
+		direction = "right"
+	default:
+		direction = "up"
+	}
+
+	return fmt.Sprintf("%s_tank_%s", prefix, direction)
+}
+
+// SetRenderUseCases устанавливает renderUseCases
+func (uc *TankCommonUseCases) SetRenderUseCases(
+	renderUseCases interfaces.IRenderUseCases,
+) {
+	uc.renderUseCases = renderUseCases
 }

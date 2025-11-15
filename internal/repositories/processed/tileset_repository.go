@@ -47,9 +47,7 @@ func NewTilesetDataRepository(
 	tileSize := config.Size
 	for imageID, coords := range config.Images {
 
-		spriteImage := img.(interface {
-			SubImage(r image.Rectangle) image.Image
-		}).SubImage(
+		spriteImage := img.(interfaces.ISubImageProvider).SubImage(
 			image.Rectangle{
 				Min: image.Point{
 					X: coords[0] * tileSize,

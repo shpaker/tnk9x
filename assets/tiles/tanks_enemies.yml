@@ -2,27 +2,93 @@
 size: 16
 
 images:
-  # Игрок 1 (желтый) - базовый танк
-  enemy_regular_up_1: [0, 0]
-  enemy_regular_up_2: [1, 0]
-  enemy_regular_left_1: [2, 0]
-  enemy_regular_left_2: [3, 0]
-  enemy_regular_down_1: [4, 0]
-  enemy_regular_down_2: [5, 0]
-  enemy_regular_right_1: [6, 0]
-  enemy_regular_right_2: [7, 0]
+  # Враги - уровень 1
+  enemy_level1_up_1: [0, 0]
+  enemy_level1_up_2: [1, 0]
+  enemy_level1_left_1: [2, 0]
+  enemy_level1_left_2: [3, 0]
+  enemy_level1_down_1: [4, 0]
+  enemy_level1_down_2: [5, 0]
+  enemy_level1_right_1: [6, 0]
+  enemy_level1_right_2: [7, 0]
+  # Враги - уровень 2
+  enemy_level2_up_1: [0, 1]
+  enemy_level2_up_2: [1, 1]
+  enemy_level2_left_1: [2, 1]
+  enemy_level2_left_2: [3, 1]
+  enemy_level2_down_1: [4, 1]
+  enemy_level2_down_2: [5, 1]
+  enemy_level2_right_1: [6, 1]
+  enemy_level2_right_2: [7, 1]
+  # Враги - уровень 3
+  enemy_level3_up_1: [0, 2]
+  enemy_level3_up_2: [1, 2]
+  enemy_level3_left_1: [2, 2]
+  enemy_level3_left_2: [3, 2]
+  enemy_level3_down_1: [4, 2]
+  enemy_level3_down_2: [5, 2]
+  enemy_level3_right_1: [6, 2]
+  enemy_level3_right_2: [7, 2]
+  # Враги - уровень 4
+  enemy_level4_up_1: [0, 3]
+  enemy_level4_up_2: [1, 3]
+  enemy_level4_left_1: [2, 3]
+  enemy_level4_left_2: [3, 3]
+  enemy_level4_down_1: [4, 3]
+  enemy_level4_down_2: [5, 3]
+  enemy_level4_right_1: [6, 3]
+  enemy_level4_right_2: [7, 3]
 
 animations:
-  # Игрок 1 (желтый) - базовый танк
-  enemy_regular_tank_up:
+  # Враги - уровень 1
+  enemy_level1_tank_up:
     duration: 10
-    frames: [enemy_regular_up_1, enemy_regular_up_2]
-  enemy_regular_tank_left:
+    frames: [enemy_level1_up_1, enemy_level1_up_2]
+  enemy_level1_tank_left:
     duration: 10
-    frames: [enemy_regular_left_1, enemy_regular_left_2]
-  enemy_regular_tank_down:
+    frames: [enemy_level1_left_1, enemy_level1_left_2]
+  enemy_level1_tank_down:
     duration: 10
-    frames: [enemy_regular_down_1, enemy_regular_down_2]
-  enemy_regular_tank_right:
+    frames: [enemy_level1_down_1, enemy_level1_down_2]
+  enemy_level1_tank_right:
     duration: 10
-    frames: [enemy_regular_right_1, enemy_regular_right_2]
+    frames: [enemy_level1_right_1, enemy_level1_right_2]
+  # Враги - уровень 2
+  enemy_level2_tank_up:
+    duration: 10
+    frames: [enemy_level2_up_1, enemy_level2_up_2]
+  enemy_level2_tank_left:
+    duration: 10
+    frames: [enemy_level2_left_1, enemy_level2_left_2]
+  enemy_level2_tank_down:
+    duration: 10
+    frames: [enemy_level2_down_1, enemy_level2_down_2]
+  enemy_level2_tank_right:
+    duration: 10
+    frames: [enemy_level2_right_1, enemy_level2_right_2]
+  # Враги - уровень 3
+  enemy_level3_tank_up:
+    duration: 10
+    frames: [enemy_level3_up_1, enemy_level3_up_2]
+  enemy_level3_tank_left:
+    duration: 10
+    frames: [enemy_level3_left_1, enemy_level3_left_2]
+  enemy_level3_tank_down:
+    duration: 10
+    frames: [enemy_level3_down_1, enemy_level3_down_2]
+  enemy_level3_tank_right:
+    duration: 10
+    frames: [enemy_level3_right_1, enemy_level3_right_2]
+  # Враги - уровень 4
+  enemy_level4_tank_up:
+    duration: 10
+    frames: [enemy_level4_up_1, enemy_level4_up_2]
+  enemy_level4_tank_left:
+    duration: 10
+    frames: [enemy_level4_left_1, enemy_level4_left_2]
+  enemy_level4_tank_down:
+    duration: 10
+    frames: [enemy_level4_down_1, enemy_level4_down_2]
+  enemy_level4_tank_right:
+    duration: 10
+    frames: [enemy_level4_right_1, enemy_level4_right_2]

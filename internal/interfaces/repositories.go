@@ -111,3 +111,7 @@ type IFileRepository interface {
 
 	CountFiles(dirPath string, pattern string) (int, error)
 }
+
+type ISubImageProvider interface {
+	SubImage(r image.Rectangle) image.Image
+}

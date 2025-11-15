@@ -21,11 +21,26 @@ func (br *BulletsRepository) AddBullet(bullet *types.BulletEntity) error {
 		return fmt.Errorf("bullet owner is nil")
 	}
 
+	owner := bullet.GetOwner()
+
+	// Получаем лимит пуль из спецификаций пули
+	bulletLimit := uint(1) // Значение по умолчанию
+	if bullet.GetSpecs() != nil {
+		bulletLimit = bullet.GetSpecs().GetBulletsLimit()
+	}
+
+	// Подсчитываем количество активных пуль у владельца
+	activeBulletsCount := uint(0)
 	for _, existingBullet := range br.bullets {
 		if existingBullet != nil &&
-			existingBullet.GetOwner() == bullet.GetOwner() {
-			return fmt.Errorf("tank already has a bullet")
+			existingBullet.GetOwner() == owner {
+			activeBulletsCount++
 		}
+	}
+
+	// Проверяем, не превышен ли лимит
+	if activeBulletsCount >= bulletLimit {
+		return fmt.Errorf("tank bullet limit exceeded")
 	}
 
 	br.bullets = append(br.bullets, bullet)

@@ -44,12 +44,8 @@ func NewStageSelectState(
 	fontUseCases interfaces.IFontUseCases,
 	mapsRepository interfaces.IMapsDataRepository,
 ) (*StageSelectState, error) {
-	type screenConfig interface {
-		ScreenWidth() int
-		ScreenHeight() int
-	}
 	var screenWidth, screenHeight int
-	if screenCfg, ok := config.(screenConfig); ok {
+	if screenCfg, ok := config.(interfaces.IScreenConfig); ok {
 		screenWidth = screenCfg.ScreenWidth()
 		screenHeight = screenCfg.ScreenHeight()
 	} else {
