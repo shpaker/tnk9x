@@ -22,8 +22,12 @@ A modern remake and tribute to the classic arcade game Battle City (NES, 1985), 
 - [x] Player lives system
 - [x] Player respawn mechanism
 - [x] Basic bonuses (grenade, tank)
-- [ ] Full bonus implementation (helmet, timer, shovel, star)
-- [ ] Player power-up system (bullet speed, armor)
+- [x] Star bonus (tank level up)
+- [x] Tank level system (0-3 levels)
+- [x] Tank level affects visual appearance
+- [x] Player damage system (level down on hit, explode at level 0)
+- [ ] Full bonus implementation (helmet, timer, shovel)
+- [x] Player power-up system (bullet speed, reinforced bullets, bullet limit)
 
 ### Enemies & AI
 - [x] Enemy spawning system
@@ -31,6 +35,8 @@ A modern remake and tribute to the classic arcade game Battle City (NES, 1985), 
 - [x] Lua-based AI scripting
 - [x] Enemies with bonus indicators
 - [x] Enemy tracking and lifecycle management
+- [x] Dynamic enemy level system based on remaining enemies count
+- [x] Enemy level progression (levels 0-3 with probability distribution)
 - [ ] Different enemy types (fast, armored, heavy)
 - [ ] Enemy AI difficulty scaling
 
@@ -45,6 +51,9 @@ A modern remake and tribute to the classic arcade game Battle City (NES, 1985), 
 - [x] Level selection screen
 - [x] Pause overlay
 - [x] Result overlays (victory/defeat)
+- [x] Debug information display (FPS, TPS, player lives, enemy count)
+- [x] Debug mode toggle (F1 key)
+- [x] Debug commands (key 0 - level up player tanks)
 - [ ] Loading screen on game start
 - [ ] HUD (lives counter, score display)
 - [ ] Main menu screen
@@ -62,6 +71,9 @@ A modern remake and tribute to the classic arcade game Battle City (NES, 1985), 
 - [x] Clean Architecture implementation
 - [x] Interface-based dependency injection
 - [x] Repository pattern for data access
+- [x] Named interfaces (no anonymous interfaces)
+- [x] Tank specifications system (SpecsEntity)
+- [x] Tank specs use cases (SpecsUseCases)
 - [x] Unit tests for collision services
 - [x] Unit tests for audio system
 - [ ] Extended test coverage (>80%)
