@@ -581,6 +581,7 @@ func (b *StageStateBuilder) buildCollisionServices(
 		b.wallCollisionService,
 		bulletCollisionService,
 		entitiesCollisionService,
+		b.coordinateService,
 		hqUseCases,
 		bonusUseCases,
 		bonusesRepository,

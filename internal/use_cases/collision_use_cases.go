@@ -17,6 +17,7 @@ type CollisionUseCases struct {
 	wallCollisionService     interfaces.IWallCollisionService
 	bulletCollisionService   interfaces.IBulletCollisionService
 	entitiesCollisionService interfaces.IEntitiesCollisionService
+	coordinateService        interfaces.ICoordinateService
 	bonusUseCases            *BonusUseCases
 	bonusesRepository        interfaces.IBonusesRepository
 	soundUseCases            *SoundUseCases
@@ -33,6 +34,7 @@ func NewCollisionUseCases(
 	wallCollisionService interfaces.IWallCollisionService,
 	bulletCollisionService interfaces.IBulletCollisionService,
 	entitiesCollisionService interfaces.IEntitiesCollisionService,
+	coordinateService interfaces.ICoordinateService,
 	hqUseCases interfaces.IHQUseCases,
 	bonusUseCases *BonusUseCases,
 	bonusesRepository interfaces.IBonusesRepository,
@@ -50,6 +52,7 @@ func NewCollisionUseCases(
 		wallCollisionService:     wallCollisionService,
 		bulletCollisionService:   bulletCollisionService,
 		entitiesCollisionService: entitiesCollisionService,
+		coordinateService:        coordinateService,
 		bonusUseCases:            bonusUseCases,
 		bonusesRepository:        bonusesRepository,
 		soundUseCases:            soundUseCases,
@@ -278,17 +281,33 @@ func (uc *CollisionUseCases) checkTankTankCollision(
 	tank *types.TankEntity,
 	allTanks []*types.TankEntity,
 ) {
+	// Вычисляем целевую позицию танка по сетке
+	targetPos := uc.getTankTargetGridPosition(tank)
+
+	// Создаем временный танк с целевой позицией для проверки коллизии
+	tankWithTargetPos := *tank
+	tankWithTargetPos.Position = targetPos
+
 	for _, otherTank := range allTanks {
 
 		if tank == otherTank || otherTank.IsDestroyed() {
 			continue
 		}
 
-		if uc.entitiesCollisionService.CheckColliders(tank, otherTank) {
+		// Вычисляем целевую позицию другого танка по сетке
+		otherTargetPos := uc.getTankTargetGridPosition(otherTank)
+		otherTankWithTargetPos := *otherTank
+		otherTankWithTargetPos.Position = otherTargetPos
+
+		// Проверяем коллизию с целевыми позициями
+		if uc.entitiesCollisionService.CheckColliders(
+			&tankWithTargetPos,
+			&otherTankWithTargetPos,
+		) {
 
 			correctedPos, err := uc.entitiesCollisionService.ResolveCollisionPosition(
-				tank,
-				otherTank,
+				&tankWithTargetPos,
+				&otherTankWithTargetPos,
 				tank.Direction,
 			)
 			if err != nil {
@@ -300,6 +319,87 @@ func (uc *CollisionUseCases) checkTankTankCollision(
 			uc.tankActions.Stop(otherTank, true)
 			return
 		}
+	}
+}
+
+// getTankTargetGridPosition вычисляет целевую позицию танка по сетке
+// на основе его текущей позиции и направления движения
+func (uc *CollisionUseCases) getTankTargetGridPosition(
+	tank *types.TankEntity,
+) types.Position {
+	if tank == nil {
+		return types.Position{}
+	}
+	if uc.coordinateService == nil {
+		return tank.Position
+	}
+
+	// Если танк не движется, возвращаем текущую позицию, округленную до сетки
+	if tank.State != types.TankStateMoving &&
+		tank.State != types.TankStateBraking {
+		return types.Position{
+			X: uc.coordinateService.RoundToNearestMultipleOf4(tank.Position.X),
+			Y: uc.coordinateService.RoundToNearestMultipleOf4(tank.Position.Y),
+		}
+	}
+
+	// Вычисляем целевую позицию на основе направления движения
+	targetPos := tank.Position
+
+	switch tank.Direction {
+	case types.DirectionUp:
+		// Движение вверх - округляем Y до ближайшего меньшего кратного 4
+		targetPos.Y = uc.getNearestMultipleOf4InDirection(
+			tank.Position.Y,
+			false,
+		)
+	case types.DirectionDown:
+		// Движение вниз - округляем Y до ближайшего большего кратного 4
+		targetPos.Y = uc.getNearestMultipleOf4InDirection(tank.Position.Y, true)
+	case types.DirectionLeft:
+		// Движение влево - округляем X до ближайшего меньшего кратного 4
+		targetPos.X = uc.getNearestMultipleOf4InDirection(
+			tank.Position.X,
+			false,
+		)
+	case types.DirectionRight:
+		// Движение вправо - округляем X до ближайшего большего кратного 4
+		targetPos.X = uc.getNearestMultipleOf4InDirection(tank.Position.X, true)
+	}
+
+	// Округляем координату, перпендикулярную направлению движения, до сетки
+	if tank.Direction == types.DirectionUp ||
+		tank.Direction == types.DirectionDown {
+		targetPos.X = uc.coordinateService.RoundToNearestMultipleOf4(
+			tank.Position.X,
+		)
+	} else {
+		targetPos.Y = uc.coordinateService.RoundToNearestMultipleOf4(tank.Position.Y)
+	}
+
+	return targetPos
+}
+
+// getNearestMultipleOf4InDirection вычисляет ближайшее кратное 4 в заданном направлении
+func (uc *CollisionUseCases) getNearestMultipleOf4InDirection(
+	value float64,
+	forward bool,
+) float64 {
+	lower := float64(int(value) / 4 * 4)
+	upper := lower + 4
+
+	if forward {
+		// Движение вперед (вниз/вправо)
+		if value <= lower {
+			return lower
+		}
+		return upper
+	} else {
+		// Движение назад (вверх/влево)
+		if value >= upper {
+			return upper
+		}
+		return lower
 	}
 }
 
