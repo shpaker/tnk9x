@@ -174,17 +174,12 @@ func (uc *CollisionUseCases) checkTankBulletCollisions(
 							)
 						}
 					} else {
-						// Уровень уже минимальный - взрываем и уменьшаем жизни
+						// Уровень уже минимальный - взрываем танк
+						// Жизни будут уменьшены при респавне в TryRespawnPlayersTanks()
 						if uc.soundUseCases != nil {
 							uc.soundUseCases.RequestSound(types.SoundIDExplosion, false)
 						}
 						_ = uc.tankLifecycleUseCases.Explode(tank)
-
-						// Уменьшаем жизни игрока
-						if uc.stageSession != nil {
-							playerNum := types.RoleToPlayerTankNum(tank.GetRole())
-							uc.stageSession.DecrementPlayerLives(playerNum)
-						}
 					}
 				} else {
 					// Для врагов проверяем здоровье
