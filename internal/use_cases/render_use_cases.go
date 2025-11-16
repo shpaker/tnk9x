@@ -1,9 +1,9 @@
 package use_cases
 
 import (
-	"github.com/shpaker/tnk25/internal/interfaces"
-	"github.com/shpaker/tnk25/internal/types"
-	image_providers "github.com/shpaker/tnk25/internal/types/image_providers"
+	"github.com/shpaker/tnk9x/internal/interfaces"
+	"github.com/shpaker/tnk9x/internal/types"
+	image_providers "github.com/shpaker/tnk9x/internal/types/image_providers"
 )
 
 type RenderUseCases struct {

@@ -6,12 +6,12 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
 	"golang.org/x/image/font/opentype"
 
-	stage_select "github.com/shpaker/tnk25/internal/adapters/stage_select"
-	"github.com/shpaker/tnk25/internal/interfaces"
-	"github.com/shpaker/tnk25/internal/types"
-	"github.com/shpaker/tnk25/internal/use_cases"
+	stage_select "github.com/shpaker/tnk9x/internal/adapters/stage_select"
+	"github.com/shpaker/tnk9x/internal/interfaces"
+	"github.com/shpaker/tnk9x/internal/types"
+	"github.com/shpaker/tnk9x/internal/use_cases"
 
-	"github.com/shpaker/tnk25/internal/types/session_entities"
+	"github.com/shpaker/tnk9x/internal/types/session_entities"
 )
 
 type StageSelectState struct {

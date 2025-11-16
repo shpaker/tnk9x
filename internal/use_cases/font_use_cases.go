@@ -5,7 +5,7 @@ import (
 
 	"golang.org/x/image/font/opentype"
 
-	"github.com/shpaker/tnk25/internal/interfaces"
+	"github.com/shpaker/tnk9x/internal/interfaces"
 )
 
 type FontUseCases struct {

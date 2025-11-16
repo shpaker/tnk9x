@@ -3,8 +3,8 @@ package interfaces
 import (
 	"image"
 
-	"github.com/shpaker/tnk25/internal/types"
-	image_providers "github.com/shpaker/tnk25/internal/types/image_providers"
+	"github.com/shpaker/tnk9x/internal/types"
+	image_providers "github.com/shpaker/tnk9x/internal/types/image_providers"
 )
 
 type IGameRepositoriesRegistry interface {

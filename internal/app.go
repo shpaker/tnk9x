@@ -10,18 +10,18 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 
-	"github.com/shpaker/tnk25/internal/adapters/stage/input_adapters/ai"
-	"github.com/shpaker/tnk25/internal/interfaces"
-	game_repos "github.com/shpaker/tnk25/internal/repositories/game"
-	"github.com/shpaker/tnk25/internal/repositories/processed"
-	"github.com/shpaker/tnk25/internal/repositories/raw"
-	"github.com/shpaker/tnk25/internal/services"
-	collision_services "github.com/shpaker/tnk25/internal/services/collision_services"
-	"github.com/shpaker/tnk25/internal/states"
-	"github.com/shpaker/tnk25/internal/types"
-	"github.com/shpaker/tnk25/internal/use_cases"
+	"github.com/shpaker/tnk9x/internal/adapters/stage/input_adapters/ai"
+	"github.com/shpaker/tnk9x/internal/interfaces"
+	game_repos "github.com/shpaker/tnk9x/internal/repositories/game"
+	"github.com/shpaker/tnk9x/internal/repositories/processed"
+	"github.com/shpaker/tnk9x/internal/repositories/raw"
+	"github.com/shpaker/tnk9x/internal/services"
+	collision_services "github.com/shpaker/tnk9x/internal/services/collision_services"
+	"github.com/shpaker/tnk9x/internal/states"
+	"github.com/shpaker/tnk9x/internal/types"
+	"github.com/shpaker/tnk9x/internal/use_cases"
 
-	"github.com/shpaker/tnk25/internal/types/session_entities"
+	"github.com/shpaker/tnk9x/internal/types/session_entities"
 )
 
 const audioSampleRate = 44100

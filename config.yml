@@ -4,7 +4,7 @@ app:
   title_font_size: 48
   subtitle_font_size: 12
   regular_font_size: 12
-  game_title: "TNK25"
+  game_title: "TNK9X"
   volume: 0.5  # Уровень громкости от 0.0 до 1.0
 
 game:

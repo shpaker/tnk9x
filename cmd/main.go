@@ -7,7 +7,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/shpaker/tnk25/internal"
+	"github.com/shpaker/tnk9x/internal"
 )
 
 func main() {

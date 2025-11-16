@@ -3,7 +3,7 @@ package use_cases
 import (
 	"math/rand"
 
-	"github.com/shpaker/tnk25/internal/types"
+	"github.com/shpaker/tnk9x/internal/types"
 )
 
 type SpecsUseCases struct {

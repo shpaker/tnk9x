@@ -3,7 +3,7 @@ package image_providers
 import (
 	"errors"
 
-	"github.com/shpaker/tnk25/internal/types"
+	"github.com/shpaker/tnk9x/internal/types"
 )
 
 type AnimationProvider struct {

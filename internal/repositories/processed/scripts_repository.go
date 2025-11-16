@@ -3,7 +3,7 @@ package processed
 import (
 	"fmt"
 
-	"github.com/shpaker/tnk25/internal/interfaces"
+	"github.com/shpaker/tnk9x/internal/interfaces"
 )
 
 type ScriptsRepository struct {

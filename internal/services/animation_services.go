@@ -1,7 +1,7 @@
 package services
 
 import (
-	image_providers "github.com/shpaker/tnk25/internal/types/image_providers"
+	image_providers "github.com/shpaker/tnk9x/internal/types/image_providers"
 )
 
 type AnimationService struct{}

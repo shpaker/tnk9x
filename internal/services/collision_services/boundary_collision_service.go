@@ -1,6 +1,6 @@
 package collision_services
 
-import "github.com/shpaker/tnk25/internal/types"
+import "github.com/shpaker/tnk9x/internal/types"
 
 type BoundaryCollisionService struct {
 	sizePx types.Size

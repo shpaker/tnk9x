@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"math/rand"
 
-	"github.com/shpaker/tnk25/internal/interfaces"
-	"github.com/shpaker/tnk25/internal/services/collision_services"
-	"github.com/shpaker/tnk25/internal/types"
+	"github.com/shpaker/tnk9x/internal/interfaces"
+	"github.com/shpaker/tnk9x/internal/services/collision_services"
+	"github.com/shpaker/tnk9x/internal/types"
 )
 
 type MapUseCases struct {

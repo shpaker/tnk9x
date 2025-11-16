@@ -3,8 +3,8 @@ package game_test
 import (
 	"testing"
 
-	"github.com/shpaker/tnk25/internal/repositories/game"
-	"github.com/shpaker/tnk25/internal/types"
+	"github.com/shpaker/tnk9x/internal/repositories/game"
+	"github.com/shpaker/tnk9x/internal/types"
 )
 
 func TestNewGameRepositoriesRegistry(t *testing.T) {

@@ -1,8 +1,8 @@
-# tnk25
+# tnk9x
 
 A modern remake and tribute to the classic arcade game Battle City (NES, 1985), built with Go and Ebiten. This project combines a passion for the original game with learning Go, Clean Architecture principles, and game development.
 
-**GitHub:** [https://github.com/shpaker/tnk25](https://github.com/shpaker/tnk25)
+**GitHub:** [https://github.com/shpaker/tnk9x](https://github.com/shpaker/tnk9x)
 
 ## Development Status
 
@@ -70,15 +70,15 @@ A modern remake and tribute to the classic arcade game Battle City (NES, 1985), 
 **Requirements:** Go 1.24+, optionally — [Just](https://github.com/casey/just).
 
 ```bash
-git clone https://github.com/shpaker/tnk25.git
-cd tnk25
+git clone https://github.com/shpaker/tnk9x.git
+cd tnk9x
 just deps         # Install dependencies (or go mod download)
 
 # Run the game
 just run          # or go run cmd/main.go
 
 # Build binary
-just build        # binary will be in dist/tnk25
+just build        # binary will be in dist/tnk9x
 
 # Checks
 just fmt

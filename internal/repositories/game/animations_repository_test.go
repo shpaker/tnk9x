@@ -3,8 +3,8 @@ package game
 import (
 	"testing"
 
-	"github.com/shpaker/tnk25/internal/types"
-	image_providers "github.com/shpaker/tnk25/internal/types/image_providers"
+	"github.com/shpaker/tnk9x/internal/types"
+	image_providers "github.com/shpaker/tnk9x/internal/types/image_providers"
 )
 
 func TestNewAnimationsRepository(t *testing.T) {

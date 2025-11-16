@@ -1,11 +1,11 @@
 package stateusecases
 
 import (
-	"github.com/shpaker/tnk25/internal/interfaces"
-	"github.com/shpaker/tnk25/internal/types"
-	"github.com/shpaker/tnk25/internal/use_cases"
+	"github.com/shpaker/tnk9x/internal/interfaces"
+	"github.com/shpaker/tnk9x/internal/types"
+	"github.com/shpaker/tnk9x/internal/use_cases"
 
-	"github.com/shpaker/tnk25/internal/types/session_entities"
+	"github.com/shpaker/tnk9x/internal/types/session_entities"
 )
 
 type StageUseCases struct {

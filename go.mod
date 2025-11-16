@@ -1,4 +1,4 @@
-module github.com/shpaker/tnk25
+module github.com/shpaker/tnk9x
 
 go 1.24.3
 

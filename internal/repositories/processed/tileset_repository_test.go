@@ -6,7 +6,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/shpaker/tnk25/internal/repositories/raw"
+	"github.com/shpaker/tnk9x/internal/repositories/raw"
 )
 
 type MockTilesetFileRepository struct {

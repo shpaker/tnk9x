@@ -3,7 +3,7 @@ package game
 import (
 	"fmt"
 
-	"github.com/shpaker/tnk25/internal/types"
+	"github.com/shpaker/tnk9x/internal/types"
 )
 
 type BonusesRepository struct {

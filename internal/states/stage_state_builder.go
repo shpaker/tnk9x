@@ -8,18 +8,18 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/audio"
 	lua "github.com/yuin/gopher-lua"
 
-	game "github.com/shpaker/tnk25/internal/adapters/stage"
-	"github.com/shpaker/tnk25/internal/adapters/stage/input_adapters"
-	"github.com/shpaker/tnk25/internal/interfaces"
-	"github.com/shpaker/tnk25/internal/repositories/processed"
-	"github.com/shpaker/tnk25/internal/services"
-	collision_services "github.com/shpaker/tnk25/internal/services/collision_services"
-	"github.com/shpaker/tnk25/internal/types"
-	"github.com/shpaker/tnk25/internal/use_cases"
-	stateusecases "github.com/shpaker/tnk25/internal/use_cases/state_use_cases"
-	tank_use_cases "github.com/shpaker/tnk25/internal/use_cases/tank_use_cases"
+	game "github.com/shpaker/tnk9x/internal/adapters/stage"
+	"github.com/shpaker/tnk9x/internal/adapters/stage/input_adapters"
+	"github.com/shpaker/tnk9x/internal/interfaces"
+	"github.com/shpaker/tnk9x/internal/repositories/processed"
+	"github.com/shpaker/tnk9x/internal/services"
+	collision_services "github.com/shpaker/tnk9x/internal/services/collision_services"
+	"github.com/shpaker/tnk9x/internal/types"
+	"github.com/shpaker/tnk9x/internal/use_cases"
+	stateusecases "github.com/shpaker/tnk9x/internal/use_cases/state_use_cases"
+	tank_use_cases "github.com/shpaker/tnk9x/internal/use_cases/tank_use_cases"
 
-	"github.com/shpaker/tnk25/internal/types/session_entities"
+	"github.com/shpaker/tnk9x/internal/types/session_entities"
 )
 
 type StageStateBuilder struct {
