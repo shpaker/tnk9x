@@ -103,7 +103,7 @@ func (tuc *TilesUseCases) getImageFromTileset(
 	case processed.TilesetTypeSpawner:
 		provider, err = tuc.tilesetRegistry.GetSpawnerImage(id)
 	case processed.TilesetTypeExplosion:
-		provider, err = tuc.tilesetRegistry.GetExplosionImage(id)
+		provider, err = tuc.tilesetRegistry.GetExplosionTankImage(id)
 	case processed.TilesetTypeHQ:
 		provider, err = tuc.tilesetRegistry.GetHQImage(id)
 	case processed.TilesetTypeBonuses:
@@ -222,7 +222,7 @@ func (tuc *TilesUseCases) CreateExplosionAnimation() (*image_providers.Animation
 
 	animation, err := tuc.tileService.CreateAnimationTileFromTileset(
 		string(tuc.explosionTilesetType),
-		"explosion",
+		"explosion_tank",
 	)
 	if err != nil {
 		return nil, err

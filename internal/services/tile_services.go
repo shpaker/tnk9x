@@ -88,7 +88,7 @@ func (s *TileService) getAnimationDataFromTileset(
 	case processed.TilesetTypeSpawner:
 		return s.tilesetRegistry.GetSpawnerAnimationData(id)
 	case processed.TilesetTypeExplosion:
-		return s.tilesetRegistry.GetExplosionAnimationData(id)
+		return s.tilesetRegistry.GetExplosionTankAnimationData(id)
 	case processed.TilesetTypeHQ:
 		return s.tilesetRegistry.GetHQAnimationData(id)
 	default:
@@ -112,7 +112,7 @@ func (s *TileService) getAnimationConfigFromTileset(
 	case processed.TilesetTypeSpawner:
 		return s.tilesetRegistry.GetSpawnerAnimationConfig(id)
 	case processed.TilesetTypeExplosion:
-		return s.tilesetRegistry.GetExplosionAnimationConfig(id)
+		return s.tilesetRegistry.GetExplosionTankAnimationConfig(id)
 	case processed.TilesetTypeHQ:
 		return s.tilesetRegistry.GetHQAnimationConfig(id)
 	default:

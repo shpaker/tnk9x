@@ -9,7 +9,7 @@ images:
   explosion_5: [4, 0]
 
 animations:
-  explosion:
+  explosion_tank:
     offset: [-8, -8]
     duration: 5   # Длительность каждого кадра в тиках
     frames: [explosion_1, explosion_2, explosion_3, explosion_4, explosion_5]

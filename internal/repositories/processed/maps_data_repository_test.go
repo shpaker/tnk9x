@@ -103,19 +103,37 @@ func (mtr *MockTilesetRepositoryRegistry) GetSpawnerAnimationConfig(
 	return types.AnimationConfig{}, nil
 }
 
-func (mtr *MockTilesetRepositoryRegistry) GetExplosionImage(
+func (mtr *MockTilesetRepositoryRegistry) GetExplosionTankImage(
 	id string,
 ) (types.IImageProvider, error) {
 	return &image_providers.StaticProvider{ImageID: id}, nil
 }
 
-func (mtr *MockTilesetRepositoryRegistry) GetExplosionAnimationData(
+func (mtr *MockTilesetRepositoryRegistry) GetExplosionTankAnimationData(
 	id string,
 ) (types.AnimationData, error) {
 	return types.AnimationData{}, nil
 }
 
-func (mtr *MockTilesetRepositoryRegistry) GetExplosionAnimationConfig(
+func (mtr *MockTilesetRepositoryRegistry) GetExplosionTankAnimationConfig(
+	id string,
+) (types.AnimationConfig, error) {
+	return types.AnimationConfig{}, nil
+}
+
+func (mtr *MockTilesetRepositoryRegistry) GetBulletExplosionImage(
+	id string,
+) (types.IImageProvider, error) {
+	return &image_providers.StaticProvider{ImageID: id}, nil
+}
+
+func (mtr *MockTilesetRepositoryRegistry) GetBulletExplosionAnimationData(
+	id string,
+) (types.AnimationData, error) {
+	return types.AnimationData{}, nil
+}
+
+func (mtr *MockTilesetRepositoryRegistry) GetBulletExplosionAnimationConfig(
 	id string,
 ) (types.AnimationConfig, error) {
 	return types.AnimationConfig{}, nil

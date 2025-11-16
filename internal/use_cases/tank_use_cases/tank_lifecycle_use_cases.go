@@ -232,6 +232,13 @@ func (uc *TankLifecycleUseCases) spawnTank(
 		)
 		if specs != nil {
 			tank.SetSpecs(specs)
+			// Для тяжёлого танка (враг уровня 3) устанавливаем 4 попадания
+			if role == types.TankRoleEnemy && level == 3 {
+				tank.SetHitPoints(4)
+			} else {
+				// Для остальных танков 1 попадание
+				tank.SetHitPoints(1)
+			}
 		}
 	}
 

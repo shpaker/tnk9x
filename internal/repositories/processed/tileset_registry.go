@@ -23,14 +23,15 @@ const (
 )
 
 type TilesetRepositoryRegistry struct {
-	blocks    *TilesetDataRepository
-	player    *TilesetDataRepository
-	enemy     *TilesetDataRepository
-	bullet    *TilesetDataRepository
-	spawner   *TilesetDataRepository
-	explosion *TilesetDataRepository
-	hq        *TilesetDataRepository
-	bonuses   *TilesetDataRepository
+	blocks          *TilesetDataRepository
+	player          *TilesetDataRepository
+	enemy           *TilesetDataRepository
+	bullet          *TilesetDataRepository
+	spawner         *TilesetDataRepository
+	explosion       *TilesetDataRepository
+	bulletExplosion *TilesetDataRepository
+	hq              *TilesetDataRepository
+	bonuses         *TilesetDataRepository
 }
 
 func NewTilesetRepositoryRegistry(
@@ -67,9 +68,23 @@ func NewTilesetRepositoryRegistry(
 		return nil, fmt.Errorf("failed to create spawner tileset: %w", err)
 	}
 
-	explosionRepo, err := NewTilesetDataRepository(fileRepo, "tiles/explosion")
+	explosionRepo, err := NewTilesetDataRepository(
+		fileRepo,
+		"tiles/explosion_tank",
+	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create explosion tileset: %w", err)
+	}
+
+	bulletExplosionRepo, err := NewTilesetDataRepository(
+		fileRepo,
+		"tiles/bullet_explosion",
+	)
+	if err != nil {
+		return nil, fmt.Errorf(
+			"failed to create bullet explosion tileset: %w",
+			err,
+		)
 	}
 
 	hqRepo, err := NewTilesetDataRepository(fileRepo, "tiles/hq")
@@ -83,14 +98,15 @@ func NewTilesetRepositoryRegistry(
 	}
 
 	return &TilesetRepositoryRegistry{
-		blocks:    blocksRepo,
-		player:    playerRepo,
-		enemy:     enemyRepo,
-		bullet:    bulletRepo,
-		spawner:   spawnerRepo,
-		explosion: explosionRepo,
-		hq:        hqRepo,
-		bonuses:   bonusesRepo,
+		blocks:          blocksRepo,
+		player:          playerRepo,
+		enemy:           enemyRepo,
+		bullet:          bulletRepo,
+		spawner:         spawnerRepo,
+		explosion:       explosionRepo,
+		bulletExplosion: bulletExplosionRepo,
+		hq:              hqRepo,
+		bonuses:         bonusesRepo,
 	}, nil
 }
 
@@ -365,6 +381,78 @@ func (tr *TilesetRepositoryRegistry) GetExplosionAnimationConfig(
 		)
 	}
 	return tr.explosion.getAnimationConfig(id)
+}
+
+func (tr *TilesetRepositoryRegistry) GetExplosionTankImage(
+	id string,
+) (types.IImageProvider, error) {
+	if tr.explosion == nil {
+		return nil, fmt.Errorf("explosion repository not initialized")
+	}
+
+	_, err := tr.explosion.getImage(id)
+	if err != nil {
+		return nil, fmt.Errorf("image '%s' not found: %w", id, err)
+	}
+	return &image_providers.StaticProvider{
+		ImageID: id,
+	}, nil
+}
+
+func (tr *TilesetRepositoryRegistry) GetExplosionTankAnimationData(
+	id string,
+) (types.AnimationData, error) {
+	if tr.explosion == nil {
+		return nil, fmt.Errorf("explosion repository not initialized")
+	}
+	return tr.explosion.getAnimationData(id)
+}
+
+func (tr *TilesetRepositoryRegistry) GetExplosionTankAnimationConfig(
+	id string,
+) (types.AnimationConfig, error) {
+	if tr.explosion == nil {
+		return types.AnimationConfig{}, fmt.Errorf(
+			"explosion repository not initialized",
+		)
+	}
+	return tr.explosion.getAnimationConfig(id)
+}
+
+func (tr *TilesetRepositoryRegistry) GetBulletExplosionImage(
+	id string,
+) (types.IImageProvider, error) {
+	if tr.bulletExplosion == nil {
+		return nil, fmt.Errorf("bullet explosion repository not initialized")
+	}
+
+	_, err := tr.bulletExplosion.getImage(id)
+	if err != nil {
+		return nil, fmt.Errorf("image '%s' not found: %w", id, err)
+	}
+	return &image_providers.StaticProvider{
+		ImageID: id,
+	}, nil
+}
+
+func (tr *TilesetRepositoryRegistry) GetBulletExplosionAnimationData(
+	id string,
+) (types.AnimationData, error) {
+	if tr.bulletExplosion == nil {
+		return nil, fmt.Errorf("bullet explosion repository not initialized")
+	}
+	return tr.bulletExplosion.getAnimationData(id)
+}
+
+func (tr *TilesetRepositoryRegistry) GetBulletExplosionAnimationConfig(
+	id string,
+) (types.AnimationConfig, error) {
+	if tr.bulletExplosion == nil {
+		return types.AnimationConfig{}, fmt.Errorf(
+			"bullet explosion repository not initialized",
+		)
+	}
+	return tr.bulletExplosion.getAnimationConfig(id)
 }
 
 func (tr *TilesetRepositoryRegistry) GetHQImage(

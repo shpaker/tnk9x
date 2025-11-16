@@ -153,6 +153,12 @@ func (r *StageRendererAdapter) drawTanks(screen *ebiten.Image) {
 		)
 
 		screen.DrawImage(img, op)
+
+		// Отрисовываем цветной слой здоровья для тяжёлого танка
+		if tank.IsEnemy() && tank.GetSpecs() != nil &&
+			tank.GetSpecs().GetLevel() == 3 {
+			r.drawTankHealthOverlay(screen, tank)
+		}
 	}
 }
 
@@ -173,6 +179,55 @@ func (r *StageRendererAdapter) getCachedImage(
 	ebitenImage := ebiten.NewImageFromImage(imageData)
 	r.imageCache[imageID] = ebitenImage
 	return ebitenImage
+}
+
+// drawTankHealthOverlay отрисовывает цветной полупрозрачный слой поверх тяжёлого танка
+// для визуализации его здоровья
+func (r *StageRendererAdapter) drawTankHealthOverlay(
+	screen *ebiten.Image,
+	tank *types.TankEntity,
+) {
+	if tank == nil {
+		return
+	}
+
+	hitPoints := tank.GetHitPoints()
+	// Если здоровье 1 или меньше, слой не отрисовывается
+	if hitPoints <= 1 {
+		return
+	}
+
+	// Определяем цвет в зависимости от здоровья
+	var overlayColor color.NRGBA
+	switch hitPoints {
+	case 4:
+		// Красный для 4 HP
+		overlayColor = color.NRGBA{R: 255, G: 0, B: 0, A: 128}
+	case 3:
+		// Жёлтый для 3 HP
+		overlayColor = color.NRGBA{R: 255, G: 255, B: 0, A: 128}
+	case 2:
+		// Зелёный для 2 HP
+		overlayColor = color.NRGBA{R: 0, G: 255, B: 0, A: 128}
+	default:
+		return
+	}
+
+	// Отрисовываем полупрозрачный прямоугольник поверх танка
+	screenX := float32(r.mapOffsetX) + float32(tank.Position.X)
+	screenY := float32(r.mapOffsetY) + float32(tank.Position.Y)
+	tankWidth := float32(tank.Size.Width)
+	tankHeight := float32(tank.Size.Height)
+
+	vector.FillRect(
+		screen,
+		screenX,
+		screenY,
+		tankWidth,
+		tankHeight,
+		overlayColor,
+		false,
+	)
 }
 
 func (r *StageRendererAdapter) drawSpawnAnimation(

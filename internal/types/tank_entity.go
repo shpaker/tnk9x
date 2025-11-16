@@ -39,6 +39,7 @@ type TankEntity struct {
 	withBonus     bool
 	blinkCounter  int  // Счетчик тиков для мигания
 	blinkFlag     bool // Флаг видимости
+	hitPoints     uint // Количество попаданий до уничтожения (для тяжёлых танков)
 }
 
 func NewDefaultTankEntity(role TankRole, direction Direction) TankEntity {
@@ -164,6 +165,32 @@ func (t *TankEntity) UpdateBlink() {
 	if t.blinkCounter >= 10 {
 		t.blinkCounter = 0
 		t.blinkFlag = !t.blinkFlag
+	}
+}
+
+func (t *TankEntity) GetHitPoints() uint {
+	if t == nil {
+		return 1
+	}
+	if t.hitPoints == 0 {
+		return 1 // По умолчанию 1 попадание
+	}
+	return t.hitPoints
+}
+
+func (t *TankEntity) SetHitPoints(hitPoints uint) {
+	if t == nil {
+		return
+	}
+	t.hitPoints = hitPoints
+}
+
+func (t *TankEntity) DecrementHitPoints() {
+	if t == nil {
+		return
+	}
+	if t.hitPoints > 0 {
+		t.hitPoints--
 	}
 }
 

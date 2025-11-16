@@ -77,9 +77,13 @@ type ITilesetRepositoryRegistry interface {
 	GetSpawnerAnimationData(id string) (types.AnimationData, error)
 	GetSpawnerAnimationConfig(id string) (types.AnimationConfig, error)
 
-	GetExplosionImage(id string) (types.IImageProvider, error)
-	GetExplosionAnimationData(id string) (types.AnimationData, error)
-	GetExplosionAnimationConfig(id string) (types.AnimationConfig, error)
+	GetExplosionTankImage(id string) (types.IImageProvider, error)
+	GetExplosionTankAnimationData(id string) (types.AnimationData, error)
+	GetExplosionTankAnimationConfig(id string) (types.AnimationConfig, error)
+
+	GetBulletExplosionImage(id string) (types.IImageProvider, error)
+	GetBulletExplosionAnimationData(id string) (types.AnimationData, error)
+	GetBulletExplosionAnimationConfig(id string) (types.AnimationConfig, error)
 
 	GetHQImage(id string) (types.IImageProvider, error)
 	GetHQAnimationData(id string) (types.AnimationData, error)

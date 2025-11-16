@@ -187,11 +187,25 @@ func (uc *CollisionUseCases) checkTankBulletCollisions(
 						}
 					}
 				} else {
-					// Для врагов взрываем сразу (старая логика)
-					if uc.soundUseCases != nil {
-						uc.soundUseCases.RequestSound(types.SoundIDExplosion, false)
+					// Для врагов проверяем здоровье
+					// Тяжёлый танк (уровень 3) требует несколько попаданий
+					currentHitPoints := tank.GetHitPoints()
+
+					// Если здоровье уже 1 или меньше, взрываем сразу
+					if currentHitPoints <= 1 {
+						if uc.soundUseCases != nil {
+							uc.soundUseCases.RequestSound(types.SoundIDExplosion, false)
+						}
+						_ = uc.tankLifecycleUseCases.Explode(tank)
+					} else {
+						// Уменьшаем здоровье
+						tank.DecrementHitPoints()
+						// Танк ещё жив - воспроизводим звук попадания
+						if uc.soundUseCases != nil {
+							uc.soundUseCases.RequestSound(types.SoundIDExplosion, false)
+						}
+						// Можно добавить визуальный эффект (мигание) для тяжёлого танка
 					}
-					_ = uc.tankLifecycleUseCases.Explode(tank)
 				}
 			}
 			return
