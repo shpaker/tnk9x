@@ -71,10 +71,10 @@ jobs:
           GOARCH: ${{ matrix.goarch }}
         run: |
           if ("${{ matrix.build_type }}" -eq "debug") {
-            go build -ldflags "-X github.com/shpaker/tnk25/internal.Version=$env:APP_VERSION -X github.com/shpaker/tnk25/internal.DebugFlag=true" -o dist/tnk25.exe ./cmd
+            go build -ldflags "-X github.com/shpaker/tnk9x/internal.Version=$env:APP_VERSION -X github.com/shpaker/tnk9x/internal.DebugFlag=true" -o dist/tnk9x.exe ./cmd
           } else {
             $env:CGO_ENABLED = "0"
-            go build -trimpath -ldflags "-s -w -X github.com/shpaker/tnk25/internal.Version=$env:APP_VERSION" -o dist/tnk25.exe ./cmd
+            go build -trimpath -ldflags "-s -w -X github.com/shpaker/tnk9x/internal.Version=$env:APP_VERSION" -o dist/tnk9x.exe ./cmd
           }
 
       - name: Build executable (Linux)
@@ -90,9 +90,9 @@ jobs:
         run: |
           export CGO_ENABLED=1
           if [ "${{ matrix.build_type }}" = "debug" ]; then
-            go build -ldflags "-X github.com/shpaker/tnk25/internal.Version=$APP_VERSION -X github.com/shpaker/tnk25/internal.DebugFlag=true" -o dist/tnk25 ./cmd
+            go build -ldflags "-X github.com/shpaker/tnk9x/internal.Version=$APP_VERSION -X github.com/shpaker/tnk9x/internal.DebugFlag=true" -o dist/tnk9x ./cmd
           else
-            go build -trimpath -ldflags "-s -w -X github.com/shpaker/tnk25/internal.Version=$APP_VERSION" -o dist/tnk25 ./cmd
+            go build -trimpath -ldflags "-s -w -X github.com/shpaker/tnk9x/internal.Version=$APP_VERSION" -o dist/tnk9x ./cmd
           fi
 
       - name: Build executable (macOS)
@@ -108,9 +108,9 @@ jobs:
         run: |
           export CGO_ENABLED=1
           if [ "${{ matrix.build_type }}" = "debug" ]; then
-            go build -ldflags "-X github.com/shpaker/tnk25/internal.Version=$APP_VERSION -X github.com/shpaker/tnk25/internal.DebugFlag=true" -o dist/tnk25 ./cmd
+            go build -ldflags "-X github.com/shpaker/tnk9x/internal.Version=$APP_VERSION -X github.com/shpaker/tnk9x/internal.DebugFlag=true" -o dist/tnk9x ./cmd
           else
-            go build -trimpath -ldflags "-s -w -X github.com/shpaker/tnk25/internal.Version=$APP_VERSION" -o dist/tnk25 ./cmd
+            go build -trimpath -ldflags "-s -w -X github.com/shpaker/tnk9x/internal.Version=$APP_VERSION" -o dist/tnk9x ./cmd
           fi
 
       - name: Package artifacts (Windows)
@@ -122,10 +122,10 @@ jobs:
         run: |
           $tag = "${{ github.ref_name }}"
           $suffix = "${{ matrix.build_type }}"
-          $zipName = "bc_windows_${suffix}_$tag.zip"
+          $zipName = "tnk9x_windows_${suffix}_$tag.zip"
 
           New-Item -ItemType Directory -Force -Path package | Out-Null
-          Copy-Item dist/tnk25.exe package/
+          Copy-Item dist/tnk9x.exe package/
           Copy-Item config.yml package/
           Copy-Item README.md package/
           Copy-Item LICENSE package/
@@ -144,10 +144,10 @@ jobs:
           TAG_NAME: ${{ github.ref_name }}
         run: |
           suffix="${{ matrix.build_type }}"
-          zip_name="bc_linux_${suffix}_${TAG_NAME}.zip"
+          zip_name="tnk9x_linux_${suffix}_${TAG_NAME}.zip"
 
           mkdir -p package/assets
-          cp dist/tnk25 package/
+          cp dist/tnk9x package/
           cp config.yml package/
           cp README.md package/
           cp LICENSE package/
@@ -165,10 +165,10 @@ jobs:
           TAG_NAME: ${{ github.ref_name }}
         run: |
           suffix="${{ matrix.build_type }}"
-          zip_name="bc_macos_${suffix}_${TAG_NAME}.zip"
+          zip_name="tnk9x_macos_${suffix}_${TAG_NAME}.zip"
 
           mkdir -p package/assets
-          cp dist/tnk25 package/
+          cp dist/tnk9x package/
           cp config.yml package/
           cp README.md package/
           cp LICENSE package/
