@@ -200,11 +200,18 @@ jobs:
         with:
           path: artifacts
 
+      - name: Extract Development Status from README
+        run: |
+          # Извлекаем секцию Development Status из README.md
+          # Используем awk для извлечения текста между "## Development Status" и следующим заголовком "##"
+          awk '/^## Development Status$/{flag=1;next} /^## [^#]/{flag=0} flag' README.md > release_body.md
+
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
           name: Release ${{ github.ref_name }}
+          body_path: release_body.md
           files: artifacts/**/*
           # generate_release_notes: true
           draft: false
