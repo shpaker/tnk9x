@@ -1,0 +1,9 @@
+---
+size: 16
+
+images:
+  hq_intact: [0, 0]
+  hq_destroyed: [0, 1]
+
+animations:
+

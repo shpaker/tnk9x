@@ -1,0 +1,13 @@
+---
+size: 16
+
+images:
+  helmet: [0, 0]
+  timer: [1, 0]
+  shovel: [2, 0]
+  star: [3, 0]
+  grenade: [4, 0]
+  tank: [5, 0]
+  pistol: [6, 0]
+
+animations:

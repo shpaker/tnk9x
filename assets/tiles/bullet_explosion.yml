@@ -1,0 +1,12 @@
+---
+size: 16
+
+images:
+  explosion_1: [0, 0]
+  explosion_2: [1, 0]
+  explosion_3: [2, 0]
+
+animations:
+  bullet_explosion:
+    duration: 5
+    frames: [explosion_1, explosion_2, explosion_3]

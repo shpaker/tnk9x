@@ -1,0 +1,280 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  prepare-deps:
+    name: Prepare Dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.24.3'
+          cache-dependency-path: go.sum
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libglfw3 \
+            libglfw3-dev \
+            libglu1-mesa-dev \
+            mesa-common-dev \
+            libx11-dev \
+            libxrandr-dev \
+            libxinerama-dev \
+            libxi-dev \
+            libxcursor-dev \
+            libxxf86vm-dev \
+            libasound2-dev \
+            pkg-config
+
+      - name: Setup Just
+        uses: extractions/setup-just@v3
+
+      - name: Download dependencies
+        run: just deps
+
+      - name: Get Go environment
+        id: go-env
+        run: |
+          echo "GOPATH=$(go env GOPATH)" >> $GITHUB_OUTPUT
+          echo "GOCACHE=$(go env GOCACHE)" >> $GITHUB_OUTPUT
+
+      - name: Cache Go tools
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ steps.go-env.outputs.GOCACHE }}
+            ${{ steps.go-env.outputs.GOPATH }}/bin
+          key: ${{ runner.os }}-go-tools-${{ hashFiles('go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-tools-
+
+      - name: Install tools
+        run: just install-tools
+
+  format:
+    name: Format Check
+    runs-on: ubuntu-latest
+    needs: [prepare-deps]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.24.3'
+          cache-dependency-path: go.sum
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libglfw3 \
+            libglfw3-dev \
+            libglu1-mesa-dev \
+            mesa-common-dev \
+            libx11-dev \
+            libxrandr-dev \
+            libxinerama-dev \
+            libxi-dev \
+            libxcursor-dev \
+            libxxf86vm-dev \
+            libasound2-dev \
+            pkg-config
+
+      - name: Setup Just
+        uses: extractions/setup-just@v3
+
+      - name: Get Go environment
+        id: go-env
+        run: |
+          echo "GOPATH=$(go env GOPATH)" >> $GITHUB_OUTPUT
+          echo "GOCACHE=$(go env GOCACHE)" >> $GITHUB_OUTPUT
+
+      - name: Restore Go tools cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ steps.go-env.outputs.GOCACHE }}
+            ${{ steps.go-env.outputs.GOPATH }}/bin
+          key: ${{ runner.os }}-go-tools-${{ hashFiles('go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-tools-
+
+      - name: Check formatting
+        run: just fmt-check
+
+  lint:
+    name: Linter
+    runs-on: ubuntu-latest
+    needs: [prepare-deps]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.24.3'
+          cache-dependency-path: go.sum
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libglfw3 \
+            libglfw3-dev \
+            libglu1-mesa-dev \
+            mesa-common-dev \
+            libx11-dev \
+            libxrandr-dev \
+            libxinerama-dev \
+            libxi-dev \
+            libxcursor-dev \
+            libxxf86vm-dev \
+            libasound2-dev \
+            pkg-config
+
+      - name: Setup Just
+        uses: extractions/setup-just@v3
+
+      - name: Get Go environment
+        id: go-env
+        run: |
+          echo "GOPATH=$(go env GOPATH)" >> $GITHUB_OUTPUT
+          echo "GOCACHE=$(go env GOCACHE)" >> $GITHUB_OUTPUT
+
+      - name: Restore Go tools cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ steps.go-env.outputs.GOCACHE }}
+            ${{ steps.go-env.outputs.GOPATH }}/bin
+          key: ${{ runner.os }}-go-tools-${{ hashFiles('go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-tools-
+
+      - name: Run linter
+        run: just lint
+
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    needs: [prepare-deps]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.24.3'
+          cache-dependency-path: go.sum
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libglfw3 \
+            libglfw3-dev \
+            libglu1-mesa-dev \
+            mesa-common-dev \
+            libx11-dev \
+            libxrandr-dev \
+            libxinerama-dev \
+            libxi-dev \
+            libxcursor-dev \
+            libxxf86vm-dev \
+            libasound2-dev \
+            pkg-config \
+            xvfb
+
+      - name: Setup Just
+        uses: extractions/setup-just@v3
+
+      - name: Get Go environment
+        id: go-env
+        run: |
+          echo "GOPATH=$(go env GOPATH)" >> $GITHUB_OUTPUT
+          echo "GOCACHE=$(go env GOCACHE)" >> $GITHUB_OUTPUT
+
+      - name: Restore Go tools cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ steps.go-env.outputs.GOCACHE }}
+            ${{ steps.go-env.outputs.GOPATH }}/bin
+          key: ${{ runner.os }}-go-tools-${{ hashFiles('go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-tools-
+
+      - name: Run tests with virtual display
+        run: |
+          export DISPLAY=:99
+          Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
+          sleep 2
+          just test
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: [format, lint, test]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.24.3'
+          cache-dependency-path: go.sum
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libglfw3 \
+            libglfw3-dev \
+            libglu1-mesa-dev \
+            mesa-common-dev \
+            libx11-dev \
+            libxrandr-dev \
+            libxinerama-dev \
+            libxi-dev \
+            libxcursor-dev \
+            libxxf86vm-dev \
+            libasound2-dev \
+            pkg-config
+
+      - name: Setup Just
+        uses: extractions/setup-just@v3
+
+      - name: Get Go environment
+        id: go-env
+        run: |
+          echo "GOPATH=$(go env GOPATH)" >> $GITHUB_OUTPUT
+          echo "GOCACHE=$(go env GOCACHE)" >> $GITHUB_OUTPUT
+
+      - name: Restore Go tools cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ steps.go-env.outputs.GOCACHE }}
+            ${{ steps.go-env.outputs.GOPATH }}/bin
+          key: ${{ runner.os }}-go-tools-${{ hashFiles('go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-tools-
+
+      - name: Build application
+        run: just build

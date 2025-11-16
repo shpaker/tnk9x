@@ -1,0 +1,46 @@
+run:
+  timeout: 5m
+  issues-exit-code: 1
+  tests: true
+
+output:
+  formats:
+    - format: colored-line-number
+  print-issued-lines: true
+  print-linter-name: true
+
+linters-settings:
+  gocyclo:
+    min-complexity: 15
+  dupl:
+    threshold: 100
+  goimports:
+    local-prefixes: github.com/shpaker/tnk25
+  goconst:
+    min-len: 3
+    min-occurrences: 3
+  misspell:
+    locale: US
+
+linters:
+  disable-all: true
+  enable:
+    - errcheck
+    - gosimple
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    - gofmt
+    - goimports
+    - typecheck
+
+issues:
+  exclude-use-default: false
+  exclude-dirs:
+    - dist
+    - web
+  exclude-files:
+    - ".*\\.pb\\.go$"
+  max-issues-per-linter: 0
+  max-same-issues: 0

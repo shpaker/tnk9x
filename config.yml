@@ -1,0 +1,23 @@
+---
+app:
+  screen_px: [1280, 720]  # Размер экрана в пикселях [width, height]
+  title_font_size: 48
+  subtitle_font_size: 12
+  regular_font_size: 12
+  game_title: "TNK25"
+  volume: 0.5  # Уровень громкости от 0.0 до 1.0
+
+game:
+  enemy_spawners:
+    - [0, 0]   # Левый верхний угол
+    - [6, 0]   # Центр сверху
+    - [12, 0]  # Правый верхний угол
+  players_1_spawn_at: [4, 12]
+  players_2_spawn_at: [8, 12]
+  hq_position: [6, 12]
+  ai_update_interval_ticks: 20  # Интервал обновления AI в тиках (60 тиков = 1000мс при 60 FPS)
+
+  # Игровые константы
+  base_size_px: 16
+  enemy_respawn_delay_ticks: 120  # Задержка между спавнами врагов в тиках (3 секунды при 60 FPS)
+  map_blocks_count: [26, 26]  # Размер карты в блоках [width, height]

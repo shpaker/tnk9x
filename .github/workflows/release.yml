@@ -1,0 +1,214 @@
+name: Release Builds
+
+on:
+  push:
+    tags:
+      - '*'
+
+jobs:
+  build:
+    name: Build ${{ matrix.os }} ${{ matrix.build_type }}
+    runs-on: ${{ matrix.runner }}
+    env:
+      APP_VERSION: ${{ github.ref_name }}
+    strategy:
+      matrix:
+        os: [windows, linux, macos]
+        build_type: [debug, prod]
+        include:
+          - os: windows
+            runner: windows-latest
+            goos: windows
+            goarch: amd64
+          - os: linux
+            runner: ubuntu-latest
+            goos: linux
+            goarch: amd64
+          - os: macos
+            runner: macos-latest
+            goos: darwin
+            goarch: arm64
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.24.3'
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Install Linux dependencies
+        if: matrix.os == 'linux'
+        run: |
+          # Базовый список зависимостей ОС (должен быть одинаковым во всех джобах)
+          sudo apt-get update
+          sudo apt-get install -y \
+            libglfw3 \
+            libglfw3-dev \
+            libglu1-mesa-dev \
+            mesa-common-dev \
+            libx11-dev \
+            libxrandr-dev \
+            libxinerama-dev \
+            libxi-dev \
+            libxcursor-dev \
+            libxxf86vm-dev \
+            libasound2-dev \
+            pkg-config
+
+      - name: Build executable (Windows)
+        if: |
+          matrix.os == 'windows' &&
+          ((contains(github.ref_name, 'a') && matrix.build_type == 'debug') ||
+           (!contains(github.ref_name, 'a') && matrix.build_type == 'prod'))
+        shell: pwsh
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          if ("${{ matrix.build_type }}" -eq "debug") {
+            go build -ldflags "-X github.com/shpaker/tnk25/internal.Version=$env:APP_VERSION -X github.com/shpaker/tnk25/internal.DebugFlag=true" -o dist/tnk25.exe ./cmd
+          } else {
+            $env:CGO_ENABLED = "0"
+            go build -trimpath -ldflags "-s -w -X github.com/shpaker/tnk25/internal.Version=$env:APP_VERSION" -o dist/tnk25.exe ./cmd
+          }
+
+      - name: Build executable (Linux)
+        if: |
+          matrix.os == 'linux' &&
+          ((contains(github.ref_name, 'a') && matrix.build_type == 'debug') ||
+           (!contains(github.ref_name, 'a') && matrix.build_type == 'prod'))
+        shell: bash
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          APP_VERSION: ${{ github.ref_name }}
+        run: |
+          export CGO_ENABLED=1
+          if [ "${{ matrix.build_type }}" = "debug" ]; then
+            go build -ldflags "-X github.com/shpaker/tnk25/internal.Version=$APP_VERSION -X github.com/shpaker/tnk25/internal.DebugFlag=true" -o dist/tnk25 ./cmd
+          else
+            go build -trimpath -ldflags "-s -w -X github.com/shpaker/tnk25/internal.Version=$APP_VERSION" -o dist/tnk25 ./cmd
+          fi
+
+      - name: Build executable (macOS)
+        if: |
+          matrix.os == 'macos' &&
+          ((contains(github.ref_name, 'a') && matrix.build_type == 'debug') ||
+           (!contains(github.ref_name, 'a') && matrix.build_type == 'prod'))
+        shell: bash
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          APP_VERSION: ${{ github.ref_name }}
+        run: |
+          export CGO_ENABLED=1
+          if [ "${{ matrix.build_type }}" = "debug" ]; then
+            go build -ldflags "-X github.com/shpaker/tnk25/internal.Version=$APP_VERSION -X github.com/shpaker/tnk25/internal.DebugFlag=true" -o dist/tnk25 ./cmd
+          else
+            go build -trimpath -ldflags "-s -w -X github.com/shpaker/tnk25/internal.Version=$APP_VERSION" -o dist/tnk25 ./cmd
+          fi
+
+      - name: Package artifacts (Windows)
+        shell: pwsh
+        if: |
+          matrix.os == 'windows' &&
+          ((contains(github.ref_name, 'a') && matrix.build_type == 'debug') ||
+           (!contains(github.ref_name, 'a') && matrix.build_type == 'prod'))
+        run: |
+          $tag = "${{ github.ref_name }}"
+          $suffix = "${{ matrix.build_type }}"
+          $zipName = "bc_windows_${suffix}_$tag.zip"
+
+          New-Item -ItemType Directory -Force -Path package | Out-Null
+          Copy-Item dist/tnk25.exe package/
+          Copy-Item config.yml package/
+          Copy-Item README.md package/
+          Copy-Item LICENSE package/
+          Copy-Item assets package/assets -Recurse
+
+          Compress-Archive -Path package/* -DestinationPath $zipName
+          "PACKAGE_NAME=$zipName" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Package artifacts (Linux)
+        if: |
+          matrix.os == 'linux' &&
+          ((contains(github.ref_name, 'a') && matrix.build_type == 'debug') ||
+           (!contains(github.ref_name, 'a') && matrix.build_type == 'prod'))
+        shell: bash
+        env:
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          suffix="${{ matrix.build_type }}"
+          zip_name="bc_linux_${suffix}_${TAG_NAME}.zip"
+
+          mkdir -p package/assets
+          cp dist/tnk25 package/
+          cp config.yml package/
+          cp README.md package/
+          cp LICENSE package/
+          cp -r assets/* package/assets/
+          (cd package && zip -r "../${zip_name}" .)
+          echo "PACKAGE_NAME=${zip_name}" >> "$GITHUB_ENV"
+
+      - name: Package artifacts (macOS)
+        if: |
+          matrix.os == 'macos' &&
+          ((contains(github.ref_name, 'a') && matrix.build_type == 'debug') ||
+           (!contains(github.ref_name, 'a') && matrix.build_type == 'prod'))
+        shell: bash
+        env:
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          suffix="${{ matrix.build_type }}"
+          zip_name="bc_macos_${suffix}_${TAG_NAME}.zip"
+
+          mkdir -p package/assets
+          cp dist/tnk25 package/
+          cp config.yml package/
+          cp README.md package/
+          cp LICENSE package/
+          cp -r assets/* package/assets/
+          (cd package && zip -r "../${zip_name}" .)
+          echo "PACKAGE_NAME=${zip_name}" >> "$GITHUB_ENV"
+
+      - name: Upload artifact
+        if: |
+          (contains(github.ref_name, 'a') && matrix.build_type == 'debug') ||
+          (!contains(github.ref_name, 'a') && matrix.build_type == 'prod')
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-${{ matrix.os }}-${{ matrix.build_type }}
+          path: ${{ env.PACKAGE_NAME }}
+
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: [build]
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          files: artifacts/**/*
+          # generate_release_notes: true
+          draft: false
+          prerelease: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
