@@ -186,19 +186,18 @@ func (app *App) createStageState(
 
 	gameRepository := game_repos.NewGameRepositoriesRegistry()
 
-	mapWidthHeight := app.config.MapBlocksCount.Width * int(
-		app.config.TileBaseSize,
-	)
 	boundaryCollisionService := collision_services.NewBoundaryCollisionService(
-		mapWidthHeight,
-		int(app.config.BaseSizePx),
+		types.Size{
+			Width: app.config.MapBlocksCount.Width * int(
+				app.config.TileBaseSize,
+			),
+			Height: app.config.MapBlocksCount.Height * int(
+				app.config.TileBaseSize,
+			),
+		},
 	)
 	entitiesCollisionService := collision_services.NewEntitiesCollisionService()
-	coordinateService := services.NewCoordinateService()
 	wallCollisionService := collision_services.NewWallCollisionService(
-		int(app.config.BaseSizePx),
-		int(app.config.TileBaseSize),
-		coordinateService,
 		entitiesCollisionService,
 	)
 	tankBrakingService := services.NewTankBrakingService()
@@ -220,7 +219,6 @@ func (app *App) createStageState(
 		gameRepository,
 		boundaryCollisionService,
 		wallCollisionService,
-		coordinateService,
 		tankBrakingService,
 		app.luaEngine,
 		session,

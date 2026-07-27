@@ -9,19 +9,17 @@ import (
 )
 
 type TankActionsUseCases struct {
-	brakingService    interfaces.ITankBrakingService
-	coordinateService interfaces.ICoordinateService
-	bulletUseCases    interfaces.IBulletUseCases
-	commonUseCases    interfaces.ITankCommonUseCases
-	renderUseCases    interfaces.IRenderUseCases
-	mapUseCases       interfaces.IMapUseCases
-	soundUseCases     *use_cases.SoundUseCases
-	specsUseCases     interfaces.ISpecsUseCases
+	brakingService interfaces.ITankBrakingService
+	bulletUseCases interfaces.IBulletUseCases
+	commonUseCases interfaces.ITankCommonUseCases
+	renderUseCases interfaces.IRenderUseCases
+	mapUseCases    interfaces.IMapUseCases
+	soundUseCases  *use_cases.SoundUseCases
+	specsUseCases  interfaces.ISpecsUseCases
 }
 
 func NewTankActionsUseCases(
 	brakingService interfaces.ITankBrakingService,
-	coordinateService interfaces.ICoordinateService,
 	bulletUseCases interfaces.IBulletUseCases,
 	commonUseCases interfaces.ITankCommonUseCases,
 	renderUseCases interfaces.IRenderUseCases,
@@ -30,14 +28,13 @@ func NewTankActionsUseCases(
 	specsUseCases interfaces.ISpecsUseCases,
 ) *TankActionsUseCases {
 	return &TankActionsUseCases{
-		brakingService:    brakingService,
-		coordinateService: coordinateService,
-		bulletUseCases:    bulletUseCases,
-		commonUseCases:    commonUseCases,
-		renderUseCases:    renderUseCases,
-		mapUseCases:       mapUseCases,
-		soundUseCases:     soundUseCases,
-		specsUseCases:     specsUseCases,
+		brakingService: brakingService,
+		bulletUseCases: bulletUseCases,
+		commonUseCases: commonUseCases,
+		renderUseCases: renderUseCases,
+		mapUseCases:    mapUseCases,
+		soundUseCases:  soundUseCases,
+		specsUseCases:  specsUseCases,
 	}
 }
 
@@ -160,11 +157,7 @@ func (uc *TankActionsUseCases) SetMaxYPosition(tank *types.TankEntity) {
 }
 
 func (uc *TankActionsUseCases) handleStopByCollision(tank *types.TankEntity) {
-	tank.Position.X = uc.coordinateService.RoundToNearestMultipleOf4(
-		tank.Position.X,
-	)
-	tank.Position.Y = uc.coordinateService.RoundToNearestMultipleOf4(
-		tank.Position.Y,
-	)
+	// Позиция уже разрешена коллизией (вплотную/откат) — округление
+	// сдвигало бы танк с места контакта и порождало дрожание
 	tank.State = types.TankStateStopped
 }

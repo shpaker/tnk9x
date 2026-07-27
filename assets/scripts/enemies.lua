@@ -10,9 +10,9 @@ DIRECTION_RIGHT = 3
 
 -- Проверяет, близок ли танк к краю карты в указанном направлении
 function isNearEdge(x, y, direction)
-    -- Конвертируем размеры карты в пиксели
-    local mapWidthPx = MAP_X_BLOCKS_COUNT * TANK_SIZE_PX
-    local mapHeightPx = MAP_Y_BLOCKS_COUNT * TANK_SIZE_PX
+    -- Размеры карты в пикселях инжектируются движком
+    local mapWidthPx = MAP_WIDTH_PX
+    local mapHeightPx = MAP_HEIGHT_PX
 
     if direction == DIRECTION_UP then
         -- Проверяем верхний край: если Y близок к 0 (меньше размера танка)

@@ -7,7 +7,7 @@ import (
 )
 
 func TestBoundaryCollisionService_CheckLeftBoundaryCollision(t *testing.T) {
-	service := NewBoundaryCollisionService(100, 16)
+	service := NewBoundaryCollisionService(types.Size{Width: 100, Height: 100})
 
 	t.Run("коллизия", func(t *testing.T) {
 		tank := &types.TankEntity{
@@ -37,7 +37,7 @@ func TestBoundaryCollisionService_CheckLeftBoundaryCollision(t *testing.T) {
 func TestBoundaryCollisionService_CheckRightBoundaryCollision(
 	t *testing.T,
 ) {
-	service := NewBoundaryCollisionService(100, 16)
+	service := NewBoundaryCollisionService(types.Size{Width: 100, Height: 100})
 
 	t.Run("коллизия", func(t *testing.T) {
 		tank := &types.TankEntity{
@@ -65,7 +65,7 @@ func TestBoundaryCollisionService_CheckRightBoundaryCollision(
 }
 
 func TestBoundaryCollisionService_CheckTopBoundaryCollision(t *testing.T) {
-	service := NewBoundaryCollisionService(100, 16)
+	service := NewBoundaryCollisionService(types.Size{Width: 100, Height: 100})
 
 	t.Run("коллизия", func(t *testing.T) {
 		tank := &types.TankEntity{
@@ -95,7 +95,7 @@ func TestBoundaryCollisionService_CheckTopBoundaryCollision(t *testing.T) {
 func TestBoundaryCollisionService_CheckBottomBoundaryCollision(
 	t *testing.T,
 ) {
-	service := NewBoundaryCollisionService(100, 16)
+	service := NewBoundaryCollisionService(types.Size{Width: 100, Height: 100})
 
 	t.Run("коллизия", func(t *testing.T) {
 		tank := &types.TankEntity{

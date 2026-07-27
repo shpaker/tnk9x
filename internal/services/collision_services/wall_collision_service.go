@@ -6,22 +6,13 @@ import (
 )
 
 type WallCollisionService struct {
-	tankSpriteSize           int
-	tileMinSize              int
-	coordinateService        interfaces.ICoordinateService
 	entitiesCollisionService interfaces.IEntitiesCollisionService
 }
 
 func NewWallCollisionService(
-	tankSpriteSize int,
-	tileMinSize int,
-	coordinateService interfaces.ICoordinateService,
 	entitiesCollisionService interfaces.IEntitiesCollisionService,
 ) *WallCollisionService {
 	return &WallCollisionService{
-		tankSpriteSize:           tankSpriteSize,
-		tileMinSize:              tileMinSize,
-		coordinateService:        coordinateService,
 		entitiesCollisionService: entitiesCollisionService,
 	}
 }

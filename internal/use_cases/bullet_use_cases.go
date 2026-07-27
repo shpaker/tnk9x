@@ -97,6 +97,6 @@ func (uc *BulletUseCases) GetBullets() []*types.BulletEntity {
 	return uc.bulletsRepository.GetAllBullets()
 }
 
-func (uc *BulletUseCases) RemoveBullet(index int) error {
-	return uc.bulletsRepository.RemoveBullet(index)
+func (uc *BulletUseCases) RemoveBullet(bullet *types.BulletEntity) error {
+	return uc.bulletsRepository.RemoveBullet(bullet)
 }

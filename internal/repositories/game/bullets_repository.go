@@ -51,14 +51,15 @@ func (br *BulletsRepository) GetAllBullets() []*types.BulletEntity {
 	return br.bullets
 }
 
-func (br *BulletsRepository) RemoveBullet(index int) error {
-	if index < 0 || index >= len(br.bullets) {
-		return fmt.Errorf(
-			"bullet index %d out of range [0, %d)",
-			index,
-			len(br.bullets),
-		)
+func (br *BulletsRepository) RemoveBullet(bullet *types.BulletEntity) error {
+	if bullet == nil {
+		return fmt.Errorf("bullet is nil")
 	}
-	br.bullets = append(br.bullets[:index], br.bullets[index+1:]...)
-	return nil
+	for index, existingBullet := range br.bullets {
+		if existingBullet == bullet {
+			br.bullets = append(br.bullets[:index], br.bullets[index+1:]...)
+			return nil
+		}
+	}
+	return fmt.Errorf("bullet not found")
 }

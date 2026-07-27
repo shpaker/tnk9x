@@ -6,15 +6,9 @@ type BoundaryCollisionService struct {
 	sizePx types.Size
 }
 
-func NewBoundaryCollisionService(
-	mapWidthHeight int,
-	tankSpriteSize int,
-) *BoundaryCollisionService {
+func NewBoundaryCollisionService(sizePx types.Size) *BoundaryCollisionService {
 	return &BoundaryCollisionService{
-		sizePx: types.Size{
-			Width:  mapWidthHeight,
-			Height: mapWidthHeight,
-		},
+		sizePx: sizePx,
 	}
 }
 

@@ -202,7 +202,7 @@ func TestRemoveBullet(t *testing.T) {
 		t.Errorf("Ожидалось 2 пули, получено %d", len(bullets))
 	}
 
-	err = repo.RemoveBullet(0)
+	err = repo.RemoveBullet(bullet1)
 	if err != nil {
 		t.Errorf("Неожиданная ошибка при удалении: %v", err)
 	}
@@ -211,9 +211,17 @@ func TestRemoveBullet(t *testing.T) {
 	if len(bullets) != 1 {
 		t.Errorf("Ожидалось 1 пуля после удаления, получено %d", len(bullets))
 	}
+	if bullets[0] != bullet2 {
+		t.Error("Ожидалось, что останется bullet2")
+	}
 
-	err = repo.RemoveBullet(5)
+	err = repo.RemoveBullet(bullet1)
 	if err == nil {
-		t.Error("Ожидалась ошибка для невалидного индекса")
+		t.Error("Ожидалась ошибка при повторном удалении той же пули")
+	}
+
+	err = repo.RemoveBullet(nil)
+	if err == nil {
+		t.Error("Ожидалась ошибка для nil-пули")
 	}
 }

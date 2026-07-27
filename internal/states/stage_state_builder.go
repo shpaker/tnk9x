@@ -38,7 +38,6 @@ type StageStateBuilder struct {
 
 	boundaryCollisionService interfaces.IBoundaryCollisionService
 	wallCollisionService     interfaces.IWallCollisionService
-	coordinateService        interfaces.ICoordinateService
 	tankBrakingService       interfaces.ITankBrakingService
 
 	luaEngine interfaces.ILuaEngine
@@ -56,7 +55,6 @@ func NewStageStateBuilder(
 	gameRepository interfaces.IGameRepositoriesRegistry,
 	boundaryCollisionService interfaces.IBoundaryCollisionService,
 	wallCollisionService interfaces.IWallCollisionService,
-	coordinateService interfaces.ICoordinateService,
 	tankBrakingService interfaces.ITankBrakingService,
 	fontUseCases interfaces.IFontUseCases,
 	luaEngine interfaces.ILuaEngine,
@@ -74,7 +72,6 @@ func NewStageStateBuilder(
 		levelNumber:              levelNumber,
 		boundaryCollisionService: boundaryCollisionService,
 		wallCollisionService:     wallCollisionService,
-		coordinateService:        coordinateService,
 		tankBrakingService:       tankBrakingService,
 		fontUseCases:             fontUseCases,
 		luaEngine:                luaEngine,
@@ -124,7 +121,6 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 	tankCommonUseCases := tank_use_cases.NewTankCommonUseCases(
 		bulletUseCases,
 		b.tankBrakingService,
-		b.coordinateService,
 		nil, // renderUseCases будет установлен позже
 		b.gameRepository.GetTanksRepository(),
 		specsUseCases,
@@ -160,7 +156,6 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 
 	tankActionsUseCases := tank_use_cases.NewTankActionsUseCases(
 		b.tankBrakingService,
-		b.coordinateService,
 		bulletUseCases,
 		tankCommonUseCases,
 		renderUseCases,
@@ -199,6 +194,8 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 
 	b.luaEngine.SetGlobal("MAP_X_BLOCKS_COUNT", lua.LNumber(mapBlocksWidth))
 	b.luaEngine.SetGlobal("MAP_Y_BLOCKS_COUNT", lua.LNumber(mapBlocksHeight))
+	b.luaEngine.SetGlobal("MAP_WIDTH_PX", lua.LNumber(sizePx.Width))
+	b.luaEngine.SetGlobal("MAP_HEIGHT_PX", lua.LNumber(sizePx.Height))
 	b.luaEngine.SetGlobal("TANK_SIZE_PX", lua.LNumber(baseSizePx))
 	b.luaEngine.SetGlobal("BLOCK_SIZE_PX", lua.LNumber(baseSizePx/2))
 
@@ -581,7 +578,6 @@ func (b *StageStateBuilder) buildCollisionServices(
 		b.wallCollisionService,
 		bulletCollisionService,
 		entitiesCollisionService,
-		b.coordinateService,
 		hqUseCases,
 		bonusUseCases,
 		bonusesRepository,

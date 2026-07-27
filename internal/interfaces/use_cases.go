@@ -13,7 +13,7 @@ type IBulletUseCases interface {
 	ShootBullet(tank *types.TankEntity) error
 	UpdateBullets(dt float64) error
 	GetBullets() []*types.BulletEntity
-	RemoveBullet(index int) error
+	RemoveBullet(bullet *types.BulletEntity) error
 }
 
 type IMapUseCases interface {
@@ -26,7 +26,6 @@ type IMapUseCases interface {
 
 type ICollisionUseCases interface {
 	UpdateCollisions()
-	HasTankCollision(candidate *types.TankEntity) bool
 	IsSpawnerBlocked(position types.Position, size types.Size) bool
 }
 
