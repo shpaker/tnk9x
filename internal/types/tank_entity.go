@@ -28,6 +28,7 @@ const (
 
 type TankEntity struct {
 	Position      Position
+	PrevPosition  Position // Позиция до движения в текущем тике (для отката коллизий)
 	Size          Size
 	Altitude      Altitude
 	Image         IImageProvider

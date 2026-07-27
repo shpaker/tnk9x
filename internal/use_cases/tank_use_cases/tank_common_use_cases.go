@@ -9,29 +9,26 @@ import (
 )
 
 type TankCommonUseCases struct {
-	brakingService    interfaces.ITankBrakingService
-	coordinateService interfaces.ICoordinateService
-	bulletUseCases    interfaces.IBulletUseCases
-	renderUseCases    interfaces.IRenderUseCases
-	tanksRepository   interfaces.ITanksRepository
-	specsUseCases     interfaces.ISpecsUseCases
+	brakingService  interfaces.ITankBrakingService
+	bulletUseCases  interfaces.IBulletUseCases
+	renderUseCases  interfaces.IRenderUseCases
+	tanksRepository interfaces.ITanksRepository
+	specsUseCases   interfaces.ISpecsUseCases
 }
 
 func NewTankCommonUseCases(
 	bulletUseCases interfaces.IBulletUseCases,
 	brakingService interfaces.ITankBrakingService,
-	coordinateService interfaces.ICoordinateService,
 	renderUseCases interfaces.IRenderUseCases,
 	tanksRepository interfaces.ITanksRepository,
 	specsUseCases interfaces.ISpecsUseCases,
 ) *TankCommonUseCases {
 	uc := &TankCommonUseCases{
-		brakingService:    brakingService,
-		coordinateService: coordinateService,
-		bulletUseCases:    bulletUseCases,
-		renderUseCases:    renderUseCases,
-		tanksRepository:   tanksRepository,
-		specsUseCases:     specsUseCases,
+		brakingService:  brakingService,
+		bulletUseCases:  bulletUseCases,
+		renderUseCases:  renderUseCases,
+		tanksRepository: tanksRepository,
+		specsUseCases:   specsUseCases,
 	}
 
 	return uc
@@ -45,6 +42,8 @@ func (uc *TankCommonUseCases) Update(tank *types.TankEntity, dt float64) error {
 	if uc.renderUseCases != nil {
 		uc.renderUseCases.SyncTankAnimationWithState(tank)
 	}
+
+	tank.PrevPosition = tank.Position
 
 	oldState := tank.State
 	oldDirection := tank.Direction

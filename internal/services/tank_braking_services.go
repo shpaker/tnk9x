@@ -22,10 +22,6 @@ func (s *TankBrakingService) HandleBrakingState(
 ) error {
 	ctx := s.getBrakingMovementContext(tank)
 
-	if s.checkAndHandleHalfStepBack(tank, ctx) {
-		return nil
-	}
-
 	s.moveTowardsTarget(tank, ctx, dt)
 
 	return nil
@@ -74,21 +70,6 @@ func (s *TankBrakingService) getBrakingMovementContext(
 		targetMultipleOf4: targetMultipleOf4,
 		isMovingForward:   isMovingForward,
 	}
-}
-
-func (s *TankBrakingService) checkAndHandleHalfStepBack(
-	tank *types.TankEntity,
-	ctx brakingMovementContext,
-) bool {
-	diff := *ctx.currentCoord - ctx.targetMultipleOf4
-	if diff > 0 && diff <= 0.5 {
-		*ctx.currentCoord = ctx.targetMultipleOf4 - 0.5
-
-		tank.State = types.TankStateStopped
-		tank.NextDirection = nil
-		return true
-	}
-	return false
 }
 
 func (s *TankBrakingService) moveTowardsTarget(

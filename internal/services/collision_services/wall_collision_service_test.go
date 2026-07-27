@@ -6,23 +6,9 @@ import (
 	"github.com/shpaker/tnk9x/internal/types"
 )
 
-type MockCoordinateService struct{}
-
-func (m *MockCoordinateService) RoundToNearestMultipleOf4(
-	value float64,
-) float64 {
-	return float64(int(value/4+0.5) * 4)
-}
-
 func TestWallCollisionService_CheckTankWallCollision(t *testing.T) {
 	entitiesService := NewEntitiesCollisionService()
-	coordinateService := &MockCoordinateService{}
-	service := NewWallCollisionService(
-		16,
-		8,
-		coordinateService,
-		entitiesService,
-	)
+	service := NewWallCollisionService(entitiesService)
 
 	t.Run("коллизия", func(t *testing.T) {
 		tank := &types.TankEntity{

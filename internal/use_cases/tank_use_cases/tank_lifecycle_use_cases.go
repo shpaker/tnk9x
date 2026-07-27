@@ -156,6 +156,10 @@ func (uc *TankLifecycleUseCases) SpawnPlayer1() (*types.TankEntity, error) {
 	if uc.tanksRepository == nil {
 		return nil, fmt.Errorf("tanks repository missing")
 	}
+	if uc.collisionUseCases != nil &&
+		uc.collisionUseCases.IsSpawnerBlocked(uc.player1Spawner, uc.baseSize) {
+		return nil, nil
+	}
 	tank, err := uc.spawnTank(
 		types.DirectionUp,
 		uc.player1Spawner,
@@ -175,6 +179,10 @@ func (uc *TankLifecycleUseCases) SpawnPlayer1() (*types.TankEntity, error) {
 func (uc *TankLifecycleUseCases) SpawnPlayer2() (*types.TankEntity, error) {
 	if uc.tanksRepository == nil {
 		return nil, fmt.Errorf("tanks repository missing")
+	}
+	if uc.collisionUseCases != nil &&
+		uc.collisionUseCases.IsSpawnerBlocked(uc.player2Spawner, uc.baseSize) {
+		return nil, nil
 	}
 	tank, err := uc.spawnTank(
 		types.DirectionUp,

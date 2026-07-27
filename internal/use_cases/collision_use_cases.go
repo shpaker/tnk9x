@@ -17,7 +17,6 @@ type CollisionUseCases struct {
 	wallCollisionService     interfaces.IWallCollisionService
 	bulletCollisionService   interfaces.IBulletCollisionService
 	entitiesCollisionService interfaces.IEntitiesCollisionService
-	coordinateService        interfaces.ICoordinateService
 	bonusUseCases            *BonusUseCases
 	bonusesRepository        interfaces.IBonusesRepository
 	soundUseCases            *SoundUseCases
@@ -34,7 +33,6 @@ func NewCollisionUseCases(
 	wallCollisionService interfaces.IWallCollisionService,
 	bulletCollisionService interfaces.IBulletCollisionService,
 	entitiesCollisionService interfaces.IEntitiesCollisionService,
-	coordinateService interfaces.ICoordinateService,
 	hqUseCases interfaces.IHQUseCases,
 	bonusUseCases *BonusUseCases,
 	bonusesRepository interfaces.IBonusesRepository,
@@ -52,7 +50,6 @@ func NewCollisionUseCases(
 		wallCollisionService:     wallCollisionService,
 		bulletCollisionService:   bulletCollisionService,
 		entitiesCollisionService: entitiesCollisionService,
-		coordinateService:        coordinateService,
 		bonusUseCases:            bonusUseCases,
 		bonusesRepository:        bonusesRepository,
 		soundUseCases:            soundUseCases,
@@ -69,20 +66,15 @@ func (uc *CollisionUseCases) UpdateCollisions() {
 
 	hq := uc.hqUseCases.GetHQ()
 
-	mapBlocks := uc.mapUseCases.GetBlocks()
-
 	bonuses := uc.getBonuses()
 
-	uc.checkBulletsCollisions(bullets, hq, mapBlocks)
+	uc.checkBulletsCollisions(bullets, hq)
 
-	bullets = uc.bulletUseCases.GetBullets()
-	uc.checkTanksCollisions(allTanks, bullets, mapBlocks, bonuses)
+	uc.checkTanksCollisions(allTanks, bonuses)
 }
 
 func (uc *CollisionUseCases) checkTanksCollisions(
 	allTanks []*types.TankEntity,
-	bullets []*types.BulletEntity,
-	mapBlocks types.MapBlocks,
 	bonuses []*types.BonusEntity,
 ) {
 	for _, tank := range allTanks {
@@ -90,10 +82,10 @@ func (uc *CollisionUseCases) checkTanksCollisions(
 		if !tank.IsActive() {
 			continue
 		}
-		uc.checkTankBoundaryCollision(tank)
-		uc.checkTankBlockCollisions(tank, mapBlocks)
+		uc.checkTankBlockCollisions(tank)
 		uc.checkTankTankCollision(tank, allTanks)
-		uc.checkTankBulletCollisions(tank, bullets)
+		uc.checkTankBoundaryCollision(tank)
+		uc.checkTankBulletCollisions(tank)
 		uc.checkTankBonusCollisions(tank, bonuses)
 	}
 }
@@ -101,7 +93,6 @@ func (uc *CollisionUseCases) checkTanksCollisions(
 func (uc *CollisionUseCases) checkBulletsCollisions(
 	bullets []*types.BulletEntity,
 	hq *types.HQEntity,
-	mapBlocks types.MapBlocks,
 ) {
 	for index := 0; index < len(bullets); index++ {
 		bullet := bullets[index]
@@ -110,8 +101,8 @@ func (uc *CollisionUseCases) checkBulletsCollisions(
 		}
 		if uc.checkBulletBoundaryCollision(bullet) ||
 			uc.checkBulletHQCollision(bullet, hq) ||
-			uc.checkBulletWallCollision(bullet, mapBlocks) {
-			_ = uc.bulletUseCases.RemoveBullet(index)
+			uc.checkBulletWallCollision(bullet) {
+			_ = uc.bulletUseCases.RemoveBullet(bullet)
 			bullets = uc.bulletUseCases.GetBullets()
 			index--
 			continue
@@ -120,8 +111,8 @@ func (uc *CollisionUseCases) checkBulletsCollisions(
 		for j := index + 1; j < len(bullets); j++ {
 			other := bullets[j]
 			if uc.checkBulletBulletCollision(bullet, other) {
-				_ = uc.bulletUseCases.RemoveBullet(j)
-				_ = uc.bulletUseCases.RemoveBullet(index)
+				_ = uc.bulletUseCases.RemoveBullet(other)
+				_ = uc.bulletUseCases.RemoveBullet(bullet)
 				bullets = uc.bulletUseCases.GetBullets()
 				index--
 				break
@@ -143,9 +134,9 @@ func (uc *CollisionUseCases) checkBulletBulletCollision(
 
 func (uc *CollisionUseCases) checkTankBulletCollisions(
 	tank *types.TankEntity,
-	bullets []*types.BulletEntity,
 ) {
-	for index, bullet := range bullets {
+	bullets := uc.bulletUseCases.GetBullets()
+	for _, bullet := range bullets {
 		if bullet == nil {
 			continue
 		}
@@ -153,7 +144,7 @@ func (uc *CollisionUseCases) checkTankBulletCollisions(
 			bullet,
 			tank,
 		) {
-			_ = uc.bulletUseCases.RemoveBullet(index)
+			_ = uc.bulletUseCases.RemoveBullet(bullet)
 			if tank.IsActive() {
 				// Для игроков понижаем уровень вместо взрыва
 				if !tank.IsEnemy() {
@@ -208,27 +199,6 @@ func (uc *CollisionUseCases) checkTankBulletCollisions(
 	}
 }
 
-func (uc *CollisionUseCases) HasTankCollision(
-	candidate *types.TankEntity,
-) bool {
-	if candidate == nil {
-		return false
-	}
-
-	allTanks := uc.tankCommonUseCases.GetAllTanks()
-	for _, otherTank := range allTanks {
-		if otherTank == nil {
-			continue
-		}
-
-		if uc.entitiesCollisionService.CheckColliders(candidate, otherTank) {
-			return true
-		}
-	}
-
-	return false
-}
-
 func (uc *CollisionUseCases) IsSpawnerBlocked(
 	position types.Position,
 	size types.Size,
@@ -251,7 +221,7 @@ func (uc *CollisionUseCases) IsSpawnerBlocked(
 	}
 
 	for _, otherTank := range uc.tankCommonUseCases.GetAllTanks() {
-		if otherTank == nil {
+		if otherTank == nil || otherTank.IsDestroyed() {
 			continue
 		}
 
@@ -265,8 +235,8 @@ func (uc *CollisionUseCases) IsSpawnerBlocked(
 
 func (uc *CollisionUseCases) checkTankBlockCollisions(
 	tank *types.TankEntity,
-	mapBlocks types.MapBlocks,
 ) {
+	mapBlocks := uc.mapUseCases.GetBlocks()
 	for _, block := range mapBlocks {
 		if uc.wallCollisionService.CheckTankWallCollision(tank, block) {
 
@@ -276,12 +246,13 @@ func (uc *CollisionUseCases) checkTankBlockCollisions(
 				tank.Direction,
 			)
 			if err != nil {
+				// Блок сбоку/сзади: перекрытие не от текущего движения,
+				// оставляем возможность выехать из него
 				continue
 			}
 
 			tank.Position = correctedPos
 			uc.tankActions.Stop(tank, true)
-			return
 		}
 	}
 }
@@ -290,126 +261,56 @@ func (uc *CollisionUseCases) checkTankTankCollision(
 	tank *types.TankEntity,
 	allTanks []*types.TankEntity,
 ) {
-	// Вычисляем целевую позицию танка по сетке
-	targetPos := uc.getTankTargetGridPosition(tank)
-
-	// Создаем временный танк с целевой позицией для проверки коллизии
-	tankWithTargetPos := *tank
-	tankWithTargetPos.Position = targetPos
-
 	for _, otherTank := range allTanks {
 
-		if tank == otherTank || otherTank.IsDestroyed() {
+		if tank == otherTank || otherTank == nil || otherTank.IsDestroyed() {
 			continue
 		}
 
-		// Вычисляем целевую позицию другого танка по сетке
-		otherTargetPos := uc.getTankTargetGridPosition(otherTank)
-		otherTankWithTargetPos := *otherTank
-		otherTankWithTargetPos.Position = otherTargetPos
-
-		// Проверяем коллизию с целевыми позициями
-		if uc.entitiesCollisionService.CheckColliders(
-			&tankWithTargetPos,
-			&otherTankWithTargetPos,
-		) {
-
-			correctedPos, err := uc.entitiesCollisionService.ResolveCollisionPosition(
-				&tankWithTargetPos,
-				&otherTankWithTargetPos,
-				tank.Direction,
-			)
-			if err != nil {
-				continue
-			}
-
-			tank.Position = correctedPos
-			uc.tankActions.Stop(tank, true)
-			uc.tankActions.Stop(otherTank, true)
-			return
+		if !uc.entitiesCollisionService.CheckColliders(tank, otherTank) {
+			continue
 		}
+
+		// Откатываем только танк, который в этом тике ехал в сторону другого:
+		// его движение «не произошло». Другой танк не трогаем — если он тоже
+		// ехал навстречу, откатится в собственной итерации. Перекрытие, не
+		// вызванное текущим движением (например, спавн поверх другого танка),
+		// не откатывается, чтобы из него можно было выехать.
+		if !uc.tankMovedTowards(tank, otherTank) {
+			continue
+		}
+
+		switch tank.Direction {
+		case types.DirectionUp, types.DirectionDown:
+			tank.Position.Y = tank.PrevPosition.Y
+		case types.DirectionLeft, types.DirectionRight:
+			tank.Position.X = tank.PrevPosition.X
+		}
+		uc.tankActions.Stop(tank, true)
 	}
 }
 
-// getTankTargetGridPosition вычисляет целевую позицию танка по сетке
-// на основе его текущей позиции и направления движения
-func (uc *CollisionUseCases) getTankTargetGridPosition(
+// tankMovedTowards сообщает, сместился ли танк в текущем тике по своей оси
+// движения в сторону другого танка
+func (uc *CollisionUseCases) tankMovedTowards(
 	tank *types.TankEntity,
-) types.Position {
-	if tank == nil {
-		return types.Position{}
-	}
-	if uc.coordinateService == nil {
-		return tank.Position
-	}
-
-	// Если танк не движется, возвращаем текущую позицию, округленную до сетки
-	if tank.State != types.TankStateMoving &&
-		tank.State != types.TankStateBraking {
-		return types.Position{
-			X: uc.coordinateService.RoundToNearestMultipleOf4(tank.Position.X),
-			Y: uc.coordinateService.RoundToNearestMultipleOf4(tank.Position.Y),
-		}
-	}
-
-	// Вычисляем целевую позицию на основе направления движения
-	targetPos := tank.Position
-
+	otherTank *types.TankEntity,
+) bool {
 	switch tank.Direction {
 	case types.DirectionUp:
-		// Движение вверх - округляем Y до ближайшего меньшего кратного 4
-		targetPos.Y = uc.getNearestMultipleOf4InDirection(
-			tank.Position.Y,
-			false,
-		)
+		return tank.Position.Y < tank.PrevPosition.Y &&
+			otherTank.Position.Y < tank.Position.Y
 	case types.DirectionDown:
-		// Движение вниз - округляем Y до ближайшего большего кратного 4
-		targetPos.Y = uc.getNearestMultipleOf4InDirection(tank.Position.Y, true)
+		return tank.Position.Y > tank.PrevPosition.Y &&
+			otherTank.Position.Y > tank.Position.Y
 	case types.DirectionLeft:
-		// Движение влево - округляем X до ближайшего меньшего кратного 4
-		targetPos.X = uc.getNearestMultipleOf4InDirection(
-			tank.Position.X,
-			false,
-		)
+		return tank.Position.X < tank.PrevPosition.X &&
+			otherTank.Position.X < tank.Position.X
 	case types.DirectionRight:
-		// Движение вправо - округляем X до ближайшего большего кратного 4
-		targetPos.X = uc.getNearestMultipleOf4InDirection(tank.Position.X, true)
+		return tank.Position.X > tank.PrevPosition.X &&
+			otherTank.Position.X > tank.Position.X
 	}
-
-	// Округляем координату, перпендикулярную направлению движения, до сетки
-	if tank.Direction == types.DirectionUp ||
-		tank.Direction == types.DirectionDown {
-		targetPos.X = uc.coordinateService.RoundToNearestMultipleOf4(
-			tank.Position.X,
-		)
-	} else {
-		targetPos.Y = uc.coordinateService.RoundToNearestMultipleOf4(tank.Position.Y)
-	}
-
-	return targetPos
-}
-
-// getNearestMultipleOf4InDirection вычисляет ближайшее кратное 4 в заданном направлении
-func (uc *CollisionUseCases) getNearestMultipleOf4InDirection(
-	value float64,
-	forward bool,
-) float64 {
-	lower := float64(int(value) / 4 * 4)
-	upper := lower + 4
-
-	if forward {
-		// Движение вперед (вниз/вправо)
-		if value <= lower {
-			return lower
-		}
-		return upper
-	} else {
-		// Движение назад (вверх/влево)
-		if value >= upper {
-			return upper
-		}
-		return lower
-	}
+	return false
 }
 
 func (uc *CollisionUseCases) checkTankBoundaryCollision(
@@ -443,8 +344,8 @@ func (uc *CollisionUseCases) checkBulletBoundaryCollision(
 
 func (uc *CollisionUseCases) checkBulletWallCollision(
 	bullet *types.BulletEntity,
-	mapBlocks types.MapBlocks,
 ) bool {
+	mapBlocks := uc.mapUseCases.GetBlocks()
 	for _, block := range mapBlocks {
 		if uc.bulletCollisionService.CheckBulletBlockCollision(
 			bullet,
@@ -452,18 +353,17 @@ func (uc *CollisionUseCases) checkBulletWallCollision(
 		) {
 
 			if block.Data != nil {
-				if block.Data.Name == types.Brick && uc.soundUseCases != nil {
+				if block.Data.Name == types.Brick {
 					_ = uc.mapUseCases.RemoveBlock(block)
-					uc.soundUseCases.RequestSound(types.SoundIDBrick, false)
+					if uc.soundUseCases != nil {
+						uc.soundUseCases.RequestSound(types.SoundIDBrick, false)
+					}
 				} else if block.Data.Name == types.Steel {
-					if bullet.IsReinforced() && uc.mapUseCases != nil {
+					if bullet.IsReinforced() {
 						// Усиленные пули могут ломать стальные блоки
 						_ = uc.mapUseCases.RemoveBlock(block)
-						if uc.soundUseCases != nil {
-							uc.soundUseCases.RequestSound(types.SoundIDSteel, false)
-						}
-					} else if uc.soundUseCases != nil {
-						// Обычные пули только отскакивают от стальных блоков
+					}
+					if uc.soundUseCases != nil {
 						uc.soundUseCases.RequestSound(types.SoundIDSteel, false)
 					}
 				}

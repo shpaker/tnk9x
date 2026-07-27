@@ -19,7 +19,7 @@ type IBulletsRepository interface {
 
 	GetAllBullets() []*types.BulletEntity
 
-	RemoveBullet(index int) error
+	RemoveBullet(bullet *types.BulletEntity) error
 }
 
 type IAnimationsRepository interface {
