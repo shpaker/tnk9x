@@ -1,8 +1,6 @@
 package interfaces
 
 import (
-	lua "github.com/yuin/gopher-lua"
-
 	"github.com/shpaker/tnk9x/internal/types"
 	image_providers "github.com/shpaker/tnk9x/internal/types/image_providers"
 )
@@ -65,8 +63,4 @@ type ITileService interface {
 		tilesetType string,
 		id string,
 	) (*image_providers.AnimationProvider, error)
-}
-
-type IAITypeConverter interface {
-	LuaToDecision(results []lua.LValue) (types.EnemyAIDecision, error)
 }

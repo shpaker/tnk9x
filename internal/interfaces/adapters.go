@@ -1,8 +1,6 @@
 package interfaces
 
 import (
-	lua "github.com/yuin/gopher-lua"
-
 	"github.com/hajimehoshi/ebiten/v2"
 
 	"github.com/shpaker/tnk9x/internal/types"
@@ -45,19 +43,15 @@ type IAiInputAdapter interface {
 	RemoveTank(tank *types.TankEntity)
 }
 
-type ILuaEngine interface {
-	Execute(script string) error
-
-	CallFunction(functionName string, args ...lua.LValue) ([]lua.LValue, error)
-
-	NewTable() *lua.LTable
-
-	SetGlobal(name string, value lua.LValue)
-
-	ToBool(value lua.LValue) bool
-
-	ToNumber(value lua.LValue) lua.LNumber
-
+// IAIScriptEngine — контракт движка AI-скриптов; реализация инкапсулирует
+// скриптовый рантайм, наружу выходят только доменные типы.
+type IAIScriptEngine interface {
+	LoadScript(source string) error
+	SetGlobalNumber(name string, value float64)
+	UpdateEnemyAI(
+		x, y float64,
+		direction, state int,
+	) (types.EnemyAIDecision, error)
 	Close()
 }
 

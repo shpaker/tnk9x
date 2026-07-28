@@ -91,7 +91,6 @@ type ITankActionsUseCases interface {
 
 type IAIUseCases interface {
 	ExecuteAI(tank *types.TankEntity) (types.EnemyAIDecision, error)
-	Close()
 }
 
 type IHQUseCases interface {

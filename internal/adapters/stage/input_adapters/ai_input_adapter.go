@@ -5,7 +5,6 @@ import (
 
 	"github.com/shpaker/tnk9x/internal/interfaces"
 	"github.com/shpaker/tnk9x/internal/types"
-	"github.com/shpaker/tnk9x/internal/use_cases"
 )
 
 var _ interfaces.IAiInputAdapter = (*AiInputAdapter)(nil)
@@ -15,7 +14,7 @@ type AiInputAdapter struct {
 	tanks          []*types.TankEntity
 	updateInterval int
 	tickCounter    int
-	aiUseCases     *use_cases.AIUseCases
+	aiUseCases     interfaces.IAIUseCases
 	lastShotTick   map[*types.TankEntity]int
 	shootCooldown  int
 }
@@ -24,7 +23,7 @@ func NewAiInputAdapter(
 	tankActions interfaces.ITankActionsUseCases,
 	tank *types.TankEntity,
 	updateInterval int,
-	aiUseCases *use_cases.AIUseCases,
+	aiUseCases interfaces.IAIUseCases,
 ) (*AiInputAdapter, error) {
 	adapter := &AiInputAdapter{
 		tankActions:    tankActions,

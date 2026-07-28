@@ -10,7 +10,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 
-	"github.com/shpaker/tnk9x/internal/adapters/stage/input_adapters/ai"
+	"github.com/shpaker/tnk9x/internal/adapters/scripting"
 	"github.com/shpaker/tnk9x/internal/interfaces"
 	game_repos "github.com/shpaker/tnk9x/internal/repositories/game"
 	"github.com/shpaker/tnk9x/internal/repositories/processed"
@@ -29,7 +29,7 @@ const audioSampleRate = 44100
 type App struct {
 	config        *Config
 	State         interfaces.IState
-	luaEngine     interfaces.ILuaEngine
+	scriptEngine  interfaces.IAIScriptEngine
 	session       *session_entities.GameSessionEntity
 	fontUseCases  interfaces.IFontUseCases
 	debugUseCases *use_cases.DebugUseCases
@@ -113,7 +113,7 @@ func New(cfg *Config) *App {
 	fontsRepository := processed.NewFontsRepository(fileRepository)
 	fontUseCases := use_cases.NewFontUseCases(fontsRepository)
 
-	luaEngine := ai.NewLuaEngine()
+	scriptEngine := scripting.NewLuaEngine()
 
 	session := session_entities.NewGameSessionEntity()
 
@@ -136,7 +136,7 @@ func New(cfg *Config) *App {
 	return &App{
 		config:       cfg,
 		State:        stageSelectState,
-		luaEngine:    luaEngine,
+		scriptEngine: scriptEngine,
 		session:      session,
 		fontUseCases: fontUseCases,
 		debugUseCases: use_cases.NewDebugUseCases(
@@ -220,7 +220,7 @@ func (app *App) createStageState(
 		boundaryCollisionService,
 		wallCollisionService,
 		tankBrakingService,
-		app.luaEngine,
+		app.scriptEngine,
 		session,
 		fileRepository,
 		app.audioContext,
@@ -290,8 +290,8 @@ func (app *App) Run(ctx context.Context) error {
 }
 
 func (app *App) Close() {
-	if app.luaEngine != nil {
-		app.luaEngine.Close()
-		app.luaEngine = nil
+	if app.scriptEngine != nil {
+		app.scriptEngine.Close()
+		app.scriptEngine = nil
 	}
 }

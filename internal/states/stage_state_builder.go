@@ -6,7 +6,6 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/audio"
-	lua "github.com/yuin/gopher-lua"
 
 	game "github.com/shpaker/tnk9x/internal/adapters/stage"
 	"github.com/shpaker/tnk9x/internal/adapters/stage/input_adapters"
@@ -40,7 +39,7 @@ type StageStateBuilder struct {
 	wallCollisionService     interfaces.IWallCollisionService
 	tankBrakingService       interfaces.ITankBrakingService
 
-	luaEngine interfaces.ILuaEngine
+	scriptEngine interfaces.IAIScriptEngine
 
 	session      *session_entities.GameSessionEntity
 	audioContext *audio.Context
@@ -57,7 +56,7 @@ func NewStageStateBuilder(
 	wallCollisionService interfaces.IWallCollisionService,
 	tankBrakingService interfaces.ITankBrakingService,
 	fontUseCases interfaces.IFontUseCases,
-	luaEngine interfaces.ILuaEngine,
+	scriptEngine interfaces.IAIScriptEngine,
 	session *session_entities.GameSessionEntity,
 	fileRepository interfaces.IFileRepository,
 	audioContext *audio.Context,
@@ -74,7 +73,7 @@ func NewStageStateBuilder(
 		wallCollisionService:     wallCollisionService,
 		tankBrakingService:       tankBrakingService,
 		fontUseCases:             fontUseCases,
-		luaEngine:                luaEngine,
+		scriptEngine:             scriptEngine,
 		session:                  session,
 		audioContext:             audioContext,
 	}
@@ -179,19 +178,25 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 	mapBlocksWidth := sizePx.Width / tileBaseSize
 	mapBlocksHeight := sizePx.Height / tileBaseSize
 
-	b.luaEngine.SetGlobal("MAP_X_BLOCKS_COUNT", lua.LNumber(mapBlocksWidth))
-	b.luaEngine.SetGlobal("MAP_Y_BLOCKS_COUNT", lua.LNumber(mapBlocksHeight))
-	b.luaEngine.SetGlobal("MAP_WIDTH_PX", lua.LNumber(sizePx.Width))
-	b.luaEngine.SetGlobal("MAP_HEIGHT_PX", lua.LNumber(sizePx.Height))
-	b.luaEngine.SetGlobal("TANK_SIZE_PX", lua.LNumber(baseSizePx))
-	b.luaEngine.SetGlobal("BLOCK_SIZE_PX", lua.LNumber(baseSizePx/2))
+	b.scriptEngine.SetGlobalNumber(
+		"MAP_X_BLOCKS_COUNT",
+		float64(mapBlocksWidth),
+	)
+	b.scriptEngine.SetGlobalNumber(
+		"MAP_Y_BLOCKS_COUNT",
+		float64(mapBlocksHeight),
+	)
+	b.scriptEngine.SetGlobalNumber("MAP_WIDTH_PX", float64(sizePx.Width))
+	b.scriptEngine.SetGlobalNumber("MAP_HEIGHT_PX", float64(sizePx.Height))
+	b.scriptEngine.SetGlobalNumber("TANK_SIZE_PX", float64(baseSizePx))
+	b.scriptEngine.SetGlobalNumber("BLOCK_SIZE_PX", float64(baseSizePx/2))
 
 	enemyScript, err := b.scriptsRepository.GetScript("enemies")
 	if err != nil {
 		return nil, err
 	}
 
-	if err := b.luaEngine.Execute(enemyScript); err != nil {
+	if err := b.scriptEngine.LoadScript(enemyScript); err != nil {
 		return nil, err
 	}
 
@@ -200,8 +205,7 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 		updateInterval = b.config.GetAIUpdateIntervalTicks()
 	}
 
-	typeConverter := services.NewAITypeConverter(b.luaEngine)
-	aiUseCases := use_cases.NewAIUseCases(b.luaEngine, typeConverter)
+	aiUseCases := use_cases.NewAIUseCases(b.scriptEngine)
 	enemyInputAdapter, err := input_adapters.NewAiInputAdapter(
 		tankActionsUseCases,
 		nil,
