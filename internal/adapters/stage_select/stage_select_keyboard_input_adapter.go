@@ -4,13 +4,15 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 
+	"github.com/shpaker/tnk9x/internal/interfaces"
 	"github.com/shpaker/tnk9x/internal/types"
-	"github.com/shpaker/tnk9x/internal/use_cases"
 )
+
+var _ interfaces.IInputAdapter = (*StageSelectKeyboardInputAdapter)(nil)
 
 type StageSelectKeyboardInputAdapter struct {
 	selector         *types.StageSelectorEntity
-	selectorUseCases *use_cases.StageSelectorUseCases
+	selectorUseCases interfaces.IStageSelectorUseCases
 	previousButton   ebiten.Key
 	nextButton       ebiten.Key
 	enterButton      ebiten.Key
@@ -18,7 +20,7 @@ type StageSelectKeyboardInputAdapter struct {
 
 func NewStageSelectKeyboardInputAdapter(
 	selector *types.StageSelectorEntity,
-	selectorUseCases *use_cases.StageSelectorUseCases,
+	selectorUseCases interfaces.IStageSelectorUseCases,
 	previousButton ebiten.Key,
 	nextButton ebiten.Key,
 	enterButton ebiten.Key,

@@ -7,13 +7,13 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
 
+	"github.com/shpaker/tnk9x/internal/interfaces"
 	"github.com/shpaker/tnk9x/internal/types"
-	"github.com/shpaker/tnk9x/internal/use_cases"
 )
 
 type StageSelectRendererAdapter struct {
 	selector         *types.StageSelectorEntity
-	selectorUseCases *use_cases.StageSelectorUseCases
+	selectorUseCases interfaces.IStageSelectorUseCases
 	fontFace         text.Face
 	screenWidth      int
 	screenHeight     int
@@ -25,7 +25,7 @@ type StageSelectRendererAdapter struct {
 
 func NewStageSelectRendererAdapter(
 	selector *types.StageSelectorEntity,
-	selectorUseCases *use_cases.StageSelectorUseCases,
+	selectorUseCases interfaces.IStageSelectorUseCases,
 	fontFace text.Face,
 	screenWidth int,
 	screenHeight int,

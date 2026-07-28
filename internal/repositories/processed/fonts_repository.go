@@ -6,6 +6,8 @@ import (
 	"github.com/shpaker/tnk9x/internal/interfaces"
 )
 
+var _ interfaces.IFontsRepository = (*FontsRepository)(nil)
+
 type FontsRepository struct {
 	fileRepository interfaces.IFileRepository
 }

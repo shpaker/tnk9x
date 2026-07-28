@@ -3,8 +3,11 @@ package collision_services
 import (
 	"errors"
 
+	"github.com/shpaker/tnk9x/internal/interfaces"
 	"github.com/shpaker/tnk9x/internal/types"
 )
+
+var _ interfaces.IEntitiesCollisionService = (*EntitiesCollisionService)(nil)
 
 type EntitiesCollisionService struct{}
 

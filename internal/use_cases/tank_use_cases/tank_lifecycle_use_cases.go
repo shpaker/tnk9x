@@ -6,11 +6,12 @@ import (
 
 	"github.com/shpaker/tnk9x/internal/interfaces"
 	"github.com/shpaker/tnk9x/internal/types"
-	"github.com/shpaker/tnk9x/internal/use_cases"
 )
 
+var _ interfaces.ITankLifecycleUseCases = (*TankLifecycleUseCases)(nil)
+
 type TankLifecycleUseCases struct {
-	tilesUseCases      *use_cases.TilesUseCases
+	tilesUseCases      interfaces.ITilesUseCases
 	renderUseCases     interfaces.IRenderUseCases
 	tankCommonUseCases interfaces.ITankCommonUseCases
 	tanksRepository    interfaces.ITanksRepository
@@ -23,7 +24,7 @@ type TankLifecycleUseCases struct {
 }
 
 func NewTankLifecycleUseCases(
-	tilesUseCases *use_cases.TilesUseCases,
+	tilesUseCases interfaces.ITilesUseCases,
 	renderUseCases interfaces.IRenderUseCases,
 	tankCommonUseCases interfaces.ITankCommonUseCases,
 	specsUseCases interfaces.ISpecsUseCases,

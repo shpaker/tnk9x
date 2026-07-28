@@ -1,8 +1,11 @@
 package game
 
 import (
+	"github.com/shpaker/tnk9x/internal/interfaces"
 	image_providers "github.com/shpaker/tnk9x/internal/types/image_providers"
 )
+
+var _ interfaces.IAnimationsRepository = (*AnimationsRepository)(nil)
 
 type AnimationsRepository struct {
 	animations []*image_providers.AnimationProvider

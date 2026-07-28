@@ -7,6 +7,8 @@ import (
 	"github.com/shpaker/tnk9x/internal/types"
 )
 
+var _ interfaces.IAIUseCases = (*AIUseCases)(nil)
+
 type AIUseCases struct {
 	scriptEngine interfaces.IAIScriptEngine
 }

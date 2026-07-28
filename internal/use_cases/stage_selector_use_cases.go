@@ -3,8 +3,11 @@ package use_cases
 import (
 	"fmt"
 
+	"github.com/shpaker/tnk9x/internal/interfaces"
 	"github.com/shpaker/tnk9x/internal/types"
 )
+
+var _ interfaces.IStageSelectorUseCases = (*StageSelectorUseCases)(nil)
 
 type StageSelectorUseCases struct{}
 

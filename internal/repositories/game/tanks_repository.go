@@ -1,8 +1,11 @@
 package game
 
 import (
+	"github.com/shpaker/tnk9x/internal/interfaces"
 	"github.com/shpaker/tnk9x/internal/types"
 )
+
+var _ interfaces.ITanksRepository = (*TanksRepository)(nil)
 
 type TanksRepository struct {
 	players []*types.TankEntity

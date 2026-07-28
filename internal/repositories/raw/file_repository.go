@@ -9,12 +9,16 @@ import (
 	"strings"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/shpaker/tnk9x/internal/interfaces"
 )
 
 const (
 	imageExt  = ".png"
 	configExt = ".yml"
 )
+
+var _ interfaces.IFileRepository = (*FileRepository)(nil)
 
 type FileRepository struct {
 	baseDir string

@@ -4,6 +4,8 @@ import (
 	"github.com/shpaker/tnk9x/internal/interfaces"
 )
 
+var _ interfaces.IGameRepositoriesRegistry = (*GameRepositoriesRegistry)(nil)
+
 type GameRepositoriesRegistry struct {
 	bulletsRepository    interfaces.IBulletsRepository
 	animationsRepository interfaces.IAnimationsRepository

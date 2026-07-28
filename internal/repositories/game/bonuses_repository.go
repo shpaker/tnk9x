@@ -3,8 +3,11 @@ package game
 import (
 	"fmt"
 
+	"github.com/shpaker/tnk9x/internal/interfaces"
 	"github.com/shpaker/tnk9x/internal/types"
 )
+
+var _ interfaces.IBonusesRepository = (*BonusesRepository)(nil)
 
 type BonusesRepository struct {
 	bonuses []*types.BonusEntity

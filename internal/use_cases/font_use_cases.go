@@ -8,6 +8,8 @@ import (
 	"github.com/shpaker/tnk9x/internal/interfaces"
 )
 
+var _ interfaces.IFontUseCases = (*FontUseCases)(nil)
+
 type FontUseCases struct {
 	fontsRepository interfaces.IFontsRepository
 	baseFont        *opentype.Font

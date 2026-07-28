@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	game "github.com/shpaker/tnk9x/internal/repositories/game"
-	"github.com/shpaker/tnk9x/internal/repositories/processed"
 	"github.com/shpaker/tnk9x/internal/testutil"
 	"github.com/shpaker/tnk9x/internal/types"
 	"github.com/shpaker/tnk9x/internal/use_cases"
@@ -25,7 +24,7 @@ func newBulletTestEnv() *bulletTestEnv {
 	bulletsRepo := game.NewBulletsRepository()
 	tilesUC := use_cases.NewTilesUseCases(
 		registry,
-		processed.TilesetTypeBullet,
+		types.TilesetTypeBullet,
 		nil,
 		nil,
 	)

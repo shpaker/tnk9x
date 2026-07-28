@@ -5,6 +5,8 @@ import (
 	"github.com/shpaker/tnk9x/internal/types"
 )
 
+var _ interfaces.ISoundUseCases = (*SoundUseCases)(nil)
+
 type SoundUseCases struct {
 	events []types.SoundEntity
 }

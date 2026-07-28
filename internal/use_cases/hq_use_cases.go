@@ -1,17 +1,20 @@
 package use_cases
 
 import (
+	"github.com/shpaker/tnk9x/internal/interfaces"
 	"github.com/shpaker/tnk9x/internal/types"
 	image_providers "github.com/shpaker/tnk9x/internal/types/image_providers"
 )
 
+var _ interfaces.IHQUseCases = (*HQUseCases)(nil)
+
 type HQUseCases struct {
-	tilesUseCases *TilesUseCases
+	tilesUseCases interfaces.ITilesUseCases
 	hq            *types.HQEntity
 }
 
 func NewHQUseCases(
-	tilesUseCases *TilesUseCases,
+	tilesUseCases interfaces.ITilesUseCases,
 	hq *types.HQEntity,
 ) *HQUseCases {
 	return &HQUseCases{

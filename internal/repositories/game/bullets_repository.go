@@ -3,8 +3,11 @@ package game
 import (
 	"fmt"
 
+	"github.com/shpaker/tnk9x/internal/interfaces"
 	"github.com/shpaker/tnk9x/internal/types"
 )
+
+var _ interfaces.IBulletsRepository = (*BulletsRepository)(nil)
 
 type BulletsRepository struct {
 	bullets []*types.BulletEntity

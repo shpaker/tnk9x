@@ -1,6 +1,11 @@
 package collision_services
 
-import "github.com/shpaker/tnk9x/internal/types"
+import (
+	"github.com/shpaker/tnk9x/internal/interfaces"
+	"github.com/shpaker/tnk9x/internal/types"
+)
+
+var _ interfaces.IBoundaryCollisionService = (*BoundaryCollisionService)(nil)
 
 type BoundaryCollisionService struct {
 	sizePx types.Size

@@ -3,8 +3,11 @@ package use_cases
 import (
 	"math/rand"
 
+	"github.com/shpaker/tnk9x/internal/interfaces"
 	"github.com/shpaker/tnk9x/internal/types"
 )
+
+var _ interfaces.ISpecsUseCases = (*SpecsUseCases)(nil)
 
 type SpecsUseCases struct {
 	playersSpecs [4]*types.SpecsEntity // Уровни 0-3

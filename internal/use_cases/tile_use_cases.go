@@ -5,24 +5,25 @@ import (
 	"image"
 
 	"github.com/shpaker/tnk9x/internal/interfaces"
-	"github.com/shpaker/tnk9x/internal/repositories/processed"
 	"github.com/shpaker/tnk9x/internal/types"
 	image_providers "github.com/shpaker/tnk9x/internal/types/image_providers"
 )
 
+var _ interfaces.ITilesUseCases = (*TilesUseCases)(nil)
+
 type TilesUseCases struct {
 	tilesetRegistry      interfaces.ITilesetRepositoryRegistry
-	tilesetType          processed.TilesetType
+	tilesetType          types.TilesetType
 	animationsRepository interfaces.IAnimationsRepository
-	spawnerTilesetType   processed.TilesetType
-	explosionTilesetType processed.TilesetType
+	spawnerTilesetType   types.TilesetType
+	explosionTilesetType types.TilesetType
 	tileService          interfaces.ITileService
 	animationService     interfaces.IAnimationService
 }
 
 func NewTilesUseCases(
 	tilesetRegistry interfaces.ITilesetRepositoryRegistry,
-	tilesetType processed.TilesetType,
+	tilesetType types.TilesetType,
 	tileService interfaces.ITileService,
 	animationService interfaces.IAnimationService,
 ) *TilesUseCases {
@@ -36,10 +37,10 @@ func NewTilesUseCases(
 
 func NewTilesUseCasesWithAnimations(
 	tilesetRegistry interfaces.ITilesetRepositoryRegistry,
-	tilesetType processed.TilesetType,
+	tilesetType types.TilesetType,
 	animationsRepository interfaces.IAnimationsRepository,
-	spawnerTilesetType processed.TilesetType,
-	explosionTilesetType processed.TilesetType,
+	spawnerTilesetType types.TilesetType,
+	explosionTilesetType types.TilesetType,
 	tileService interfaces.ITileService,
 	animationService interfaces.IAnimationService,
 ) *TilesUseCases {
@@ -64,9 +65,9 @@ func (tuc *TilesUseCases) GetTankImage(
 	id string,
 	isEnemy bool,
 ) (image.Image, error) {
-	tilesetType := processed.TilesetTypePlayer
+	tilesetType := types.TilesetTypePlayer
 	if isEnemy {
-		tilesetType = processed.TilesetTypeEnemy
+		tilesetType = types.TilesetTypeEnemy
 	}
 	return tuc.getImageFromTileset(tilesetType, id)
 }
@@ -85,28 +86,28 @@ func (tuc *TilesUseCases) CreateStaticTile(
 }
 
 func (tuc *TilesUseCases) getImageFromTileset(
-	tilesetType processed.TilesetType,
+	tilesetType types.TilesetType,
 	id string,
 ) (image.Image, error) {
 	var provider types.IImageProvider
 	var err error
 
 	switch tilesetType {
-	case processed.TilesetTypeBlocks:
+	case types.TilesetTypeBlocks:
 		provider, err = tuc.tilesetRegistry.GetBlocksImage(id)
-	case processed.TilesetTypePlayer:
+	case types.TilesetTypePlayer:
 		provider, err = tuc.tilesetRegistry.GetPlayerImage(id)
-	case processed.TilesetTypeEnemy:
+	case types.TilesetTypeEnemy:
 		provider, err = tuc.tilesetRegistry.GetEnemyImage(id)
-	case processed.TilesetTypeBullet:
+	case types.TilesetTypeBullet:
 		provider, err = tuc.tilesetRegistry.GetBulletImage(id)
-	case processed.TilesetTypeSpawner:
+	case types.TilesetTypeSpawner:
 		provider, err = tuc.tilesetRegistry.GetSpawnerImage(id)
-	case processed.TilesetTypeExplosion:
+	case types.TilesetTypeExplosion:
 		provider, err = tuc.tilesetRegistry.GetExplosionTankImage(id)
-	case processed.TilesetTypeHQ:
+	case types.TilesetTypeHQ:
 		provider, err = tuc.tilesetRegistry.GetHQImage(id)
-	case processed.TilesetTypeBonuses:
+	case types.TilesetTypeBonuses:
 		provider, err = tuc.tilesetRegistry.GetBonusesImage(id)
 	default:
 		return nil, fmt.Errorf("unknown tileset type: %s", tilesetType)
@@ -128,9 +129,9 @@ func (tuc *TilesUseCases) CreateTankAnimationTile(
 	id string,
 	isEnemy bool,
 ) (*image_providers.AnimationProvider, error) {
-	tilesetType := processed.TilesetTypePlayer
+	tilesetType := types.TilesetTypePlayer
 	if isEnemy {
-		tilesetType = processed.TilesetTypeEnemy
+		tilesetType = types.TilesetTypeEnemy
 	}
 	return tuc.tileService.CreateAnimationTileFromTileset(
 		string(tilesetType),

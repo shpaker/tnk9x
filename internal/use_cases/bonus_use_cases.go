@@ -8,6 +8,8 @@ import (
 	"github.com/shpaker/tnk9x/internal/types/session_entities"
 )
 
+var _ interfaces.IBonusUseCases = (*BonusUseCases)(nil)
+
 type BonusUseCases struct {
 	tankCommonUseCases    interfaces.ITankCommonUseCases
 	tankLifecycleUseCases interfaces.ITankLifecycleUseCases
@@ -16,7 +18,7 @@ type BonusUseCases struct {
 	configProvider        interfaces.IConfigProvider
 	tilesUseCases         interfaces.ITilesUseCases
 	renderUseCases        interfaces.IRenderUseCases
-	soundUseCases         *SoundUseCases
+	soundUseCases         interfaces.ISoundUseCases
 }
 
 func NewBonusUseCases(
@@ -27,7 +29,7 @@ func NewBonusUseCases(
 	configProvider interfaces.IConfigProvider,
 	tilesUseCases interfaces.ITilesUseCases,
 	renderUseCases interfaces.IRenderUseCases,
-	soundUseCases *SoundUseCases,
+	soundUseCases interfaces.ISoundUseCases,
 ) *BonusUseCases {
 	return &BonusUseCases{
 		tankCommonUseCases:    tankCommonUseCases,

@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	game "github.com/shpaker/tnk9x/internal/repositories/game"
-	"github.com/shpaker/tnk9x/internal/repositories/processed"
 	"github.com/shpaker/tnk9x/internal/testutil"
 	"github.com/shpaker/tnk9x/internal/types"
 	"github.com/shpaker/tnk9x/internal/types/session_entities"
@@ -137,7 +136,7 @@ func newBonusTestEnv() *bonusTestEnv {
 	registry := &testutil.FakeTilesetRegistry{}
 	tilesUC := use_cases.NewTilesUseCases(
 		registry,
-		processed.TilesetTypeBonuses,
+		types.TilesetTypeBonuses,
 		nil,
 		nil,
 	)

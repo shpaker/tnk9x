@@ -6,6 +6,8 @@ import (
 	"github.com/shpaker/tnk9x/internal/interfaces"
 )
 
+var _ interfaces.ISoundsRepository = (*SoundsRepository)(nil)
+
 type SoundsRepository struct {
 	fileRepository interfaces.IFileRepository
 	cache          map[string][]byte

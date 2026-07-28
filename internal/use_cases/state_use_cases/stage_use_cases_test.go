@@ -1,4 +1,4 @@
-package stateusecases_test
+package state_use_cases_test
 
 import (
 	"testing"
@@ -6,7 +6,7 @@ import (
 	game "github.com/shpaker/tnk9x/internal/repositories/game"
 	"github.com/shpaker/tnk9x/internal/types"
 	"github.com/shpaker/tnk9x/internal/types/session_entities"
-	stateusecases "github.com/shpaker/tnk9x/internal/use_cases/state_use_cases"
+	state_use_cases "github.com/shpaker/tnk9x/internal/use_cases/state_use_cases"
 )
 
 const testDT = 1.0 / 60.0
@@ -164,7 +164,7 @@ type stageTestEnv struct {
 	hq        *stubHQUseCases
 	session   *session_entities.StageSessionEntity
 	bonuses   *game.BonusesRepository
-	stage     *stateusecases.StageUseCases
+	stage     *state_use_cases.StageUseCases
 }
 
 func newStageTestEnv(enemyRespawnDelay uint) *stageTestEnv {
@@ -177,7 +177,7 @@ func newStageTestEnv(enemyRespawnDelay uint) *stageTestEnv {
 	bonuses := game.NewBonusesRepository()
 
 	// NewStageUseCases возвращает значение — берём адрес
-	stage := stateusecases.NewStageUseCases(
+	stage := state_use_cases.NewStageUseCases(
 		lifecycle,
 		common,
 		bullets,
@@ -378,7 +378,7 @@ func TestStageUseCases_WinLoseTruthTable(t *testing.T) {
 // Без hqUseCases победа определяется только по врагам и игрокам
 func TestStageUseCases_IsStageWon_WithoutHQUseCases(t *testing.T) {
 	session := session_entities.NewStageSessionEntity()
-	stage := stateusecases.NewStageUseCases(
+	stage := state_use_cases.NewStageUseCases(
 		nil, nil, nil, nil, nil, session, 0, nil, nil, nil,
 	)
 	for i := 0; i < int(session.GetTotalEnemies()); i++ {
@@ -395,7 +395,7 @@ func TestStageUseCases_IsStageWon_WithoutHQUseCases(t *testing.T) {
 
 // Все зависимости nil: методы не паникуют и возвращают нейтральные значения
 func TestStageUseCases_NilDependenciesAreSafe(t *testing.T) {
-	stage := stateusecases.NewStageUseCases(
+	stage := state_use_cases.NewStageUseCases(
 		nil, nil, nil, nil, nil, nil, 0, nil, nil, nil,
 	)
 

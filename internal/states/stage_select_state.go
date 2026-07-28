@@ -17,7 +17,7 @@ import (
 type StageSelectState struct {
 	config             interfaces.IConfigProvider
 	selector           *types.StageSelectorEntity
-	selectorUseCases   *use_cases.StageSelectorUseCases
+	selectorUseCases   interfaces.IStageSelectorUseCases
 	transitionUseCases *use_cases.StateTransitionUseCases
 	Session            *session_entities.GameSessionEntity
 	inputAdapter       *stage_select.StageSelectKeyboardInputAdapter
@@ -38,7 +38,7 @@ const (
 
 func NewStageSelectState(
 	config interfaces.IConfigProvider,
-	selectorUseCases *use_cases.StageSelectorUseCases,
+	selectorUseCases interfaces.IStageSelectorUseCases,
 	transitionUseCases *use_cases.StateTransitionUseCases,
 	session *session_entities.GameSessionEntity,
 	fontUseCases interfaces.IFontUseCases,

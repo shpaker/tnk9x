@@ -5,8 +5,9 @@ import (
 
 	"github.com/shpaker/tnk9x/internal/interfaces"
 	"github.com/shpaker/tnk9x/internal/types"
-	"github.com/shpaker/tnk9x/internal/use_cases"
 )
+
+var _ interfaces.ITankActionsUseCases = (*TankActionsUseCases)(nil)
 
 type TankActionsUseCases struct {
 	brakingService interfaces.ITankBrakingService
@@ -14,7 +15,7 @@ type TankActionsUseCases struct {
 	commonUseCases interfaces.ITankCommonUseCases
 	renderUseCases interfaces.IRenderUseCases
 	mapUseCases    interfaces.IMapUseCases
-	soundUseCases  *use_cases.SoundUseCases
+	soundUseCases  interfaces.ISoundUseCases
 }
 
 func NewTankActionsUseCases(
@@ -23,7 +24,7 @@ func NewTankActionsUseCases(
 	commonUseCases interfaces.ITankCommonUseCases,
 	renderUseCases interfaces.IRenderUseCases,
 	mapUseCases interfaces.IMapUseCases,
-	soundUseCases *use_cases.SoundUseCases,
+	soundUseCases interfaces.ISoundUseCases,
 ) *TankActionsUseCases {
 	return &TankActionsUseCases{
 		brakingService: brakingService,

@@ -1,12 +1,13 @@
-package stateusecases
+package state_use_cases
 
 import (
 	"github.com/shpaker/tnk9x/internal/interfaces"
 	"github.com/shpaker/tnk9x/internal/types"
-	"github.com/shpaker/tnk9x/internal/use_cases"
 
 	"github.com/shpaker/tnk9x/internal/types/session_entities"
 )
+
+var _ interfaces.IStageUseCases = (*StageUseCases)(nil)
 
 type StageUseCases struct {
 	isPaused bool
@@ -23,7 +24,7 @@ type StageUseCases struct {
 
 	bonusesRepository interfaces.IBonusesRepository
 	mapUseCases       interfaces.IMapUseCases
-	bonusUseCases     *use_cases.BonusUseCases
+	bonusUseCases     interfaces.IBonusUseCases
 }
 
 func NewStageUseCases(
@@ -36,7 +37,7 @@ func NewStageUseCases(
 	enemyRespawnDelay uint,
 	bonusesRepository interfaces.IBonusesRepository,
 	mapUseCases interfaces.IMapUseCases,
-	bonusUseCases *use_cases.BonusUseCases,
+	bonusUseCases interfaces.IBonusUseCases,
 ) StageUseCases {
 	if enemyRespawnDelay == 0 {
 		enemyRespawnDelay = 3 * 60

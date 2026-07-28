@@ -1,8 +1,11 @@
 package use_cases
 
 import (
+	"github.com/shpaker/tnk9x/internal/interfaces"
 	"github.com/shpaker/tnk9x/internal/types"
 )
+
+var _ interfaces.IMapUseCases = (*MapUseCases)(nil)
 
 type MapUseCases struct {
 	mapEntity *types.MapEntity

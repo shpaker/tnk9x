@@ -7,7 +7,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/audio"
 
-	game "github.com/shpaker/tnk9x/internal/adapters/stage"
+	"github.com/shpaker/tnk9x/internal/adapters/stage"
 	"github.com/shpaker/tnk9x/internal/adapters/stage/input_adapters"
 	"github.com/shpaker/tnk9x/internal/interfaces"
 	"github.com/shpaker/tnk9x/internal/repositories/processed"
@@ -15,7 +15,7 @@ import (
 	collision_services "github.com/shpaker/tnk9x/internal/services/collision_services"
 	"github.com/shpaker/tnk9x/internal/types"
 	"github.com/shpaker/tnk9x/internal/use_cases"
-	stateusecases "github.com/shpaker/tnk9x/internal/use_cases/state_use_cases"
+	state_use_cases "github.com/shpaker/tnk9x/internal/use_cases/state_use_cases"
 	tank_use_cases "github.com/shpaker/tnk9x/internal/use_cases/tank_use_cases"
 
 	"github.com/shpaker/tnk9x/internal/types/session_entities"
@@ -86,7 +86,7 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 
 	// Создаем звуковой адаптер
 	soundsRepository := processed.NewSoundsRepository(b.fileRepository)
-	soundAdapter, err := game.NewSoundAdapter(
+	soundAdapter, err := stage.NewSoundAdapter(
 		soundsRepository,
 		b.audioContext,
 		b.config.GetVolume(),
@@ -152,18 +152,18 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 
 	hqTileService := services.NewTileServiceWithSpecialRepos(
 		b.tilesetRegistry,
-		processed.TilesetTypePlayer,
-		processed.TilesetType(""),
-		processed.TilesetTypeSpawner,
-		processed.TilesetTypeExplosion,
+		types.TilesetTypePlayer,
+		types.TilesetType(""),
+		types.TilesetTypeSpawner,
+		types.TilesetTypeExplosion,
 	)
 	hqAnimationService := services.NewAnimationService()
 	hqTilesUseCases := use_cases.NewTilesUseCasesWithAnimations(
 		b.tilesetRegistry,
-		processed.TilesetTypeHQ,
+		types.TilesetTypeHQ,
 		b.gameRepository.GetAnimationsRepository(),
-		processed.TilesetTypeSpawner,
-		processed.TilesetTypeExplosion,
+		types.TilesetTypeSpawner,
+		types.TilesetTypeExplosion,
 		hqTileService,
 		hqAnimationService,
 	)
@@ -270,7 +270,7 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 
 	tankLifecycleUseCases.SetCollisionUseCases(collisionUseCases)
 
-	stageUseCasesValue := stateusecases.NewStageUseCases(
+	stageUseCasesValue := state_use_cases.NewStageUseCases(
 		tankLifecycleUseCases,
 		tankCommonUseCases,
 		bulletUseCases,
@@ -311,52 +311,52 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 	renderAnimationService := services.NewAnimationService()
 	mapTilesUseCases := use_cases.NewTilesUseCases(
 		b.tilesetRegistry,
-		processed.TilesetTypeBlocks,
-		services.NewTileService(b.tilesetRegistry, processed.TilesetTypeBlocks),
+		types.TilesetTypeBlocks,
+		services.NewTileService(b.tilesetRegistry, types.TilesetTypeBlocks),
 		renderAnimationService,
 	)
 	tankTilesUseCases := use_cases.NewTilesUseCases(
 		b.tilesetRegistry,
-		processed.TilesetTypePlayer,
-		services.NewTileService(b.tilesetRegistry, processed.TilesetTypePlayer),
+		types.TilesetTypePlayer,
+		services.NewTileService(b.tilesetRegistry, types.TilesetTypePlayer),
 		renderAnimationService,
 	)
 	bulletTilesUseCases := use_cases.NewTilesUseCases(
 		b.tilesetRegistry,
-		processed.TilesetTypeBullet,
-		services.NewTileService(b.tilesetRegistry, processed.TilesetTypeBullet),
+		types.TilesetTypeBullet,
+		services.NewTileService(b.tilesetRegistry, types.TilesetTypeBullet),
 		renderAnimationService,
 	)
 	spawnerTilesUseCases := use_cases.NewTilesUseCases(
 		b.tilesetRegistry,
-		processed.TilesetTypeSpawner,
+		types.TilesetTypeSpawner,
 		services.NewTileService(
 			b.tilesetRegistry,
-			processed.TilesetTypeSpawner,
+			types.TilesetTypeSpawner,
 		),
 		renderAnimationService,
 	)
 	explosionTilesUseCases := use_cases.NewTilesUseCases(
 		b.tilesetRegistry,
-		processed.TilesetTypeExplosion,
+		types.TilesetTypeExplosion,
 		services.NewTileService(
 			b.tilesetRegistry,
-			processed.TilesetTypeExplosion,
+			types.TilesetTypeExplosion,
 		),
 		renderAnimationService,
 	)
 	hqTilesUseCasesForRenderer := use_cases.NewTilesUseCases(
 		b.tilesetRegistry,
-		processed.TilesetTypeHQ,
-		services.NewTileService(b.tilesetRegistry, processed.TilesetTypeHQ),
+		types.TilesetTypeHQ,
+		services.NewTileService(b.tilesetRegistry, types.TilesetTypeHQ),
 		renderAnimationService,
 	)
 	bonusTilesUseCasesForRenderer := use_cases.NewTilesUseCases(
 		b.tilesetRegistry,
-		processed.TilesetTypeBonuses,
+		types.TilesetTypeBonuses,
 		services.NewTileService(
 			b.tilesetRegistry,
-			processed.TilesetTypeBonuses,
+			types.TilesetTypeBonuses,
 		),
 		renderAnimationService,
 	)
@@ -368,7 +368,7 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 	mapOffsetY := 16
 	mapOffsetX := mapWidthHeightForAdapter / 2
 
-	rendererAdapter := game.NewStageRendererAdapter(
+	rendererAdapter := stage.NewStageRendererAdapter(
 		mapUseCases,
 		tankCommonUseCases,
 		bulletUseCases,
@@ -434,19 +434,19 @@ func (b *StageStateBuilder) loadLevel() error {
 func (b *StageStateBuilder) buildTileServices() (*use_cases.TilesUseCases, error) {
 	tileService := services.NewTileServiceWithSpecialRepos(
 		b.tilesetRegistry,
-		processed.TilesetTypePlayer,
-		processed.TilesetTypeEnemy,
-		processed.TilesetTypeSpawner,
-		processed.TilesetTypeExplosion,
+		types.TilesetTypePlayer,
+		types.TilesetTypeEnemy,
+		types.TilesetTypeSpawner,
+		types.TilesetTypeExplosion,
 	)
 	animationService := services.NewAnimationService()
 
 	tilesUseCasesWithAnimations := use_cases.NewTilesUseCasesWithAnimations(
 		b.tilesetRegistry,
-		processed.TilesetTypePlayer,
+		types.TilesetTypePlayer,
 		b.gameRepository.GetAnimationsRepository(),
-		processed.TilesetTypeSpawner,
-		processed.TilesetTypeExplosion,
+		types.TilesetTypeSpawner,
+		types.TilesetTypeExplosion,
 		tileService,
 		animationService,
 	)
@@ -459,12 +459,12 @@ func (b *StageStateBuilder) buildBulletUseCases() (*use_cases.BulletUseCases, ui
 
 	bulletTileService := services.NewTileService(
 		b.tilesetRegistry,
-		processed.TilesetTypeBullet,
+		types.TilesetTypeBullet,
 	)
 	bulletAnimationService := services.NewAnimationService()
 	bulletTilesUseCases := use_cases.NewTilesUseCases(
 		b.tilesetRegistry,
-		processed.TilesetTypeBullet,
+		types.TilesetTypeBullet,
 		bulletTileService,
 		bulletAnimationService,
 	)
@@ -480,12 +480,12 @@ func (b *StageStateBuilder) buildBulletUseCases() (*use_cases.BulletUseCases, ui
 func (b *StageStateBuilder) buildBonusTilesUseCases() (*use_cases.TilesUseCases, error) {
 	bonusTileService := services.NewTileService(
 		b.tilesetRegistry,
-		processed.TilesetTypeBonuses,
+		types.TilesetTypeBonuses,
 	)
 	bonusAnimationService := services.NewAnimationService()
 	bonusTilesUseCases := use_cases.NewTilesUseCases(
 		b.tilesetRegistry,
-		processed.TilesetTypeBonuses,
+		types.TilesetTypeBonuses,
 		bonusTileService,
 		bonusAnimationService,
 	)

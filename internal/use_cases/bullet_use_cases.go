@@ -5,6 +5,8 @@ import (
 	"github.com/shpaker/tnk9x/internal/types"
 )
 
+var _ interfaces.IBulletUseCases = (*BulletUseCases)(nil)
+
 type BulletUseCases struct {
 	bulletsRepository interfaces.IBulletsRepository
 	tilesUseCases     interfaces.ITilesUseCases

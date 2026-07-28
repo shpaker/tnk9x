@@ -8,6 +8,8 @@ import (
 	"github.com/shpaker/tnk9x/internal/types"
 )
 
+var _ interfaces.ITankCommonUseCases = (*TankCommonUseCases)(nil)
+
 type TankCommonUseCases struct {
 	brakingService  interfaces.ITankBrakingService
 	renderUseCases  interfaces.IRenderUseCases

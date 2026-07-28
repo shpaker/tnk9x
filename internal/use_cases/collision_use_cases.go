@@ -5,6 +5,8 @@ import (
 	"github.com/shpaker/tnk9x/internal/types"
 )
 
+var _ interfaces.ICollisionUseCases = (*CollisionUseCases)(nil)
+
 type CollisionUseCases struct {
 	bulletUseCases           interfaces.IBulletUseCases
 	tankActions              interfaces.ITankActionsUseCases
@@ -16,9 +18,9 @@ type CollisionUseCases struct {
 	wallCollisionService     interfaces.IWallCollisionService
 	bulletCollisionService   interfaces.IBulletCollisionService
 	entitiesCollisionService interfaces.IEntitiesCollisionService
-	bonusUseCases            *BonusUseCases
+	bonusUseCases            interfaces.IBonusUseCases
 	bonusesRepository        interfaces.IBonusesRepository
-	soundUseCases            *SoundUseCases
+	soundUseCases            interfaces.ISoundUseCases
 }
 
 func NewCollisionUseCases(
@@ -32,9 +34,9 @@ func NewCollisionUseCases(
 	bulletCollisionService interfaces.IBulletCollisionService,
 	entitiesCollisionService interfaces.IEntitiesCollisionService,
 	hqUseCases interfaces.IHQUseCases,
-	bonusUseCases *BonusUseCases,
+	bonusUseCases interfaces.IBonusUseCases,
 	bonusesRepository interfaces.IBonusesRepository,
-	soundUseCases *SoundUseCases,
+	soundUseCases interfaces.ISoundUseCases,
 ) *CollisionUseCases {
 	return &CollisionUseCases{
 		bulletUseCases:           bulletUseCases,

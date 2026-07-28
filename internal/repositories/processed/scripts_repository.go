@@ -6,6 +6,8 @@ import (
 	"github.com/shpaker/tnk9x/internal/interfaces"
 )
 
+var _ interfaces.IScriptsRepository = (*ScriptsRepository)(nil)
+
 type ScriptsRepository struct {
 	fileRepository interfaces.IFileRepository
 }

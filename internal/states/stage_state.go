@@ -7,11 +7,10 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/audio"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 
-	game "github.com/shpaker/tnk9x/internal/adapters/stage"
+	"github.com/shpaker/tnk9x/internal/adapters/stage"
 	"github.com/shpaker/tnk9x/internal/interfaces"
 	"github.com/shpaker/tnk9x/internal/types"
 	"github.com/shpaker/tnk9x/internal/types/session_entities"
-	"github.com/shpaker/tnk9x/internal/use_cases"
 )
 
 type StageState struct {
@@ -23,12 +22,12 @@ type StageState struct {
 	RenderUseCases        interfaces.IRenderUseCases
 	TankLifecycleUseCases interfaces.ITankLifecycleUseCases
 	BulletUseCases        interfaces.IBulletUseCases
-	MapUseCases           *use_cases.MapUseCases
-	CollisionUseCases     *use_cases.CollisionUseCases
-	TilesUseCases         *use_cases.TilesUseCases
+	MapUseCases           interfaces.IMapUseCases
+	CollisionUseCases     interfaces.ICollisionUseCases
+	TilesUseCases         interfaces.ITilesUseCases
 
 	inputAdapters     []interfaces.IInputAdapter
-	RendererAdapter   *game.StageRendererAdapter
+	RendererAdapter   *stage.StageRendererAdapter
 	EnemyInputAdapter interfaces.IAiInputAdapter
 
 	StartTime time.Time
@@ -39,7 +38,7 @@ type StageState struct {
 	session           *session_entities.GameSessionEntity
 	bonusesRepository interfaces.IBonusesRepository
 
-	soundUseCases      *use_cases.SoundUseCases
+	soundUseCases      interfaces.ISoundUseCases
 	soundPlayerAdapter interfaces.ISoundPlayerAdapter
 
 	defeatSoundPlayed bool

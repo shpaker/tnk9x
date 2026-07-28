@@ -8,6 +8,8 @@ import (
 	"github.com/shpaker/tnk9x/internal/types"
 )
 
+var _ interfaces.IInputAdapterWithTank = (*StageKeyboardInputAdapter)(nil)
+
 type StageKeyboardInputAdapter struct {
 	tankActions   interfaces.ITankActionsUseCases
 	stageUseCases interfaces.IStageUseCases

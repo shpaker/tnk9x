@@ -1,24 +1,11 @@
-package services
+package stage
 
 import (
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
-type ImageService struct{}
-
-func NewImageService() *ImageService {
-	return &ImageService{}
-}
-
-func (s *ImageService) RotateImageByAngle(
-	image interface{},
-	angle float64,
-) (interface{}, error) {
-	img, ok := image.(*ebiten.Image)
-	if !ok {
-		return image, nil
-	}
-
+// rotateImageByAngle возвращает копию изображения, повёрнутую вокруг центра.
+func rotateImageByAngle(img *ebiten.Image, angle float64) *ebiten.Image {
 	bounds := img.Bounds()
 	width := bounds.Dx()
 	height := bounds.Dy()
@@ -37,5 +24,5 @@ func (s *ImageService) RotateImageByAngle(
 
 	rotatedImage.DrawImage(img, op)
 
-	return rotatedImage, nil
+	return rotatedImage
 }

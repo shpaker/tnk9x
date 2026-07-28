@@ -32,10 +32,16 @@ type ITilesUseCases interface {
 	CreateStaticTile(id string) (IImageProvider, error)
 	CreateSpawnAnimation() (*image_providers.AnimationProvider, error)
 	CreateExplosionAnimation() (*image_providers.AnimationProvider, error)
+	CreateTankAnimationTile(
+		id string,
+		isEnemy bool,
+	) (*image_providers.AnimationProvider, error)
 	GetImage(id string) (image.Image, error)
+	GetTankImage(id string, isEnemy bool) (image.Image, error)
 	AddAnimation(animation *image_providers.AnimationProvider)
 	UpdateAnimations()
 	StartAnimation(animation *image_providers.AnimationProvider)
+	StopAnimation(animation *image_providers.AnimationProvider)
 }
 
 type ITankCommonUseCases interface {
@@ -123,4 +129,22 @@ type IStageUseCases interface {
 type ISpecsUseCases interface {
 	GetTankSpecs(isEnemy bool, level uint) *types.SpecsEntity
 	GetEnemyLevelByRemainingCount(remainingEnemies uint) uint
+}
+
+type ISoundUseCases interface {
+	RequestSound(soundID types.SoundID, loop bool)
+	GetEvents() []types.SoundEntity
+	StopAll(soundPlayerAdapter ISoundPlayerAdapter)
+}
+
+type IBonusUseCases interface {
+	Apply(bonus *types.BonusEntity, tank *types.TankEntity)
+	SpawnRandomBonusEntity(position types.Position) *types.BonusEntity
+}
+
+type IStageSelectorUseCases interface {
+	Next(selector *types.StageSelectorEntity) uint
+	Previous(selector *types.StageSelectorEntity) uint
+	String(selector *types.StageSelectorEntity) string
+	Select(selector *types.StageSelectorEntity) uint
 }

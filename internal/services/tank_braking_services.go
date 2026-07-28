@@ -1,8 +1,11 @@
 package services
 
 import (
+	"github.com/shpaker/tnk9x/internal/interfaces"
 	"github.com/shpaker/tnk9x/internal/types"
 )
+
+var _ interfaces.ITankBrakingService = (*TankBrakingService)(nil)
 
 type TankBrakingService struct{}
 

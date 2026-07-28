@@ -1,4 +1,4 @@
-package adapters
+package stage
 
 import (
 	"image"
@@ -11,27 +11,24 @@ import (
 	"golang.org/x/image/font/opentype"
 
 	"github.com/shpaker/tnk9x/internal/interfaces"
-	"github.com/shpaker/tnk9x/internal/services"
 	"github.com/shpaker/tnk9x/internal/types"
 	image_providers "github.com/shpaker/tnk9x/internal/types/image_providers"
-	"github.com/shpaker/tnk9x/internal/use_cases"
 )
 
 type StageRendererAdapter struct {
 	mapUseCases            interfaces.IMapUseCases
 	tankCommonUseCases     interfaces.ITankCommonUseCases
 	bulletUseCases         interfaces.IBulletUseCases
-	mapTilesUseCases       *use_cases.TilesUseCases
-	tankTilesUseCases      *use_cases.TilesUseCases
-	bulletTilesUseCases    *use_cases.TilesUseCases
-	spawnerTilesUseCases   *use_cases.TilesUseCases
-	explosionTilesUseCases *use_cases.TilesUseCases
-	hqTilesUseCases        *use_cases.TilesUseCases
+	mapTilesUseCases       interfaces.ITilesUseCases
+	tankTilesUseCases      interfaces.ITilesUseCases
+	bulletTilesUseCases    interfaces.ITilesUseCases
+	spawnerTilesUseCases   interfaces.ITilesUseCases
+	explosionTilesUseCases interfaces.ITilesUseCases
+	hqTilesUseCases        interfaces.ITilesUseCases
 	hqUseCases             interfaces.IHQUseCases
 	bonusesRepository      interfaces.IBonusesRepository
-	bonusTilesUseCases     *use_cases.TilesUseCases
+	bonusTilesUseCases     interfaces.ITilesUseCases
 	imageCache             map[string]*ebiten.Image
-	imageService           *services.ImageService
 	fontUseCases           interfaces.IFontUseCases
 	fontFace               text.Face
 	titleFontSize          int
@@ -47,15 +44,15 @@ func NewStageRendererAdapter(
 	mapUseCases interfaces.IMapUseCases,
 	tankCommonUseCases interfaces.ITankCommonUseCases,
 	bulletUseCases interfaces.IBulletUseCases,
-	mapTilesUseCases *use_cases.TilesUseCases,
-	tankTilesUseCases *use_cases.TilesUseCases,
-	bulletTilesUseCases *use_cases.TilesUseCases,
-	spawnerTilesUseCases *use_cases.TilesUseCases,
-	explosionTilesUseCases *use_cases.TilesUseCases,
-	hqTilesUseCases *use_cases.TilesUseCases,
+	mapTilesUseCases interfaces.ITilesUseCases,
+	tankTilesUseCases interfaces.ITilesUseCases,
+	bulletTilesUseCases interfaces.ITilesUseCases,
+	spawnerTilesUseCases interfaces.ITilesUseCases,
+	explosionTilesUseCases interfaces.ITilesUseCases,
+	hqTilesUseCases interfaces.ITilesUseCases,
 	hqUseCases interfaces.IHQUseCases,
 	bonusesRepository interfaces.IBonusesRepository,
-	bonusTilesUseCases *use_cases.TilesUseCases,
+	bonusTilesUseCases interfaces.ITilesUseCases,
 	fontUseCases interfaces.IFontUseCases,
 	tileMinSize int,
 	mapOffsetX int,
@@ -92,7 +89,6 @@ func NewStageRendererAdapter(
 		bonusTilesUseCases:     bonusTilesUseCases,
 		fontUseCases:           fontUseCases,
 		imageCache:             make(map[string]*ebiten.Image),
-		imageService:           services.NewImageService(),
 		tileMinSize:            tileMinSize,
 		mapOffsetX:             mapOffsetX,
 		mapOffsetY:             mapOffsetY,
@@ -416,17 +412,7 @@ func (r *StageRendererAdapter) drawBullets(screen *ebiten.Image) {
 		img := ebiten.NewImageFromImage(imageData)
 
 		rotationAngle := getRotationAngle(bullet.Direction)
-		rotatedImg, err := r.imageService.RotateImageByAngle(
-			img,
-			rotationAngle,
-		)
-		if err != nil {
-			continue
-		}
-		rotatedImage, ok := rotatedImg.(*ebiten.Image)
-		if !ok {
-			continue
-		}
+		rotatedImage := rotateImageByAngle(img, rotationAngle)
 
 		screenX := float64(r.mapOffsetX) + bullet.Position.X
 		screenY := float64(r.mapOffsetY) + bullet.Position.Y

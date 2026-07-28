@@ -5,6 +5,8 @@ import (
 	"github.com/shpaker/tnk9x/internal/types"
 )
 
+var _ interfaces.IBulletCollisionService = (*BulletCollisionService)(nil)
+
 type BulletCollisionService struct {
 	tileMinSize              int
 	entitiesCollisionService interfaces.IEntitiesCollisionService

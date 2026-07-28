@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	game "github.com/shpaker/tnk9x/internal/repositories/game"
-	"github.com/shpaker/tnk9x/internal/repositories/processed"
 	"github.com/shpaker/tnk9x/internal/services"
 	"github.com/shpaker/tnk9x/internal/testutil"
 	"github.com/shpaker/tnk9x/internal/types"
@@ -108,10 +107,10 @@ func newLifecycleTestEnv() *lifecycleTestEnv {
 	tileService := &testutil.FakeTileService{}
 	tilesUC := use_cases.NewTilesUseCasesWithAnimations(
 		nil, // реестр тайлсетов не нужен для анимаций спавна и взрыва
-		processed.TilesetTypePlayer,
+		types.TilesetTypePlayer,
 		animations,
-		processed.TilesetTypeSpawner,
-		processed.TilesetTypeExplosion,
+		types.TilesetTypeSpawner,
+		types.TilesetTypeExplosion,
 		tileService,
 		nil,
 	)

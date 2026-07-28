@@ -18,6 +18,8 @@ var MapCharsBlocksMapping = map[string]types.BlockType{
 	"=": types.Ice,
 }
 
+var _ interfaces.IMapsDataRepository = (*MapsDataRepository)(nil)
+
 type MapsDataRepository struct {
 	fileRepository  interfaces.IFileRepository
 	tilesetRegistry interfaces.ITilesetRepositoryRegistry

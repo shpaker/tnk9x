@@ -9,18 +9,7 @@ import (
 	image_providers "github.com/shpaker/tnk9x/internal/types/image_providers"
 )
 
-type TilesetType string
-
-const (
-	TilesetTypeBlocks    TilesetType = "blocks"
-	TilesetTypePlayer    TilesetType = "player"
-	TilesetTypeEnemy     TilesetType = "enemy"
-	TilesetTypeBullet    TilesetType = "bullet"
-	TilesetTypeSpawner   TilesetType = "spawner"
-	TilesetTypeExplosion TilesetType = "explosion"
-	TilesetTypeHQ        TilesetType = "hq"
-	TilesetTypeBonuses   TilesetType = "bonuses"
-)
+var _ interfaces.ITilesetRepositoryRegistry = (*TilesetRepositoryRegistry)(nil)
 
 type TilesetRepositoryRegistry struct {
 	blocks          *TilesetDataRepository
@@ -111,46 +100,46 @@ func NewTilesetRepositoryRegistry(
 }
 
 func (tr *TilesetRepositoryRegistry) getImageData(
-	tilesetType TilesetType,
+	tilesetType types.TilesetType,
 	id string,
 ) (image.Image, error) {
 	switch tilesetType {
-	case TilesetTypeBlocks:
+	case types.TilesetTypeBlocks:
 		if tr.blocks == nil {
 			return nil, fmt.Errorf("blocks repository not initialized")
 		}
 		return tr.blocks.getImage(id)
-	case TilesetTypePlayer:
+	case types.TilesetTypePlayer:
 		if tr.player == nil {
 			return nil, fmt.Errorf("player repository not initialized")
 		}
 		return tr.player.getImage(id)
-	case TilesetTypeEnemy:
+	case types.TilesetTypeEnemy:
 		if tr.enemy == nil {
 			return nil, fmt.Errorf("enemy repository not initialized")
 		}
 		return tr.enemy.getImage(id)
-	case TilesetTypeBullet:
+	case types.TilesetTypeBullet:
 		if tr.bullet == nil {
 			return nil, fmt.Errorf("bullet repository not initialized")
 		}
 		return tr.bullet.getImage(id)
-	case TilesetTypeSpawner:
+	case types.TilesetTypeSpawner:
 		if tr.spawner == nil {
 			return nil, fmt.Errorf("spawner repository not initialized")
 		}
 		return tr.spawner.getImage(id)
-	case TilesetTypeExplosion:
+	case types.TilesetTypeExplosion:
 		if tr.explosion == nil {
 			return nil, fmt.Errorf("explosion repository not initialized")
 		}
 		return tr.explosion.getImage(id)
-	case TilesetTypeHQ:
+	case types.TilesetTypeHQ:
 		if tr.hq == nil {
 			return nil, fmt.Errorf("hq repository not initialized")
 		}
 		return tr.hq.getImage(id)
-	case TilesetTypeBonuses:
+	case types.TilesetTypeBonuses:
 		if tr.bonuses == nil {
 			return nil, fmt.Errorf("bonuses repository not initialized")
 		}
@@ -164,7 +153,7 @@ func (tr *TilesetRepositoryRegistry) GetImageData(
 	tilesetType string,
 	id string,
 ) (image.Image, error) {
-	return tr.getImageData(TilesetType(tilesetType), id)
+	return tr.getImageData(types.TilesetType(tilesetType), id)
 }
 
 func (tr *TilesetRepositoryRegistry) GetBlocksImage(

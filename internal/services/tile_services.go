@@ -4,20 +4,21 @@ import (
 	"fmt"
 
 	"github.com/shpaker/tnk9x/internal/interfaces"
-	"github.com/shpaker/tnk9x/internal/repositories/processed"
 	"github.com/shpaker/tnk9x/internal/types"
 	image_providers "github.com/shpaker/tnk9x/internal/types/image_providers"
 )
 
+var _ interfaces.ITileService = (*TileService)(nil)
+
 type TileService struct {
 	tilesetRegistry  interfaces.ITilesetRepositoryRegistry
-	tilesetType      processed.TilesetType
-	enemyTilesetType processed.TilesetType
+	tilesetType      types.TilesetType
+	enemyTilesetType types.TilesetType
 }
 
 func NewTileService(
 	tilesetRegistry interfaces.ITilesetRepositoryRegistry,
-	tilesetType processed.TilesetType,
+	tilesetType types.TilesetType,
 ) *TileService {
 	return &TileService{
 		tilesetRegistry: tilesetRegistry,
@@ -27,10 +28,10 @@ func NewTileService(
 
 func NewTileServiceWithSpecialRepos(
 	tilesetRegistry interfaces.ITilesetRepositoryRegistry,
-	primaryTilesetType processed.TilesetType,
-	enemyTilesetType processed.TilesetType,
-	spawnerTilesetType processed.TilesetType,
-	explosionTilesetType processed.TilesetType,
+	primaryTilesetType types.TilesetType,
+	enemyTilesetType types.TilesetType,
+	spawnerTilesetType types.TilesetType,
+	explosionTilesetType types.TilesetType,
 ) *TileService {
 	return &TileService{
 		tilesetRegistry:  tilesetRegistry,
@@ -73,23 +74,23 @@ func (s *TileService) GetAnimationConfig(
 }
 
 func (s *TileService) getAnimationDataFromTileset(
-	tilesetType processed.TilesetType,
+	tilesetType types.TilesetType,
 	id string,
 ) (types.AnimationData, error) {
 	switch tilesetType {
-	case processed.TilesetTypeBlocks:
+	case types.TilesetTypeBlocks:
 		return s.tilesetRegistry.GetBlocksAnimationData(id)
-	case processed.TilesetTypePlayer:
+	case types.TilesetTypePlayer:
 		return s.tilesetRegistry.GetPlayerAnimationData(id)
-	case processed.TilesetTypeEnemy:
+	case types.TilesetTypeEnemy:
 		return s.tilesetRegistry.GetEnemyAnimationData(id)
-	case processed.TilesetTypeBullet:
+	case types.TilesetTypeBullet:
 		return s.tilesetRegistry.GetBulletAnimationData(id)
-	case processed.TilesetTypeSpawner:
+	case types.TilesetTypeSpawner:
 		return s.tilesetRegistry.GetSpawnerAnimationData(id)
-	case processed.TilesetTypeExplosion:
+	case types.TilesetTypeExplosion:
 		return s.tilesetRegistry.GetExplosionTankAnimationData(id)
-	case processed.TilesetTypeHQ:
+	case types.TilesetTypeHQ:
 		return s.tilesetRegistry.GetHQAnimationData(id)
 	default:
 		return nil, fmt.Errorf("unknown tileset type: %s", tilesetType)
@@ -97,23 +98,23 @@ func (s *TileService) getAnimationDataFromTileset(
 }
 
 func (s *TileService) getAnimationConfigFromTileset(
-	tilesetType processed.TilesetType,
+	tilesetType types.TilesetType,
 	id string,
 ) (types.AnimationConfig, error) {
 	switch tilesetType {
-	case processed.TilesetTypeBlocks:
+	case types.TilesetTypeBlocks:
 		return s.tilesetRegistry.GetBlocksAnimationConfig(id)
-	case processed.TilesetTypePlayer:
+	case types.TilesetTypePlayer:
 		return s.tilesetRegistry.GetPlayerAnimationConfig(id)
-	case processed.TilesetTypeEnemy:
+	case types.TilesetTypeEnemy:
 		return s.tilesetRegistry.GetEnemyAnimationConfig(id)
-	case processed.TilesetTypeBullet:
+	case types.TilesetTypeBullet:
 		return s.tilesetRegistry.GetBulletAnimationConfig(id)
-	case processed.TilesetTypeSpawner:
+	case types.TilesetTypeSpawner:
 		return s.tilesetRegistry.GetSpawnerAnimationConfig(id)
-	case processed.TilesetTypeExplosion:
+	case types.TilesetTypeExplosion:
 		return s.tilesetRegistry.GetExplosionTankAnimationConfig(id)
-	case processed.TilesetTypeHQ:
+	case types.TilesetTypeHQ:
 		return s.tilesetRegistry.GetHQAnimationConfig(id)
 	default:
 		return types.AnimationConfig{}, fmt.Errorf(
@@ -161,7 +162,7 @@ func (s *TileService) CreateAnimationTileFromTileset(
 	id string,
 ) (*image_providers.AnimationProvider, error) {
 	config, err := s.getAnimationConfigFromTileset(
-		processed.TilesetType(tilesetType),
+		types.TilesetType(tilesetType),
 		id,
 	)
 	if err != nil {
@@ -169,7 +170,7 @@ func (s *TileService) CreateAnimationTileFromTileset(
 	}
 
 	animationFrames, err := s.getAnimationDataFromTileset(
-		processed.TilesetType(tilesetType),
+		types.TilesetType(tilesetType),
 		id,
 	)
 	if err != nil {

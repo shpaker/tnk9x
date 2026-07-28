@@ -6,13 +6,15 @@ import (
 	image_providers "github.com/shpaker/tnk9x/internal/types/image_providers"
 )
 
+var _ interfaces.IRenderUseCases = (*RenderUseCases)(nil)
+
 type RenderUseCases struct {
-	tilesUseCases      *TilesUseCases
+	tilesUseCases      interfaces.ITilesUseCases
 	tankCommonUseCases interfaces.ITankAnimationNameProvider
 }
 
 func NewRenderUseCases(
-	tilesUseCases *TilesUseCases,
+	tilesUseCases interfaces.ITilesUseCases,
 	tankCommonUseCases interfaces.ITankAnimationNameProvider,
 ) *RenderUseCases {
 	return &RenderUseCases{
