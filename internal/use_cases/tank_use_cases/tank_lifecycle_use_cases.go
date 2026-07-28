@@ -26,7 +26,6 @@ func NewTankLifecycleUseCases(
 	tilesUseCases *use_cases.TilesUseCases,
 	renderUseCases interfaces.IRenderUseCases,
 	tankCommonUseCases interfaces.ITankCommonUseCases,
-	enemyRespawnDelay uint,
 	specsUseCases interfaces.ISpecsUseCases,
 ) *TankLifecycleUseCases {
 	return &TankLifecycleUseCases{
@@ -58,12 +57,6 @@ func (uc *TankLifecycleUseCases) SetCollisionUseCases(
 	uc.collisionUseCases = collisionUseCases
 }
 
-func (uc *TankLifecycleUseCases) SetTankCommonUseCases(
-	tankCommonUseCases interfaces.ITankCommonUseCases,
-) {
-	uc.tankCommonUseCases = tankCommonUseCases
-}
-
 func (uc *TankLifecycleUseCases) OnStageSetUpEnemiesSpawn() ([3]*types.TankEntity, error) {
 	var spawnedEnemies [3]*types.TankEntity
 
@@ -84,13 +77,6 @@ func (uc *TankLifecycleUseCases) OnStageSetUpEnemiesSpawn() ([3]*types.TankEntit
 	}
 
 	return spawnedEnemies, nil
-}
-
-func (uc *TankLifecycleUseCases) SpawnEnemy(
-	index *int,
-	ignoreRespawnDelay bool,
-) (*types.TankEntity, error) {
-	return uc.SpawnEnemyWithLevel(index, ignoreRespawnDelay, 0)
 }
 
 func (uc *TankLifecycleUseCases) SpawnEnemyWithLevel(
@@ -276,25 +262,6 @@ func (uc *TankLifecycleUseCases) Explode(tank *types.TankEntity) error {
 
 	uc.tilesUseCases.StartAnimation(explosionAnim)
 	return nil
-}
-
-func (uc *TankLifecycleUseCases) IsSpawnFinished(
-	tank *types.TankEntity,
-	currentTime float64,
-) {
-	if tank.State == types.TankStateSpawning {
-		if uc.renderUseCases.IsTankSpawnAnimationFinished(tank) {
-			uc.finishSpawnAnimation(tank)
-		}
-	}
-}
-
-func (uc *TankLifecycleUseCases) IsExplosionFinished(tank *types.TankEntity) {
-	if tank.State == types.TankStateExploding {
-		if uc.renderUseCases.IsTankExplosionAnimationFinished(tank) {
-			tank.State = types.TankStateExploded
-		}
-	}
 }
 
 func (uc *TankLifecycleUseCases) finishSpawnAnimation(

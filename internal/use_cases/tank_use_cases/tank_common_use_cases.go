@@ -10,28 +10,23 @@ import (
 
 type TankCommonUseCases struct {
 	brakingService  interfaces.ITankBrakingService
-	bulletUseCases  interfaces.IBulletUseCases
 	renderUseCases  interfaces.IRenderUseCases
 	tanksRepository interfaces.ITanksRepository
 	specsUseCases   interfaces.ISpecsUseCases
 }
 
 func NewTankCommonUseCases(
-	bulletUseCases interfaces.IBulletUseCases,
 	brakingService interfaces.ITankBrakingService,
 	renderUseCases interfaces.IRenderUseCases,
 	tanksRepository interfaces.ITanksRepository,
 	specsUseCases interfaces.ISpecsUseCases,
 ) *TankCommonUseCases {
-	uc := &TankCommonUseCases{
+	return &TankCommonUseCases{
 		brakingService:  brakingService,
-		bulletUseCases:  bulletUseCases,
 		renderUseCases:  renderUseCases,
 		tanksRepository: tanksRepository,
 		specsUseCases:   specsUseCases,
 	}
-
-	return uc
 }
 
 func (uc *TankCommonUseCases) Update(tank *types.TankEntity, dt float64) error {

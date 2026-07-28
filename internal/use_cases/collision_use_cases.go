@@ -3,7 +3,6 @@ package use_cases
 import (
 	"github.com/shpaker/tnk9x/internal/interfaces"
 	"github.com/shpaker/tnk9x/internal/types"
-	"github.com/shpaker/tnk9x/internal/types/session_entities"
 )
 
 type CollisionUseCases struct {
@@ -20,7 +19,6 @@ type CollisionUseCases struct {
 	bonusUseCases            *BonusUseCases
 	bonusesRepository        interfaces.IBonusesRepository
 	soundUseCases            *SoundUseCases
-	stageSession             *session_entities.StageSessionEntity
 }
 
 func NewCollisionUseCases(
@@ -37,9 +35,8 @@ func NewCollisionUseCases(
 	bonusUseCases *BonusUseCases,
 	bonusesRepository interfaces.IBonusesRepository,
 	soundUseCases *SoundUseCases,
-	stageSession *session_entities.StageSessionEntity,
 ) *CollisionUseCases {
-	uc := &CollisionUseCases{
+	return &CollisionUseCases{
 		bulletUseCases:           bulletUseCases,
 		tankActions:              tankActions,
 		mapUseCases:              mapUseCases,
@@ -53,10 +50,7 @@ func NewCollisionUseCases(
 		bonusUseCases:            bonusUseCases,
 		bonusesRepository:        bonusesRepository,
 		soundUseCases:            soundUseCases,
-		stageSession:             stageSession,
 	}
-
-	return uc
 }
 
 func (uc *CollisionUseCases) UpdateCollisions() {

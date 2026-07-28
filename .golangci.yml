@@ -15,7 +15,7 @@ linters-settings:
   dupl:
     threshold: 100
   goimports:
-    local-prefixes: github.com/shpaker/tnk25
+    local-prefixes: github.com/shpaker/tnk9x
   goconst:
     min-len: 3
     min-occurrences: 3

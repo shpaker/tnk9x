@@ -107,7 +107,7 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 		return nil, err
 	}
 
-	bulletUseCases, baseSizePx, err := b.buildBulletUseCases(specsUseCases)
+	bulletUseCases, baseSizePx, err := b.buildBulletUseCases()
 	if err != nil {
 		return nil, err
 	}
@@ -119,7 +119,6 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 	// Создаем временный renderUseCases для tankCommonUseCases
 	// Он будет обновлен после создания полного renderUseCases
 	tankCommonUseCases := tank_use_cases.NewTankCommonUseCases(
-		bulletUseCases,
 		b.tankBrakingService,
 		nil, // renderUseCases будет установлен позже
 		b.gameRepository.GetTanksRepository(),
@@ -138,21 +137,10 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 		tilesUseCasesWithAnimations,
 		renderUseCases,
 		tankCommonUseCases,
-		enemyRespawnDelay,
 		specsUseCases,
 	)
 
-	bonusTilesUseCasesForMap, err := b.buildBonusTilesUseCases()
-	if err != nil {
-		return nil, fmt.Errorf("failed to build bonus tiles use cases: %w", err)
-	}
-
-	mapUseCases := use_cases.NewMapUseCasesWithCollision(
-		b.mapEntity,
-		entitiesCollisionService,
-		tankCommonUseCases,
-		bonusTilesUseCasesForMap,
-	)
+	mapUseCases := use_cases.NewMapUseCases(b.mapEntity)
 
 	tankActionsUseCases := tank_use_cases.NewTankActionsUseCases(
 		b.tankBrakingService,
@@ -161,7 +149,6 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 		renderUseCases,
 		mapUseCases,
 		soundUseCases,
-		specsUseCases,
 	)
 
 	hqTileService := services.NewTileServiceWithSpecialRepos(
@@ -272,7 +259,6 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 		entitiesCollisionService,
 		bonusUseCases,
 		soundUseCases,
-		stageSession,
 	)
 	if err != nil {
 		return nil, err
@@ -381,7 +367,6 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 	rendererAdapter := game.NewStageRendererAdapter(
 		mapUseCases,
 		tankCommonUseCases,
-		renderUseCases,
 		bulletUseCases,
 		mapTilesUseCases,
 		tankTilesUseCases,
@@ -465,9 +450,7 @@ func (b *StageStateBuilder) buildTileServices() (*use_cases.TilesUseCases, error
 	return tilesUseCasesWithAnimations, nil
 }
 
-func (b *StageStateBuilder) buildBulletUseCases(
-	specsUseCases interfaces.ISpecsUseCases,
-) (*use_cases.BulletUseCases, uint, error) {
+func (b *StageStateBuilder) buildBulletUseCases() (*use_cases.BulletUseCases, uint, error) {
 	baseSizePx := b.config.GetBaseSizePx()
 
 	bulletTileService := services.NewTileService(
@@ -485,7 +468,6 @@ func (b *StageStateBuilder) buildBulletUseCases(
 		b.gameRepository.GetBulletsRepository(),
 		bulletTilesUseCases,
 		baseSizePx,
-		specsUseCases,
 	)
 
 	return bulletUseCases, baseSizePx, nil
@@ -550,7 +532,6 @@ func (b *StageStateBuilder) buildCollisionServices(
 	entitiesCollisionService interfaces.IEntitiesCollisionService,
 	bonusUseCases *use_cases.BonusUseCases,
 	soundUseCases *use_cases.SoundUseCases,
-	stageSession *session_entities.StageSessionEntity,
 ) (*use_cases.CollisionUseCases, interfaces.IHQUseCases, error) {
 	bulletCollisionService := collision_services.NewBulletCollisionService(
 		int(b.config.GetTileBaseSize()),
@@ -582,7 +563,6 @@ func (b *StageStateBuilder) buildCollisionServices(
 		bonusUseCases,
 		bonusesRepository,
 		soundUseCases,
-		stageSession,
 	)
 
 	return collisionUseCases, hqUseCases, nil

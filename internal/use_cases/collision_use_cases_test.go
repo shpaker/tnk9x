@@ -33,13 +33,6 @@ func (s *stubTankLifecycle) OnStageSetUpEnemiesSpawn() ([3]*types.TankEntity, er
 	return [3]*types.TankEntity{}, nil
 }
 
-func (s *stubTankLifecycle) SpawnEnemy(
-	index *int,
-	ignoreRespawnDelay bool,
-) (*types.TankEntity, error) {
-	return nil, nil
-}
-
 func (s *stubTankLifecycle) SpawnEnemyWithLevel(
 	index *int,
 	ignoreRespawnDelay bool,
@@ -70,15 +63,6 @@ func (s *stubTankLifecycle) Explode(tank *types.TankEntity) error {
 	return nil
 }
 
-func (s *stubTankLifecycle) IsSpawnFinished(
-	tank *types.TankEntity,
-	currentTime float64,
-) {
-}
-
-func (s *stubTankLifecycle) IsExplosionFinished(tank *types.TankEntity) {
-}
-
 func (s *stubTankLifecycle) UpdateAllTanksLifecycle() error { return nil }
 
 type stubMapUseCases struct {
@@ -92,12 +76,6 @@ func (s *stubMapUseCases) RemoveBlock(block *types.BlockEntity) error {
 }
 
 func (s *stubMapUseCases) GetSizePx() types.Size { return s.mapEntity.GetSizePx() }
-
-func (s *stubMapUseCases) SpawnBonus(
-	baseSizePx uint,
-) (*types.BonusEntity, error) {
-	return nil, nil
-}
 
 func (s *stubMapUseCases) GetRandomBonusSpawnPosition() types.Position {
 	return types.Position{}
@@ -135,9 +113,8 @@ func newCollisionTestEnv(blocks types.MapBlocks) *collisionTestEnv {
 	braking := services.NewTankBrakingService()
 	specsUC := use_cases.NewSpecsUseCases()
 
-	bulletUC := use_cases.NewBulletUseCases(bulletsRepo, nil, 16, specsUC)
+	bulletUC := use_cases.NewBulletUseCases(bulletsRepo, nil, 16)
 	tankCommon := tank_use_cases.NewTankCommonUseCases(
-		bulletUC,
 		braking,
 		nil,
 		tanksRepo,
@@ -150,7 +127,6 @@ func newCollisionTestEnv(blocks types.MapBlocks) *collisionTestEnv {
 		nil,
 		mapUC,
 		nil,
-		specsUC,
 	)
 	lifecycle := &stubTankLifecycle{}
 
@@ -165,7 +141,6 @@ func newCollisionTestEnv(blocks types.MapBlocks) *collisionTestEnv {
 		bulletSvc,
 		entities,
 		&stubHQUseCases{},
-		nil,
 		nil,
 		nil,
 		nil,

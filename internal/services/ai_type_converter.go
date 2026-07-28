@@ -21,27 +21,6 @@ func NewAITypeConverter(
 	}
 }
 
-func (c *aiTypeConverter) TankToLua(
-	tank *types.TankEntity,
-) (*lua.LTable, error) {
-	if tank == nil {
-		return nil, errors.New("tank is nil")
-	}
-
-	t := c.luaEngine.NewTable()
-	t.RawSetString("x", lua.LNumber(tank.Position.X))
-	t.RawSetString("y", lua.LNumber(tank.Position.Y))
-	t.RawSetString("direction", lua.LNumber(int(tank.Direction)))
-	// Скорость получается из спецификаций танка
-	speed := float64(32.0) // Значение по умолчанию
-	if tank.GetSpecs() != nil {
-		speed = tank.GetSpecs().GetSpeed()
-	}
-	t.RawSetString("speed", lua.LNumber(speed))
-
-	return t, nil
-}
-
 func (c *aiTypeConverter) LuaToDecision(
 	results []lua.LValue,
 ) (types.EnemyAIDecision, error) {

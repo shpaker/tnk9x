@@ -9,20 +9,17 @@ type BulletUseCases struct {
 	bulletsRepository interfaces.IBulletsRepository
 	tilesUseCases     interfaces.ITilesUseCases
 	tankSpriteSize    uint
-	specsUseCases     interfaces.ISpecsUseCases
 }
 
 func NewBulletUseCases(
 	bulletsRepository interfaces.IBulletsRepository,
 	tilesUseCases interfaces.ITilesUseCases,
 	tankSpriteSize uint,
-	specsUseCases interfaces.ISpecsUseCases,
 ) *BulletUseCases {
 	return &BulletUseCases{
 		bulletsRepository: bulletsRepository,
 		tilesUseCases:     tilesUseCases,
 		tankSpriteSize:    tankSpriteSize,
-		specsUseCases:     specsUseCases,
 	}
 }
 

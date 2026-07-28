@@ -1,46 +1,13 @@
 package services
 
 import (
-	"math"
-
 	"github.com/hajimehoshi/ebiten/v2"
-
-	"github.com/shpaker/tnk9x/internal/types"
 )
 
 type ImageService struct{}
 
 func NewImageService() *ImageService {
 	return &ImageService{}
-}
-
-func (s *ImageService) RotateImage(
-	image interface{},
-	direction types.Direction,
-) interface{} {
-	img, ok := image.(*ebiten.Image)
-	if !ok {
-		return image
-	}
-	var angle float64
-	switch direction {
-	case types.DirectionUp:
-		angle = 0
-	case types.DirectionRight:
-		angle = math.Pi / 2
-	case types.DirectionDown:
-		angle = math.Pi
-	case types.DirectionLeft:
-		angle = -math.Pi / 2
-	default:
-		angle = 0
-	}
-
-	rotatedImage, err := s.RotateImageByAngle(img, angle)
-	if err != nil {
-		return img
-	}
-	return rotatedImage
 }
 
 func (s *ImageService) RotateImageByAngle(

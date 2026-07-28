@@ -15,7 +15,6 @@ type TankActionsUseCases struct {
 	renderUseCases interfaces.IRenderUseCases
 	mapUseCases    interfaces.IMapUseCases
 	soundUseCases  *use_cases.SoundUseCases
-	specsUseCases  interfaces.ISpecsUseCases
 }
 
 func NewTankActionsUseCases(
@@ -25,7 +24,6 @@ func NewTankActionsUseCases(
 	renderUseCases interfaces.IRenderUseCases,
 	mapUseCases interfaces.IMapUseCases,
 	soundUseCases *use_cases.SoundUseCases,
-	specsUseCases interfaces.ISpecsUseCases,
 ) *TankActionsUseCases {
 	return &TankActionsUseCases{
 		brakingService: brakingService,
@@ -34,7 +32,6 @@ func NewTankActionsUseCases(
 		renderUseCases: renderUseCases,
 		mapUseCases:    mapUseCases,
 		soundUseCases:  soundUseCases,
-		specsUseCases:  specsUseCases,
 	}
 }
 

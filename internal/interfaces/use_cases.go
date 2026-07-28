@@ -20,7 +20,6 @@ type IMapUseCases interface {
 	GetBlocks() types.MapBlocks
 	RemoveBlock(block *types.BlockEntity) error
 	GetSizePx() types.Size
-	SpawnBonus(baseSizePx uint) (*types.BonusEntity, error)
 	GetRandomBonusSpawnPosition() types.Position
 }
 
@@ -31,7 +30,6 @@ type ICollisionUseCases interface {
 
 type ITilesUseCases interface {
 	CreateStaticTile(id string) (IImageProvider, error)
-	CreateAnimationTile(id string) (*image_providers.AnimationProvider, error)
 	CreateSpawnAnimation() (*image_providers.AnimationProvider, error)
 	CreateExplosionAnimation() (*image_providers.AnimationProvider, error)
 	GetImage(id string) (image.Image, error)
@@ -65,7 +63,6 @@ type IRenderUseCases interface {
 
 type ITankLifecycleUseCases interface {
 	OnStageSetUpEnemiesSpawn() ([3]*types.TankEntity, error)
-	SpawnEnemy(index *int, ignoreRespawnDelay bool) (*types.TankEntity, error)
 	SpawnEnemyWithLevel(
 		index *int,
 		ignoreRespawnDelay bool,
@@ -76,8 +73,6 @@ type ITankLifecycleUseCases interface {
 	SetPlayerTank(num types.PlayerTankNum, tank *types.TankEntity)
 	SpawnPlayer2() (*types.TankEntity, error)
 	Explode(tank *types.TankEntity) error
-	IsSpawnFinished(tank *types.TankEntity, currentTime float64)
-	IsExplosionFinished(tank *types.TankEntity)
 	UpdateAllTanksLifecycle() error
 }
 

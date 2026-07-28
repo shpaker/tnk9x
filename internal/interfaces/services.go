@@ -12,10 +12,6 @@ type ITankBrakingService interface {
 	HandleRotateWhileBraking(tank *types.TankEntity, direction types.Direction)
 }
 
-type ICoordinateService interface {
-	RoundToNearestMultipleOf4(value float64) float64
-}
-
 type IBoundaryCollisionService interface {
 	CheckLeftBoundaryCollision(entity types.IEntityCollider) bool
 	CheckRightBoundaryCollision(entity types.IEntityCollider) bool
@@ -54,11 +50,6 @@ type IEntitiesCollisionService interface {
 	) (types.Position, error)
 }
 
-type IImageService interface {
-	RotateImage(image interface{}, direction types.Direction) interface{}
-	RotateImageByAngle(image interface{}, angle float64) (interface{}, error)
-}
-
 type IAnimationService interface {
 	UpdateAnimation(animation *image_providers.AnimationProvider)
 }
@@ -77,7 +68,5 @@ type ITileService interface {
 }
 
 type IAITypeConverter interface {
-	TankToLua(tank *types.TankEntity) (*lua.LTable, error)
-
 	LuaToDecision(results []lua.LValue) (types.EnemyAIDecision, error)
 }

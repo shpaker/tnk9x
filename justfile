@@ -168,7 +168,7 @@ install-tools:
     echo "Installing development tools..."
     {{gocmd}} install mvdan.cc/gofumpt@latest
     {{gocmd}} install github.com/segmentio/golines@latest
-    {{gocmd}} install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+    {{gocmd}} install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.64.8
     echo "Tools installed. Make sure \$GOBIN or \$(go env GOPATH)/bin is in your PATH"
 
 # Проверки качества кода

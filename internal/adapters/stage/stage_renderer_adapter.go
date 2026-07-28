@@ -20,7 +20,6 @@ import (
 type StageRendererAdapter struct {
 	mapUseCases            interfaces.IMapUseCases
 	tankCommonUseCases     interfaces.ITankCommonUseCases
-	renderUseCases         interfaces.IRenderUseCases
 	bulletUseCases         interfaces.IBulletUseCases
 	mapTilesUseCases       *use_cases.TilesUseCases
 	tankTilesUseCases      *use_cases.TilesUseCases
@@ -47,7 +46,6 @@ type StageRendererAdapter struct {
 func NewStageRendererAdapter(
 	mapUseCases interfaces.IMapUseCases,
 	tankCommonUseCases interfaces.ITankCommonUseCases,
-	renderUseCases interfaces.IRenderUseCases,
 	bulletUseCases interfaces.IBulletUseCases,
 	mapTilesUseCases *use_cases.TilesUseCases,
 	tankTilesUseCases *use_cases.TilesUseCases,
@@ -82,7 +80,6 @@ func NewStageRendererAdapter(
 	return &StageRendererAdapter{
 		mapUseCases:            mapUseCases,
 		tankCommonUseCases:     tankCommonUseCases,
-		renderUseCases:         renderUseCases,
 		bulletUseCases:         bulletUseCases,
 		mapTilesUseCases:       mapTilesUseCases,
 		tankTilesUseCases:      tankTilesUseCases,

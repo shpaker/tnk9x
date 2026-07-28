@@ -124,25 +124,6 @@ func (tuc *TilesUseCases) getImageFromTileset(
 	return tuc.tilesetRegistry.GetImageData(string(tilesetType), imageID)
 }
 
-func (tuc *TilesUseCases) CreateAnimationTile(
-	id string,
-) (*image_providers.AnimationProvider, error) {
-	config, err := tuc.tileService.GetAnimationConfig(id)
-	if err != nil {
-		return nil, err
-	}
-
-	animationFrames, err := tuc.tileService.GetTileAnimationFrames(id)
-	if err != nil {
-		return nil, fmt.Errorf("animation '%s' not found: %w", id, err)
-	}
-
-	return tuc.tileService.CreateAnimationFromConfig(
-		animationFrames,
-		config,
-	), nil
-}
-
 func (tuc *TilesUseCases) CreateTankAnimationTile(
 	id string,
 	isEnemy bool,
