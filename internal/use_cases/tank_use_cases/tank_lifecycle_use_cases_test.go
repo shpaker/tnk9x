@@ -65,29 +65,30 @@ func (s *stubRenderUseCases) SyncTankAnimationWithState(
 
 func (s *stubRenderUseCases) UpdateBlink(blinkObjects []types.IBlink) {}
 
-type stubCollisionUseCases struct {
+// stubSpawnCollisionService фиксирует проверенные позиции и
+// позволяет объявить спавнер заблокированным
+type stubSpawnCollisionService struct {
 	blocked bool
 	checked []types.Position
 }
 
-func (s *stubCollisionUseCases) UpdateCollisions() {}
-
-func (s *stubCollisionUseCases) IsSpawnerBlocked(
+func (s *stubSpawnCollisionService) IsSpawnerBlocked(
 	position types.Position,
 	size types.Size,
+	tanks []*types.TankEntity,
 ) bool {
 	s.checked = append(s.checked, position)
 	return s.blocked
 }
 
 type lifecycleTestEnv struct {
-	tanksRepo   *game.TanksRepository
-	animations  *game.AnimationsRepository
-	tileService *testutil.FakeTileService
-	render      *stubRenderUseCases
-	collision   *stubCollisionUseCases
-	specs       *forcedLevelSpecs
-	lifecycle   *tank_use_cases.TankLifecycleUseCases
+	tanksRepo      *game.TanksRepository
+	animations     *game.AnimationsRepository
+	tileService    *testutil.FakeTileService
+	render         *stubRenderUseCases
+	spawnCollision *stubSpawnCollisionService
+	specs          *forcedLevelSpecs
+	lifecycle      *tank_use_cases.TankLifecycleUseCases
 }
 
 // Спавнеры в тайлах, позиция танка = спавнер * baseSize (16px)
@@ -118,34 +119,34 @@ func newLifecycleTestEnv() *lifecycleTestEnv {
 	render := &stubRenderUseCases{}
 	common := tank_use_cases.NewTankCommonUseCases(
 		services.NewTankBrakingService(),
-		nil,
+		render,
 		tanksRepo,
 		specs,
 	)
+	spawnCollision := &stubSpawnCollisionService{}
 	lifecycle := tank_use_cases.NewTankLifecycleUseCases(
 		tilesUC,
 		render,
 		common,
-		specs,
-	)
-	collision := &stubCollisionUseCases{}
-	lifecycle.SetSpawnConfiguration(
 		tanksRepo,
-		testEnemySpawners,
-		testPlayer1Spawner,
-		testPlayer2Spawner,
-		types.Size{Width: 16, Height: 16},
+		spawnCollision,
+		specs,
+		types.SpawnLayout{
+			EnemySpawners:  testEnemySpawners,
+			Player1Spawner: testPlayer1Spawner,
+			Player2Spawner: testPlayer2Spawner,
+			BaseSize:       types.Size{Width: 16, Height: 16},
+		},
 	)
-	lifecycle.SetCollisionUseCases(collision)
 
 	return &lifecycleTestEnv{
-		tanksRepo:   tanksRepo,
-		animations:  animations,
-		tileService: tileService,
-		render:      render,
-		collision:   collision,
-		specs:       specs,
-		lifecycle:   lifecycle,
+		tanksRepo:      tanksRepo,
+		animations:     animations,
+		tileService:    tileService,
+		render:         render,
+		spawnCollision: spawnCollision,
+		specs:          specs,
+		lifecycle:      lifecycle,
 	}
 }
 
@@ -222,7 +223,7 @@ func TestTankLifecycleUseCases_SpawnPlayer2(t *testing.T) {
 // Заблокированный спавнер: игрок не создаётся, ошибки нет
 func TestTankLifecycleUseCases_SpawnPlayerBlockedSpawner(t *testing.T) {
 	env := newLifecycleTestEnv()
-	env.collision.blocked = true
+	env.spawnCollision.blocked = true
 
 	tank, err := env.lifecycle.SpawnPlayer1()
 	if tank != nil || err != nil {
@@ -231,9 +232,9 @@ func TestTankLifecycleUseCases_SpawnPlayerBlockedSpawner(t *testing.T) {
 	if env.tanksRepo.HasPlayer(types.PlayerTankNumPlayer1) {
 		t.Error("игрок зарегистрирован при заблокированном спавнере")
 	}
-	if len(env.collision.checked) != 1 ||
-		env.collision.checked[0] != testPlayer1Spawner {
-		t.Errorf("проверена не та позиция: %v", env.collision.checked)
+	if len(env.spawnCollision.checked) != 1 ||
+		env.spawnCollision.checked[0] != testPlayer1Spawner {
+		t.Errorf("проверена не та позиция: %v", env.spawnCollision.checked)
 	}
 }
 
@@ -294,7 +295,7 @@ func TestTankLifecycleUseCases_SpawnEnemyHeavyTankHitPoints(t *testing.T) {
 
 func TestTankLifecycleUseCases_SpawnEnemyBlockedSpawner(t *testing.T) {
 	env := newLifecycleTestEnv()
-	env.collision.blocked = true
+	env.spawnCollision.blocked = true
 	index := 0
 
 	// Без ignoreRespawnDelay блокировка отменяет спавн без ошибки
@@ -346,7 +347,7 @@ func TestTankLifecycleUseCases_SpawnEnemyRandomSpawner(t *testing.T) {
 // блокировка спавнера игнорируется
 func TestTankLifecycleUseCases_OnStageSetUpEnemiesSpawn(t *testing.T) {
 	env := newLifecycleTestEnv()
-	env.collision.blocked = true
+	env.spawnCollision.blocked = true
 
 	spawned, err := env.lifecycle.OnStageSetUpEnemiesSpawn()
 	if err != nil {
@@ -378,18 +379,32 @@ func TestTankLifecycleUseCases_OnStageSetUpEnemiesSpawn(t *testing.T) {
 	}
 }
 
-// Без SetSpawnConfiguration спавн невозможен
-func TestTankLifecycleUseCases_MissingConfiguration(t *testing.T) {
-	lifecycle := tank_use_cases.NewTankLifecycleUseCases(nil, nil, nil, nil)
+// Без настроенных спавнеров врагов случайный спавн невозможен,
+// а начальный спавн молча возвращает пустой результат
+func TestTankLifecycleUseCases_NoEnemySpawners(t *testing.T) {
+	env := newLifecycleTestEnv()
+	lifecycle := tank_use_cases.NewTankLifecycleUseCases(
+		nil,
+		env.render,
+		nil,
+		env.tanksRepo,
+		env.spawnCollision,
+		env.specs,
+		types.SpawnLayout{BaseSize: types.Size{Width: 16, Height: 16}},
+	)
 
-	if _, err := lifecycle.SpawnPlayer1(); err == nil {
-		t.Error("SpawnPlayer1: ожидалась ошибка без репозитория")
-	}
-	if _, err := lifecycle.SpawnPlayer2(); err == nil {
-		t.Error("SpawnPlayer2: ожидалась ошибка без репозитория")
-	}
 	if _, err := lifecycle.SpawnEnemyWithLevel(nil, false, 20); err == nil {
-		t.Error("SpawnEnemyWithLevel: ожидалась ошибка без репозитория")
+		t.Error("SpawnEnemyWithLevel: ожидалась ошибка без спавнеров")
+	}
+
+	spawned, err := lifecycle.OnStageSetUpEnemiesSpawn()
+	if err != nil {
+		t.Fatalf("начальный спавн: %v", err)
+	}
+	for i, tank := range spawned {
+		if tank != nil {
+			t.Errorf("враг %d создан без спавнеров", i)
+		}
 	}
 }
 

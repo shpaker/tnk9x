@@ -61,17 +61,13 @@ func (uc *TankActionsUseCases) Rotate(
 	if tank.State == types.TankStateBraking {
 		uc.brakingService.HandleRotateWhileBraking(tank, direction)
 
-		if uc.renderUseCases != nil {
-			uc.renderUseCases.UpdateTankAnimation(tank)
-		}
+		uc.renderUseCases.UpdateTankAnimation(tank)
 		return nil
 	}
 
 	if tank.State == types.TankStateStopped {
 		tank.Direction = direction
-		if uc.renderUseCases != nil {
-			uc.renderUseCases.UpdateTankAnimation(tank)
-		}
+		uc.renderUseCases.UpdateTankAnimation(tank)
 		return nil
 	}
 
@@ -79,9 +75,7 @@ func (uc *TankActionsUseCases) Rotate(
 	tank.NextDirection = &directionCopy
 	tank.State = types.TankStateBraking
 
-	if uc.renderUseCases != nil {
-		uc.renderUseCases.UpdateTankAnimation(tank)
-	}
+	uc.renderUseCases.UpdateTankAnimation(tank)
 	return nil
 }
 
@@ -118,7 +112,7 @@ func (uc *TankActionsUseCases) Shoot(tank *types.TankEntity) error {
 	if !tank.IsActive() {
 		return errors.New("tank is not active")
 	}
-	if uc.soundUseCases != nil && !tank.IsEnemy() {
+	if !tank.IsEnemy() {
 		uc.soundUseCases.RequestSound(types.SoundIDFire, false)
 	}
 	return uc.bulletUseCases.ShootBullet(tank)

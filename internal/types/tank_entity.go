@@ -1,5 +1,7 @@
 package types
 
+import "fmt"
+
 type PlayerTankNum int
 
 const (
@@ -56,6 +58,47 @@ func NewDefaultTankEntity(role TankRole, direction Direction) TankEntity {
 		role:      role,
 		specs:     nil, // Будет установлено при создании танка
 	}
+}
+
+// AnimationName возвращает имя анимации танка, производное от уровня
+// спецификаций, роли и направления; для nil-танка — имя по умолчанию.
+func (t *TankEntity) AnimationName() string {
+	if t == nil {
+		return "player1_level1_tank_up"
+	}
+
+	// Получаем уровень танка из спецификаций
+	tankLevel := uint(0)
+	if t.GetSpecs() != nil {
+		tankLevel = t.GetSpecs().GetLevel()
+	}
+	if tankLevel > 3 {
+		tankLevel = 3
+	}
+	modelName := fmt.Sprintf("level%d", tankLevel+1)
+
+	roleStr := string(t.GetRole())
+	if roleStr == "" {
+		roleStr = "player1"
+	}
+
+	prefix := roleStr + "_" + modelName
+
+	var direction string
+	switch t.Direction {
+	case DirectionUp:
+		direction = "up"
+	case DirectionDown:
+		direction = "down"
+	case DirectionLeft:
+		direction = "left"
+	case DirectionRight:
+		direction = "right"
+	default:
+		direction = "up"
+	}
+
+	return fmt.Sprintf("%s_tank_%s", prefix, direction)
 }
 
 func (t *TankEntity) GetSpecs() *SpecsEntity {

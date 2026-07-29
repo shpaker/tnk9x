@@ -17,6 +17,30 @@ type stubImageProvider struct{}
 
 func (s *stubImageProvider) GetImageID() (string, error) { return "stub", nil }
 
+// stubRenderUseCases — no-op рендер для сценариев движения и стрельбы
+type stubRenderUseCases struct{}
+
+func (s *stubRenderUseCases) IsTankSpawnAnimationFinished(
+	tank *types.TankEntity,
+) bool {
+	return false
+}
+
+func (s *stubRenderUseCases) IsTankExplosionAnimationFinished(
+	tank *types.TankEntity,
+) bool {
+	return false
+}
+
+func (s *stubRenderUseCases) UpdateTankAnimation(tank *types.TankEntity) {}
+
+func (s *stubRenderUseCases) SyncTankAnimationWithState(
+	tank *types.TankEntity,
+) {
+}
+
+func (s *stubRenderUseCases) UpdateBlink(blinkObjects []types.IBlink) {}
+
 type stubHQUseCases struct{}
 
 func (s *stubHQUseCases) GetHQ() *types.HQEntity           { return nil }
@@ -113,10 +137,13 @@ func newCollisionTestEnv(blocks types.MapBlocks) *collisionTestEnv {
 	braking := services.NewTankBrakingService()
 	specsUC := use_cases.NewSpecsUseCases()
 
+	render := &stubRenderUseCases{}
+	soundUC := use_cases.NewSoundUseCases()
+
 	bulletUC := use_cases.NewBulletUseCases(bulletsRepo, nil, 16)
 	tankCommon := tank_use_cases.NewTankCommonUseCases(
 		braking,
-		nil,
+		render,
 		tanksRepo,
 		specsUC,
 	)
@@ -124,9 +151,9 @@ func newCollisionTestEnv(blocks types.MapBlocks) *collisionTestEnv {
 		braking,
 		bulletUC,
 		tankCommon,
-		nil,
+		render,
 		mapUC,
-		nil,
+		soundUC,
 	)
 	lifecycle := &stubTankLifecycle{}
 
@@ -140,10 +167,11 @@ func newCollisionTestEnv(blocks types.MapBlocks) *collisionTestEnv {
 		wall,
 		bulletSvc,
 		entities,
+		collision_services.NewSpawnCollisionService(entities),
 		&stubHQUseCases{},
 		nil,
-		nil,
-		nil,
+		game.NewBonusesRepository(),
+		soundUC,
 	)
 
 	return &collisionTestEnv{

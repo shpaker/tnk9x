@@ -2,7 +2,6 @@ package tank_use_cases
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/shpaker/tnk9x/internal/interfaces"
 	"github.com/shpaker/tnk9x/internal/types"
@@ -36,9 +35,7 @@ func (uc *TankCommonUseCases) Update(tank *types.TankEntity, dt float64) error {
 		return errors.New("tank is not active")
 	}
 
-	if uc.renderUseCases != nil {
-		uc.renderUseCases.SyncTankAnimationWithState(tank)
-	}
+	uc.renderUseCases.SyncTankAnimationWithState(tank)
 
 	tank.PrevPosition = tank.Position
 
@@ -46,16 +43,13 @@ func (uc *TankCommonUseCases) Update(tank *types.TankEntity, dt float64) error {
 	oldDirection := tank.Direction
 
 	if tank.State == types.TankStateBraking {
-		if uc.brakingService == nil {
-			return errors.New("brakingService is not initialized")
-		}
 		err := uc.brakingService.HandleBrakingState(tank, dt)
 
-		if oldDirection != tank.Direction && uc.renderUseCases != nil {
+		if oldDirection != tank.Direction {
 			uc.renderUseCases.UpdateTankAnimation(tank)
 		}
 
-		if oldState != tank.State && uc.renderUseCases != nil {
+		if oldState != tank.State {
 			uc.renderUseCases.SyncTankAnimationWithState(tank)
 		}
 		return err
@@ -81,9 +75,7 @@ func (uc *TankCommonUseCases) Update(tank *types.TankEntity, dt float64) error {
 		}
 	}
 
-	if uc.renderUseCases != nil {
-		uc.renderUseCases.SyncTankAnimationWithState(tank)
-	}
+	uc.renderUseCases.SyncTankAnimationWithState(tank)
 
 	return nil
 }
@@ -101,17 +93,11 @@ func (uc *TankCommonUseCases) UpdateAllTanks(dt float64) error {
 }
 
 func (uc *TankCommonUseCases) GetAllTanks() []*types.TankEntity {
-	if uc.tanksRepository == nil {
-		return []*types.TankEntity{}
-	}
 	return uc.tanksRepository.GetAllTanks()
 }
 
 // GetAllPlayerTanks возвращает все танки игроков (не врагов)
 func (uc *TankCommonUseCases) GetAllPlayerTanks() []*types.TankEntity {
-	if uc.tanksRepository == nil {
-		return []*types.TankEntity{}
-	}
 	return uc.tanksRepository.GetActivePlayerTanks()
 }
 
@@ -141,9 +127,7 @@ func (uc *TankCommonUseCases) LevelUp(tank *types.TankEntity) {
 		if newSpecs != nil {
 			tank.SetSpecs(newSpecs)
 			// Обновляем анимацию танка для отображения нового уровня
-			if uc.renderUseCases != nil {
-				uc.renderUseCases.UpdateTankAnimation(tank)
-			}
+			uc.renderUseCases.UpdateTankAnimation(tank)
 		}
 	}
 }
@@ -163,58 +147,7 @@ func (uc *TankCommonUseCases) LevelDown(tank *types.TankEntity) {
 		if newSpecs != nil {
 			tank.SetSpecs(newSpecs)
 			// Обновляем анимацию танка для отображения нового уровня
-			if uc.renderUseCases != nil {
-				uc.renderUseCases.UpdateTankAnimation(tank)
-			}
+			uc.renderUseCases.UpdateTankAnimation(tank)
 		}
 	}
-}
-
-// GetTankAnimationName возвращает имя анимации танка на основе его спецификаций
-func (uc *TankCommonUseCases) GetTankAnimationName(
-	tank *types.TankEntity,
-) string {
-	if tank == nil {
-		return "player1_level1_tank_up"
-	}
-
-	// Получаем уровень танка из спецификаций
-	tankLevel := uint(0)
-	if tank.GetSpecs() != nil {
-		tankLevel = tank.GetSpecs().GetLevel()
-	}
-	if tankLevel > 3 {
-		tankLevel = 3
-	}
-	modelName := fmt.Sprintf("level%d", tankLevel+1)
-
-	roleStr := string(tank.GetRole())
-	if roleStr == "" {
-		roleStr = "player1"
-	}
-
-	prefix := roleStr + "_" + modelName
-
-	var direction string
-	switch tank.Direction {
-	case types.DirectionUp:
-		direction = "up"
-	case types.DirectionDown:
-		direction = "down"
-	case types.DirectionLeft:
-		direction = "left"
-	case types.DirectionRight:
-		direction = "right"
-	default:
-		direction = "up"
-	}
-
-	return fmt.Sprintf("%s_tank_%s", prefix, direction)
-}
-
-// SetRenderUseCases устанавливает renderUseCases
-func (uc *TankCommonUseCases) SetRenderUseCases(
-	renderUseCases interfaces.IRenderUseCases,
-) {
-	uc.renderUseCases = renderUseCases
 }

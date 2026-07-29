@@ -51,9 +51,7 @@ func (uc *BonusUseCases) Apply(
 		return
 	}
 
-	if uc.soundUseCases != nil {
-		uc.soundUseCases.RequestSound(types.SoundIDBonus, false)
-	}
+	uc.soundUseCases.RequestSound(types.SoundIDBonus, false)
 
 	switch bonus.GetType() {
 	case types.BonusTypeHelmet:
@@ -93,21 +91,13 @@ func (uc *BonusUseCases) applyStar(tank *types.TankEntity) {
 	}
 
 	// Повышаем уровень танка (максимум 3)
-	if uc.tankCommonUseCases != nil {
-		uc.tankCommonUseCases.LevelUp(tank)
-	}
+	uc.tankCommonUseCases.LevelUp(tank)
 	// Обновляем анимацию танка для отображения нового уровня
-	if uc.renderUseCases != nil {
-		uc.renderUseCases.UpdateTankAnimation(tank)
-	}
+	uc.renderUseCases.UpdateTankAnimation(tank)
 }
 
 func (uc *BonusUseCases) applyGrenade(tank *types.TankEntity) {
 	// Уничтожение всех врагов
-	if uc.tankCommonUseCases == nil || uc.tankLifecycleUseCases == nil {
-		return
-	}
-
 	allTanks := uc.tankCommonUseCases.GetAllTanks()
 	for _, enemyTank := range allTanks {
 		if enemyTank == nil || !enemyTank.IsEnemy() || !enemyTank.IsActive() {
@@ -133,7 +123,7 @@ func (uc *BonusUseCases) applyTank(tank *types.TankEntity) {
 }
 
 func (uc *BonusUseCases) removeBonus(bonus *types.BonusEntity) {
-	if uc.bonusesRepository == nil || bonus == nil {
+	if bonus == nil {
 		return
 	}
 	_ = uc.bonusesRepository.RemoveBonus(bonus)
@@ -153,10 +143,6 @@ func (uc *BonusUseCases) GetRandomBonusType() types.BonusType {
 func (uc *BonusUseCases) SpawnRandomBonusEntity(
 	position types.Position,
 ) *types.BonusEntity {
-	if uc.configProvider == nil || uc.tilesUseCases == nil {
-		return nil
-	}
-
 	randomType := uc.GetRandomBonusType()
 
 	// Получаем размер базового тайла

@@ -9,17 +9,14 @@ import (
 var _ interfaces.IRenderUseCases = (*RenderUseCases)(nil)
 
 type RenderUseCases struct {
-	tilesUseCases      interfaces.ITilesUseCases
-	tankCommonUseCases interfaces.ITankAnimationNameProvider
+	tilesUseCases interfaces.ITilesUseCases
 }
 
 func NewRenderUseCases(
 	tilesUseCases interfaces.ITilesUseCases,
-	tankCommonUseCases interfaces.ITankAnimationNameProvider,
 ) *RenderUseCases {
 	return &RenderUseCases{
-		tilesUseCases:      tilesUseCases,
-		tankCommonUseCases: tankCommonUseCases,
+		tilesUseCases: tilesUseCases,
 	}
 }
 
@@ -50,11 +47,11 @@ func (uc *RenderUseCases) IsTankExplosionAnimationFinished(
 func (uc *RenderUseCases) UpdateTankAnimation(
 	tank *types.TankEntity,
 ) {
-	if uc.tilesUseCases == nil || tank == nil {
+	if tank == nil {
 		return
 	}
 
-	animationName := uc.tankCommonUseCases.GetTankAnimationName(tank)
+	animationName := tank.AnimationName()
 	tankAnimation, err := uc.tilesUseCases.CreateTankAnimationTile(
 		animationName,
 		tank.IsEnemy(),
@@ -78,10 +75,6 @@ func (uc *RenderUseCases) UpdateTankAnimation(
 func (uc *RenderUseCases) SyncTankAnimationWithState(
 	tank *types.TankEntity,
 ) {
-	if uc.tilesUseCases == nil {
-		return
-	}
-
 	if tank.Image == nil {
 		return
 	}

@@ -148,7 +148,7 @@ func newBonusTestEnv() *bonusTestEnv {
 		bonusesRepo,
 		&stubConfigProvider{baseSizePx: 16},
 		tilesUC,
-		nil,
+		&stubRenderUseCases{},
 		sounds,
 	)
 
@@ -366,13 +366,5 @@ func TestBonusUseCases_SpawnRandomBonusEntity_Failures(t *testing.T) {
 	env.registry.Err = errTileNotFound
 	if got := env.bonusUC.SpawnRandomBonusEntity(types.Position{}); got != nil {
 		t.Errorf("ожидался nil при ошибке тайла, получен %v", got)
-	}
-
-	// Отсутствующие зависимости -> nil
-	bare := use_cases.NewBonusUseCases(
-		nil, nil, nil, nil, nil, nil, nil, nil,
-	)
-	if got := bare.SpawnRandomBonusEntity(types.Position{}); got != nil {
-		t.Errorf("ожидался nil без зависимостей, получен %v", got)
 	}
 }

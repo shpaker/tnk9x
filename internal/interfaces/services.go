@@ -48,6 +48,14 @@ type IEntitiesCollisionService interface {
 	) (types.Position, error)
 }
 
+type ISpawnCollisionService interface {
+	IsSpawnerBlocked(
+		position types.Position,
+		size types.Size,
+		tanks []*types.TankEntity,
+	) bool
+}
+
 type IAnimationService interface {
 	UpdateAnimation(animation *image_providers.AnimationProvider)
 }

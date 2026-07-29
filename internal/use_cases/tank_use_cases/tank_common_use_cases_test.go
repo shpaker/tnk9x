@@ -22,7 +22,7 @@ func newCommonTestEnv() *commonTestEnv {
 	specsUC := use_cases.NewSpecsUseCases()
 	common := tank_use_cases.NewTankCommonUseCases(
 		services.NewTankBrakingService(),
-		nil,
+		&stubRenderUseCases{},
 		tanksRepo,
 		specsUC,
 	)
@@ -232,20 +232,6 @@ func TestTankCommonUseCases_Update_BrakingWithNextDirection(t *testing.T) {
 	}
 }
 
-func TestTankCommonUseCases_Update_BrakingWithoutService(t *testing.T) {
-	common := tank_use_cases.NewTankCommonUseCases(nil, nil, nil, nil)
-	tankValue := types.NewDefaultTankEntity(
-		types.TankRolePlayer1,
-		types.DirectionUp,
-	)
-	tank := &tankValue
-	tank.State = types.TankStateBraking
-
-	if err := common.Update(tank, 0.25); err == nil {
-		t.Error("ожидалась ошибка при отсутствии brakingService")
-	}
-}
-
 // UpdateAllTanks обходит все танки репозитория, ошибки глотаются
 func TestTankCommonUseCases_UpdateAllTanks(t *testing.T) {
 	env := newCommonTestEnv()
@@ -363,7 +349,7 @@ func TestTankCommonUseCases_LevelUpDownClamping(t *testing.T) {
 	}
 }
 
-func TestTankCommonUseCases_GetTankAnimationName(t *testing.T) {
+func TestTankEntity_AnimationName(t *testing.T) {
 	env := newCommonTestEnv()
 
 	tests := []struct {
@@ -416,14 +402,14 @@ func TestTankCommonUseCases_GetTankAnimationName(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := env.common.GetTankAnimationName(tt.tank); got != tt.want {
+			if got := tt.tank.AnimationName(); got != tt.want {
 				t.Errorf("имя %q, ожидалось %q", got, tt.want)
 			}
 		})
 	}
 }
 
-func TestTankCommonUseCases_GetTankAnimationName_Fallbacks(t *testing.T) {
+func TestTankEntity_AnimationName_Fallbacks(t *testing.T) {
 	env := newCommonTestEnv()
 
 	// Без спецификаций уровень 0, пустая роль трактуется как player1
@@ -434,7 +420,7 @@ func TestTankCommonUseCases_GetTankAnimationName_Fallbacks(t *testing.T) {
 		0,
 	)
 	noSpecs.SetSpecs(nil)
-	if got := env.common.GetTankAnimationName(noSpecs); got != "enemy_level1_tank_up" {
+	if got := noSpecs.AnimationName(); got != "enemy_level1_tank_up" {
 		t.Errorf("без спецификаций: %q", got)
 	}
 
@@ -444,7 +430,7 @@ func TestTankCommonUseCases_GetTankAnimationName_Fallbacks(t *testing.T) {
 		types.TankStateStopped,
 		0,
 	)
-	if got := env.common.GetTankAnimationName(emptyRole); got != "player1_level1_tank_up" {
+	if got := emptyRole.AnimationName(); got != "player1_level1_tank_up" {
 		t.Errorf("пустая роль: %q", got)
 	}
 
@@ -456,7 +442,7 @@ func TestTankCommonUseCases_GetTankAnimationName_Fallbacks(t *testing.T) {
 		0,
 	)
 	weird.SetSpecs(types.NewSpecsEntity(7, 32, false, 120, 1))
-	if got := env.common.GetTankAnimationName(weird); got != "player1_level4_tank_up" {
+	if got := weird.AnimationName(); got != "player1_level4_tank_up" {
 		t.Errorf("уровень 7 и направление 99: %q", got)
 	}
 }

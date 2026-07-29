@@ -11,57 +11,39 @@ import (
 var _ interfaces.ITankLifecycleUseCases = (*TankLifecycleUseCases)(nil)
 
 type TankLifecycleUseCases struct {
-	tilesUseCases      interfaces.ITilesUseCases
-	renderUseCases     interfaces.IRenderUseCases
-	tankCommonUseCases interfaces.ITankCommonUseCases
-	tanksRepository    interfaces.ITanksRepository
-	collisionUseCases  interfaces.ICollisionUseCases
-	specsUseCases      interfaces.ISpecsUseCases
-	enemySpawners      []types.Position
-	player1Spawner     types.Position
-	player2Spawner     types.Position
-	baseSize           types.Size
+	tilesUseCases         interfaces.ITilesUseCases
+	renderUseCases        interfaces.IRenderUseCases
+	tankCommonUseCases    interfaces.ITankCommonUseCases
+	tanksRepository       interfaces.ITanksRepository
+	spawnCollisionService interfaces.ISpawnCollisionService
+	specsUseCases         interfaces.ISpecsUseCases
+	spawnLayout           types.SpawnLayout
 }
 
 func NewTankLifecycleUseCases(
 	tilesUseCases interfaces.ITilesUseCases,
 	renderUseCases interfaces.IRenderUseCases,
 	tankCommonUseCases interfaces.ITankCommonUseCases,
+	tanksRepository interfaces.ITanksRepository,
+	spawnCollisionService interfaces.ISpawnCollisionService,
 	specsUseCases interfaces.ISpecsUseCases,
+	spawnLayout types.SpawnLayout,
 ) *TankLifecycleUseCases {
 	return &TankLifecycleUseCases{
-		tilesUseCases:      tilesUseCases,
-		renderUseCases:     renderUseCases,
-		tankCommonUseCases: tankCommonUseCases,
-		specsUseCases:      specsUseCases,
-		player1Spawner:     types.Position{X: 12, Y: 24},
+		tilesUseCases:         tilesUseCases,
+		renderUseCases:        renderUseCases,
+		tankCommonUseCases:    tankCommonUseCases,
+		tanksRepository:       tanksRepository,
+		spawnCollisionService: spawnCollisionService,
+		specsUseCases:         specsUseCases,
+		spawnLayout:           spawnLayout,
 	}
-}
-
-func (uc *TankLifecycleUseCases) SetSpawnConfiguration(
-	tanksRepository interfaces.ITanksRepository,
-	enemySpawners []types.Position,
-	player1Spawner types.Position,
-	player2Spawner types.Position,
-	baseSize types.Size,
-) {
-	uc.tanksRepository = tanksRepository
-	uc.enemySpawners = enemySpawners
-	uc.player1Spawner = player1Spawner
-	uc.player2Spawner = player2Spawner
-	uc.baseSize = baseSize
-}
-
-func (uc *TankLifecycleUseCases) SetCollisionUseCases(
-	collisionUseCases interfaces.ICollisionUseCases,
-) {
-	uc.collisionUseCases = collisionUseCases
 }
 
 func (uc *TankLifecycleUseCases) OnStageSetUpEnemiesSpawn() ([3]*types.TankEntity, error) {
 	var spawnedEnemies [3]*types.TankEntity
 
-	if uc.tanksRepository == nil || len(uc.enemySpawners) == 0 {
+	if len(uc.spawnLayout.EnemySpawners) == 0 {
 		return spawnedEnemies, nil
 	}
 
@@ -69,7 +51,8 @@ func (uc *TankLifecycleUseCases) OnStageSetUpEnemiesSpawn() ([3]*types.TankEntit
 	// Используем большое значение remainingEnemies чтобы получить уровень 0
 	remainingEnemies := uint(20) // Максимальное значение для первых трех танков
 
-	for index := 0; index < len(uc.enemySpawners) && index < len(spawnedEnemies); index++ {
+	for index := 0; index < len(uc.spawnLayout.EnemySpawners) &&
+		index < len(spawnedEnemies); index++ {
 		spawned, err := uc.SpawnEnemyWithLevel(&index, true, remainingEnemies)
 		if err != nil {
 			return spawnedEnemies, err
@@ -85,44 +68,31 @@ func (uc *TankLifecycleUseCases) SpawnEnemyWithLevel(
 	ignoreRespawnDelay bool,
 	remainingEnemies uint,
 ) (*types.TankEntity, error) {
-	if uc.tanksRepository == nil {
-		return nil, fmt.Errorf("tanks repository missing")
-	}
-
 	selectedIndex := 0
 	if index != nil {
 		selectedIndex = *index
-	} else if len(uc.enemySpawners) > 0 {
-		selectedIndex = rand.Intn(len(uc.enemySpawners))
+	} else if len(uc.spawnLayout.EnemySpawners) > 0 {
+		selectedIndex = rand.Intn(len(uc.spawnLayout.EnemySpawners))
 	} else {
 		return nil, fmt.Errorf("enemy spawners missing")
 	}
 
-	if selectedIndex >= len(uc.enemySpawners) {
+	if selectedIndex >= len(uc.spawnLayout.EnemySpawners) {
 		return nil, fmt.Errorf("enemy spawner index out of range")
 	}
 
-	spawnPosition := uc.enemySpawners[selectedIndex]
+	spawnPosition := uc.spawnLayout.EnemySpawners[selectedIndex]
 
-	spawnerBlocked := false
-	if uc.collisionUseCases != nil {
-		spawnerBlocked = uc.collisionUseCases.IsSpawnerBlocked(
-			spawnPosition,
-			uc.baseSize,
-		)
-	}
+	spawnerBlocked := uc.isSpawnerBlocked(spawnPosition)
 
 	if !ignoreRespawnDelay && spawnerBlocked {
 		return nil, nil
 	}
 
 	// Определяем уровень врага на основе количества оставшихся врагов
-	var enemyLevel uint = 0
-	if uc.specsUseCases != nil {
-		enemyLevel = uc.specsUseCases.GetEnemyLevelByRemainingCount(
-			remainingEnemies,
-		)
-	}
+	enemyLevel := uc.specsUseCases.GetEnemyLevelByRemainingCount(
+		remainingEnemies,
+	)
 
 	tank, err := uc.spawnTank(
 		types.DirectionUp,
@@ -140,16 +110,12 @@ func (uc *TankLifecycleUseCases) SpawnEnemyWithLevel(
 }
 
 func (uc *TankLifecycleUseCases) SpawnPlayer1() (*types.TankEntity, error) {
-	if uc.tanksRepository == nil {
-		return nil, fmt.Errorf("tanks repository missing")
-	}
-	if uc.collisionUseCases != nil &&
-		uc.collisionUseCases.IsSpawnerBlocked(uc.player1Spawner, uc.baseSize) {
+	if uc.isSpawnerBlocked(uc.spawnLayout.Player1Spawner) {
 		return nil, nil
 	}
 	tank, err := uc.spawnTank(
 		types.DirectionUp,
-		uc.player1Spawner,
+		uc.spawnLayout.Player1Spawner,
 		types.TankRolePlayer1,
 		0, // Игроки всегда начинают с уровня 0
 	)
@@ -164,16 +130,12 @@ func (uc *TankLifecycleUseCases) SpawnPlayer1() (*types.TankEntity, error) {
 }
 
 func (uc *TankLifecycleUseCases) SpawnPlayer2() (*types.TankEntity, error) {
-	if uc.tanksRepository == nil {
-		return nil, fmt.Errorf("tanks repository missing")
-	}
-	if uc.collisionUseCases != nil &&
-		uc.collisionUseCases.IsSpawnerBlocked(uc.player2Spawner, uc.baseSize) {
+	if uc.isSpawnerBlocked(uc.spawnLayout.Player2Spawner) {
 		return nil, nil
 	}
 	tank, err := uc.spawnTank(
 		types.DirectionUp,
-		uc.player2Spawner,
+		uc.spawnLayout.Player2Spawner,
 		types.TankRolePlayer2,
 		0, // Игроки всегда начинают с уровня 0
 	)
@@ -187,12 +149,20 @@ func (uc *TankLifecycleUseCases) SpawnPlayer2() (*types.TankEntity, error) {
 	return tankPtr, nil
 }
 
+// isSpawnerBlocked проверяет перекрытие спавнера живыми танками
+func (uc *TankLifecycleUseCases) isSpawnerBlocked(
+	position types.Position,
+) bool {
+	return uc.spawnCollisionService.IsSpawnerBlocked(
+		position,
+		uc.spawnLayout.BaseSize,
+		uc.tankCommonUseCases.GetAllTanks(),
+	)
+}
+
 func (uc *TankLifecycleUseCases) GetPlayerTank(
 	num types.PlayerTankNum,
 ) *types.TankEntity {
-	if uc.tanksRepository == nil {
-		return nil
-	}
 	return uc.tanksRepository.GetPlayer(num)
 }
 
@@ -200,9 +170,6 @@ func (uc *TankLifecycleUseCases) SetPlayerTank(
 	num types.PlayerTankNum,
 	tank *types.TankEntity,
 ) {
-	if uc.tanksRepository == nil {
-		return
-	}
 	uc.tanksRepository.SetPlayer(num, tank)
 }
 
@@ -213,33 +180,28 @@ func (uc *TankLifecycleUseCases) spawnTank(
 	level uint,
 ) (types.TankEntity, error) {
 	tank := types.NewDefaultTankEntity(role, direction)
-	tank.Size = uc.baseSize
+	tank.Size = uc.spawnLayout.BaseSize
 	tank.Position = types.Position{
-		X: spawnAt.X * float64(uc.baseSize.Width),
-		Y: spawnAt.Y * float64(uc.baseSize.Height),
+		X: spawnAt.X * float64(uc.spawnLayout.BaseSize.Width),
+		Y: spawnAt.Y * float64(uc.spawnLayout.BaseSize.Height),
 	}
 
 	// Устанавливаем спецификации танка с указанным уровнем
-	if uc.specsUseCases != nil {
-		specs := uc.specsUseCases.GetTankSpecs(
-			role == types.TankRoleEnemy,
-			level,
-		)
-		if specs != nil {
-			tank.SetSpecs(specs)
-			// Для тяжёлого танка (враг уровня 3) устанавливаем 4 попадания
-			if role == types.TankRoleEnemy && level == 3 {
-				tank.SetHitPoints(4)
-			} else {
-				// Для остальных танков 1 попадание
-				tank.SetHitPoints(1)
-			}
+	specs := uc.specsUseCases.GetTankSpecs(
+		role == types.TankRoleEnemy,
+		level,
+	)
+	if specs != nil {
+		tank.SetSpecs(specs)
+		// Для тяжёлого танка (враг уровня 3) устанавливаем 4 попадания
+		if role == types.TankRoleEnemy && level == 3 {
+			tank.SetHitPoints(4)
+		} else {
+			// Для остальных танков 1 попадание
+			tank.SetHitPoints(1)
 		}
 	}
 
-	if uc.tanksRepository == nil {
-		return tank, fmt.Errorf("tanks repository missing")
-	}
 	spawnAnimation, err := uc.tilesUseCases.CreateSpawnAnimation()
 	if err != nil {
 		return tank, err
@@ -268,16 +230,11 @@ func (uc *TankLifecycleUseCases) Explode(tank *types.TankEntity) error {
 func (uc *TankLifecycleUseCases) finishSpawnAnimation(
 	tank *types.TankEntity,
 ) {
-	if uc.renderUseCases != nil {
-		uc.renderUseCases.UpdateTankAnimation(tank)
-	}
+	uc.renderUseCases.UpdateTankAnimation(tank)
 	tank.State = types.TankStateStopped
 }
 
 func (uc *TankLifecycleUseCases) UpdateAllTanksLifecycle() error {
-	if uc.tankCommonUseCases == nil {
-		return nil
-	}
 	allTanks := uc.tankCommonUseCases.GetAllTanks()
 	for _, tank := range allTanks {
 		if tank != nil {
@@ -293,10 +250,6 @@ func (uc *TankLifecycleUseCases) updateTankSpawn(tank *types.TankEntity) {
 		return
 	}
 
-	if uc.renderUseCases == nil {
-		return
-	}
-
 	if uc.renderUseCases.IsTankSpawnAnimationFinished(tank) {
 		uc.finishSpawnAnimation(tank)
 	}
@@ -304,10 +257,6 @@ func (uc *TankLifecycleUseCases) updateTankSpawn(tank *types.TankEntity) {
 
 func (uc *TankLifecycleUseCases) updateTankExplosion(tank *types.TankEntity) {
 	if tank.State != types.TankStateExploding {
-		return
-	}
-
-	if uc.renderUseCases == nil {
 		return
 	}
 

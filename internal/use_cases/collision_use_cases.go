@@ -18,6 +18,7 @@ type CollisionUseCases struct {
 	wallCollisionService     interfaces.IWallCollisionService
 	bulletCollisionService   interfaces.IBulletCollisionService
 	entitiesCollisionService interfaces.IEntitiesCollisionService
+	spawnCollisionService    interfaces.ISpawnCollisionService
 	bonusUseCases            interfaces.IBonusUseCases
 	bonusesRepository        interfaces.IBonusesRepository
 	soundUseCases            interfaces.ISoundUseCases
@@ -33,6 +34,7 @@ func NewCollisionUseCases(
 	wallCollisionService interfaces.IWallCollisionService,
 	bulletCollisionService interfaces.IBulletCollisionService,
 	entitiesCollisionService interfaces.IEntitiesCollisionService,
+	spawnCollisionService interfaces.ISpawnCollisionService,
 	hqUseCases interfaces.IHQUseCases,
 	bonusUseCases interfaces.IBonusUseCases,
 	bonusesRepository interfaces.IBonusesRepository,
@@ -49,6 +51,7 @@ func NewCollisionUseCases(
 		wallCollisionService:     wallCollisionService,
 		bulletCollisionService:   bulletCollisionService,
 		entitiesCollisionService: entitiesCollisionService,
+		spawnCollisionService:    spawnCollisionService,
 		bonusUseCases:            bonusUseCases,
 		bonusesRepository:        bonusesRepository,
 		soundUseCases:            soundUseCases,
@@ -151,21 +154,18 @@ func (uc *CollisionUseCases) checkTankBulletCollisions(
 
 					if currentLevel > 0 {
 						// Понижаем уровень
-						if uc.tankCommonUseCases != nil {
-							uc.tankCommonUseCases.LevelDown(tank)
-						}
-						if uc.soundUseCases != nil {
-							uc.soundUseCases.RequestSound(
-								types.SoundIDExplosion,
-								false,
-							)
-						}
+						uc.tankCommonUseCases.LevelDown(tank)
+						uc.soundUseCases.RequestSound(
+							types.SoundIDExplosion,
+							false,
+						)
 					} else {
 						// Уровень уже минимальный - взрываем танк
 						// Жизни будут уменьшены при респавне в TryRespawnPlayersTanks()
-						if uc.soundUseCases != nil {
-							uc.soundUseCases.RequestSound(types.SoundIDExplosion, false)
-						}
+						uc.soundUseCases.RequestSound(
+							types.SoundIDExplosion,
+							false,
+						)
 						_ = uc.tankLifecycleUseCases.Explode(tank)
 					}
 				} else {
@@ -175,17 +175,19 @@ func (uc *CollisionUseCases) checkTankBulletCollisions(
 
 					// Если здоровье уже 1 или меньше, взрываем сразу
 					if currentHitPoints <= 1 {
-						if uc.soundUseCases != nil {
-							uc.soundUseCases.RequestSound(types.SoundIDExplosion, false)
-						}
+						uc.soundUseCases.RequestSound(
+							types.SoundIDExplosion,
+							false,
+						)
 						_ = uc.tankLifecycleUseCases.Explode(tank)
 					} else {
 						// Уменьшаем здоровье
 						tank.DecrementHitPoints()
 						// Танк ещё жив - воспроизводим звук попадания
-						if uc.soundUseCases != nil {
-							uc.soundUseCases.RequestSound(types.SoundIDExplosion, false)
-						}
+						uc.soundUseCases.RequestSound(
+							types.SoundIDExplosion,
+							false,
+						)
 						// Можно добавить визуальный эффект (мигание) для тяжёлого танка
 					}
 				}
@@ -199,34 +201,11 @@ func (uc *CollisionUseCases) IsSpawnerBlocked(
 	position types.Position,
 	size types.Size,
 ) bool {
-	if uc.entitiesCollisionService == nil ||
-		uc.tankCommonUseCases == nil ||
-		size.Width == 0 ||
-		size.Height == 0 {
-		return false
-	}
-
-	candidate := types.NewDefaultTankEntity(
-		types.TankRoleEnemy,
-		types.DirectionUp,
+	return uc.spawnCollisionService.IsSpawnerBlocked(
+		position,
+		size,
+		uc.tankCommonUseCases.GetAllTanks(),
 	)
-	candidate.Size = size
-	candidate.Position = types.Position{
-		X: position.X * float64(size.Width),
-		Y: position.Y * float64(size.Height),
-	}
-
-	for _, otherTank := range uc.tankCommonUseCases.GetAllTanks() {
-		if otherTank == nil || otherTank.IsDestroyed() {
-			continue
-		}
-
-		if uc.entitiesCollisionService.CheckColliders(&candidate, otherTank) {
-			return true
-		}
-	}
-
-	return false
 }
 
 func (uc *CollisionUseCases) checkTankBlockCollisions(
@@ -351,17 +330,13 @@ func (uc *CollisionUseCases) checkBulletWallCollision(
 			if block.Data != nil {
 				if block.Data.Name == types.Brick {
 					_ = uc.mapUseCases.RemoveBlock(block)
-					if uc.soundUseCases != nil {
-						uc.soundUseCases.RequestSound(types.SoundIDBrick, false)
-					}
+					uc.soundUseCases.RequestSound(types.SoundIDBrick, false)
 				} else if block.Data.Name == types.Steel {
 					if bullet.IsReinforced() {
 						// Усиленные пули могут ломать стальные блоки
 						_ = uc.mapUseCases.RemoveBlock(block)
 					}
-					if uc.soundUseCases != nil {
-						uc.soundUseCases.RequestSound(types.SoundIDSteel, false)
-					}
+					uc.soundUseCases.RequestSound(types.SoundIDSteel, false)
 				}
 			}
 
@@ -378,7 +353,7 @@ func (uc *CollisionUseCases) checkBulletHQCollision(
 ) bool {
 	if uc.bulletCollisionService.CheckBulletHQCollision(bullet, hq) {
 
-		if uc.hqUseCases != nil && !hq.IsDestroyed() {
+		if !hq.IsDestroyed() {
 			_ = uc.hqUseCases.Explode(hq)
 		}
 		return true
@@ -387,9 +362,6 @@ func (uc *CollisionUseCases) checkBulletHQCollision(
 }
 
 func (uc *CollisionUseCases) getBonuses() []*types.BonusEntity {
-	if uc.bonusesRepository == nil {
-		return nil
-	}
 	return uc.bonusesRepository.GetAllBonuses()
 }
 
@@ -397,7 +369,7 @@ func (uc *CollisionUseCases) checkTankBonusCollisions(
 	tank *types.TankEntity,
 	bonuses []*types.BonusEntity,
 ) {
-	if uc.bonusUseCases == nil || tank == nil {
+	if tank == nil {
 		return
 	}
 

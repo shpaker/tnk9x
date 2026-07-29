@@ -112,31 +112,39 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 	}
 
 	entitiesCollisionService := collision_services.NewEntitiesCollisionService()
+	spawnCollisionService := collision_services.NewSpawnCollisionService(
+		entitiesCollisionService,
+	)
 
 	enemyRespawnDelay := b.config.GetEnemyRespawnDelayTicks()
 
-	// Создаем временный renderUseCases для tankCommonUseCases
-	// Он будет обновлен после создания полного renderUseCases
+	renderUseCases := use_cases.NewRenderUseCases(tilesUseCasesWithAnimations)
+
 	tankCommonUseCases := tank_use_cases.NewTankCommonUseCases(
 		b.tankBrakingService,
-		nil, // renderUseCases будет установлен позже
+		renderUseCases,
 		b.gameRepository.GetTanksRepository(),
 		specsUseCases,
 	)
 
-	renderUseCases := use_cases.NewRenderUseCases(
-		tilesUseCasesWithAnimations,
-		tankCommonUseCases,
-	)
-
-	// Обновляем renderUseCases в tankCommonUseCases
-	tankCommonUseCases.SetRenderUseCases(renderUseCases)
+	spawnLayout := types.SpawnLayout{
+		EnemySpawners:  b.config.GetEnemySpawners(),
+		Player1Spawner: b.config.GetPlayer1Spawn(),
+		Player2Spawner: b.config.GetPlayer2Spawn(),
+		BaseSize: types.Size{
+			Width:  int(baseSizePx),
+			Height: int(baseSizePx),
+		},
+	}
 
 	tankLifecycleUseCases := tank_use_cases.NewTankLifecycleUseCases(
 		tilesUseCasesWithAnimations,
 		renderUseCases,
 		tankCommonUseCases,
+		b.gameRepository.GetTanksRepository(),
+		spawnCollisionService,
 		specsUseCases,
+		spawnLayout,
 	)
 
 	mapUseCases := use_cases.NewMapUseCases(b.mapEntity)
@@ -216,19 +224,6 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 		return nil, err
 	}
 
-	enemySpawners := b.config.GetEnemySpawners()
-	player1Spawner := b.config.GetPlayer1Spawn()
-	player2Spawner := b.config.GetPlayer2Spawn()
-	baseSize := types.Size{Width: int(baseSizePx), Height: int(baseSizePx)}
-
-	tankLifecycleUseCases.SetSpawnConfiguration(
-		b.gameRepository.GetTanksRepository(),
-		enemySpawners,
-		player1Spawner,
-		player2Spawner,
-		baseSize,
-	)
-
 	var stageSession *session_entities.StageSessionEntity
 	if b.session != nil {
 		stageSession = b.session.StageSession()
@@ -261,14 +256,13 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 		hqTilesUseCases,
 		hq,
 		entitiesCollisionService,
+		spawnCollisionService,
 		bonusUseCases,
 		soundUseCases,
 	)
 	if err != nil {
 		return nil, err
 	}
-
-	tankLifecycleUseCases.SetCollisionUseCases(collisionUseCases)
 
 	stageUseCasesValue := state_use_cases.NewStageUseCases(
 		tankLifecycleUseCases,
@@ -534,6 +528,7 @@ func (b *StageStateBuilder) buildCollisionServices(
 	hqTilesUseCases *use_cases.TilesUseCases,
 	hq *types.HQEntity,
 	entitiesCollisionService interfaces.IEntitiesCollisionService,
+	spawnCollisionService interfaces.ISpawnCollisionService,
 	bonusUseCases *use_cases.BonusUseCases,
 	soundUseCases *use_cases.SoundUseCases,
 ) (*use_cases.CollisionUseCases, interfaces.IHQUseCases, error) {
@@ -563,6 +558,7 @@ func (b *StageStateBuilder) buildCollisionServices(
 		b.wallCollisionService,
 		bulletCollisionService,
 		entitiesCollisionService,
+		spawnCollisionService,
 		hqUseCases,
 		bonusUseCases,
 		bonusesRepository,

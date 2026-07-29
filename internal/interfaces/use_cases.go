@@ -52,11 +52,6 @@ type ITankCommonUseCases interface {
 	IsAnyPlayerTankMoving() bool
 	LevelUp(tank *types.TankEntity)
 	LevelDown(tank *types.TankEntity)
-	GetTankAnimationName(tank *types.TankEntity) string
-}
-
-type ITankAnimationNameProvider interface {
-	GetTankAnimationName(tank *types.TankEntity) string
 }
 
 type IRenderUseCases interface {
