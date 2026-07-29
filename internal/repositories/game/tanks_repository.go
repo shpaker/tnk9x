@@ -77,7 +77,3 @@ func (tr *TanksRepository) GetAllTanks() []*types.TankEntity {
 
 	return allTanks
 }
-
-func (tr *TanksRepository) AddTank(tank *types.TankEntity) {
-	tr.enemies = append(tr.enemies, tank)
-}

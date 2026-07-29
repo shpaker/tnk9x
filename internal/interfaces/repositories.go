@@ -47,8 +47,6 @@ type ITanksRepository interface {
 	GetAllEnemies() []*types.TankEntity
 
 	GetAllTanks() []*types.TankEntity
-
-	AddTank(tank *types.TankEntity)
 }
 
 type IBonusesRepository interface {
