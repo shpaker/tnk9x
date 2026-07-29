@@ -3,16 +3,9 @@ package collision_services
 import (
 	"testing"
 
+	"github.com/shpaker/tnk9x/internal/testutil"
 	"github.com/shpaker/tnk9x/internal/types"
 )
-
-type MockImageProvider struct {
-	id string
-}
-
-func (m *MockImageProvider) GetImageID() (string, error) {
-	return m.id, nil
-}
 
 func TestBulletCollisionService_CheckBulletBlockCollision(t *testing.T) {
 	entitiesService := NewEntitiesCollisionService()
@@ -34,7 +27,7 @@ func TestBulletCollisionService_CheckBulletBlockCollision(t *testing.T) {
 			12.0,
 			12.0,
 			16,
-			&MockImageProvider{id: "brick"},
+			&testutil.FakeImageProvider{ImageID: "brick"},
 		)
 
 		result := service.CheckBulletBlockCollision(bullet, block)
@@ -59,7 +52,7 @@ func TestBulletCollisionService_CheckBulletBlockCollision(t *testing.T) {
 			50.0,
 			50.0,
 			16,
-			&MockImageProvider{id: "brick"},
+			&testutil.FakeImageProvider{ImageID: "brick"},
 		)
 
 		result := service.CheckBulletBlockCollision(bullet, block)

@@ -3,6 +3,7 @@ package collision_services
 import (
 	"testing"
 
+	"github.com/shpaker/tnk9x/internal/testutil"
 	"github.com/shpaker/tnk9x/internal/types"
 )
 
@@ -22,7 +23,7 @@ func TestWallCollisionService_CheckTankWallCollision(t *testing.T) {
 			12.0,
 			12.0,
 			16,
-			&MockImageProvider{id: "brick"},
+			&testutil.FakeImageProvider{ImageID: "brick"},
 		)
 
 		result := service.CheckTankWallCollision(tank, block)
@@ -43,7 +44,7 @@ func TestWallCollisionService_CheckTankWallCollision(t *testing.T) {
 			50.0,
 			50.0,
 			16,
-			&MockImageProvider{id: "brick"},
+			&testutil.FakeImageProvider{ImageID: "brick"},
 		)
 
 		result := service.CheckTankWallCollision(tank, block)

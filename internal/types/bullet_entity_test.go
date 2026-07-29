@@ -1,19 +1,24 @@
-package types
+package types_test
 
 import (
 	"testing"
+
+	"github.com/shpaker/tnk9x/internal/testutil"
+	"github.com/shpaker/tnk9x/internal/types"
 )
 
 func TestBulletEntity_GetImageID(t *testing.T) {
 	tests := []struct {
 		name        string
-		imageGetter IImageProvider
+		imageGetter types.IImageProvider
 		expected    string
 		expectError bool
 	}{
 		{
-			name:        "Valid Image",
-			imageGetter: &MockImageProvider{id: "bullet"},
+			name: "Valid Image",
+			imageGetter: &testutil.FakeImageProvider{
+				ImageID: "bullet",
+			},
 			expected:    "bullet",
 			expectError: false,
 		},
@@ -25,7 +30,7 @@ func TestBulletEntity_GetImageID(t *testing.T) {
 		},
 		{
 			name:        "Empty ID",
-			imageGetter: &MockImageProvider{id: ""},
+			imageGetter: &testutil.FakeImageProvider{ImageID: ""},
 			expected:    "",
 			expectError: false,
 		},
@@ -33,12 +38,12 @@ func TestBulletEntity_GetImageID(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			bullet := NewBulletEntity(
-				Position{},
-				Size{},
-				SURFACE,
+			bullet := types.NewBulletEntity(
+				types.Position{},
+				types.Size{},
+				types.SURFACE,
 				tt.imageGetter,
-				DirectionUp,
+				types.DirectionUp,
 				nil,
 				nil,
 			)
@@ -62,12 +67,12 @@ func TestBulletEntity_GetImageID(t *testing.T) {
 }
 
 func TestBulletEntity_GetSize(t *testing.T) {
-	bullet := NewBulletEntity(
-		Position{},
-		Size{},
-		SURFACE,
+	bullet := types.NewBulletEntity(
+		types.Position{},
+		types.Size{},
+		types.SURFACE,
 		nil,
-		DirectionUp,
+		types.DirectionUp,
 		nil,
 		nil,
 	)
@@ -86,13 +91,13 @@ func TestBulletEntity_GetSize(t *testing.T) {
 }
 
 func TestBulletEntity_GetPosition(t *testing.T) {
-	expectedPos := Position{X: 100, Y: 200}
-	bullet := NewBulletEntity(
+	expectedPos := types.Position{X: 100, Y: 200}
+	bullet := types.NewBulletEntity(
 		expectedPos,
-		Size{},
-		SURFACE,
+		types.Size{},
+		types.SURFACE,
 		nil,
-		DirectionUp,
+		types.DirectionUp,
 		nil,
 		nil,
 	)

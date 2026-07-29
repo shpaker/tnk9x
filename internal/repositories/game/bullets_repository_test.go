@@ -3,16 +3,9 @@ package game
 import (
 	"testing"
 
+	"github.com/shpaker/tnk9x/internal/testutil"
 	"github.com/shpaker/tnk9x/internal/types"
 )
-
-type MockImageProvider struct {
-	id string
-}
-
-func (m *MockImageProvider) GetImageID() (string, error) {
-	return m.id, nil
-}
 
 func TestNewBulletsRepository(t *testing.T) {
 	repo := NewBulletsRepository()
@@ -46,7 +39,7 @@ func TestAddAndGetBullets(t *testing.T) {
 		types.Position{X: 100, Y: 100},
 		types.Size{Width: 4, Height: 4},
 		types.SURFACE,
-		&MockImageProvider{id: "bullet"},
+		&testutil.FakeImageProvider{ImageID: "bullet"},
 		types.DirectionUp,
 		specs,
 		tankPtr,
@@ -82,7 +75,7 @@ func TestAddBulletWithoutOwner(t *testing.T) {
 		types.Position{X: 100, Y: 100},
 		types.Size{Width: 4, Height: 4},
 		types.SURFACE,
-		&MockImageProvider{id: "bullet"},
+		&testutil.FakeImageProvider{ImageID: "bullet"},
 		types.DirectionUp,
 		nil,
 		nil,
@@ -113,7 +106,7 @@ func TestAddBulletDuplicateOwner(t *testing.T) {
 		types.Position{X: 100, Y: 100},
 		types.Size{Width: 4, Height: 4},
 		types.SURFACE,
-		&MockImageProvider{id: "bullet"},
+		&testutil.FakeImageProvider{ImageID: "bullet"},
 		types.DirectionUp,
 		specs,
 		tankPtr,
@@ -128,7 +121,7 @@ func TestAddBulletDuplicateOwner(t *testing.T) {
 		types.Position{X: 200, Y: 200},
 		types.Size{Width: 4, Height: 4},
 		types.SURFACE,
-		&MockImageProvider{id: "bullet"},
+		&testutil.FakeImageProvider{ImageID: "bullet"},
 		types.DirectionDown,
 		specs,
 		tankPtr,
@@ -173,7 +166,7 @@ func TestRemoveBullet(t *testing.T) {
 		types.Position{X: 100, Y: 100},
 		types.Size{Width: 4, Height: 4},
 		types.SURFACE,
-		&MockImageProvider{id: "bullet"},
+		&testutil.FakeImageProvider{ImageID: "bullet"},
 		types.DirectionUp,
 		specs,
 		tank1Ptr,
@@ -182,7 +175,7 @@ func TestRemoveBullet(t *testing.T) {
 		types.Position{X: 200, Y: 200},
 		types.Size{Width: 4, Height: 4},
 		types.SURFACE,
-		&MockImageProvider{id: "bullet"},
+		&testutil.FakeImageProvider{ImageID: "bullet"},
 		types.DirectionDown,
 		specs,
 		tank2Ptr,

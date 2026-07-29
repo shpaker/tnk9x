@@ -1,44 +1,21 @@
-package types
+package types_test
 
 import (
-	"fmt"
 	"testing"
 
-	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/shpaker/tnk9x/internal/testutil"
+	"github.com/shpaker/tnk9x/internal/types"
 )
 
-type MockTilesetRepository struct{}
-
-func (mtr *MockTilesetRepository) GetImage(id string) (*ebiten.Image, error) {
-	if id == "notfound" {
-		return nil, fmt.Errorf("image '%s' not found", id)
-	}
-	return ebiten.NewImage(8, 8), nil
-}
-
-func (mtr *MockTilesetRepository) GetAnimationData(
-	id string,
-) (AnimationData, error) {
-	return AnimationData{}, nil
-}
-
-type MockImageProvider struct {
-	id string
-}
-
-func (mig *MockImageProvider) GetImageID() (string, error) {
-	return mig.id, nil
-}
-
 func TestBlockEntity_GetImageID_NilImage(t *testing.T) {
-	block := &BlockEntity{
+	block := &types.BlockEntity{
 		Image: nil,
-		Data: &BlockData{
+		Data: &types.BlockData{
 			Name:     "test",
-			Position: Position{X: 0, Y: 0},
+			Position: types.Position{X: 0, Y: 0},
 		},
-		Position: Position{X: 0, Y: 0},
-		Altitude: SURFACE,
+		Position: types.Position{X: 0, Y: 0},
+		Altitude: types.SURFACE,
 	}
 
 	_, err := block.GetImageID()
@@ -58,14 +35,14 @@ func TestBlockEntity_GetImageID_NilImage(t *testing.T) {
 }
 
 func TestBlockEntity_GetImageID_EmptyImageID(t *testing.T) {
-	block := &BlockEntity{
-		Image: &MockImageProvider{id: ""},
-		Data: &BlockData{
+	block := &types.BlockEntity{
+		Image: &testutil.FakeImageProvider{ImageID: ""},
+		Data: &types.BlockData{
 			Name:     "test",
-			Position: Position{X: 0, Y: 0},
+			Position: types.Position{X: 0, Y: 0},
 		},
-		Position: Position{X: 0, Y: 0},
-		Altitude: SURFACE,
+		Position: types.Position{X: 0, Y: 0},
+		Altitude: types.SURFACE,
 	}
 
 	imageID, err := block.GetImageID()
@@ -81,14 +58,14 @@ func TestBlockEntity_GetImageID_EmptyImageID(t *testing.T) {
 }
 
 func TestBlockEntity_GetImageID_ValidImageID(t *testing.T) {
-	block := &BlockEntity{
-		Image: &MockImageProvider{id: "valid"},
-		Data: &BlockData{
+	block := &types.BlockEntity{
+		Image: &testutil.FakeImageProvider{ImageID: "valid"},
+		Data: &types.BlockData{
 			Name:     "test",
-			Position: Position{X: 0, Y: 0},
+			Position: types.Position{X: 0, Y: 0},
 		},
-		Position: Position{X: 0, Y: 0},
-		Altitude: SURFACE,
+		Position: types.Position{X: 0, Y: 0},
+		Altitude: types.SURFACE,
 	}
 
 	imageID, err := block.GetImageID()
