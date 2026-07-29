@@ -27,6 +27,7 @@ func main() {
 	defer cancel()
 
 	if err := application.Run(ctx); err != nil {
+		fmt.Fprintf(os.Stderr, "Application error: %v\n", err)
 		os.Exit(1)
 	}
 }

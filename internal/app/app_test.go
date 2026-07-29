@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"errors"
 	"os"
 	"sync"
@@ -169,5 +170,18 @@ func TestApp_ApplyTransition_FullApp(t *testing.T) {
 	}
 	if app.stageState != nil {
 		t.Error("ссылка на StageState не очищена")
+	}
+}
+
+// Отмена контекста завершает игровой цикл штатно (ebiten.Termination)
+func TestApp_Update_ContextCancelled(t *testing.T) {
+	app, _ := newAppTestEnv()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	app.ctx = ctx
+
+	cancel()
+	if err := app.Update(); !errors.Is(err, ebiten.Termination) {
+		t.Fatalf("ожидался ebiten.Termination, получено %v", err)
 	}
 }

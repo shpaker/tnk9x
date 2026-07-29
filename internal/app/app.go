@@ -2,7 +2,6 @@ package app
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -36,6 +35,9 @@ type App struct {
 	config     *Config
 	state      gameState
 	stageState *states.StageState
+
+	// Контекст приложения: отмена (например, SIGINT) завершает игровой цикл
+	ctx context.Context
 
 	session *session_entities.GameSessionEntity
 
@@ -141,8 +143,16 @@ func (app *App) Layout(outsideWidth, outsideHeight int) (int, int) {
 }
 
 func (app *App) Update() error {
+	if app.ctx != nil {
+		select {
+		case <-app.ctx.Done():
+			return ebiten.Termination
+		default:
+		}
+	}
+
 	if ebiten.IsKeyPressed(ebiten.KeyEscape) {
-		return errors.New("exit application")
+		return ebiten.Termination
 	}
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyF1) {
@@ -241,6 +251,9 @@ func (app *App) collectDebugData() types.DebugInfoData {
 }
 
 func (app *App) Run(ctx context.Context) error {
+	app.ctx = ctx
+	defer app.Close()
+
 	ebiten.SetWindowSize(
 		app.config.ScreenWidth(),
 		app.config.ScreenHeight(),
@@ -249,11 +262,7 @@ func (app *App) Run(ctx context.Context) error {
 		fmt.Sprintf("%s v%s", app.config.GetGameTitle(), Version),
 	)
 
-	err := ebiten.RunGame(app)
-
-	defer app.Close()
-
-	return err
+	return ebiten.RunGame(app)
 }
 
 func (app *App) Close() {
