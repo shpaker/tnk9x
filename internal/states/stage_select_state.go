@@ -86,7 +86,6 @@ func NewStageSelectState(
 		selectorUseCases,
 		ebiten.KeyLeft,
 		ebiten.KeyRight,
-		ebiten.KeyEnter,
 	)
 
 	state := &StageSelectState{

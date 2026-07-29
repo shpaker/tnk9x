@@ -15,7 +15,6 @@ type StageSelectKeyboardInputAdapter struct {
 	selectorUseCases interfaces.IStageSelectorUseCases
 	previousButton   ebiten.Key
 	nextButton       ebiten.Key
-	enterButton      ebiten.Key
 }
 
 func NewStageSelectKeyboardInputAdapter(
@@ -23,14 +22,12 @@ func NewStageSelectKeyboardInputAdapter(
 	selectorUseCases interfaces.IStageSelectorUseCases,
 	previousButton ebiten.Key,
 	nextButton ebiten.Key,
-	enterButton ebiten.Key,
 ) *StageSelectKeyboardInputAdapter {
 	return &StageSelectKeyboardInputAdapter{
 		selector:         selector,
 		selectorUseCases: selectorUseCases,
 		previousButton:   previousButton,
 		nextButton:       nextButton,
-		enterButton:      enterButton,
 	}
 }
 
@@ -49,9 +46,5 @@ func (a *StageSelectKeyboardInputAdapter) Update(dt float64) {
 		inpututil.IsKeyJustPressed(ebiten.KeyRight) ||
 		inpututil.IsKeyJustPressed(ebiten.KeyD) {
 		a.selectorUseCases.Next(a.selector)
-	}
-
-	if inpututil.IsKeyJustPressed(a.enterButton) {
-		a.selectorUseCases.Select(a.selector)
 	}
 }
