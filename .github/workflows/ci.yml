@@ -226,6 +226,9 @@ jobs:
           sleep 2
           just test
 
+      - name: Check use cases coverage threshold
+        run: just test-coverage-check
+
   build:
     name: Build
     runs-on: ubuntu-latest

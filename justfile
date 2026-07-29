@@ -112,6 +112,17 @@ test-coverage:
     {{gocmd}} tool cover -html=coverage.out -o coverage.html
     echo "Coverage report generated: coverage.html"
 
+# Порог покрытия ядра игровой логики (internal/use_cases)
+test-coverage-check:
+    #!/bin/bash
+    set -euo pipefail
+    threshold=70
+    {{gocmd}} test -coverprofile=coverage-use-cases.out ./internal/use_cases/...
+    total=$({{gocmd}} tool cover -func=coverage-use-cases.out | awk '/^total:/ {gsub("%", "", $3); print $3}')
+    rm -f coverage-use-cases.out
+    echo "internal/use_cases coverage: ${total}% (threshold ${threshold}%)"
+    awk -v total="$total" -v threshold="$threshold" 'BEGIN { exit (total < threshold) ? 1 : 0 }'
+
 deps:
     #!/bin/bash
     echo "Downloading dependencies..."

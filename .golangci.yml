@@ -21,10 +21,82 @@ linters-settings:
     min-occurrences: 3
   misspell:
     locale: US
+  # Границы слоёв Clean Architecture (см. AGENTS.md)
+  depguard:
+    rules:
+      domain:
+        list-mode: strict
+        files:
+          - "**/internal/types/**"
+          - "!$test"
+        allow:
+          - $gostd
+          - github.com/shpaker/tnk9x/internal/types
+      contracts:
+        list-mode: strict
+        files:
+          - "**/internal/interfaces/**"
+          - "!$test"
+        allow:
+          - $gostd
+          - github.com/shpaker/tnk9x/internal/types
+      application:
+        files:
+          - "**/internal/use_cases/**"
+          - "**/internal/services/**"
+          - "!$test"
+        deny:
+          - pkg: github.com/hajimehoshi/ebiten
+            desc: движок — только в Presentation и internal/app
+          - pkg: github.com/shpaker/tnk9x/internal/adapters
+            desc: Application не зависит от Presentation
+          - pkg: github.com/shpaker/tnk9x/internal/states
+            desc: Application не зависит от Presentation
+          - pkg: github.com/shpaker/tnk9x/internal/repositories
+            desc: доступ к данным — только через интерфейсы
+          - pkg: github.com/shpaker/tnk9x/internal/app
+            desc: composition root никем не импортируется
+      infrastructure:
+        files:
+          - "**/internal/repositories/**"
+          - "!$test"
+        deny:
+          - pkg: github.com/hajimehoshi/ebiten
+            desc: движок — только в Presentation и internal/app
+          - pkg: github.com/shpaker/tnk9x/internal/use_cases
+            desc: Infrastructure не зависит от Application
+          - pkg: github.com/shpaker/tnk9x/internal/services
+            desc: Infrastructure не зависит от Application
+          - pkg: github.com/shpaker/tnk9x/internal/adapters
+            desc: Infrastructure не зависит от Presentation
+          - pkg: github.com/shpaker/tnk9x/internal/states
+            desc: Infrastructure не зависит от Presentation
+          - pkg: github.com/shpaker/tnk9x/internal/app
+            desc: composition root никем не импортируется
+      presentation:
+        files:
+          - "**/internal/states/**"
+          - "**/internal/adapters/**"
+          - "!$test"
+        deny:
+          - pkg: github.com/shpaker/tnk9x/internal/repositories
+            desc: доступ к данным — только через интерфейсы
+          - pkg: github.com/shpaker/tnk9x/internal/app
+            desc: composition root никем не импортируется
+      lua-isolation:
+        files:
+          - "**/internal/**"
+          - "**/cmd/**"
+          - "!**/internal/adapters/scripting/**"
+          - "!$test"
+        deny:
+          - pkg: github.com/yuin/gopher-lua
+            desc: lua — только в internal/adapters/scripting за IAIScriptEngine
 
 linters:
   disable-all: true
   enable:
+    - depguard
     - errcheck
     - gosimple
     - govet

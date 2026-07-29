@@ -57,12 +57,16 @@ A modern remake and tribute to the classic arcade game Battle City (NES, 1985), 
 
 ### Infrastructure
 - [x] Clean Architecture
-- [x] Dependency injection
+- [x] Composition root (internal/app)
+- [x] Dependency injection (constructor-only, no setters)
+- [x] Layer boundaries enforced by depguard
 - [x] Repository pattern
 - [x] Specs system
-- [x] Unit tests (collision, audio)
-- [ ] Test coverage (>80%)
-- [ ] CI/CD
+- [x] Scripting behind a domain-typed engine interface
+- [x] Unit tests (use cases, services, repositories, app transitions)
+- [x] Use cases coverage gate in CI (>=70%)
+- [ ] Test coverage (>80% total)
+- [x] CI/CD (fmt, lint, test, build, release)
 - [ ] Performance profiling
 
 ## Installation and Running
@@ -78,7 +82,7 @@ just deps         # Install dependencies (or go mod download)
 just run          # or go run cmd/main.go
 
 # Build binary
-just build        # binary will be in dist/tnk9x
+just build        # binary will be in ./tnk9x
 
 # Checks
 just fmt
@@ -88,25 +92,29 @@ just test
 
 ## Architecture
 
-The project follows **Clean Architecture** principles with clear separation of concerns across four layers. Dependencies point inward: outer layers depend on inner layers through interfaces.
+The project follows **Clean Architecture** principles with clear separation of concerns. Dependencies point inward: outer layers depend on inner layers through interfaces. The composition root (`internal/app`) is the only place that assembles the object graph — all dependencies are injected via constructors, layer boundaries are enforced by depguard.
 
 ### Dependency Flow
 
 ```
-┌────────────────────────────────────────────────────────┐
-│  Presentation Layer                                    │
-│  ┌──────────────┐  ┌──────────────┐                    │
-│  │   States     │  │   Adapters   │                    │
-│  │              │  │              │                    │
-│  │ StageState   │  │ Renderer     │                    │
-│  │ StageSelect  │  │ Input        │                    │
-│  │              │  │ Sound        │                    │
-│  └──────┬───────┘  └───────┬──────┘                    │
-│         │                  │                           │
-│         └─────────┬────────┘                           │
-│                   │ (depends on)                       │
-│                   ▼                                    │
-└────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────┐
+│  Composition Root (internal/app)                        │
+│  game loop · state transitions · object graph assembly  │
+└───────────────────┬─────────────────────────────────────┘
+                    │ (builds & wires)
+┌───────────────────▼─────────────────────────────────────┐
+│  Presentation Layer                                     │
+│  ┌──────────────┐  ┌──────────────────────┐             │
+│  │   States     │  │      Adapters        │             │
+│  │              │  │                      │             │
+│  │ StageState   │  │ Renderer             │             │
+│  │ StageSelect  │  │ Input                │             │
+│  │              │  │ Sound                │             │
+│  │              │  │ Scripting (Lua)      │             │
+│  └──────┬───────┘  └───────┬──────────────┘             │
+│         └─────────┬────────┘                            │
+│                   │ (depends on)                        │
+└───────────────────▼─────────────────────────────────────┘
                     │
 ┌───────────────────▼─────────────────────────────────────┐
 │  Application Layer                                      │
@@ -115,13 +123,11 @@ The project follows **Clean Architecture** principles with clear separation of c
 │  │              │  │              │                     │
 │  │ TankActions  │  │ Collision    │                     │
 │  │ Collision    │  │ Animation    │                     │
-│  │ Sound        │  │ Coordinate   │                     │
+│  │ Sound        │  │ Braking      │                     │
 │  └──────┬───────┘  └──────┬───────┘                     │
-│         │                 │                             │
 │         └─────────┬───────┘                             │
 │                   │ (manipulates)                       │
-│                   ▼                                     │
-└─────────────────────────────────────────────────────────┘
+└───────────────────▼─────────────────────────────────────┘
                     │
 ┌───────────────────▼─────────────────────────────────────┐
 │  Domain Layer                                           │
