@@ -1,4 +1,4 @@
-package internal
+package app
 
 import (
 	"context"
@@ -13,16 +13,14 @@ import (
 
 	"github.com/shpaker/tnk9x/internal/adapters/scripting"
 	"github.com/shpaker/tnk9x/internal/interfaces"
-	game_repos "github.com/shpaker/tnk9x/internal/repositories/game"
 	"github.com/shpaker/tnk9x/internal/repositories/processed"
 	"github.com/shpaker/tnk9x/internal/repositories/raw"
 	"github.com/shpaker/tnk9x/internal/services"
 	collision_services "github.com/shpaker/tnk9x/internal/services/collision_services"
 	"github.com/shpaker/tnk9x/internal/states"
 	"github.com/shpaker/tnk9x/internal/types"
-	"github.com/shpaker/tnk9x/internal/use_cases"
-
 	"github.com/shpaker/tnk9x/internal/types/session_entities"
+	"github.com/shpaker/tnk9x/internal/use_cases"
 )
 
 const audioSampleRate = 44100
@@ -35,14 +33,107 @@ type gameState interface {
 }
 
 type App struct {
-	config        *Config
-	state         gameState
-	stageState    *states.StageState
-	scriptEngine  interfaces.IAIScriptEngine
-	session       *session_entities.GameSessionEntity
-	textFace      text.Face
+	config     *Config
+	state      gameState
+	stageState *states.StageState
+
+	session *session_entities.GameSessionEntity
+
+	// Долгоживущая инфраструктура — создаётся один раз на приложение
+	fileRepository    interfaces.IFileRepository
+	tilesetRegistry   interfaces.ITilesetRepositoryRegistry
+	mapsRepository    interfaces.IMapsDataRepository
+	scriptsRepository interfaces.IScriptsRepository
+	soundsRepository  interfaces.ISoundsRepository
+	textFace          text.Face
+	scriptEngine      interfaces.IAIScriptEngine
+	audioContext      *audio.Context
+
+	// Stateless-сервисы
+	boundaryCollisionService interfaces.IBoundaryCollisionService
+	entitiesCollisionService interfaces.IEntitiesCollisionService
+	wallCollisionService     interfaces.IWallCollisionService
+	bulletCollisionService   interfaces.IBulletCollisionService
+	spawnCollisionService    interfaces.ISpawnCollisionService
+	tankBrakingService       interfaces.ITankBrakingService
+
+	// Use Cases
+	specsUseCases interfaces.ISpecsUseCases
 	debugUseCases *use_cases.DebugUseCases
-	audioContext  *audio.Context
+}
+
+func New(cfg *Config) *App {
+	// Создаем audio context один раз на приложение
+	audioContext := audio.NewContext(audioSampleRate)
+
+	fileRepository := raw.NewFileRepository("assets")
+
+	tilesetRegistry, err := processed.NewTilesetRepositoryRegistry(
+		fileRepository,
+	)
+	if err != nil {
+		fmt.Printf("Error creating tileset registry: %v\n", err)
+		panic(err)
+	}
+
+	mapsRepository := processed.NewMapsDataRepository(
+		fileRepository,
+		tilesetRegistry,
+	)
+	scriptsRepository := processed.NewScriptsRepository(fileRepository)
+	soundsRepository := processed.NewSoundsRepository(fileRepository)
+
+	fontsRepository := processed.NewFontsRepository(fileRepository)
+	textFace, err := buildTextFace(fontsRepository, cfg.GetTitleFontSize())
+	if err != nil {
+		fmt.Printf("Error creating text face: %v\n", err)
+		panic(err)
+	}
+
+	mapSizePx := types.Size{
+		Width:  cfg.MapBlocksCount.Width * int(cfg.TileBaseSize),
+		Height: cfg.MapBlocksCount.Height * int(cfg.TileBaseSize),
+	}
+	entitiesCollisionService := collision_services.NewEntitiesCollisionService()
+
+	app := &App{
+		config:            cfg,
+		session:           session_entities.NewGameSessionEntity(),
+		fileRepository:    fileRepository,
+		tilesetRegistry:   tilesetRegistry,
+		mapsRepository:    mapsRepository,
+		scriptsRepository: scriptsRepository,
+		soundsRepository:  soundsRepository,
+		textFace:          textFace,
+		scriptEngine:      scripting.NewLuaEngine(),
+		audioContext:      audioContext,
+		boundaryCollisionService: collision_services.NewBoundaryCollisionService(
+			mapSizePx,
+		),
+		entitiesCollisionService: entitiesCollisionService,
+		wallCollisionService: collision_services.NewWallCollisionService(
+			entitiesCollisionService,
+		),
+		bulletCollisionService: collision_services.NewBulletCollisionService(
+			int(cfg.GetTileBaseSize()),
+			entitiesCollisionService,
+		),
+		spawnCollisionService: collision_services.NewSpawnCollisionService(
+			entitiesCollisionService,
+		),
+		tankBrakingService: services.NewTankBrakingService(),
+		specsUseCases:      use_cases.NewSpecsUseCases(),
+		debugUseCases:      use_cases.NewDebugUseCases(Version),
+	}
+
+	selectState, err := app.newStageSelectState()
+	if err != nil {
+		fmt.Printf("Error creating StageSelectState: %v\n", err)
+		panic(err)
+	}
+	app.state = selectState
+
+	return app
 }
 
 func (app *App) Layout(outsideWidth, outsideHeight int) (int, int) {
@@ -81,14 +172,15 @@ func (app *App) applyTransition(transition types.StateTransition) error {
 		}
 		app.session.Level = int(transition.Level)
 
-		stageState, err := app.createStageState(app.session)
+		stageState, err := app.newStageState()
 		if err != nil {
 			return err
 		}
+		stageState.SetDebugEnabled(Debug)
 		app.state = stageState
 		app.stageState = stageState
 	case types.TransitionToStageSelect:
-		selectState, err := app.createStageSelectState()
+		selectState, err := app.newStageSelectState()
 		if err != nil {
 			return err
 		}
@@ -146,147 +238,6 @@ func (app *App) collectDebugData() types.DebugInfoData {
 	data.RemainingEnemies = stageSession.GetRemainingEnemies()
 
 	return data
-}
-
-func New(cfg *Config) *App {
-	// Создаем audio context один раз на приложение
-	audioContext := audio.NewContext(audioSampleRate)
-
-	fileRepository := raw.NewFileRepository("assets")
-
-	tilesetRegistry, err := processed.NewTilesetRepositoryRegistry(
-		fileRepository,
-	)
-	if err != nil {
-		fmt.Printf("Error creating tileset registry: %v\n", err)
-		panic(err)
-	}
-
-	mapsRepository := processed.NewMapsDataRepository(
-		fileRepository,
-		tilesetRegistry,
-	)
-	fontsRepository := processed.NewFontsRepository(fileRepository)
-	textFace, err := buildTextFace(fontsRepository, cfg.GetTitleFontSize())
-	if err != nil {
-		fmt.Printf("Error creating text face: %v\n", err)
-		panic(err)
-	}
-
-	scriptEngine := scripting.NewLuaEngine()
-
-	session := session_entities.NewGameSessionEntity()
-
-	stageSelectorUseCases := use_cases.NewStageSelectorUseCases()
-
-	stageSelectState, err := states.NewStageSelectState(
-		cfg,
-		stageSelectorUseCases,
-		textFace,
-		mapsRepository,
-	)
-	if err != nil {
-		fmt.Printf("Error creating StageSelectState: %v\n", err)
-		panic(err)
-	}
-
-	return &App{
-		config:        cfg,
-		state:         stageSelectState,
-		scriptEngine:  scriptEngine,
-		session:       session,
-		textFace:      textFace,
-		debugUseCases: use_cases.NewDebugUseCases(Version),
-		audioContext:  audioContext,
-	}
-}
-
-func (app *App) createStageState(
-	session *session_entities.GameSessionEntity,
-) (*states.StageState, error) {
-	fileRepository := raw.NewFileRepository("assets")
-
-	tilesetRegistry, err := processed.NewTilesetRepositoryRegistry(
-		fileRepository,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create tileset registry: %w", err)
-	}
-
-	scriptsRepository := processed.NewScriptsRepository(fileRepository)
-
-	mapsRepository := processed.NewMapsDataRepository(
-		fileRepository,
-		tilesetRegistry,
-	)
-
-	gameRepository := game_repos.NewGameRepositoriesRegistry()
-
-	boundaryCollisionService := collision_services.NewBoundaryCollisionService(
-		types.Size{
-			Width: app.config.MapBlocksCount.Width * int(
-				app.config.TileBaseSize,
-			),
-			Height: app.config.MapBlocksCount.Height * int(
-				app.config.TileBaseSize,
-			),
-		},
-	)
-	entitiesCollisionService := collision_services.NewEntitiesCollisionService()
-	wallCollisionService := collision_services.NewWallCollisionService(
-		entitiesCollisionService,
-	)
-	tankBrakingService := services.NewTankBrakingService()
-
-	stageStatePtr, err := states.NewStageState(
-		mapsRepository,
-		scriptsRepository,
-		session.Level,
-		tilesetRegistry,
-		app.config,
-		app.textFace,
-		gameRepository,
-		boundaryCollisionService,
-		wallCollisionService,
-		tankBrakingService,
-		app.scriptEngine,
-		session.StageSession(),
-		fileRepository,
-		app.audioContext,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	// Устанавливаем флаг дебаг-режима
-	stageStatePtr.SetDebugEnabled(Debug)
-
-	return stageStatePtr, nil
-}
-
-func (app *App) createStageSelectState() (*states.StageSelectState, error) {
-	fileRepository := raw.NewFileRepository("assets")
-
-	tilesetRegistry, err := processed.NewTilesetRepositoryRegistry(
-		fileRepository,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create tileset registry: %w", err)
-	}
-
-	mapsRepository := processed.NewMapsDataRepository(
-		fileRepository,
-		tilesetRegistry,
-	)
-
-	stageSelectorUseCases := use_cases.NewStageSelectorUseCases()
-
-	return states.NewStageSelectState(
-		app.config,
-		stageSelectorUseCases,
-		app.textFace,
-		mapsRepository,
-	)
 }
 
 func (app *App) Run(ctx context.Context) error {

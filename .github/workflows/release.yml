@@ -71,10 +71,10 @@ jobs:
           GOARCH: ${{ matrix.goarch }}
         run: |
           if ("${{ matrix.build_type }}" -eq "debug") {
-            go build -ldflags "-X github.com/shpaker/tnk9x/internal.Version=$env:APP_VERSION -X github.com/shpaker/tnk9x/internal.DebugFlag=true" -o dist/tnk9x.exe ./cmd
+            go build -ldflags "-X github.com/shpaker/tnk9x/internal/app.Version=$env:APP_VERSION -X github.com/shpaker/tnk9x/internal/app.DebugFlag=true" -o dist/tnk9x.exe ./cmd
           } else {
             $env:CGO_ENABLED = "0"
-            go build -trimpath -ldflags "-s -w -X github.com/shpaker/tnk9x/internal.Version=$env:APP_VERSION" -o dist/tnk9x.exe ./cmd
+            go build -trimpath -ldflags "-s -w -X github.com/shpaker/tnk9x/internal/app.Version=$env:APP_VERSION" -o dist/tnk9x.exe ./cmd
           }
 
       - name: Build executable (Linux)
@@ -90,9 +90,9 @@ jobs:
         run: |
           export CGO_ENABLED=1
           if [ "${{ matrix.build_type }}" = "debug" ]; then
-            go build -ldflags "-X github.com/shpaker/tnk9x/internal.Version=$APP_VERSION -X github.com/shpaker/tnk9x/internal.DebugFlag=true" -o dist/tnk9x ./cmd
+            go build -ldflags "-X github.com/shpaker/tnk9x/internal/app.Version=$APP_VERSION -X github.com/shpaker/tnk9x/internal/app.DebugFlag=true" -o dist/tnk9x ./cmd
           else
-            go build -trimpath -ldflags "-s -w -X github.com/shpaker/tnk9x/internal.Version=$APP_VERSION" -o dist/tnk9x ./cmd
+            go build -trimpath -ldflags "-s -w -X github.com/shpaker/tnk9x/internal/app.Version=$APP_VERSION" -o dist/tnk9x ./cmd
           fi
 
       - name: Build executable (macOS)
@@ -108,9 +108,9 @@ jobs:
         run: |
           export CGO_ENABLED=1
           if [ "${{ matrix.build_type }}" = "debug" ]; then
-            go build -ldflags "-X github.com/shpaker/tnk9x/internal.Version=$APP_VERSION -X github.com/shpaker/tnk9x/internal.DebugFlag=true" -o dist/tnk9x ./cmd
+            go build -ldflags "-X github.com/shpaker/tnk9x/internal/app.Version=$APP_VERSION -X github.com/shpaker/tnk9x/internal/app.DebugFlag=true" -o dist/tnk9x ./cmd
           else
-            go build -trimpath -ldflags "-s -w -X github.com/shpaker/tnk9x/internal.Version=$APP_VERSION" -o dist/tnk9x ./cmd
+            go build -trimpath -ldflags "-s -w -X github.com/shpaker/tnk9x/internal/app.Version=$APP_VERSION" -o dist/tnk9x ./cmd
           fi
 
       - name: Package artifacts (Windows)
