@@ -3,8 +3,6 @@ package interfaces
 import (
 	"image"
 
-	"golang.org/x/image/font/opentype"
-
 	"github.com/shpaker/tnk9x/internal/types"
 	image_providers "github.com/shpaker/tnk9x/internal/types/image_providers"
 )
@@ -99,10 +97,6 @@ type IHQUseCases interface {
 	Explode(hq *types.HQEntity) error
 	IsExplosionFinished(hq *types.HQEntity)
 	IsDestroyed() bool
-}
-
-type IFontUseCases interface {
-	GetFont() (*opentype.Font, error)
 }
 
 type IStageUseCases interface {

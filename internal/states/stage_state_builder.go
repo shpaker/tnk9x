@@ -6,6 +6,7 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/audio"
+	"github.com/hajimehoshi/ebiten/v2/text/v2"
 
 	"github.com/shpaker/tnk9x/internal/adapters/stage"
 	"github.com/shpaker/tnk9x/internal/adapters/stage/input_adapters"
@@ -31,7 +32,7 @@ type StageStateBuilder struct {
 	config      interfaces.IConfigProvider
 	levelNumber int
 
-	fontUseCases interfaces.IFontUseCases
+	textFace text.Face
 
 	mapEntity *types.MapEntity
 
@@ -55,7 +56,7 @@ func NewStageStateBuilder(
 	boundaryCollisionService interfaces.IBoundaryCollisionService,
 	wallCollisionService interfaces.IWallCollisionService,
 	tankBrakingService interfaces.ITankBrakingService,
-	fontUseCases interfaces.IFontUseCases,
+	textFace text.Face,
 	scriptEngine interfaces.IAIScriptEngine,
 	session *session_entities.GameSessionEntity,
 	fileRepository interfaces.IFileRepository,
@@ -72,7 +73,7 @@ func NewStageStateBuilder(
 		boundaryCollisionService: boundaryCollisionService,
 		wallCollisionService:     wallCollisionService,
 		tankBrakingService:       tankBrakingService,
-		fontUseCases:             fontUseCases,
+		textFace:                 textFace,
 		scriptEngine:             scriptEngine,
 		session:                  session,
 		audioContext:             audioContext,
@@ -96,7 +97,9 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 	}
 
 	// Создаем SoundUseCases для использования в других use cases
-	soundUseCases := use_cases.NewSoundUseCases()
+	soundUseCases := use_cases.NewSoundUseCases(
+		b.gameRepository.GetSoundEventsRepository(),
+	)
 
 	// Создаем SpecsUseCases для управления характеристиками танков
 	specsUseCases := use_cases.NewSpecsUseCases()
@@ -264,7 +267,7 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 		return nil, err
 	}
 
-	stageUseCasesValue := state_use_cases.NewStageUseCases(
+	stageUseCases := state_use_cases.NewStageUseCases(
 		tankLifecycleUseCases,
 		tankCommonUseCases,
 		bulletUseCases,
@@ -276,7 +279,6 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 		mapUseCases,
 		bonusUseCases,
 	)
-	stageUseCases := &stageUseCasesValue
 
 	inputAdapter1 := input_adapters.NewStageKeyboardInputAdapter(
 		tankActionsUseCases,
@@ -375,7 +377,7 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 		hqUseCases,
 		b.gameRepository.GetBonusesRepository(),
 		bonusTilesUseCasesForRenderer,
-		b.fontUseCases,
+		b.textFace,
 		rendererTileSize,
 		mapOffsetX,
 		mapOffsetY,

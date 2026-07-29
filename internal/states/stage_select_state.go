@@ -4,7 +4,6 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
-	"golang.org/x/image/font/opentype"
 
 	stage_select "github.com/shpaker/tnk9x/internal/adapters/stage_select"
 	"github.com/shpaker/tnk9x/internal/interfaces"
@@ -41,7 +40,7 @@ func NewStageSelectState(
 	selectorUseCases interfaces.IStageSelectorUseCases,
 	transitionUseCases *use_cases.StateTransitionUseCases,
 	session *session_entities.GameSessionEntity,
-	fontUseCases interfaces.IFontUseCases,
+	textFace text.Face,
 	mapsRepository interfaces.IMapsDataRepository,
 ) (*StageSelectState, error) {
 	var screenWidth, screenHeight int
@@ -62,11 +61,6 @@ func NewStageSelectState(
 
 	selector := types.NewStageSelector(maxStages)
 
-	baseFont, err := fontUseCases.GetFont()
-	if err != nil {
-		return nil, err
-	}
-
 	titleSize := config.GetTitleFontSize()
 	if titleSize == 0 {
 		titleSize = 32
@@ -79,16 +73,6 @@ func NewStageSelectState(
 	if subtitleSize == 0 {
 		subtitleSize = regularSize
 	}
-
-	fontFace, err := opentype.NewFace(baseFont, &opentype.FaceOptions{
-		Size: float64(titleSize),
-		DPI:  72,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	textFace := text.NewGoXFace(fontFace)
 
 	rendererAdapter, err := stage_select.NewStageSelectRendererAdapter(
 		selector,

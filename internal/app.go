@@ -9,6 +9,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/audio"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
+	"github.com/hajimehoshi/ebiten/v2/text/v2"
 
 	"github.com/shpaker/tnk9x/internal/adapters/scripting"
 	"github.com/shpaker/tnk9x/internal/interfaces"
@@ -31,7 +32,7 @@ type App struct {
 	State         interfaces.IState
 	scriptEngine  interfaces.IAIScriptEngine
 	session       *session_entities.GameSessionEntity
-	fontUseCases  interfaces.IFontUseCases
+	textFace      text.Face
 	debugUseCases *use_cases.DebugUseCases
 	audioContext  *audio.Context
 }
@@ -79,7 +80,7 @@ func (app *App) Draw(screen *ebiten.Image) {
 		return
 	}
 
-	debugText := app.debugUseCases.BuildDebugInfo()
+	debugText := app.debugUseCases.BuildDebugInfo(app.collectDebugData())
 	if debugText == "" {
 		return
 	}
@@ -90,6 +91,32 @@ func (app *App) Draw(screen *ebiten.Image) {
 		0,
 		0,
 	)
+}
+
+// collectDebugData собирает метрики движка и данные сессии для HUD
+func (app *App) collectDebugData() types.DebugInfoData {
+	data := types.DebugInfoData{
+		FPS: ebiten.ActualFPS(),
+		TPS: ebiten.ActualTPS(),
+	}
+
+	stageSession := app.session.StageSession()
+	if stageSession == nil {
+		return data
+	}
+
+	data.Player1Lives = stageSession.GetPlayerLives(types.PlayerTankNumPlayer1)
+	data.Player1InitialLives = stageSession.GetPlayerInitialLives(
+		types.PlayerTankNumPlayer1,
+	)
+	data.Player2Lives = stageSession.GetPlayerLives(types.PlayerTankNumPlayer2)
+	data.Player2InitialLives = stageSession.GetPlayerInitialLives(
+		types.PlayerTankNumPlayer2,
+	)
+	data.TotalEnemies = stageSession.GetTotalEnemies()
+	data.RemainingEnemies = stageSession.GetRemainingEnemies()
+
+	return data
 }
 
 func New(cfg *Config) *App {
@@ -111,7 +138,11 @@ func New(cfg *Config) *App {
 		tilesetRegistry,
 	)
 	fontsRepository := processed.NewFontsRepository(fileRepository)
-	fontUseCases := use_cases.NewFontUseCases(fontsRepository)
+	textFace, err := buildTextFace(fontsRepository, cfg.GetTitleFontSize())
+	if err != nil {
+		fmt.Printf("Error creating text face: %v\n", err)
+		panic(err)
+	}
 
 	scriptEngine := scripting.NewLuaEngine()
 
@@ -125,7 +156,7 @@ func New(cfg *Config) *App {
 		stageSelectorUseCases,
 		stateTransitionUseCases,
 		session,
-		fontUseCases,
+		textFace,
 		mapsRepository,
 	)
 	if err != nil {
@@ -134,16 +165,13 @@ func New(cfg *Config) *App {
 	}
 
 	return &App{
-		config:       cfg,
-		State:        stageSelectState,
-		scriptEngine: scriptEngine,
-		session:      session,
-		fontUseCases: fontUseCases,
-		debugUseCases: use_cases.NewDebugUseCases(
-			session,
-			Version,
-		),
-		audioContext: audioContext,
+		config:        cfg,
+		State:         stageSelectState,
+		scriptEngine:  scriptEngine,
+		session:       session,
+		textFace:      textFace,
+		debugUseCases: use_cases.NewDebugUseCases(Version),
+		audioContext:  audioContext,
 	}
 }
 
@@ -202,20 +230,13 @@ func (app *App) createStageState(
 	)
 	tankBrakingService := services.NewTankBrakingService()
 
-	fontUseCases := app.fontUseCases
-	if fontUseCases == nil {
-		fontUseCases = use_cases.NewFontUseCases(
-			processed.NewFontsRepository(fileRepository),
-		)
-	}
-
 	stageStatePtr, err := states.NewStageState(
 		mapsRepository,
 		scriptsRepository,
 		session.Level,
 		tilesetRegistry,
 		app.config,
-		fontUseCases,
+		app.textFace,
 		gameRepository,
 		boundaryCollisionService,
 		wallCollisionService,
@@ -252,14 +273,6 @@ func (app *App) createStageSelectState(
 		tilesetRegistry,
 	)
 
-	fontUseCases := app.fontUseCases
-	if fontUseCases == nil {
-		fontUseCases = use_cases.NewFontUseCases(
-			processed.NewFontsRepository(fileRepository),
-		)
-		app.fontUseCases = fontUseCases
-	}
-
 	stageSelectorUseCases := use_cases.NewStageSelectorUseCases()
 	stateTransitionUseCases := use_cases.NewStateTransitionUseCases()
 
@@ -268,7 +281,7 @@ func (app *App) createStageSelectState(
 		stageSelectorUseCases,
 		stateTransitionUseCases,
 		session,
-		fontUseCases,
+		app.textFace,
 		mapsRepository,
 	)
 }

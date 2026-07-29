@@ -176,7 +176,6 @@ func newStageTestEnv(enemyRespawnDelay uint) *stageTestEnv {
 	session := session_entities.NewStageSessionEntity()
 	bonuses := game.NewBonusesRepository()
 
-	// NewStageUseCases возвращает значение — берём адрес
 	stage := state_use_cases.NewStageUseCases(
 		lifecycle,
 		common,
@@ -198,7 +197,7 @@ func newStageTestEnv(enemyRespawnDelay uint) *stageTestEnv {
 		hq:        hq,
 		session:   session,
 		bonuses:   bonuses,
-		stage:     &stage,
+		stage:     stage,
 	}
 }
 

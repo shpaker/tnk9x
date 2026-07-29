@@ -6,6 +6,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/audio"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
+	"github.com/hajimehoshi/ebiten/v2/text/v2"
 
 	"github.com/shpaker/tnk9x/internal/adapters/stage"
 	"github.com/shpaker/tnk9x/internal/interfaces"
@@ -56,7 +57,7 @@ func NewStageState(
 	levelNumber int,
 	tilesetRegistry interfaces.ITilesetRepositoryRegistry,
 	config interfaces.IConfigProvider,
-	fontUseCases interfaces.IFontUseCases,
+	textFace text.Face,
 	gameRepository interfaces.IGameRepositoriesRegistry,
 	boundaryCollisionService interfaces.IBoundaryCollisionService,
 	wallCollisionService interfaces.IWallCollisionService,
@@ -76,7 +77,7 @@ func NewStageState(
 		boundaryCollisionService,
 		wallCollisionService,
 		tankBrakingService,
-		fontUseCases,
+		textFace,
 		scriptEngine,
 		session,
 		fileRepository,

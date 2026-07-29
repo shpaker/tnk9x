@@ -138,7 +138,7 @@ func newCollisionTestEnv(blocks types.MapBlocks) *collisionTestEnv {
 	specsUC := use_cases.NewSpecsUseCases()
 
 	render := &stubRenderUseCases{}
-	soundUC := use_cases.NewSoundUseCases()
+	soundUC := use_cases.NewSoundUseCases(game.NewSoundEventsRepository())
 
 	bulletUC := use_cases.NewBulletUseCases(bulletsRepo, nil, 16)
 	tankCommon := tank_use_cases.NewTankCommonUseCases(

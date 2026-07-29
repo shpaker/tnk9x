@@ -7,18 +7,20 @@ import (
 var _ interfaces.IGameRepositoriesRegistry = (*GameRepositoriesRegistry)(nil)
 
 type GameRepositoriesRegistry struct {
-	bulletsRepository    interfaces.IBulletsRepository
-	animationsRepository interfaces.IAnimationsRepository
-	tanksRepository      interfaces.ITanksRepository
-	bonusesRepository    interfaces.IBonusesRepository
+	bulletsRepository     interfaces.IBulletsRepository
+	animationsRepository  interfaces.IAnimationsRepository
+	tanksRepository       interfaces.ITanksRepository
+	bonusesRepository     interfaces.IBonusesRepository
+	soundEventsRepository interfaces.ISoundEventsRepository
 }
 
 func NewGameRepositoriesRegistry() *GameRepositoriesRegistry {
 	return &GameRepositoriesRegistry{
-		bulletsRepository:    NewBulletsRepository(),
-		animationsRepository: NewAnimationsRepository(),
-		tanksRepository:      NewTanksRepository(),
-		bonusesRepository:    NewBonusesRepository(),
+		bulletsRepository:     NewBulletsRepository(),
+		animationsRepository:  NewAnimationsRepository(),
+		tanksRepository:       NewTanksRepository(),
+		bonusesRepository:     NewBonusesRepository(),
+		soundEventsRepository: NewSoundEventsRepository(),
 	}
 }
 
@@ -36,4 +38,8 @@ func (gr *GameRepositoriesRegistry) GetTanksRepository() interfaces.ITanksReposi
 
 func (gr *GameRepositoriesRegistry) GetBonusesRepository() interfaces.IBonusesRepository {
 	return gr.bonusesRepository
+}
+
+func (gr *GameRepositoriesRegistry) GetSoundEventsRepository() interfaces.ISoundEventsRepository {
+	return gr.soundEventsRepository
 }

@@ -3,13 +3,14 @@ package use_cases_test
 import (
 	"testing"
 
+	game "github.com/shpaker/tnk9x/internal/repositories/game"
 	"github.com/shpaker/tnk9x/internal/testutil"
 	"github.com/shpaker/tnk9x/internal/types"
 	"github.com/shpaker/tnk9x/internal/use_cases"
 )
 
 func TestSoundUseCases_RequestSoundAppendsInOrder(t *testing.T) {
-	uc := use_cases.NewSoundUseCases()
+	uc := use_cases.NewSoundUseCases(game.NewSoundEventsRepository())
 
 	uc.RequestSound(types.SoundIDFire, false)
 	uc.RequestSound(types.SoundIDEngine, true)
@@ -28,7 +29,7 @@ func TestSoundUseCases_RequestSoundAppendsInOrder(t *testing.T) {
 
 // GetEvents отдаёт события разрушающе: повторный вызов пуст
 func TestSoundUseCases_GetEventsDrainsQueue(t *testing.T) {
-	uc := use_cases.NewSoundUseCases()
+	uc := use_cases.NewSoundUseCases(game.NewSoundEventsRepository())
 	uc.RequestSound(types.SoundIDExplosion, false)
 
 	if got := len(uc.GetEvents()); got != 1 {
@@ -40,7 +41,7 @@ func TestSoundUseCases_GetEventsDrainsQueue(t *testing.T) {
 }
 
 func TestSoundUseCases_StopAll(t *testing.T) {
-	uc := use_cases.NewSoundUseCases()
+	uc := use_cases.NewSoundUseCases(game.NewSoundEventsRepository())
 	player := &testutil.FakeSoundPlayer{}
 
 	uc.RequestSound(types.SoundIDBrick, false)
@@ -60,7 +61,7 @@ func TestSoundUseCases_StopAll(t *testing.T) {
 }
 
 func TestSoundUseCases_StopAllWithNilAdapter(t *testing.T) {
-	uc := use_cases.NewSoundUseCases()
+	uc := use_cases.NewSoundUseCases(game.NewSoundEventsRepository())
 	uc.RequestSound(types.SoundIDBonus, false)
 
 	uc.StopAll(nil) // не должно паниковать

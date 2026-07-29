@@ -8,7 +8,6 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
-	"golang.org/x/image/font/opentype"
 
 	"github.com/shpaker/tnk9x/internal/interfaces"
 	"github.com/shpaker/tnk9x/internal/types"
@@ -29,7 +28,6 @@ type StageRendererAdapter struct {
 	bonusesRepository      interfaces.IBonusesRepository
 	bonusTilesUseCases     interfaces.ITilesUseCases
 	imageCache             map[string]*ebiten.Image
-	fontUseCases           interfaces.IFontUseCases
 	fontFace               text.Face
 	titleFontSize          int
 	subtitleFontSize       int
@@ -53,7 +51,7 @@ func NewStageRendererAdapter(
 	hqUseCases interfaces.IHQUseCases,
 	bonusesRepository interfaces.IBonusesRepository,
 	bonusTilesUseCases interfaces.ITilesUseCases,
-	fontUseCases interfaces.IFontUseCases,
+	fontFace text.Face,
 	tileMinSize int,
 	mapOffsetX int,
 	mapOffsetY int,
@@ -87,7 +85,7 @@ func NewStageRendererAdapter(
 		hqUseCases:             hqUseCases,
 		bonusesRepository:      bonusesRepository,
 		bonusTilesUseCases:     bonusTilesUseCases,
-		fontUseCases:           fontUseCases,
+		fontFace:               fontFace,
 		imageCache:             make(map[string]*ebiten.Image),
 		tileMinSize:            tileMinSize,
 		mapOffsetX:             mapOffsetX,
@@ -515,7 +513,7 @@ func (r *StageRendererAdapter) drawOverlayMessage(
 		false,
 	)
 
-	face := r.ensureFontFace()
+	face := r.fontFace
 	if face == nil {
 		return
 	}
@@ -550,31 +548,6 @@ func (r *StageRendererAdapter) drawOverlayMessage(
 	subtitleOp.ColorScale.ScaleWithColor(color.White)
 
 	text.Draw(screen, subtitle, face, subtitleOp)
-}
-
-func (r *StageRendererAdapter) ensureFontFace() text.Face {
-	if r.fontFace != nil {
-		return r.fontFace
-	}
-	if r.fontUseCases == nil {
-		return nil
-	}
-
-	baseFont, err := r.fontUseCases.GetFont()
-	if err != nil || baseFont == nil {
-		return nil
-	}
-
-	face, err := opentype.NewFace(baseFont, &opentype.FaceOptions{
-		Size: float64(r.titleFontSize),
-		DPI:  72,
-	})
-	if err != nil {
-		return nil
-	}
-
-	r.fontFace = text.NewGoXFace(face)
-	return r.fontFace
 }
 
 func (r *StageRendererAdapter) drawScreenBackground(screen *ebiten.Image) {

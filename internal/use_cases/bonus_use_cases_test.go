@@ -132,7 +132,7 @@ func newBonusTestEnv() *bonusTestEnv {
 	lifecycle := &recordingLifecycle{}
 	session := session_entities.NewStageSessionEntity()
 	bonusesRepo := game.NewBonusesRepository()
-	sounds := use_cases.NewSoundUseCases()
+	sounds := use_cases.NewSoundUseCases(game.NewSoundEventsRepository())
 	registry := &testutil.FakeTilesetRegistry{}
 	tilesUC := use_cases.NewTilesUseCases(
 		registry,

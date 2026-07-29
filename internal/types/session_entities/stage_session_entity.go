@@ -15,6 +15,9 @@ type StageSessionEntity struct {
 	spawnedEnemies   uint
 	destroyedEnemies uint
 
+	// Танки, уже учтённые счётчиком destroyedEnemies
+	countedDestroyedEnemies map[*types.TankEntity]struct{}
+
 	playerLives        []uint
 	playerInitialLives []uint
 
@@ -24,6 +27,8 @@ type StageSessionEntity struct {
 	maxActiveEnemies uint
 
 	playerCount uint
+
+	isPaused bool
 }
 
 func NewStageSessionEntity() *StageSessionEntity {
@@ -36,14 +41,15 @@ func NewStageSessionEntity() *StageSessionEntity {
 	playerInitialLives[types.PlayerTankNumPlayer2] = defaultStagePlayer2Lives
 
 	return &StageSessionEntity{
-		totalEnemies:       20,
-		destroyedEnemies:   0,
-		playerLives:        playerLives,
-		playerInitialLives: playerInitialLives,
-		enemyRespawnDelay:  defaultStageRespawnDelay,
-		enemySpawnTicks:    defaultStageRespawnDelay,
-		maxActiveEnemies:   5,
-		playerCount:        1,
+		totalEnemies:            20,
+		destroyedEnemies:        0,
+		countedDestroyedEnemies: make(map[*types.TankEntity]struct{}),
+		playerLives:             playerLives,
+		playerInitialLives:      playerInitialLives,
+		enemyRespawnDelay:       defaultStageRespawnDelay,
+		enemySpawnTicks:         defaultStageRespawnDelay,
+		maxActiveEnemies:        5,
+		playerCount:             1,
 	}
 }
 
@@ -63,6 +69,39 @@ func (s *StageSessionEntity) IncrementDestroyedEnemies() {
 	s.destroyedEnemies++
 }
 
+// TrackDestroyedEnemy учитывает уничтоженного врага ровно один раз:
+// повторный вызов для того же танка возвращает false и счётчик не меняет
+func (s *StageSessionEntity) TrackDestroyedEnemy(
+	tank *types.TankEntity,
+) bool {
+	if tank == nil {
+		return false
+	}
+	if s.countedDestroyedEnemies == nil {
+		s.countedDestroyedEnemies = make(map[*types.TankEntity]struct{})
+	}
+	if _, exists := s.countedDestroyedEnemies[tank]; exists {
+		return false
+	}
+	s.countedDestroyedEnemies[tank] = struct{}{}
+	s.destroyedEnemies++
+	return true
+}
+
+// ClearDestroyedEnemiesTracking сбрасывает учёт танков,
+// не затрагивая счётчик уничтоженных
+func (s *StageSessionEntity) ClearDestroyedEnemiesTracking() {
+	s.countedDestroyedEnemies = make(map[*types.TankEntity]struct{})
+}
+
+func (s *StageSessionEntity) IsPaused() bool {
+	return s.isPaused
+}
+
+func (s *StageSessionEntity) SetPaused(paused bool) {
+	s.isPaused = paused
+}
+
 func (s *StageSessionEntity) EnemiesForSpawnCount() uint {
 	return s.totalEnemies - s.spawnedEnemies
 }
@@ -70,6 +109,8 @@ func (s *StageSessionEntity) EnemiesForSpawnCount() uint {
 func (s *StageSessionEntity) Reset() {
 	s.spawnedEnemies = 0
 	s.destroyedEnemies = 0
+	s.isPaused = false
+	s.ClearDestroyedEnemiesTracking()
 
 	playerCount := int(s.GetPlayerCount())
 	if playerCount < 1 {

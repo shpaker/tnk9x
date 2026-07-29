@@ -12,6 +12,14 @@ type IGameRepositoriesRegistry interface {
 	GetAnimationsRepository() IAnimationsRepository
 	GetTanksRepository() ITanksRepository
 	GetBonusesRepository() IBonusesRepository
+	GetSoundEventsRepository() ISoundEventsRepository
+}
+
+// ISoundEventsRepository хранит очередь звуковых событий кадра
+type ISoundEventsRepository interface {
+	Add(event types.SoundEntity)
+	Drain() []types.SoundEntity
+	Clear()
 }
 
 type IBulletsRepository interface {

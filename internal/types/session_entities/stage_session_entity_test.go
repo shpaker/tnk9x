@@ -138,3 +138,60 @@ func TestStageSessionEntity_RemainingEnemies(t *testing.T) {
 		)
 	}
 }
+
+// Пауза хранится в сессии; Reset снимает её
+func TestStageSessionEntity_Pause(t *testing.T) {
+	session := NewStageSessionEntity()
+
+	if session.IsPaused() {
+		t.Error("новая сессия не должна быть на паузе")
+	}
+
+	session.SetPaused(true)
+	if !session.IsPaused() {
+		t.Error("SetPaused(true) не включил паузу")
+	}
+
+	session.Reset()
+	if session.IsPaused() {
+		t.Error("Reset должен снимать паузу")
+	}
+}
+
+// Каждый танк учитывается счётчиком уничтоженных ровно один раз
+func TestStageSessionEntity_TrackDestroyedEnemy(t *testing.T) {
+	session := NewStageSessionEntity()
+	tankValue := types.NewDefaultTankEntity(
+		types.TankRoleEnemy,
+		types.DirectionUp,
+	)
+	tank := &tankValue
+
+	if !session.TrackDestroyedEnemy(tank) {
+		t.Error("первый учёт танка должен вернуть true")
+	}
+	if session.TrackDestroyedEnemy(tank) {
+		t.Error("повторный учёт того же танка должен вернуть false")
+	}
+	if got := session.GetTotalEnemies() - session.GetRemainingEnemies(); got != 1 {
+		t.Errorf("уничтожено %d, ожидался 1", got)
+	}
+	if session.TrackDestroyedEnemy(nil) {
+		t.Error("nil-танк не учитывается")
+	}
+
+	// Сброс трекинга не трогает счётчик, но позволяет учесть танк заново
+	session.ClearDestroyedEnemiesTracking()
+	if got := session.GetTotalEnemies() - session.GetRemainingEnemies(); got != 1 {
+		t.Errorf("после сброса трекинга уничтожено %d, ожидался 1", got)
+	}
+	if !session.TrackDestroyedEnemy(tank) {
+		t.Error("после сброса трекинга танк учитывается заново")
+	}
+
+	// Полный Reset обнуляет и счётчик, и трекинг
+	session.Reset()
+	if got := session.GetTotalEnemies() - session.GetRemainingEnemies(); got != 0 {
+		t.Errorf("после Reset уничтожено %d, ожидалось 0", got)
+	}
+}

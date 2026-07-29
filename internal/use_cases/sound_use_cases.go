@@ -8,26 +8,25 @@ import (
 var _ interfaces.ISoundUseCases = (*SoundUseCases)(nil)
 
 type SoundUseCases struct {
-	events []types.SoundEntity
+	soundEventsRepository interfaces.ISoundEventsRepository
 }
 
-func NewSoundUseCases() *SoundUseCases {
+func NewSoundUseCases(
+	soundEventsRepository interfaces.ISoundEventsRepository,
+) *SoundUseCases {
 	return &SoundUseCases{
-		events: make([]types.SoundEntity, 0),
+		soundEventsRepository: soundEventsRepository,
 	}
 }
 
 func (uc *SoundUseCases) RequestSound(soundID types.SoundID, loop bool) {
-	uc.events = append(
-		uc.events,
+	uc.soundEventsRepository.Add(
 		types.SoundEntity{SoundID: soundID, Loop: loop},
 	)
 }
 
 func (uc *SoundUseCases) GetEvents() []types.SoundEntity {
-	events := uc.events
-	uc.events = uc.events[:0] // Очищаем после получения
-	return events
+	return uc.soundEventsRepository.Drain()
 }
 
 // StopAll останавливает все проигрываемые звуки через звуковой адаптер
@@ -38,5 +37,5 @@ func (uc *SoundUseCases) StopAll(
 		soundPlayerAdapter.StopAll()
 	}
 	// Очищаем очередь событий, чтобы не проигрывать запланированные звуки
-	uc.events = uc.events[:0]
+	uc.soundEventsRepository.Clear()
 }

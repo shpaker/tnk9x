@@ -10,8 +10,6 @@ import (
 var _ interfaces.IStageUseCases = (*StageUseCases)(nil)
 
 type StageUseCases struct {
-	isPaused bool
-
 	tankLifecycleUseCases interfaces.ITankLifecycleUseCases
 	tankCommonUseCases    interfaces.ITankCommonUseCases
 	bulletUseCases        interfaces.IBulletUseCases
@@ -19,8 +17,6 @@ type StageUseCases struct {
 	hqUseCases            interfaces.IHQUseCases
 
 	stageSession *session_entities.StageSessionEntity
-
-	destroyedEnemies map[*types.TankEntity]struct{}
 
 	bonusesRepository interfaces.IBonusesRepository
 	mapUseCases       interfaces.IMapUseCases
@@ -38,22 +34,20 @@ func NewStageUseCases(
 	bonusesRepository interfaces.IBonusesRepository,
 	mapUseCases interfaces.IMapUseCases,
 	bonusUseCases interfaces.IBonusUseCases,
-) StageUseCases {
+) *StageUseCases {
 	if enemyRespawnDelay == 0 {
 		enemyRespawnDelay = 3 * 60
 	}
 	if stageSession != nil {
 		stageSession.SetEnemyRespawnDelay(enemyRespawnDelay)
 	}
-	return StageUseCases{
-		isPaused:              false,
+	return &StageUseCases{
 		tankLifecycleUseCases: tankLifecycleUseCases,
 		tankCommonUseCases:    tankCommonUseCases,
 		bulletUseCases:        bulletUseCases,
 		collisionUseCases:     collisionUseCases,
 		hqUseCases:            hqUseCases,
 		stageSession:          stageSession,
-		destroyedEnemies:      make(map[*types.TankEntity]struct{}),
 		bonusesRepository:     bonusesRepository,
 		mapUseCases:           mapUseCases,
 		bonusUseCases:         bonusUseCases,
@@ -61,11 +55,15 @@ func NewStageUseCases(
 }
 
 func (uc *StageUseCases) PauseStageState() {
-	uc.isPaused = true
+	if uc.stageSession != nil {
+		uc.stageSession.SetPaused(true)
+	}
 }
 
 func (uc *StageUseCases) ResumeStageState() {
-	uc.isPaused = false
+	if uc.stageSession != nil {
+		uc.stageSession.SetPaused(false)
+	}
 }
 
 func (uc *StageUseCases) SpawnPlayerTank(
@@ -108,8 +106,10 @@ func (uc *StageUseCases) SpawnInitialEnemyTanks() []*types.TankEntity {
 		return nil
 	}
 
-	// Очищаем карту уничтоженных врагов при спавне начальных врагов
-	uc.destroyedEnemies = make(map[*types.TankEntity]struct{})
+	// Сбрасываем учёт уничтоженных врагов при спавне начальных врагов
+	if uc.stageSession != nil {
+		uc.stageSession.ClearDestroyedEnemiesTracking()
+	}
 
 	enemies, err := uc.tankLifecycleUseCases.OnStageSetUpEnemiesSpawn()
 	if err != nil {
@@ -133,7 +133,7 @@ func (uc *StageUseCases) SpawnInitialEnemyTanks() []*types.TankEntity {
 }
 
 func (uc *StageUseCases) UpdateGameObjects(dt float64) {
-	if uc.isPaused {
+	if uc.IsPaused() {
 		return
 	}
 
@@ -155,11 +155,13 @@ func (uc *StageUseCases) UpdateGameObjects(dt float64) {
 }
 
 func (uc *StageUseCases) TogglePause() {
-	uc.isPaused = !uc.isPaused
+	if uc.stageSession != nil {
+		uc.stageSession.SetPaused(!uc.stageSession.IsPaused())
+	}
 }
 
 func (uc *StageUseCases) IsPaused() bool {
-	return uc.isPaused
+	return uc.stageSession != nil && uc.stageSession.IsPaused()
 }
 
 func (uc *StageUseCases) TryRespawnPlayersTanks() (*types.TankEntity, *types.TankEntity) {
@@ -365,21 +367,15 @@ func (uc *StageUseCases) trackDestroyedEnemies() {
 		return
 	}
 
-	if uc.destroyedEnemies == nil {
-		uc.destroyedEnemies = make(map[*types.TankEntity]struct{})
-	}
-
 	for _, tank := range enemies {
 		if tank == nil || !tank.IsEnemy() {
 			continue
 		}
 
 		if tank.State == types.TankStateExploded {
-			if _, exists := uc.destroyedEnemies[tank]; exists {
+			if !uc.stageSession.TrackDestroyedEnemy(tank) {
 				continue
 			}
-			uc.stageSession.IncrementDestroyedEnemies()
-			uc.destroyedEnemies[tank] = struct{}{}
 
 			// Если враг с бонусом уничтожен, удаляем все бонусы без owner'а и спавним новый
 			if tank.GetWithBonus() {
