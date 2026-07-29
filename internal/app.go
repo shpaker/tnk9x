@@ -27,9 +27,17 @@ import (
 
 const audioSampleRate = 44100
 
+// gameState — контракт состояния приложения, определён у потребителя;
+// Update возвращает запрос перехода (нулевое значение — остаться)
+type gameState interface {
+	Update() types.StateTransition
+	Draw(screen *ebiten.Image)
+}
+
 type App struct {
 	config        *Config
-	State         interfaces.IState
+	state         gameState
+	stageState    *states.StageState
 	scriptEngine  interfaces.IAIScriptEngine
 	session       *session_entities.GameSessionEntity
 	textFace      text.Face
@@ -48,30 +56,51 @@ func (app *App) Update() error {
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyF1) {
 		Debug = !Debug
-		// Обновляем флаг дебаг-режима в текущем состоянии (если это StageState)
-		if stageState, ok := app.State.(*states.StageState); ok {
-			stageState.SetDebugEnabled(Debug)
+		// Обновляем флаг дебаг-режима в текущем игровом состоянии
+		if app.stageState != nil {
+			app.stageState.SetDebugEnabled(Debug)
 		}
 	}
 
-	app.State.Update()
+	transition := app.state.Update()
 
-	targetState := app.session.GetTargetState()
-	if targetState != nil {
-		newState, err := app.createStateFromTarget(app.session, targetState)
+	return app.applyTransition(transition)
+}
+
+// applyTransition применяет запрошенный стейтом переход:
+// записывает параметры в сессию и собирает новое состояние
+func (app *App) applyTransition(transition types.StateTransition) error {
+	switch transition.Target {
+	case types.TransitionNone:
+		return nil
+	case types.TransitionToStage:
+		stageSession := app.session.StageSession()
+		if stageSession != nil {
+			stageSession.SetMaxActiveEnemies(transition.MaxActiveEnemies)
+			stageSession.SetPlayerCount(transition.PlayerCount)
+		}
+		app.session.Level = int(transition.Level)
+
+		stageState, err := app.createStageState(app.session)
 		if err != nil {
 			return err
 		}
-		if newState != nil {
-			app.State = newState
+		app.state = stageState
+		app.stageState = stageState
+	case types.TransitionToStageSelect:
+		selectState, err := app.createStageSelectState()
+		if err != nil {
+			return err
 		}
+		app.state = selectState
+		app.stageState = nil
 	}
 
 	return nil
 }
 
 func (app *App) Draw(screen *ebiten.Image) {
-	app.State.Draw(screen)
+	app.state.Draw(screen)
 	if app.debugUseCases == nil {
 		return
 	}
@@ -149,13 +178,10 @@ func New(cfg *Config) *App {
 	session := session_entities.NewGameSessionEntity()
 
 	stageSelectorUseCases := use_cases.NewStageSelectorUseCases()
-	stateTransitionUseCases := use_cases.NewStateTransitionUseCases()
 
 	stageSelectState, err := states.NewStageSelectState(
 		cfg,
 		stageSelectorUseCases,
-		stateTransitionUseCases,
-		session,
 		textFace,
 		mapsRepository,
 	)
@@ -166,7 +192,7 @@ func New(cfg *Config) *App {
 
 	return &App{
 		config:        cfg,
-		State:         stageSelectState,
+		state:         stageSelectState,
 		scriptEngine:  scriptEngine,
 		session:       session,
 		textFace:      textFace,
@@ -175,27 +201,9 @@ func New(cfg *Config) *App {
 	}
 }
 
-func (app *App) createStateFromTarget(
-	session *session_entities.GameSessionEntity,
-	targetState *types.StateType,
-) (interfaces.IState, error) {
-	if targetState == nil {
-		return nil, nil
-	}
-
-	switch *targetState {
-	case types.StateTypeStage:
-		return app.createStageState(session)
-	case types.StateTypeStageSelect:
-		return app.createStageSelectState(session)
-	default:
-		return nil, nil
-	}
-}
-
 func (app *App) createStageState(
 	session *session_entities.GameSessionEntity,
-) (interfaces.IState, error) {
+) (*states.StageState, error) {
 	fileRepository := raw.NewFileRepository("assets")
 
 	tilesetRegistry, err := processed.NewTilesetRepositoryRegistry(
@@ -242,7 +250,7 @@ func (app *App) createStageState(
 		wallCollisionService,
 		tankBrakingService,
 		app.scriptEngine,
-		session,
+		session.StageSession(),
 		fileRepository,
 		app.audioContext,
 	)
@@ -256,9 +264,7 @@ func (app *App) createStageState(
 	return stageStatePtr, nil
 }
 
-func (app *App) createStageSelectState(
-	session *session_entities.GameSessionEntity,
-) (interfaces.IState, error) {
+func (app *App) createStageSelectState() (*states.StageSelectState, error) {
 	fileRepository := raw.NewFileRepository("assets")
 
 	tilesetRegistry, err := processed.NewTilesetRepositoryRegistry(
@@ -274,13 +280,10 @@ func (app *App) createStageSelectState(
 	)
 
 	stageSelectorUseCases := use_cases.NewStageSelectorUseCases()
-	stateTransitionUseCases := use_cases.NewStateTransitionUseCases()
 
 	return states.NewStageSelectState(
 		app.config,
 		stageSelectorUseCases,
-		stateTransitionUseCases,
-		session,
 		app.textFace,
 		mapsRepository,
 	)

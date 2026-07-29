@@ -42,7 +42,7 @@ type StageStateBuilder struct {
 
 	scriptEngine interfaces.IAIScriptEngine
 
-	session      *session_entities.GameSessionEntity
+	stageSession *session_entities.StageSessionEntity
 	audioContext *audio.Context
 }
 
@@ -58,7 +58,7 @@ func NewStageStateBuilder(
 	tankBrakingService interfaces.ITankBrakingService,
 	textFace text.Face,
 	scriptEngine interfaces.IAIScriptEngine,
-	session *session_entities.GameSessionEntity,
+	stageSession *session_entities.StageSessionEntity,
 	fileRepository interfaces.IFileRepository,
 	audioContext *audio.Context,
 ) *StageStateBuilder {
@@ -75,7 +75,7 @@ func NewStageStateBuilder(
 		tankBrakingService:       tankBrakingService,
 		textFace:                 textFace,
 		scriptEngine:             scriptEngine,
-		session:                  session,
+		stageSession:             stageSession,
 		audioContext:             audioContext,
 	}
 }
@@ -227,10 +227,7 @@ func (b *StageStateBuilder) Build() (*StageState, error) {
 		return nil, err
 	}
 
-	var stageSession *session_entities.StageSessionEntity
-	if b.session != nil {
-		stageSession = b.session.StageSession()
-	}
+	stageSession := b.stageSession
 
 	bonusesRepository := b.gameRepository.GetBonusesRepository()
 
@@ -599,6 +596,6 @@ func (b *StageStateBuilder) buildStageState(
 		EnemyInputAdapter:     enemyInputAdapter,
 		StartTime:             time.Now(),
 		stageUseCases:         nil,
-		session:               b.session,
+		stageSession:          b.stageSession,
 	}
 }

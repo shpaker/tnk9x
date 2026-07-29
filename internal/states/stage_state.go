@@ -36,7 +36,7 @@ type StageState struct {
 
 	stageUseCases interfaces.IStageUseCases
 
-	session           *session_entities.GameSessionEntity
+	stageSession      *session_entities.StageSessionEntity
 	bonusesRepository interfaces.IBonusesRepository
 
 	soundUseCases      interfaces.ISoundUseCases
@@ -63,7 +63,7 @@ func NewStageState(
 	wallCollisionService interfaces.IWallCollisionService,
 	tankBrakingService interfaces.ITankBrakingService,
 	scriptEngine interfaces.IAIScriptEngine,
-	session *session_entities.GameSessionEntity,
+	stageSession *session_entities.StageSessionEntity,
 	fileRepository interfaces.IFileRepository,
 	audioContext *audio.Context,
 ) (*StageState, error) {
@@ -79,7 +79,7 @@ func NewStageState(
 		tankBrakingService,
 		textFace,
 		scriptEngine,
-		session,
+		stageSession,
 		fileRepository,
 		audioContext,
 	)
@@ -101,13 +101,13 @@ func (state *StageState) SetUp() {
 	}
 
 	// Сбрасываем сессию перед спавном танков, чтобы восстановить жизни игроков
-	if state.session != nil && state.session.StageSession() != nil {
-		state.session.StageSession().Reset()
+	if state.stageSession != nil {
+		state.stageSession.Reset()
 	}
 
 	playerCount := 2
-	if state.session != nil && state.session.StageSession() != nil {
-		playerCount = int(state.session.StageSession().GetPlayerCount())
+	if state.stageSession != nil {
+		playerCount = int(state.stageSession.GetPlayerCount())
 		if playerCount < 1 {
 			playerCount = 1
 		}
@@ -140,11 +140,13 @@ func (state *StageState) SetUp() {
 	}
 }
 
-func (state *StageState) Update() {
+func (state *StageState) Update() types.StateTransition {
 	if !state.isSetUp {
 		state.SetUp()
 		state.isSetUp = true
 	}
+
+	transition := types.StateTransition{}
 
 	tps := ebiten.ActualTPS()
 	var dt float64
@@ -195,10 +197,10 @@ func (state *StageState) Update() {
 				state.soundUseCases.RequestSound(types.SoundIDGameOver, false)
 				state.defeatSoundPlayed = true
 			}
-			if state.session != nil &&
-				len(inpututil.AppendJustPressedKeys(nil)) > 0 {
-				target := types.StateTypeStageSelect
-				state.session.SetTargetState(&target)
+			if len(inpututil.AppendJustPressedKeys(nil)) > 0 {
+				transition = types.StateTransition{
+					Target: types.TransitionToStageSelect,
+				}
 			}
 		}
 	}
@@ -298,6 +300,8 @@ func (state *StageState) Update() {
 		}
 		_ = state.soundPlayerAdapter.Update()
 	}
+
+	return transition
 }
 
 func (state *StageState) Draw(screen *ebiten.Image) {

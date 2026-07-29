@@ -8,23 +8,17 @@ import (
 	stage_select "github.com/shpaker/tnk9x/internal/adapters/stage_select"
 	"github.com/shpaker/tnk9x/internal/interfaces"
 	"github.com/shpaker/tnk9x/internal/types"
-	"github.com/shpaker/tnk9x/internal/use_cases"
-
-	"github.com/shpaker/tnk9x/internal/types/session_entities"
 )
 
 type StageSelectState struct {
-	config             interfaces.IConfigProvider
-	selector           *types.StageSelectorEntity
-	selectorUseCases   interfaces.IStageSelectorUseCases
-	transitionUseCases *use_cases.StateTransitionUseCases
-	Session            *session_entities.GameSessionEntity
-	inputAdapter       *stage_select.StageSelectKeyboardInputAdapter
-	rendererAdapter    *stage_select.StageSelectRendererAdapter
-	isSetUp            bool
-	activeMenuItem     stageSelectMenuItem
-	playerCount        int
-	maxActiveEnemies   uint
+	config           interfaces.IConfigProvider
+	selector         *types.StageSelectorEntity
+	selectorUseCases interfaces.IStageSelectorUseCases
+	inputAdapter     *stage_select.StageSelectKeyboardInputAdapter
+	rendererAdapter  *stage_select.StageSelectRendererAdapter
+	activeMenuItem   stageSelectMenuItem
+	playerCount      int
+	maxActiveEnemies uint
 }
 
 type stageSelectMenuItem int
@@ -38,8 +32,6 @@ const (
 func NewStageSelectState(
 	config interfaces.IConfigProvider,
 	selectorUseCases interfaces.IStageSelectorUseCases,
-	transitionUseCases *use_cases.StateTransitionUseCases,
-	session *session_entities.GameSessionEntity,
 	textFace text.Face,
 	mapsRepository interfaces.IMapsDataRepository,
 ) (*StageSelectState, error) {
@@ -98,30 +90,20 @@ func NewStageSelectState(
 	)
 
 	state := &StageSelectState{
-		config:             config,
-		selector:           selector,
-		selectorUseCases:   selectorUseCases,
-		transitionUseCases: transitionUseCases,
-		Session:            session,
-		inputAdapter:       inputAdapter,
-		rendererAdapter:    rendererAdapter,
-		activeMenuItem:     stageSelectMenuItemLevel,
-		playerCount:        1,
-		maxActiveEnemies:   5,
+		config:           config,
+		selector:         selector,
+		selectorUseCases: selectorUseCases,
+		inputAdapter:     inputAdapter,
+		rendererAdapter:  rendererAdapter,
+		activeMenuItem:   stageSelectMenuItemLevel,
+		playerCount:      1,
+		maxActiveEnemies: 5,
 	}
 
 	return state, nil
 }
 
-func (s *StageSelectState) SetUp() {
-}
-
-func (s *StageSelectState) Update() {
-	if !s.isSetUp {
-		s.SetUp()
-		s.isSetUp = true
-	}
-
+func (s *StageSelectState) Update() types.StateTransition {
 	s.handleMenuNavigation()
 
 	if s.activeMenuItem == stageSelectMenuItemLevel {
@@ -135,12 +117,15 @@ func (s *StageSelectState) Update() {
 	if inpututil.IsKeyJustPressed(ebiten.KeyEnter) {
 		selectedLevel := s.selectorUseCases.Select(s.selector)
 
-		if s.Session != nil && s.Session.StageSession() != nil {
-			s.Session.StageSession().SetMaxActiveEnemies(s.maxActiveEnemies)
-			s.Session.StageSession().SetPlayerCount(uint(s.playerCount))
+		return types.StateTransition{
+			Target:           types.TransitionToStage,
+			Level:            selectedLevel,
+			PlayerCount:      uint(s.playerCount),
+			MaxActiveEnemies: s.maxActiveEnemies,
 		}
-		s.transitionUseCases.ToGame(s.Session, selectedLevel)
 	}
+
+	return types.StateTransition{}
 }
 
 func (s *StageSelectState) Draw(screen *ebiten.Image) {

@@ -1,8 +1,6 @@
 package interfaces
 
 import (
-	"github.com/hajimehoshi/ebiten/v2"
-
 	"github.com/shpaker/tnk9x/internal/types"
 )
 
@@ -61,10 +59,4 @@ type ISoundPlayerAdapter interface {
 	Stop(soundID types.SoundID) error
 	StopAll()
 	Update() error
-}
-
-type IState interface {
-	SetUp()
-	Update()
-	Draw(screen *ebiten.Image)
 }

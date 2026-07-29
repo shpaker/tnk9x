@@ -1,8 +1,19 @@
 package types
 
-type StateType int
+// TransitionTarget — целевое состояние приложения
+type TransitionTarget int
 
 const (
-	StateTypeStage StateType = iota
-	StateTypeStageSelect
+	TransitionNone TransitionTarget = iota
+	TransitionToStage
+	TransitionToStageSelect
 )
+
+// StateTransition — запрос смены состояния, возвращаемый из Update стейта;
+// нулевое значение означает «остаться в текущем состоянии»
+type StateTransition struct {
+	Target           TransitionTarget
+	Level            uint
+	PlayerCount      uint
+	MaxActiveEnemies uint
+}
