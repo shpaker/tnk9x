@@ -2,6 +2,7 @@ package stage
 
 import (
 	"fmt"
+	"image"
 	"image/color"
 	"math"
 
@@ -625,16 +626,51 @@ func (r *StageRendererAdapter) drawBlocksByAltitude(
 			continue
 		}
 
-		imageID, err := block.Image.GetImageID()
-		if err != nil {
-			continue
-		}
-
-		r.drawEntitySprite(
-			screen,
-			types.TilesetTypeBlocks,
-			imageID,
-			block.Position,
-		)
+		r.drawBlockSprite(screen, block)
 	}
+}
+
+// drawBlockSprite рисует блок карты; подрезанный пулями блок
+// отображается соответствующей частью исходного спрайта тайла
+func (r *StageRendererAdapter) drawBlockSprite(
+	screen *ebiten.Image,
+	block *types.BlockEntity,
+) {
+	imageID, err := block.Image.GetImageID()
+	if err != nil {
+		return
+	}
+
+	img, err := r.spriteCache.Image(types.TilesetTypeBlocks, imageID)
+	if err != nil {
+		return
+	}
+
+	blockSize := block.GetSize()
+	bounds := img.Bounds()
+	partial := block.Data != nil &&
+		(blockSize.Width < bounds.Dx() || blockSize.Height < bounds.Dy())
+	if partial {
+		// Смещение уцелевшей части относительно исходного тайла
+		offsetX := int(block.Position.X - block.Data.Position.X)
+		offsetY := int(block.Position.Y - block.Data.Position.Y)
+		subRect := image.Rect(
+			bounds.Min.X+offsetX,
+			bounds.Min.Y+offsetY,
+			bounds.Min.X+offsetX+blockSize.Width,
+			bounds.Min.Y+offsetY+blockSize.Height,
+		)
+		subImg, ok := img.SubImage(subRect).(*ebiten.Image)
+		if !ok {
+			return
+		}
+		img = subImg
+	}
+
+	op := &ebiten.DrawImageOptions{}
+	op.GeoM.Translate(
+		float64(r.mapOffsetX)+block.Position.X,
+		float64(r.mapOffsetY)+block.Position.Y,
+	)
+	screen.DrawImage(img, op)
 }

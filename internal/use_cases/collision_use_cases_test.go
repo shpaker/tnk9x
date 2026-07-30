@@ -612,8 +612,8 @@ func TestTankWallCollision_WaterBlocksTank(t *testing.T) {
 	}
 }
 
-// B2/B3: два выстрела в один кирпич за тик — кирпич удаляется один раз
-// (без звукового сервиса), вторая пуля летит дальше, а не бьёт фантом
+// B2/B3: два выстрела в один кирпич за тик — первый состругивает
+// ближнюю половину, вторая пуля летит дальше, а не бьёт фантом
 func TestBulletWallCollision_NoPhantomHitOnDestroyedBrick(t *testing.T) {
 	blocks := types.MapBlocks{brick(120, 96)}
 	env := newCollisionTestEnv(blocks)
@@ -664,10 +664,19 @@ func TestBulletWallCollision_NoPhantomHitOnDestroyedBrick(t *testing.T) {
 
 	env.collision.UpdateCollisions()
 
-	if got := len(env.mapEntity.GetBlocks()); got != 0 {
+	remainingBlocks := env.mapEntity.GetBlocks()
+	if len(remainingBlocks) != 1 {
+		t.Fatalf(
+			"ожидалась уцелевшая половина тайла, блоков: %d",
+			len(remainingBlocks),
+		)
+	}
+	if remainingBlocks[0].Position.X != 124 ||
+		remainingBlocks[0].Size.Width != 4 {
 		t.Errorf(
-			"кирпич не удалён (soundUseCases == nil): осталось %d блоков",
-			got,
+			"уцелевшая половина: X=%v, ширина %d; ожидалось X=124, ширина 4",
+			remainingBlocks[0].Position.X,
+			remainingBlocks[0].Size.Width,
 		)
 	}
 
@@ -824,8 +833,8 @@ func makeDirectedBullet(
 	return bullet
 }
 
-// Обычная пуля срезает полосу кирпича 16px шириной и 8px глубиной:
-// клетка 16x16 пробивается насквозь за два выстрела
+// Обычная пуля состругивает слой в полтайла (4px) по всей ширине
+// клетки 16px: тайл выдерживает два попадания, клетка — четыре
 func TestBulletWallCollision_BrickStrip(t *testing.T) {
 	// Клетка кирпича 16x16 (по сетке клеток) из четырёх тайлов 8x8
 	blocks := types.MapBlocks{
@@ -844,32 +853,48 @@ func TestBulletWallCollision_BrickStrip(t *testing.T) {
 	)
 	env.tanksRepo.SetPlayer(types.PlayerTankNumPlayer1, shooter)
 
-	// Пуля летит вправо и попадает в левую колонку клетки
+	// Первый выстрел: у левой колонки клетки срезана ближняя половина
 	makeDirectedBullet(env, 110, 98, types.DirectionRight, shooter)
 	env.collision.UpdateCollisions()
 
 	remaining := env.mapEntity.GetBlocks()
-	if len(remaining) != 2 {
+	if len(remaining) != 4 {
 		t.Fatalf(
-			"после выстрела осталось %d тайлов, ожидалось 2",
+			"после выстрела осталось %d блоков, ожидалось 4",
 			len(remaining),
 		)
 	}
+	halves := 0
 	for _, block := range remaining {
-		if block.GetPosition().X != 120 {
-			t.Errorf(
-				"снята не та колонка: остался тайл %v",
-				block.GetPosition(),
-			)
+		if block.Size.Width == 4 {
+			halves++
+			if block.Position.X != 116 {
+				t.Errorf("половина не на месте: %v", block.Position)
+			}
 		}
 	}
+	if halves != 2 {
+		t.Fatalf("срезанных половин %d, ожидалось 2", halves)
+	}
 
-	// Второй выстрел пробивает клетку насквозь
+	// Второй выстрел добивает половины левой колонки
+	makeDirectedBullet(env, 114, 98, types.DirectionRight, shooter)
+	env.collision.UpdateCollisions()
+	if got := len(env.mapEntity.GetBlocks()); got != 2 {
+		t.Fatalf(
+			"после второго выстрела осталось %d блоков, ожидалось 2",
+			got,
+		)
+	}
+
+	// Третий и четвёртый выстрелы пробивают клетку насквозь
 	makeDirectedBullet(env, 118, 98, types.DirectionRight, shooter)
+	env.collision.UpdateCollisions()
+	makeDirectedBullet(env, 122, 98, types.DirectionRight, shooter)
 	env.collision.UpdateCollisions()
 
 	if got := len(env.mapEntity.GetBlocks()); got != 0 {
-		t.Errorf("после второго выстрела осталось %d тайлов", got)
+		t.Errorf("после четырёх выстрелов осталось %d блоков", got)
 	}
 }
 

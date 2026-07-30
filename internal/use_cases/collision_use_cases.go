@@ -365,17 +365,18 @@ func (uc *CollisionUseCases) checkBulletWallCollision(
 
 			if block.Data != nil {
 				if block.Data.Name == types.Brick {
-					// Выстрел срезает полосу шириной в клетку 16px;
-					// усиленная пуля пробивает клетку насквозь
-					uc.destroyBlockStrip(
-						bullet,
-						block,
-						bullet.IsReinforced(),
-					)
+					if bullet.IsReinforced() {
+						// Усиленная пуля пробивает клетку насквозь
+						uc.destroyBlockStrip(bullet, block, true)
+					} else {
+						// Обычная пуля состругивает слой в полтайла
+						// глубиной по всей ширине клетки 16px
+						uc.shaveBlockStrip(bullet, block)
+					}
 					uc.soundUseCases.RequestSound(types.SoundIDBrick, false)
 				} else if block.Data.Name == types.Steel {
 					if bullet.IsReinforced() {
-						// Усиленные пули срезают сталь той же полосой
+						// Усиленные пули срезают сталь полосой в тайл
 						uc.destroyBlockStrip(bullet, block, false)
 					}
 					uc.soundUseCases.RequestSound(types.SoundIDSteel, false)
@@ -409,15 +410,72 @@ func (uc *CollisionUseCases) destroyBlockStrip(
 	}
 }
 
-// stripPositions возвращает координаты 8px-тайлов, снимаемых выстрелом:
-// пара тайлов клетки поперёк полёта, при fullCell — вся клетка 16x16
+// shaveBlockStrip состругивает со стороны попадания слой в полтайла
+// глубиной по обоим тайлам клетки: минимальная единица разрушения —
+// половина тайла, как в оригинале
+func (uc *CollisionUseCases) shaveBlockStrip(
+	bullet *types.BulletEntity,
+	block *types.BlockEntity,
+) {
+	if block.Data == nil {
+		return
+	}
+	blockType := block.Data.Name
+
+	for _, position := range stripPositions(bullet, block, false) {
+		if target := uc.blockOfTypeAt(position, blockType); target != nil {
+			uc.shaveBlock(target, bullet.Direction)
+		}
+	}
+}
+
+// blockShaveDepth — глубина одного среза: половина тайла 8px
+const blockShaveDepth = 4
+
+// shaveBlock срезает половину тайла со стороны, в которую летит пуля;
+// исчерпанный блок удаляется с карты
+func (uc *CollisionUseCases) shaveBlock(
+	block *types.BlockEntity,
+	direction types.Direction,
+) {
+	shaveDepth := blockShaveDepth
+
+	switch direction {
+	case types.DirectionUp:
+		// Пуля летит вверх — срезаем нижнюю часть
+		block.Size.Height -= shaveDepth
+	case types.DirectionDown:
+		// Пуля летит вниз — срезаем верхнюю часть
+		block.Position.Y += float64(shaveDepth)
+		block.Size.Height -= shaveDepth
+	case types.DirectionLeft:
+		// Пуля летит влево — срезаем правую часть
+		block.Size.Width -= shaveDepth
+	case types.DirectionRight:
+		// Пуля летит вправо — срезаем левую часть
+		block.Position.X += float64(shaveDepth)
+		block.Size.Width -= shaveDepth
+	}
+
+	if block.Size.Width <= 0 || block.Size.Height <= 0 {
+		_ = uc.mapUseCases.RemoveBlock(block)
+	}
+}
+
+// stripPositions возвращает исходные координаты 8px-тайлов, снимаемых
+// выстрелом: пара тайлов клетки поперёк полёта, при fullCell — вся
+// клетка 16x16. Расчёт идёт от позиции тайла на сетке (Data.Position),
+// поэтому уже подрезанные блоки попадают в полосу
 func stripPositions(
 	bullet *types.BulletEntity,
 	block *types.BlockEntity,
 	fullCell bool,
 ) []types.Position {
 	blockPosition := block.GetPosition()
-	tileSize := float64(block.GetSize().Width)
+	if block.Data != nil {
+		blockPosition = block.Data.Position
+	}
+	tileSize := float64(2 * blockShaveDepth)
 	cellSize := tileSize * 2
 
 	// Вторая координата тайла внутри клетки 16px по указанной оси
@@ -464,7 +522,8 @@ func stripPositions(
 	return positions
 }
 
-// blockOfTypeAt находит блок указанного типа в точке карты
+// blockOfTypeAt находит блок указанного типа по исходной позиции тайла
+// на сетке: подрезанный блок смещается, но его Data.Position неизменна
 func (uc *CollisionUseCases) blockOfTypeAt(
 	position types.Position,
 	blockType types.BlockType,
@@ -474,8 +533,8 @@ func (uc *CollisionUseCases) blockOfTypeAt(
 			block.Data.Name != blockType {
 			continue
 		}
-		blockPosition := block.GetPosition()
-		if blockPosition.X == position.X && blockPosition.Y == position.Y {
+		gridPosition := block.Data.Position
+		if gridPosition.X == position.X && gridPosition.Y == position.Y {
 			return block
 		}
 	}

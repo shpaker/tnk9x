@@ -87,13 +87,18 @@ func (uc *FortressUseCases) rebuildRing(blockType types.BlockType) {
 	}
 }
 
+// removeBlockAt удаляет блок по исходной позиции тайла на сетке:
+// подрезанный пулями кирпич смещён, но его Data.Position неизменна
 func (uc *FortressUseCases) removeBlockAt(position types.Position) {
 	for _, block := range uc.mapUseCases.GetBlocks() {
 		if block == nil {
 			continue
 		}
-		blockPosition := block.GetPosition()
-		if blockPosition.X == position.X && blockPosition.Y == position.Y {
+		gridPosition := block.GetPosition()
+		if block.Data != nil {
+			gridPosition = block.Data.Position
+		}
+		if gridPosition.X == position.X && gridPosition.Y == position.Y {
 			_ = uc.mapUseCases.RemoveBlock(block)
 			return
 		}
