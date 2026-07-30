@@ -6,68 +6,16 @@ A modern remake and tribute to the classic arcade game Battle City (NES, 1985), 
 
 ## Development Status
 
-### Core
-- [x] Game loop (delta time)
-- [x] Collision detection (tank-tank, tank-wall, bullet-wall, bullet-tank, bullet-HQ)
-- [x] Boundary collision
-- [x] Tank movement/rotation/braking
-- [x] Bullet mechanics
-- [x] Enemy spawning
-- [x] Surface types (brick, steel, forest)
-- [ ] Surface types (water, ice)
-- [ ] Surface mechanics (ice sliding, water blocking)
+**Playable now:** full game loop, two-player keyboard controls, tank movement with braking and grid snap, bullets and destructible terrain, all five surface types (brick, steel, forest, water, ice) with ice sliding and water blocking, Lua-scripted enemies of four types with probability-based levels, player lives/levels/damage, bonuses (grenade, tank, star) and power-ups, HQ with victory/defeat overlays, level selection, pause, sound effects and music.
 
-### Player
-- [x] Controls (keyboard)
-- [x] Lives/respawn
-- [x] Tank levels (0-3)
-- [x] Damage system (level down on hit)
-- [x] Bonuses (grenade, tank, star)
-- [x] Power-ups (bullet speed, reinforced bullets, bullet limit)
-- [ ] Bonuses (helmet, timer, shovel)
+**Under the hood:** Clean Architecture with depguard-enforced layer boundaries, constructor-only DI from a composition root, repository pattern, scripting behind a domain-typed engine interface, unit tests with a >=70% use-cases coverage gate, CI/CD (fmt, lint, test, build, release).
 
-### Enemies
-- [x] Spawning system
-- [x] AI (Lua scripts)
-- [x] Level system (probability-based)
-- [x] Types (basic, fast, rapid fire, heavy)
-- [x] Heavy tank health overlay
-- [ ] AI difficulty scaling
-
-### HQ
-- [x] Vulnerability/explosion
-- [x] Victory/defeat overlays
-- [ ] Defeat screen
-- [ ] Protection mechanics
-
-### UI
-- [x] Level selection
-- [x] Pause overlay
-- [x] Debug info (FPS, TPS, lives, enemies)
-- [ ] HUD (lives, score)
-- [ ] Main menu
-- [ ] Game over screen
-- [ ] Settings
-
-### Audio
-- [x] Sound effects
-- [x] Background music
-- [x] Engine loop
-- [x] Volume config
-
-### Infrastructure
-- [x] Clean Architecture
-- [x] Composition root (internal/app)
-- [x] Dependency injection (constructor-only, no setters)
-- [x] Layer boundaries enforced by depguard
-- [x] Repository pattern
-- [x] Specs system
-- [x] Scripting behind a domain-typed engine interface
-- [x] Unit tests (use cases, services, repositories, app transitions)
-- [x] Use cases coverage gate in CI (>=70%)
-- [ ] Test coverage (>80% total)
-- [x] CI/CD (fmt, lint, test, build, release)
-- [ ] Performance profiling
+### Roadmap
+- Bonuses: helmet, timer, shovel
+- Enemy AI difficulty scaling
+- HQ: defeat screen, protection mechanics
+- UI: HUD (lives, score), main menu, game over screen, settings
+- Test coverage >80% total, performance profiling
 
 ## Installation and Running
 
