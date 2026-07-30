@@ -99,6 +99,8 @@ type ITilesetRepositoryRegistry interface {
 	GetBonusesAnimationData(id string) (types.AnimationData, error)
 	GetBonusesAnimationConfig(id string) (types.AnimationConfig, error)
 
+	GetHUDImage(id string) (types.IImageProvider, error)
+
 	GetImageData(tilesetType string, id string) (image.Image, error)
 }
 

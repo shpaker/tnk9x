@@ -1,0 +1,15 @@
+---
+size: 8
+
+images:
+  enemy_icon: [0, 0]
+  life_icon: [1, 0]
+  roman_one: [2, 0]
+  roman_two: [3, 0]
+  letter_p: [4, 0]
+  flag_tl: [0, 1]
+  flag_tr: [1, 1]
+  flag_bl: [2, 1]
+  flag_br: [3, 1]
+
+animations:

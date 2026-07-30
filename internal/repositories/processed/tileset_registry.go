@@ -21,6 +21,7 @@ type TilesetRepositoryRegistry struct {
 	bulletExplosion *TilesetDataRepository
 	hq              *TilesetDataRepository
 	bonuses         *TilesetDataRepository
+	hud             *TilesetDataRepository
 }
 
 func NewTilesetRepositoryRegistry(
@@ -86,6 +87,11 @@ func NewTilesetRepositoryRegistry(
 		return nil, fmt.Errorf("failed to create bonuses tileset: %w", err)
 	}
 
+	hudRepo, err := NewTilesetDataRepository(fileRepo, "tiles/hud")
+	if err != nil {
+		return nil, fmt.Errorf("failed to create hud tileset: %w", err)
+	}
+
 	return &TilesetRepositoryRegistry{
 		blocks:          blocksRepo,
 		player:          playerRepo,
@@ -96,6 +102,7 @@ func NewTilesetRepositoryRegistry(
 		bulletExplosion: bulletExplosionRepo,
 		hq:              hqRepo,
 		bonuses:         bonusesRepo,
+		hud:             hudRepo,
 	}, nil
 }
 
@@ -144,6 +151,11 @@ func (tr *TilesetRepositoryRegistry) getImageData(
 			return nil, fmt.Errorf("bonuses repository not initialized")
 		}
 		return tr.bonuses.getImage(id)
+	case types.TilesetTypeHUD:
+		if tr.hud == nil {
+			return nil, fmt.Errorf("hud repository not initialized")
+		}
+		return tr.hud.getImage(id)
 	default:
 		return nil, fmt.Errorf("unknown tileset type: %s", tilesetType)
 	}
@@ -452,6 +464,22 @@ func (tr *TilesetRepositoryRegistry) GetHQImage(
 	}
 
 	_, err := tr.hq.getImage(id)
+	if err != nil {
+		return nil, fmt.Errorf("image '%s' not found: %w", id, err)
+	}
+	return &image_providers.StaticProvider{
+		ImageID: id,
+	}, nil
+}
+
+func (tr *TilesetRepositoryRegistry) GetHUDImage(
+	id string,
+) (types.IImageProvider, error) {
+	if tr.hud == nil {
+		return nil, fmt.Errorf("hud repository not initialized")
+	}
+
+	_, err := tr.hud.getImage(id)
 	if err != nil {
 		return nil, fmt.Errorf("image '%s' not found: %w", id, err)
 	}

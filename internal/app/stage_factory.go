@@ -372,38 +372,59 @@ func (app *App) buildStageRenderer(
 	rendererTileSize := int(app.config.GetTileBaseSize())
 	mapWidthHeightForAdapter := mapBlocksCount.Width * rendererTileSize
 
-	mapOffsetY := 16
-	mapOffsetX := mapWidthHeightForAdapter / 2
+	// Раскладка экрана как в NES: поле 208x208 со смещением (16,8),
+	// справа остаётся панель HUD шириной 32px
+	mapOffsetY := 8
+	mapOffsetX := 16
 
-	return stage.NewStageRendererAdapter(
-		mapUseCases,
-		tankCommonUseCases,
-		bulletUseCases,
-		app.buildTilesUseCases(types.TilesetTypeBlocks, renderAnimationService),
-		app.buildTilesUseCases(types.TilesetTypePlayer, renderAnimationService),
-		app.buildTilesUseCases(types.TilesetTypeBullet, renderAnimationService),
-		app.buildTilesUseCases(
+	return stage.NewStageRendererAdapter(stage.StageRendererDependencies{
+		MapUseCases:        mapUseCases,
+		TankCommonUseCases: tankCommonUseCases,
+		BulletUseCases:     bulletUseCases,
+		HQUseCases:         hqUseCases,
+		HUDUseCases:        use_cases.NewHUDUseCases(),
+		MapTilesUseCases: app.buildTilesUseCases(
+			types.TilesetTypeBlocks,
+			renderAnimationService,
+		),
+		TankTilesUseCases: app.buildTilesUseCases(
+			types.TilesetTypePlayer,
+			renderAnimationService,
+		),
+		BulletTilesUseCases: app.buildTilesUseCases(
+			types.TilesetTypeBullet,
+			renderAnimationService,
+		),
+		SpawnerTilesUseCases: app.buildTilesUseCases(
 			types.TilesetTypeSpawner,
 			renderAnimationService,
 		),
-		app.buildTilesUseCases(
+		ExplosionTilesUseCases: app.buildTilesUseCases(
 			types.TilesetTypeExplosion,
 			renderAnimationService,
 		),
-		app.buildTilesUseCases(types.TilesetTypeHQ, renderAnimationService),
-		hqUseCases,
-		bonusesRepository,
-		app.buildTilesUseCases(
+		HQTilesUseCases: app.buildTilesUseCases(
+			types.TilesetTypeHQ,
+			renderAnimationService,
+		),
+		BonusTilesUseCases: app.buildTilesUseCases(
 			types.TilesetTypeBonuses,
 			renderAnimationService,
 		),
-		app.textFace,
-		rendererTileSize,
-		mapOffsetX,
-		mapOffsetY,
-		mapWidthHeightForAdapter,
-		int(app.config.GetTitleFontSize()),
-		int(app.config.GetSubtitleFontSize()),
-		int(app.config.GetRegularFontSize()),
-	)
+		HUDTilesUseCases: app.buildTilesUseCases(
+			types.TilesetTypeHUD,
+			renderAnimationService,
+		),
+		BonusesRepository: bonusesRepository,
+		FontFace:          app.textFace,
+		HUDFontFace:       app.hudTextFace,
+		TileMinSize:       rendererTileSize,
+		MapOffsetX:        mapOffsetX,
+		MapOffsetY:        mapOffsetY,
+		MapWidthHeight:    mapWidthHeightForAdapter,
+		TitleFontSize:     int(app.config.GetTitleFontSize()),
+		SubtitleFontSize:  int(app.config.GetSubtitleFontSize()),
+		RegularFontSize:   int(app.config.GetRegularFontSize()),
+		StageNumber:       app.session.Level,
+	})
 }

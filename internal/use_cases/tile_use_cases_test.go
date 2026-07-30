@@ -15,6 +15,7 @@ type routingRegistry struct {
 	*testutil.FakeTilesetRegistry
 	playerIDs []string
 	enemyIDs  []string
+	hudIDs    []string
 }
 
 func (r *routingRegistry) GetPlayerImage(
@@ -29,6 +30,13 @@ func (r *routingRegistry) GetEnemyImage(
 ) (types.IImageProvider, error) {
 	r.enemyIDs = append(r.enemyIDs, id)
 	return r.FakeTilesetRegistry.GetEnemyImage(id)
+}
+
+func (r *routingRegistry) GetHUDImage(
+	id string,
+) (types.IImageProvider, error) {
+	r.hudIDs = append(r.hudIDs, id)
+	return r.FakeTilesetRegistry.GetHUDImage(id)
 }
 
 // countingAnimationService считает делегированные обновления анимаций
@@ -113,6 +121,32 @@ func TestTilesUseCases_GetTankImage_Routing(t *testing.T) {
 	if len(env.registry.enemyIDs) != 1 ||
 		env.registry.enemyIDs[0] != "tank_down" {
 		t.Errorf("enemy-тайлсет: %v", env.registry.enemyIDs)
+	}
+}
+
+// Изображения HUD берутся из тайлсета hud
+func TestTilesUseCases_GetImage_HUDRouting(t *testing.T) {
+	registry := &routingRegistry{
+		FakeTilesetRegistry: &testutil.FakeTilesetRegistry{},
+	}
+	tilesUC := use_cases.NewTilesUseCases(
+		registry,
+		types.TilesetTypeHUD,
+		&testutil.FakeTileService{},
+		&countingAnimationService{},
+	)
+
+	img, err := tilesUC.GetImage("enemy_icon")
+	if err != nil || img == nil {
+		t.Fatalf("изображение не получено: img=%v err=%v", img, err)
+	}
+	if len(registry.hudIDs) != 1 || registry.hudIDs[0] != "enemy_icon" {
+		t.Errorf("hud-тайлсет: %v", registry.hudIDs)
+	}
+
+	registry.Err = errTileNotFound
+	if _, err := tilesUC.GetImage("enemy_icon"); err == nil {
+		t.Error("ожидалась ошибка реестра")
 	}
 }
 

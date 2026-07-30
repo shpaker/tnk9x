@@ -104,6 +104,75 @@ func createTestRegistryWithPlayer(
 	return &TilesetRepositoryRegistry{player: playerRepo}, nil
 }
 
+func createTestHUDConfig() []byte {
+	return []byte(`---
+size: 8
+
+images:
+  enemy_icon: [0, 0]
+  life_icon: [1, 0]
+
+animations:
+`)
+}
+
+func createTestRegistryWithHUD(
+	mockFileRepo *MockTilesetFileRepository,
+) (*TilesetRepositoryRegistry, error) {
+	hudRepo, err := NewTilesetDataRepository(mockFileRepo, "hud")
+	if err != nil {
+		return nil, err
+	}
+	return &TilesetRepositoryRegistry{hud: hudRepo}, nil
+}
+
+func TestGetHUDImage(t *testing.T) {
+	mockFileRepo := NewMockTilesetFileRepository()
+	mockFileRepo.AddFile("hud.yml", createTestHUDConfig())
+	mockFileRepo.AddImage("hud", createTestImage(40, 16))
+
+	registry, err := createTestRegistryWithHUD(mockFileRepo)
+	if err != nil {
+		t.Fatalf("Не удалось создать фасад: %v", err)
+	}
+
+	provider, err := registry.GetHUDImage("enemy_icon")
+	if err != nil {
+		t.Fatalf("GetHUDImage вернул ошибку: %v", err)
+	}
+
+	imageID, err := provider.GetImageID()
+	if err != nil {
+		t.Fatalf("GetImageID вернул ошибку: %v", err)
+	}
+
+	img, err := registry.GetImageData("hud", imageID)
+	if err != nil {
+		t.Fatalf("GetImageData вернул ошибку: %v", err)
+	}
+
+	bounds := img.Bounds()
+	if bounds.Dx() != 8 || bounds.Dy() != 8 {
+		t.Errorf(
+			"Ожидался размер 8x8, получен %dx%d",
+			bounds.Dx(),
+			bounds.Dy(),
+		)
+	}
+
+	if _, err := registry.GetHUDImage("nonexistent"); err == nil {
+		t.Error("Ожидалась ошибка для несуществующего изображения")
+	}
+}
+
+func TestGetHUDImage_NotInitialized(t *testing.T) {
+	registry := &TilesetRepositoryRegistry{}
+
+	if _, err := registry.GetHUDImage("enemy_icon"); err == nil {
+		t.Error("Ожидалась ошибка неинициализированного репозитория")
+	}
+}
+
 func TestNewTilesetRepository_Success(t *testing.T) {
 	mockFileRepo := NewMockTilesetFileRepository()
 

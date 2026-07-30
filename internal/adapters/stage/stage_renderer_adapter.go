@@ -1,6 +1,7 @@
 package stage
 
 import (
+	"fmt"
 	"image"
 	"image/color"
 	"math"
@@ -25,10 +26,13 @@ type StageRendererAdapter struct {
 	explosionTilesUseCases interfaces.ITilesUseCases
 	hqTilesUseCases        interfaces.ITilesUseCases
 	hqUseCases             interfaces.IHQUseCases
+	hudUseCases            interfaces.IHUDUseCases
 	bonusesRepository      interfaces.IBonusesRepository
 	bonusTilesUseCases     interfaces.ITilesUseCases
+	hudTilesUseCases       interfaces.ITilesUseCases
 	imageCache             map[string]*ebiten.Image
 	fontFace               text.Face
+	hudFontFace            text.Face
 	titleFontSize          int
 	subtitleFontSize       int
 	regularFontSize        int
@@ -36,30 +40,49 @@ type StageRendererAdapter struct {
 	mapOffsetX             int
 	mapOffsetY             int
 	mapWidthHeight         int
+	stageNumber            int
+}
+
+// StageRendererDependencies — готовый граф зависимостей рендера уровня;
+// собирается composition root'ом, все поля обязательны
+type StageRendererDependencies struct {
+	// Use Cases
+	MapUseCases            interfaces.IMapUseCases
+	TankCommonUseCases     interfaces.ITankCommonUseCases
+	BulletUseCases         interfaces.IBulletUseCases
+	HQUseCases             interfaces.IHQUseCases
+	HUDUseCases            interfaces.IHUDUseCases
+	MapTilesUseCases       interfaces.ITilesUseCases
+	TankTilesUseCases      interfaces.ITilesUseCases
+	BulletTilesUseCases    interfaces.ITilesUseCases
+	SpawnerTilesUseCases   interfaces.ITilesUseCases
+	ExplosionTilesUseCases interfaces.ITilesUseCases
+	HQTilesUseCases        interfaces.ITilesUseCases
+	BonusTilesUseCases     interfaces.ITilesUseCases
+	HUDTilesUseCases       interfaces.ITilesUseCases
+
+	// Repositories
+	BonusesRepository interfaces.IBonusesRepository
+
+	// Шрифты и раскладка
+	FontFace         text.Face
+	HUDFontFace      text.Face
+	TileMinSize      int
+	MapOffsetX       int
+	MapOffsetY       int
+	MapWidthHeight   int
+	TitleFontSize    int
+	SubtitleFontSize int
+	RegularFontSize  int
+	StageNumber      int
 }
 
 func NewStageRendererAdapter(
-	mapUseCases interfaces.IMapUseCases,
-	tankCommonUseCases interfaces.ITankCommonUseCases,
-	bulletUseCases interfaces.IBulletUseCases,
-	mapTilesUseCases interfaces.ITilesUseCases,
-	tankTilesUseCases interfaces.ITilesUseCases,
-	bulletTilesUseCases interfaces.ITilesUseCases,
-	spawnerTilesUseCases interfaces.ITilesUseCases,
-	explosionTilesUseCases interfaces.ITilesUseCases,
-	hqTilesUseCases interfaces.ITilesUseCases,
-	hqUseCases interfaces.IHQUseCases,
-	bonusesRepository interfaces.IBonusesRepository,
-	bonusTilesUseCases interfaces.ITilesUseCases,
-	fontFace text.Face,
-	tileMinSize int,
-	mapOffsetX int,
-	mapOffsetY int,
-	mapWidthHeight int,
-	titleFontSize int,
-	subtitleFontSize int,
-	regularFontSize int,
+	deps StageRendererDependencies,
 ) *StageRendererAdapter {
+	titleFontSize := deps.TitleFontSize
+	subtitleFontSize := deps.SubtitleFontSize
+	regularFontSize := deps.RegularFontSize
 	if titleFontSize <= 0 {
 		titleFontSize = 32
 	}
@@ -73,27 +96,31 @@ func NewStageRendererAdapter(
 		regularFontSize = subtitleFontSize
 	}
 	return &StageRendererAdapter{
-		mapUseCases:            mapUseCases,
-		tankCommonUseCases:     tankCommonUseCases,
-		bulletUseCases:         bulletUseCases,
-		mapTilesUseCases:       mapTilesUseCases,
-		tankTilesUseCases:      tankTilesUseCases,
-		bulletTilesUseCases:    bulletTilesUseCases,
-		spawnerTilesUseCases:   spawnerTilesUseCases,
-		explosionTilesUseCases: explosionTilesUseCases,
-		hqTilesUseCases:        hqTilesUseCases,
-		hqUseCases:             hqUseCases,
-		bonusesRepository:      bonusesRepository,
-		bonusTilesUseCases:     bonusTilesUseCases,
-		fontFace:               fontFace,
+		mapUseCases:            deps.MapUseCases,
+		tankCommonUseCases:     deps.TankCommonUseCases,
+		bulletUseCases:         deps.BulletUseCases,
+		mapTilesUseCases:       deps.MapTilesUseCases,
+		tankTilesUseCases:      deps.TankTilesUseCases,
+		bulletTilesUseCases:    deps.BulletTilesUseCases,
+		spawnerTilesUseCases:   deps.SpawnerTilesUseCases,
+		explosionTilesUseCases: deps.ExplosionTilesUseCases,
+		hqTilesUseCases:        deps.HQTilesUseCases,
+		hqUseCases:             deps.HQUseCases,
+		bonusesRepository:      deps.BonusesRepository,
+		bonusTilesUseCases:     deps.BonusTilesUseCases,
+		hudTilesUseCases:       deps.HUDTilesUseCases,
+		hudUseCases:            deps.HUDUseCases,
+		fontFace:               deps.FontFace,
+		hudFontFace:            deps.HUDFontFace,
 		imageCache:             make(map[string]*ebiten.Image),
-		tileMinSize:            tileMinSize,
-		mapOffsetX:             mapOffsetX,
-		mapOffsetY:             mapOffsetY,
-		mapWidthHeight:         mapWidthHeight,
+		tileMinSize:            deps.TileMinSize,
+		mapOffsetX:             deps.MapOffsetX,
+		mapOffsetY:             deps.MapOffsetY,
+		mapWidthHeight:         deps.MapWidthHeight,
 		titleFontSize:          titleFontSize,
 		subtitleFontSize:       subtitleFontSize,
 		regularFontSize:        regularFontSize,
+		stageNumber:            deps.StageNumber,
 	}
 }
 
@@ -485,6 +512,170 @@ func (r *StageRendererAdapter) DrawAll(screen *ebiten.Image) {
 	r.drawBlocksByAltitude(screen, types.AIR)
 }
 
+// Раскладка боковой панели HUD (как в NES Battle City): колонка справа
+// от поля, все координаты на сетке 8px
+const (
+	hudEnemyIconSize    = 8
+	hudEnemyGridColumns = 2
+	hudEnemyGridRows    = 10
+	hudPanelMargin      = 8 // отступ панели от правого края поля
+	hudEnemyGridY       = 16
+	hudLivesP1LabelY    = 128
+	hudLivesP2LabelY    = 152
+	hudFlagY            = 176
+)
+
+// DrawSidebar рисует боковую панель: резерв врагов, жизни игроков
+// и флаг с номером уровня. Блок второго игрока — только в режиме
+// двух игроков
+func (r *StageRendererAdapter) DrawSidebar(
+	screen *ebiten.Image,
+	hud types.StageHUDData,
+) {
+	panelX := r.mapOffsetX + r.mapWidthHeight + hudPanelMargin
+
+	r.drawSidebarEnemyReserve(screen, panelX, hud.EnemiesForSpawn)
+
+	r.drawSidebarLivesBlock(
+		screen,
+		panelX,
+		hudLivesP1LabelY,
+		"roman_one",
+		hud.Player1Lives,
+	)
+	if hud.PlayerCount > 1 {
+		r.drawSidebarLivesBlock(
+			screen,
+			panelX,
+			hudLivesP2LabelY,
+			"roman_two",
+			hud.Player2Lives,
+		)
+	}
+
+	r.drawSidebarStageFlag(screen, panelX, hudFlagY)
+}
+
+// drawSidebarEnemyReserve рисует сетку иконок ещё не заспавнившихся врагов
+func (r *StageRendererAdapter) drawSidebarEnemyReserve(
+	screen *ebiten.Image,
+	panelX int,
+	enemiesForSpawn uint,
+) {
+	offsets := r.hudUseCases.EnemyIconOffsets(
+		enemiesForSpawn,
+		hudEnemyGridColumns,
+		hudEnemyGridRows,
+		hudEnemyIconSize,
+	)
+	for _, offset := range offsets {
+		r.drawHUDImage(
+			screen,
+			"enemy_icon",
+			float64(panelX)+offset.X,
+			hudEnemyGridY+offset.Y,
+		)
+	}
+}
+
+// drawSidebarLivesBlock рисует блок жизней игрока: метку (номер + P),
+// иконку танка и число оставшихся жизней
+func (r *StageRendererAdapter) drawSidebarLivesBlock(
+	screen *ebiten.Image,
+	panelX int,
+	labelY int,
+	romanImageID string,
+	lives uint,
+) {
+	r.drawHUDImage(screen, romanImageID, float64(panelX), float64(labelY))
+	r.drawHUDImage(
+		screen,
+		"letter_p",
+		float64(panelX+hudEnemyIconSize),
+		float64(labelY),
+	)
+	r.drawHUDImage(
+		screen,
+		"life_icon",
+		float64(panelX),
+		float64(labelY+hudEnemyIconSize),
+	)
+	r.drawHUDText(
+		screen,
+		fmt.Sprintf("%d", lives),
+		float64(panelX+hudEnemyIconSize),
+		float64(labelY+hudEnemyIconSize),
+	)
+}
+
+// drawSidebarStageFlag рисует флаг уровня (четыре четверти 8x8)
+// и номер уровня под ним
+func (r *StageRendererAdapter) drawSidebarStageFlag(
+	screen *ebiten.Image,
+	panelX int,
+	flagY int,
+) {
+	quadrants := []struct {
+		imageID string
+		dx      int
+		dy      int
+	}{
+		{"flag_tl", 0, 0},
+		{"flag_tr", hudEnemyIconSize, 0},
+		{"flag_bl", 0, hudEnemyIconSize},
+		{"flag_br", hudEnemyIconSize, hudEnemyIconSize},
+	}
+	for _, q := range quadrants {
+		r.drawHUDImage(
+			screen,
+			q.imageID,
+			float64(panelX+q.dx),
+			float64(flagY+q.dy),
+		)
+	}
+
+	r.drawHUDText(
+		screen,
+		fmt.Sprintf("%d", r.stageNumber),
+		float64(panelX+hudEnemyIconSize),
+		float64(flagY+2*hudEnemyIconSize),
+	)
+}
+
+func (r *StageRendererAdapter) drawHUDImage(
+	screen *ebiten.Image,
+	imageID string,
+	x float64,
+	y float64,
+) {
+	imageData, err := r.hudTilesUseCases.GetImage(imageID)
+	if err != nil {
+		return
+	}
+
+	img := r.getCachedImage(imageID, imageData)
+
+	op := &ebiten.DrawImageOptions{}
+	op.GeoM.Translate(x, y)
+	screen.DrawImage(img, op)
+}
+
+func (r *StageRendererAdapter) drawHUDText(
+	screen *ebiten.Image,
+	message string,
+	x float64,
+	y float64,
+) {
+	if r.hudFontFace == nil {
+		return
+	}
+
+	op := &text.DrawOptions{}
+	op.GeoM.Translate(x, y)
+	op.ColorScale.ScaleWithColor(color.Black)
+	text.Draw(screen, message, r.hudFontFace, op)
+}
+
 func (r *StageRendererAdapter) DrawPauseOverlay(screen *ebiten.Image) {
 	r.drawOverlayMessage(screen, "PAUSED", "")
 }
@@ -553,13 +744,14 @@ func (r *StageRendererAdapter) drawOverlayMessage(
 }
 
 func (r *StageRendererAdapter) drawScreenBackground(screen *ebiten.Image) {
+	// Серый рамки NES — совпадает с фоном, выключенным в спрайтах HUD
 	vector.FillRect(
 		screen,
 		0,
 		0,
 		float32(screen.Bounds().Dx()),
 		float32(screen.Bounds().Dy()),
-		color.Gray{Y: 128},
+		color.RGBA{R: 109, G: 109, B: 109, A: 255},
 		false,
 	)
 }

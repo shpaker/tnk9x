@@ -288,6 +288,12 @@ func (r *FakeTilesetRegistry) GetBonusesAnimationConfig(
 	return r.animationConfig()
 }
 
+func (r *FakeTilesetRegistry) GetHUDImage(
+	id string,
+) (types.IImageProvider, error) {
+	return r.image(id)
+}
+
 func (r *FakeTilesetRegistry) GetImageData(
 	tilesetType string,
 	id string,
