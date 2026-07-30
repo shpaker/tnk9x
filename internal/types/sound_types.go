@@ -13,3 +13,17 @@ const (
 	SoundIDGameOver  SoundID = "gameover"
 	SoundIDEngine    SoundID = "engine"
 )
+
+func AllSoundIDs() []SoundID {
+	return []SoundID{
+		SoundIDFire,
+		SoundIDExplosion,
+		SoundIDBrick,
+		SoundIDSteel,
+		SoundIDBonus,
+		SoundIDScore,
+		SoundIDGameStart,
+		SoundIDGameOver,
+		SoundIDEngine,
+	}
+}

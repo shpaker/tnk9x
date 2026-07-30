@@ -87,18 +87,16 @@ func (p *FakeSoundPlayer) PlayLoop(soundID types.SoundID) error {
 	return nil
 }
 
-func (p *FakeSoundPlayer) Stop(soundID types.SoundID) error {
+func (p *FakeSoundPlayer) Stop(soundID types.SoundID) {
 	p.Stopped = append(p.Stopped, soundID)
-	return nil
 }
 
 func (p *FakeSoundPlayer) StopAll() {
 	p.StopAllCalls++
 }
 
-func (p *FakeSoundPlayer) Update() error {
+func (p *FakeSoundPlayer) Update() {
 	p.UpdateCalls++
-	return nil
 }
 
 // FakeTilesetRegistry реализует interfaces.ITilesetRepositoryRegistry:

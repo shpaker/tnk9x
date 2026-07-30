@@ -133,8 +133,9 @@ type ISpecsUseCases interface {
 
 type ISoundUseCases interface {
 	RequestSound(soundID types.SoundID, loop bool)
+	RequestStop(soundID types.SoundID)
+	RequestStopAll()
 	GetEvents() []types.SoundEntity
-	StopAll(soundPlayerAdapter ISoundPlayerAdapter)
 }
 
 type IBonusUseCases interface {

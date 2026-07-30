@@ -1,6 +1,8 @@
 package states
 
 import (
+	"log"
+
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 
@@ -59,9 +61,9 @@ type StageState struct {
 	stageSession      *session_entities.StageSessionEntity
 	bonusesRepository interfaces.IBonusesRepository
 
-	isSetUp           bool
-	defeatSoundPlayed bool
-	debugEnabled      bool // Флаг дебаг-режима
+	isSetUp         bool
+	endSoundHandled bool
+	debugEnabled    bool // Флаг дебаг-режима
 }
 
 func NewStageState(deps StageStateDependencies) *StageState {
@@ -87,11 +89,11 @@ func (state *StageState) SetDebugEnabled(enabled bool) {
 }
 
 func (state *StageState) SetUp() {
-	// Сбрасываем флаг проигрывания звука поражения для нового уровня
-	state.defeatSoundPlayed = false
+	// Сбрасываем флаг звуков завершения уровня для нового уровня
+	state.endSoundHandled = false
 
-	// Запускаем фоновую музыку при старте уровня
-	state.soundUseCases.StopAll(state.soundPlayerAdapter)
+	// Глушим остатки прошлого уровня и запускаем стартовый звук
+	state.soundUseCases.RequestStopAll()
 	state.soundUseCases.RequestSound(types.SoundIDGameStart, false)
 
 	// Сбрасываем сессию перед спавном танков, чтобы восстановить жизни игроков
@@ -166,16 +168,18 @@ func (state *StageState) Update() types.StateTransition {
 		state.stageUseCases.PauseStageState()
 	}
 	if stageFinished {
-		// Проигрываем звук поражения один раз при завершении уровня поражением
-		if !state.stageUseCases.IsStageWon() && !state.defeatSoundPlayed {
-			// Останавливаем все звуки перед проигрыванием звука поражения
-			state.soundPlayerAdapter.StopAll()
-
-			// Запрашиваем звук поражения
-			state.soundUseCases.RequestSound(types.SoundIDGameOver, false)
-			state.defeatSoundPlayed = true
+		// Один раз глушим все звуки (в т.ч. луп двигателя) при завершении
+		// уровня; при поражении дополнительно проигрываем gameover
+		if !state.endSoundHandled {
+			state.soundUseCases.RequestStopAll()
+			if !state.stageUseCases.IsStageWon() {
+				state.soundUseCases.RequestSound(types.SoundIDGameOver, false)
+			}
+			state.endSoundHandled = true
 		}
 		if len(inpututil.AppendJustPressedKeys(nil)) > 0 {
+			// Глушим звук завершения при выходе на экран выбора уровня
+			state.soundUseCases.RequestStopAll()
 			transition = types.StateTransition{
 				Target: types.TransitionToStageSelect,
 			}
@@ -221,22 +225,36 @@ func (state *StageState) Update() types.StateTransition {
 			state.soundUseCases.RequestSound(types.SoundIDEngine, true)
 		} else {
 			// Останавливаем звук двигателя, когда все игроки остановлены
-			_ = state.soundPlayerAdapter.Stop(types.SoundIDEngine)
+			state.soundUseCases.RequestStop(types.SoundIDEngine)
 		}
 	}
 
-	// Обработка звуковых событий
-	events := state.soundUseCases.GetEvents()
-	for _, event := range events {
-		if event.Loop {
-			_ = state.soundPlayerAdapter.PlayLoop(event.SoundID)
-		} else {
-			_ = state.soundPlayerAdapter.Play(event.SoundID)
-		}
+	// Единственная точка контакта с звуковым адаптером: применяем
+	// накопленные события кадра в порядке добавления
+	for _, event := range state.soundUseCases.GetEvents() {
+		state.applySoundEvent(event)
 	}
-	_ = state.soundPlayerAdapter.Update()
+	state.soundPlayerAdapter.Update()
 
 	return transition
+}
+
+func (state *StageState) applySoundEvent(event types.SoundEntity) {
+	var err error
+	switch event.Action {
+	case types.SoundActionPlay:
+		err = state.soundPlayerAdapter.Play(event.SoundID)
+	case types.SoundActionPlayLoop:
+		err = state.soundPlayerAdapter.PlayLoop(event.SoundID)
+	case types.SoundActionStop:
+		state.soundPlayerAdapter.Stop(event.SoundID)
+	case types.SoundActionStopAll:
+		state.soundPlayerAdapter.StopAll()
+	}
+	// Ошибки воспроизведения не фатальны: логируем и продолжаем
+	if err != nil {
+		log.Printf("sound %q: %v", event.SoundID, err)
+	}
 }
 
 // updateBlinkObjects обновляет мигание бонусов и танков с бонусом

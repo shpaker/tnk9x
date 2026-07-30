@@ -64,15 +64,6 @@ func (app *App) newStageState() (*states.StageState, error) {
 		}
 	}
 
-	soundAdapter, err := stage.NewSoundAdapter(
-		app.soundsRepository,
-		app.audioContext,
-		app.config.GetVolume(),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create sound adapter: %w", err)
-	}
-
 	soundUseCases := use_cases.NewSoundUseCases(
 		gameRepositories.GetSoundEventsRepository(),
 	)
@@ -249,7 +240,7 @@ func (app *App) newStageState() (*states.StageState, error) {
 		},
 		EnemyInputAdapter:  enemyInputAdapter,
 		Renderer:           rendererAdapter,
-		SoundPlayerAdapter: soundAdapter,
+		SoundPlayerAdapter: app.soundAdapter,
 		StageSession:       stageSession,
 		BonusesRepository:  bonusesRepository,
 	}), nil

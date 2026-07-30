@@ -60,7 +60,7 @@ type App struct {
 	textFace          text.Face
 	hudTextFace       text.Face
 	scriptEngine      interfaces.IAIScriptEngine
-	audioContext      *audio.Context
+	soundAdapter      *stage.SoundAdapter
 
 	// Stateless-сервисы
 	boundaryCollisionService interfaces.IBoundaryCollisionService
@@ -116,6 +116,18 @@ func New(cfg *Config) *App {
 	scriptsRepository := processed.NewScriptsRepository(fileRepository)
 	soundsRepository := processed.NewSoundsRepository(fileRepository)
 
+	// Звуковой адаптер общий для всех уровней: PCM декодируется один
+	// раз при старте, плееры живут на единственном audio.Context
+	soundAdapter, err := stage.NewSoundAdapter(
+		soundsRepository,
+		audioContext,
+		cfg.GetVolume(),
+	)
+	if err != nil {
+		fmt.Printf("Error creating sound adapter: %v\n", err)
+		panic(err)
+	}
+
 	fontsRepository := processed.NewFontsRepository(fileRepository)
 	textFace, err := buildTextFace(fontsRepository, cfg.GetTitleFontSize())
 	if err != nil {
@@ -147,7 +159,7 @@ func New(cfg *Config) *App {
 		textFace:          textFace,
 		hudTextFace:       hudTextFace,
 		scriptEngine:      scripting.NewLuaEngine(),
-		audioContext:      audioContext,
+		soundAdapter:      soundAdapter,
 		boundaryCollisionService: collision_services.NewBoundaryCollisionService(
 			mapSizePx,
 		),
@@ -310,5 +322,8 @@ func (app *App) Close() {
 	if app.scriptEngine != nil {
 		app.scriptEngine.Close()
 		app.scriptEngine = nil
+	}
+	if app.soundAdapter != nil {
+		app.soundAdapter.StopAll()
 	}
 }

@@ -28,7 +28,3 @@ func (r *SoundEventsRepository) Drain() []types.SoundEntity {
 	r.events = r.events[:0]
 	return events
 }
-
-func (r *SoundEventsRepository) Clear() {
-	r.events = r.events[:0]
-}

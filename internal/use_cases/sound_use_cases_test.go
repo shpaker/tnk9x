@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	game "github.com/shpaker/tnk9x/internal/repositories/game"
-	"github.com/shpaker/tnk9x/internal/testutil"
 	"github.com/shpaker/tnk9x/internal/types"
 	"github.com/shpaker/tnk9x/internal/use_cases"
 )
@@ -19,10 +18,12 @@ func TestSoundUseCases_RequestSoundAppendsInOrder(t *testing.T) {
 	if len(events) != 2 {
 		t.Fatalf("ожидалось 2 события, получено %d", len(events))
 	}
-	if events[0].SoundID != types.SoundIDFire || events[0].Loop {
+	if events[0].SoundID != types.SoundIDFire ||
+		events[0].Action != types.SoundActionPlay {
 		t.Errorf("событие 0: %+v", events[0])
 	}
-	if events[1].SoundID != types.SoundIDEngine || !events[1].Loop {
+	if events[1].SoundID != types.SoundIDEngine ||
+		events[1].Action != types.SoundActionPlayLoop {
 		t.Errorf("событие 1: %+v", events[1])
 	}
 }
@@ -40,33 +41,37 @@ func TestSoundUseCases_GetEventsDrainsQueue(t *testing.T) {
 	}
 }
 
-func TestSoundUseCases_StopAll(t *testing.T) {
+// Остановка идёт тем же каналом, что и запуск: событием в очереди
+func TestSoundUseCases_RequestStopProducesStopEvent(t *testing.T) {
 	uc := use_cases.NewSoundUseCases(game.NewSoundEventsRepository())
-	player := &testutil.FakeSoundPlayer{}
 
-	uc.RequestSound(types.SoundIDBrick, false)
-	uc.RequestSound(types.SoundIDSteel, false)
+	uc.RequestSound(types.SoundIDEngine, true)
+	uc.RequestStop(types.SoundIDEngine)
 
-	uc.StopAll(player)
-
-	if player.StopAllCalls != 1 {
-		t.Errorf(
-			"ожидался 1 вызов StopAll адаптера, было %d",
-			player.StopAllCalls,
-		)
+	events := uc.GetEvents()
+	if len(events) != 2 {
+		t.Fatalf("ожидалось 2 события, получено %d", len(events))
 	}
-	if got := len(uc.GetEvents()); got != 0 {
-		t.Errorf("очередь не очищена: %d событий", got)
+	if events[1].SoundID != types.SoundIDEngine ||
+		events[1].Action != types.SoundActionStop {
+		t.Errorf("событие 1: %+v", events[1])
 	}
 }
 
-func TestSoundUseCases_StopAllWithNilAdapter(t *testing.T) {
+func TestSoundUseCases_RequestStopAllProducesStopAllEvent(t *testing.T) {
 	uc := use_cases.NewSoundUseCases(game.NewSoundEventsRepository())
-	uc.RequestSound(types.SoundIDBonus, false)
 
-	uc.StopAll(nil) // не должно паниковать
+	uc.RequestSound(types.SoundIDBrick, false)
+	uc.RequestStopAll()
 
-	if got := len(uc.GetEvents()); got != 0 {
-		t.Errorf("очередь не очищена: %d событий", got)
+	events := uc.GetEvents()
+	if len(events) != 2 {
+		t.Fatalf("ожидалось 2 события, получено %d", len(events))
+	}
+	if events[0].Action != types.SoundActionPlay {
+		t.Errorf("событие 0: %+v", events[0])
+	}
+	if events[1].Action != types.SoundActionStopAll {
+		t.Errorf("событие 1: %+v", events[1])
 	}
 }

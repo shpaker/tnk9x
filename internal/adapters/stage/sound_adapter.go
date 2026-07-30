@@ -3,6 +3,7 @@ package stage
 import (
 	"bytes"
 	"fmt"
+	"io"
 
 	"github.com/hajimehoshi/ebiten/v2/audio"
 	"github.com/hajimehoshi/ebiten/v2/audio/vorbis"
@@ -13,13 +14,16 @@ import (
 
 var _ interfaces.ISoundPlayerAdapter = (*SoundAdapter)(nil)
 
+// SoundAdapter проигрывает звуки поверх единственного audio.Context.
+// Все звуки декодируются в PCM один раз при создании адаптера; каждый
+// плеер читает собственный bytes.Reader поверх неизменяемого среза,
+// поэтому плееры не разделяют состояние декодера между собой
 type SoundAdapter struct {
-	soundsRepository interfaces.ISoundsRepository
-	audioContext     *audio.Context
-	volume           float64
-	players          map[types.SoundID]*audio.Player
-	loopPlayers      map[types.SoundID]*audio.Player
-	soundStreams     map[types.SoundID]*vorbis.Stream
+	audioContext *audio.Context
+	volume       float64
+	pcm          map[types.SoundID][]byte
+	players      map[types.SoundID]*audio.Player
+	loopPlayers  map[types.SoundID]*audio.Player
 }
 
 func NewSoundAdapter(
@@ -38,77 +42,88 @@ func NewSoundAdapter(
 		volume = 1.0
 	}
 
-	return &SoundAdapter{
-		soundsRepository: soundsRepository,
-		audioContext:     audioContext,
-		volume:           volume,
-		players:          make(map[types.SoundID]*audio.Player),
-		loopPlayers:      make(map[types.SoundID]*audio.Player),
-		soundStreams:     make(map[types.SoundID]*vorbis.Stream),
-	}, nil
+	adapter := &SoundAdapter{
+		audioContext: audioContext,
+		volume:       volume,
+		pcm:          make(map[types.SoundID][]byte),
+		players:      make(map[types.SoundID]*audio.Player),
+		loopPlayers:  make(map[types.SoundID]*audio.Player),
+	}
+
+	// Fail-fast: все звуки декодируются при старте, ошибки данных
+	// проявляются до открытия окна, а не посреди игры
+	for _, soundID := range types.AllSoundIDs() {
+		soundData, err := soundsRepository.GetSound(string(soundID))
+		if err != nil {
+			return nil, fmt.Errorf("failed to get sound '%s': %w", soundID, err)
+		}
+
+		pcm, err := decodePCM(audioContext.SampleRate(), soundData)
+		if err != nil {
+			return nil, fmt.Errorf(
+				"failed to decode sound '%s': %w",
+				soundID,
+				err,
+			)
+		}
+		adapter.pcm[soundID] = pcm
+	}
+
+	return adapter, nil
 }
 
-func (a *SoundAdapter) getOrCreateStream(
-	soundID types.SoundID,
-) (*vorbis.Stream, error) {
-	if stream, exists := a.soundStreams[soundID]; exists {
-		return stream, nil
-	}
-
-	soundData, err := a.soundsRepository.GetSound(string(soundID))
+// decodePCM разворачивает ogg/vorbis в 16-битный PCM целиком в память
+func decodePCM(sampleRate int, oggData []byte) ([]byte, error) {
+	stream, err := vorbis.DecodeWithSampleRate(
+		sampleRate,
+		bytes.NewReader(oggData),
+	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get sound '%s': %w", soundID, err)
+		return nil, err
 	}
 
-	stream, err := vorbis.DecodeWithoutResampling(bytes.NewReader(soundData))
-	if err != nil {
-		return nil, fmt.Errorf("failed to decode sound '%s': %w", soundID, err)
-	}
-
-	a.soundStreams[soundID] = stream
-	return stream, nil
+	return io.ReadAll(stream)
 }
 
 func (a *SoundAdapter) Play(soundID types.SoundID) error {
-	// Получаем данные звука и декодируем заново для каждого воспроизведения
-	soundData, err := a.soundsRepository.GetSound(string(soundID))
-	if err != nil {
-		return fmt.Errorf("failed to get sound '%s': %w", soundID, err)
+	pcm, exists := a.pcm[soundID]
+	if !exists {
+		return fmt.Errorf("unknown sound '%s'", soundID)
 	}
 
-	stream, err := vorbis.DecodeWithoutResampling(bytes.NewReader(soundData))
-	if err != nil {
-		return fmt.Errorf("failed to decode sound '%s': %w", soundID, err)
-	}
-
-	player, err := a.audioContext.NewPlayer(stream)
-	if err != nil {
-		return fmt.Errorf("failed to create player for '%s': %w", soundID, err)
-	}
-
-	// Останавливаем предыдущий проигрыватель, если он есть
+	// Закрываем предыдущий проигрыватель до создания нового
 	if oldPlayer, exists := a.players[soundID]; exists {
 		_ = oldPlayer.Close()
+		delete(a.players, soundID)
 	}
 
-	a.players[soundID] = player
+	player := a.audioContext.NewPlayerFromBytes(pcm)
 	player.SetVolume(a.volume)
 	player.Play()
+	a.players[soundID] = player
 
 	return nil
 }
 
 func (a *SoundAdapter) PlayLoop(soundID types.SoundID) error {
-	// Используем кэшированный поток для зацикливания
-	stream, err := a.getOrCreateStream(soundID)
-	if err != nil {
-		return err
+	// Идемпотентность: уже играющий луп не перезапускается
+	if player, exists := a.loopPlayers[soundID]; exists {
+		if player.IsPlaying() {
+			return nil
+		}
+		_ = player.Close()
+		delete(a.loopPlayers, soundID)
 	}
 
-	// Создаем бесконечный поток для зацикливания
-	infiniteStream := audio.NewInfiniteLoop(stream, stream.Length())
+	pcm, exists := a.pcm[soundID]
+	if !exists {
+		return fmt.Errorf("unknown sound '%s'", soundID)
+	}
 
-	player, err := a.audioContext.NewPlayer(infiniteStream)
+	// Свой reader на каждый плеер — общего изменяемого состояния нет
+	loop := audio.NewInfiniteLoop(bytes.NewReader(pcm), int64(len(pcm)))
+
+	player, err := a.audioContext.NewPlayer(loop)
 	if err != nil {
 		return fmt.Errorf(
 			"failed to create loop player for '%s': %w",
@@ -117,19 +132,14 @@ func (a *SoundAdapter) PlayLoop(soundID types.SoundID) error {
 		)
 	}
 
-	// Останавливаем предыдущий зацикленный проигрыватель, если он есть
-	if oldPlayer, exists := a.loopPlayers[soundID]; exists {
-		_ = oldPlayer.Close()
-	}
-
-	a.loopPlayers[soundID] = player
 	player.SetVolume(a.volume)
 	player.Play()
+	a.loopPlayers[soundID] = player
 
 	return nil
 }
 
-func (a *SoundAdapter) Stop(soundID types.SoundID) error {
+func (a *SoundAdapter) Stop(soundID types.SoundID) {
 	if player, exists := a.players[soundID]; exists {
 		_ = player.Close()
 		delete(a.players, soundID)
@@ -139,8 +149,6 @@ func (a *SoundAdapter) Stop(soundID types.SoundID) error {
 		_ = player.Close()
 		delete(a.loopPlayers, soundID)
 	}
-
-	return nil
 }
 
 func (a *SoundAdapter) StopAll() {
@@ -159,8 +167,8 @@ func (a *SoundAdapter) StopAll() {
 	a.loopPlayers = make(map[types.SoundID]*audio.Player)
 }
 
-func (a *SoundAdapter) Update() error {
-	// Удаляем завершившиеся проигрыватели
+func (a *SoundAdapter) Update() {
+	// Удаляем завершившиеся проигрыватели из обоих реестров
 	for soundID, player := range a.players {
 		if !player.IsPlaying() {
 			_ = player.Close()
@@ -168,5 +176,10 @@ func (a *SoundAdapter) Update() error {
 		}
 	}
 
-	return nil
+	for soundID, player := range a.loopPlayers {
+		if !player.IsPlaying() {
+			_ = player.Close()
+			delete(a.loopPlayers, soundID)
+		}
+	}
 }

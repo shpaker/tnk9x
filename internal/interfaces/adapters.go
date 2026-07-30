@@ -51,7 +51,7 @@ type IAIScriptEngine interface {
 type ISoundPlayerAdapter interface {
 	Play(soundID types.SoundID) error
 	PlayLoop(soundID types.SoundID) error
-	Stop(soundID types.SoundID) error
+	Stop(soundID types.SoundID)
 	StopAll()
-	Update() error
+	Update()
 }

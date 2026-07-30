@@ -19,7 +19,6 @@ type IGameRepositoriesRegistry interface {
 type ISoundEventsRepository interface {
 	Add(event types.SoundEntity)
 	Drain() []types.SoundEntity
-	Clear()
 }
 
 type IBulletsRepository interface {
