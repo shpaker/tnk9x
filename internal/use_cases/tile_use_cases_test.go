@@ -10,35 +10,6 @@ import (
 	"github.com/shpaker/tnk9x/internal/use_cases"
 )
 
-// routingRegistry записывает, через какой тайлсет запрошено изображение
-type routingRegistry struct {
-	*testutil.FakeTilesetRegistry
-	playerIDs []string
-	enemyIDs  []string
-	hudIDs    []string
-}
-
-func (r *routingRegistry) GetPlayerImage(
-	id string,
-) (types.IImageProvider, error) {
-	r.playerIDs = append(r.playerIDs, id)
-	return r.FakeTilesetRegistry.GetPlayerImage(id)
-}
-
-func (r *routingRegistry) GetEnemyImage(
-	id string,
-) (types.IImageProvider, error) {
-	r.enemyIDs = append(r.enemyIDs, id)
-	return r.FakeTilesetRegistry.GetEnemyImage(id)
-}
-
-func (r *routingRegistry) GetHUDImage(
-	id string,
-) (types.IImageProvider, error) {
-	r.hudIDs = append(r.hudIDs, id)
-	return r.FakeTilesetRegistry.GetHUDImage(id)
-}
-
 // countingAnimationService считает делегированные обновления анимаций
 type countingAnimationService struct {
 	updated []*image_providers.AnimationProvider
@@ -51,7 +22,7 @@ func (s *countingAnimationService) UpdateAnimation(
 }
 
 type tilesTestEnv struct {
-	registry         *routingRegistry
+	registry         *testutil.FakeTilesetRegistry
 	tileService      *testutil.FakeTileService
 	animations       *game.AnimationsRepository
 	animationService *countingAnimationService
@@ -59,9 +30,7 @@ type tilesTestEnv struct {
 }
 
 func newTilesTestEnv() *tilesTestEnv {
-	registry := &routingRegistry{
-		FakeTilesetRegistry: &testutil.FakeTilesetRegistry{},
-	}
+	registry := &testutil.FakeTilesetRegistry{}
 	tileService := &testutil.FakeTileService{}
 	animations := game.NewAnimationsRepository()
 	animationService := &countingAnimationService{}
@@ -70,8 +39,6 @@ func newTilesTestEnv() *tilesTestEnv {
 		registry,
 		types.TilesetTypeBlocks,
 		animations,
-		types.TilesetTypeSpawner,
-		types.TilesetTypeExplosion,
 		tileService,
 		animationService,
 	)
@@ -82,71 +49,6 @@ func newTilesTestEnv() *tilesTestEnv {
 		animations:       animations,
 		animationService: animationService,
 		tilesUC:          tilesUC,
-	}
-}
-
-func TestTilesUseCases_GetImage(t *testing.T) {
-	env := newTilesTestEnv()
-
-	img, err := env.tilesUC.GetImage("brick")
-	if err != nil || img == nil {
-		t.Fatalf("изображение не получено: img=%v err=%v", img, err)
-	}
-	if len(env.registry.Requested) != 1 ||
-		env.registry.Requested[0] != "brick" {
-		t.Errorf("запрошены не те изображения: %v", env.registry.Requested)
-	}
-
-	env.registry.Err = errTileNotFound
-	if _, err := env.tilesUC.GetImage("brick"); err == nil {
-		t.Error("ожидалась ошибка реестра")
-	}
-}
-
-// Танк игрока берётся из тайлсета player, вражеский — из enemy
-func TestTilesUseCases_GetTankImage_Routing(t *testing.T) {
-	env := newTilesTestEnv()
-
-	if _, err := env.tilesUC.GetTankImage("tank_up", false); err != nil {
-		t.Fatalf("изображение игрока: %v", err)
-	}
-	if _, err := env.tilesUC.GetTankImage("tank_down", true); err != nil {
-		t.Fatalf("изображение врага: %v", err)
-	}
-
-	if len(env.registry.playerIDs) != 1 ||
-		env.registry.playerIDs[0] != "tank_up" {
-		t.Errorf("player-тайлсет: %v", env.registry.playerIDs)
-	}
-	if len(env.registry.enemyIDs) != 1 ||
-		env.registry.enemyIDs[0] != "tank_down" {
-		t.Errorf("enemy-тайлсет: %v", env.registry.enemyIDs)
-	}
-}
-
-// Изображения HUD берутся из тайлсета hud
-func TestTilesUseCases_GetImage_HUDRouting(t *testing.T) {
-	registry := &routingRegistry{
-		FakeTilesetRegistry: &testutil.FakeTilesetRegistry{},
-	}
-	tilesUC := use_cases.NewTilesUseCases(
-		registry,
-		types.TilesetTypeHUD,
-		&testutil.FakeTileService{},
-		&countingAnimationService{},
-	)
-
-	img, err := tilesUC.GetImage("enemy_icon")
-	if err != nil || img == nil {
-		t.Fatalf("изображение не получено: img=%v err=%v", img, err)
-	}
-	if len(registry.hudIDs) != 1 || registry.hudIDs[0] != "enemy_icon" {
-		t.Errorf("hud-тайлсет: %v", registry.hudIDs)
-	}
-
-	registry.Err = errTileNotFound
-	if _, err := tilesUC.GetImage("enemy_icon"); err == nil {
-		t.Error("ожидалась ошибка реестра")
 	}
 }
 
@@ -224,8 +126,8 @@ func TestTilesUseCases_CreateExplosionAnimation(t *testing.T) {
 	}
 }
 
-// Без специальных тайлсетов анимации спавна и взрыва недоступны
-func TestTilesUseCases_CreateAnimations_EmptyTilesetType(t *testing.T) {
+// Без репозитория анимаций анимации спавна и взрыва недоступны
+func TestTilesUseCases_CreateAnimations_WithoutAnimationsRepo(t *testing.T) {
 	env := newTilesTestEnv()
 	tilesUC := use_cases.NewTilesUseCases(
 		env.registry,

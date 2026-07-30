@@ -105,6 +105,18 @@ func LoadConfig() (*Config, error) {
 
 	cfg.TileBaseSize = cfg.BaseSizePx / 2
 
+	// Единая нормализация размеров шрифтов: дальше по графу зависимостей
+	// значения считаются заданными и не проверяются
+	if cfg.TitleFontSize == 0 {
+		cfg.TitleFontSize = 32
+	}
+	if cfg.RegularFontSize == 0 {
+		cfg.RegularFontSize = 8
+	}
+	if cfg.SubtitleFontSize == 0 {
+		cfg.SubtitleFontSize = cfg.RegularFontSize
+	}
+
 	if cfg.EnemyRespawnDelayTicks == 0 {
 		cfg.EnemyRespawnDelayTicks = 3 * 60
 	}

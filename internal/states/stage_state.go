@@ -272,6 +272,7 @@ func (state *StageState) Draw(screen *ebiten.Image) {
 		Player2Lives: state.stageSession.GetPlayerLives(
 			types.PlayerTankNumPlayer2,
 		),
+		StageNumber: state.stageSession.GetStageNumber(),
 	})
 
 	if state.stageUseCases.IsStageFinished() {

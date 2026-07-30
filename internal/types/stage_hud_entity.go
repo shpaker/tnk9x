@@ -7,4 +7,5 @@ type StageHUDData struct {
 	PlayerCount     uint
 	Player1Lives    uint
 	Player2Lives    uint
+	StageNumber     uint
 }

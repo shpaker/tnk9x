@@ -35,16 +35,6 @@ func NewStageSelectState(
 	textFace text.Face,
 	mapsRepository interfaces.IMapsDataRepository,
 ) (*StageSelectState, error) {
-	var screenWidth, screenHeight int
-	if screenCfg, ok := config.(interfaces.IScreenConfig); ok {
-		screenWidth = screenCfg.ScreenWidth()
-		screenHeight = screenCfg.ScreenHeight()
-	} else {
-
-		screenWidth = 800
-		screenHeight = 600
-	}
-
 	levelsCount, err := mapsRepository.GetLevelsCount()
 	if err != nil {
 		return nil, err
@@ -53,33 +43,17 @@ func NewStageSelectState(
 
 	selector := types.NewStageSelector(maxStages)
 
-	titleSize := config.GetTitleFontSize()
-	if titleSize == 0 {
-		titleSize = 32
-	}
-	regularSize := config.GetRegularFontSize()
-	if regularSize == 0 {
-		regularSize = titleSize
-	}
-	subtitleSize := config.GetSubtitleFontSize()
-	if subtitleSize == 0 {
-		subtitleSize = regularSize
-	}
-
-	rendererAdapter, err := stage_select.NewStageSelectRendererAdapter(
-		selector,
-		selectorUseCases,
-		textFace,
-		screenWidth,
-		screenHeight,
-		int(titleSize),
-		int(regularSize),
-		int(subtitleSize),
-		config.GetGameTitle(),
+	rendererAdapter := stage_select.NewStageSelectRendererAdapter(
+		stage_select.StageSelectRendererDependencies{
+			Selector:         selector,
+			SelectorUseCases: selectorUseCases,
+			FontFace:         textFace,
+			TitleFontSize:    int(config.GetTitleFontSize()),
+			RegularFontSize:  int(config.GetRegularFontSize()),
+			SubtitleFontSize: int(config.GetSubtitleFontSize()),
+			GameTitle:        config.GetGameTitle(),
+		},
 	)
-	if err != nil {
-		return nil, err
-	}
 
 	inputAdapter := stage_select.NewStageSelectKeyboardInputAdapter(
 		selector,
@@ -128,17 +102,13 @@ func (s *StageSelectState) Update() types.StateTransition {
 }
 
 func (s *StageSelectState) Draw(screen *ebiten.Image) {
-	if s.rendererAdapter != nil {
-		isLevelActive := s.activeMenuItem == stageSelectMenuItemLevel
-		isPlayersActive := s.activeMenuItem == stageSelectMenuItemPlayers
-		s.rendererAdapter.DrawAll(
-			screen,
-			isLevelActive,
-			s.playerCount,
-			isPlayersActive,
-			s.maxActiveEnemies,
-		)
-	}
+	s.rendererAdapter.DrawAll(screen, types.StageSelectViewData{
+		LevelActive:      s.activeMenuItem == stageSelectMenuItemLevel,
+		PlayersActive:    s.activeMenuItem == stageSelectMenuItemPlayers,
+		MaxEnemiesActive: s.activeMenuItem == stageSelectMenuItemMaxEnemies,
+		PlayerCount:      uint(s.playerCount),
+		MaxActiveEnemies: s.maxActiveEnemies,
+	})
 }
 
 func (s *StageSelectState) handleMenuNavigation() {
@@ -180,19 +150,15 @@ func (s *StageSelectState) handlePlayerCountSelection() {
 func (s *StageSelectState) handleMaxActiveEnemiesSelection() {
 	if inpututil.IsKeyJustPressed(ebiten.KeyLeft) ||
 		inpututil.IsKeyJustPressed(ebiten.KeyA) {
-		if s.maxActiveEnemies > 3 {
-			s.maxActiveEnemies--
-		} else {
-			s.maxActiveEnemies = 10
-		}
+		s.maxActiveEnemies = s.selectorUseCases.PreviousMaxActiveEnemies(
+			s.maxActiveEnemies,
+		)
 	}
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyRight) ||
 		inpututil.IsKeyJustPressed(ebiten.KeyD) {
-		if s.maxActiveEnemies < 10 {
-			s.maxActiveEnemies++
-		} else {
-			s.maxActiveEnemies = 3
-		}
+		s.maxActiveEnemies = s.selectorUseCases.NextMaxActiveEnemies(
+			s.maxActiveEnemies,
+		)
 	}
 }

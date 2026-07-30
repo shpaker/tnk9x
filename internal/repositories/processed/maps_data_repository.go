@@ -101,7 +101,8 @@ func (mdr *MapsDataRepository) createImageProvider(
 		}, nil
 	}
 
-	animationData, err := mdr.tilesetRegistry.GetBlocksAnimationData(
+	animationData, err := mdr.tilesetRegistry.GetAnimationData(
+		types.TilesetTypeBlocks,
 		string(types.Water),
 	)
 	if err != nil {

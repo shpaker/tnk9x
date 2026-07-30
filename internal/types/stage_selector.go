@@ -21,3 +21,13 @@ func (s *StageSelectorEntity) GetMinStages() uint {
 func (s *StageSelectorEntity) GetMaxStages() uint {
 	return s.max
 }
+
+// StageSelectViewData — состояние меню выбора уровня для отрисовки:
+// плоский DTO, рендер показывает значения как есть
+type StageSelectViewData struct {
+	LevelActive      bool
+	PlayersActive    bool
+	MaxEnemiesActive bool
+	PlayerCount      uint
+	MaxActiveEnemies uint
+}

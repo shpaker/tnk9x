@@ -21,11 +21,6 @@ type IConfigProvider interface {
 	GetVolume() float64
 }
 
-type IScreenConfig interface {
-	ScreenWidth() int
-	ScreenHeight() int
-}
-
 type IInputAdapter interface {
 	Update(dt float64)
 }

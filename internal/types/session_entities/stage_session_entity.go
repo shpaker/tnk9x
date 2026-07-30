@@ -28,6 +28,8 @@ type StageSessionEntity struct {
 
 	playerCount uint
 
+	stageNumber uint
+
 	isPaused bool
 }
 
@@ -229,6 +231,14 @@ func (s *StageSessionEntity) SetMaxActiveEnemies(value uint) {
 
 func (s *StageSessionEntity) GetPlayerCount() uint {
 	return s.playerCount
+}
+
+func (s *StageSessionEntity) GetStageNumber() uint {
+	return s.stageNumber
+}
+
+func (s *StageSessionEntity) SetStageNumber(number uint) {
+	s.stageNumber = number
 }
 
 func (s *StageSessionEntity) SetPlayerCount(count uint) {

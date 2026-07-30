@@ -368,3 +368,42 @@ func TestBonusUseCases_SpawnRandomBonusEntity_Failures(t *testing.T) {
 		t.Errorf("ожидался nil при ошибке тайла, получен %v", got)
 	}
 }
+
+// VisibleBonuses отдаёт только бонусы в видимой фазе мигания
+func TestBonusUseCases_VisibleBonuses(t *testing.T) {
+	env := newBonusTestEnv()
+
+	visibleBonus := types.NewBonusEntity(
+		types.BonusTypeStar,
+		types.Position{},
+		types.Size{Width: 16, Height: 16},
+		nil,
+	)
+	hiddenBonus := types.NewBonusEntity(
+		types.BonusTypeGrenade,
+		types.Position{},
+		types.Size{Width: 16, Height: 16},
+		nil,
+	)
+	for i := 0; i < 10; i++ {
+		hiddenBonus.UpdateBlink()
+	}
+
+	env.bonusesRepo.AddBonus(visibleBonus)
+	env.bonusesRepo.AddBonus(nil)
+	env.bonusesRepo.AddBonus(hiddenBonus)
+
+	visible := env.bonusUC.VisibleBonuses()
+	if len(visible) != 1 || visible[0] != visibleBonus {
+		t.Errorf("видимые бонусы: %v", visible)
+	}
+}
+
+// Пустой репозиторий — пустой список видимых бонусов
+func TestBonusUseCases_VisibleBonuses_Empty(t *testing.T) {
+	env := newBonusTestEnv()
+
+	if visible := env.bonusUC.VisibleBonuses(); len(visible) != 0 {
+		t.Errorf("ожидался пустой список, получено: %v", visible)
+	}
+}

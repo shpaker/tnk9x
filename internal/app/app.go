@@ -11,6 +11,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
 
 	"github.com/shpaker/tnk9x/internal/adapters/scripting"
+	"github.com/shpaker/tnk9x/internal/adapters/stage"
 	"github.com/shpaker/tnk9x/internal/interfaces"
 	"github.com/shpaker/tnk9x/internal/repositories/processed"
 	"github.com/shpaker/tnk9x/internal/repositories/raw"
@@ -27,6 +28,10 @@ const audioSampleRate = 44100
 // hudFontSize — размер пиксельного шрифта HUD: глифы PressStart2P
 // нарисованы сеткой 8x8, целый размер даёт чёткие пиксели без фильтрации
 const hudFontSize = 8
+
+// screenScaleFactor — во сколько раз окно крупнее логического экрана NES
+// (768x672 -> 256x224)
+const screenScaleFactor = 3
 
 // gameState — контракт состояния приложения, определён у потребителя;
 // Update возвращает запрос перехода (нулевое значение — остаться)
@@ -48,6 +53,7 @@ type App struct {
 	// Долгоживущая инфраструктура — создаётся один раз на приложение
 	fileRepository    interfaces.IFileRepository
 	tilesetRegistry   interfaces.ITilesetRepositoryRegistry
+	spriteCache       *stage.SpriteCache
 	mapsRepository    interfaces.IMapsDataRepository
 	scriptsRepository interfaces.IScriptsRepository
 	soundsRepository  interfaces.ISoundsRepository
@@ -83,6 +89,26 @@ func New(cfg *Config) *App {
 		panic(err)
 	}
 
+	// Fail-fast проверка спрайтов: все идентификаторы, на которые
+	// ссылается код, должны существовать в тайлсетах — падение
+	// до открытия окна с полным списком проблем
+	spriteManifest := processed.RequiredSprites().
+		Merge(use_cases.RequiredSprites()).
+		Merge(stage.RequiredSprites()).
+		Merge(stageFactoryRequiredSprites())
+	spriteValidation := use_cases.NewSpriteValidationUseCases(tilesetRegistry)
+	if err := spriteValidation.Validate(spriteManifest); err != nil {
+		fmt.Printf("Error validating sprites: %v\n", err)
+		panic(err)
+	}
+
+	// Кэш GPU-спрайтов общий для всех уровней; прогрев при старте
+	// делает стоимость кадра детерминированной
+	spriteCache := stage.NewSpriteCache(
+		use_cases.NewSpriteUseCases(tilesetRegistry),
+	)
+	spriteCache.Preload(types.AllTilesetTypes())
+
 	mapsRepository := processed.NewMapsDataRepository(
 		fileRepository,
 		tilesetRegistry,
@@ -114,6 +140,7 @@ func New(cfg *Config) *App {
 		session:           session_entities.NewGameSessionEntity(),
 		fileRepository:    fileRepository,
 		tilesetRegistry:   tilesetRegistry,
+		spriteCache:       spriteCache,
 		mapsRepository:    mapsRepository,
 		scriptsRepository: scriptsRepository,
 		soundsRepository:  soundsRepository,
@@ -151,7 +178,8 @@ func New(cfg *Config) *App {
 }
 
 func (app *App) Layout(outsideWidth, outsideHeight int) (int, int) {
-	return app.config.ScreenWidth() / 3, app.config.ScreenHeight() / 3
+	return app.config.ScreenWidth() / screenScaleFactor,
+		app.config.ScreenHeight() / screenScaleFactor
 }
 
 func (app *App) Update() error {
@@ -191,6 +219,7 @@ func (app *App) applyTransition(transition types.StateTransition) error {
 		if stageSession != nil {
 			stageSession.SetMaxActiveEnemies(transition.MaxActiveEnemies)
 			stageSession.SetPlayerCount(transition.PlayerCount)
+			stageSession.SetStageNumber(transition.Level)
 		}
 		app.session.Level = int(transition.Level)
 

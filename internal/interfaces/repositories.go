@@ -62,46 +62,21 @@ type IMapsDataRepository interface {
 	GetLevelsCount() (int, error)
 }
 
+// ITilesetRepositoryRegistry — единая точка доступа к тайлсетам по типу
 type ITilesetRepositoryRegistry interface {
-	GetBlocksImage(id string) (types.IImageProvider, error)
-	GetBlocksAnimationData(id string) (types.AnimationData, error)
-	GetBlocksAnimationConfig(id string) (types.AnimationConfig, error)
-
-	GetPlayerImage(id string) (types.IImageProvider, error)
-	GetPlayerAnimationData(id string) (types.AnimationData, error)
-	GetPlayerAnimationConfig(id string) (types.AnimationConfig, error)
-
-	GetEnemyImage(id string) (types.IImageProvider, error)
-	GetEnemyAnimationData(id string) (types.AnimationData, error)
-	GetEnemyAnimationConfig(id string) (types.AnimationConfig, error)
-
-	GetBulletImage(id string) (types.IImageProvider, error)
-	GetBulletAnimationData(id string) (types.AnimationData, error)
-	GetBulletAnimationConfig(id string) (types.AnimationConfig, error)
-
-	GetSpawnerImage(id string) (types.IImageProvider, error)
-	GetSpawnerAnimationData(id string) (types.AnimationData, error)
-	GetSpawnerAnimationConfig(id string) (types.AnimationConfig, error)
-
-	GetExplosionTankImage(id string) (types.IImageProvider, error)
-	GetExplosionTankAnimationData(id string) (types.AnimationData, error)
-	GetExplosionTankAnimationConfig(id string) (types.AnimationConfig, error)
-
-	GetBulletExplosionImage(id string) (types.IImageProvider, error)
-	GetBulletExplosionAnimationData(id string) (types.AnimationData, error)
-	GetBulletExplosionAnimationConfig(id string) (types.AnimationConfig, error)
-
-	GetHQImage(id string) (types.IImageProvider, error)
-	GetHQAnimationData(id string) (types.AnimationData, error)
-	GetHQAnimationConfig(id string) (types.AnimationConfig, error)
-
-	GetBonusesImage(id string) (types.IImageProvider, error)
-	GetBonusesAnimationData(id string) (types.AnimationData, error)
-	GetBonusesAnimationConfig(id string) (types.AnimationConfig, error)
-
-	GetHUDImage(id string) (types.IImageProvider, error)
-
-	GetImageData(tilesetType string, id string) (image.Image, error)
+	GetImageData(
+		tilesetType types.TilesetType,
+		id string,
+	) (image.Image, error)
+	GetAnimationData(
+		tilesetType types.TilesetType,
+		id string,
+	) (types.AnimationData, error)
+	GetAnimationConfig(
+		tilesetType types.TilesetType,
+		id string,
+	) (types.AnimationConfig, error)
+	GetImageIDs(tilesetType types.TilesetType) []string
 }
 
 type IScriptsRepository interface {

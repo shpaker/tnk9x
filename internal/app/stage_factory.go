@@ -18,6 +18,26 @@ import (
 	tank_use_cases "github.com/shpaker/tnk9x/internal/use_cases/tank_use_cases"
 )
 
+// Раскладка экрана уровня как в NES: поле 208x208 со смещением (16,8),
+// справа остаётся панель HUD шириной 32px
+const (
+	stageMapOffsetX = 16
+	stageMapOffsetY = 8
+)
+
+// hqSizePx — размер штаба в пикселях логического экрана
+const hqSizePx = 16
+
+// stageFactoryRequiredSprites перечисляет спрайты, запрашиваемые
+// фабрикой уровня (см. createHQ)
+func stageFactoryRequiredSprites() types.SpriteManifest {
+	return types.SpriteManifest{
+		Images: map[types.TilesetType][]string{
+			types.TilesetTypeHQ: {"hq_intact"},
+		},
+	}
+}
+
 // newStageState собирает граф зависимостей уровня в топологическом порядке:
 // репозитории и сервисы приложения переиспользуются, игровое runtime-состояние
 // (танки, пули, бонусы, анимации, звуковые события) создаётся заново
@@ -111,11 +131,11 @@ func (app *App) newStageState() (*states.StageState, error) {
 	)
 
 	hqTilesUseCases := app.buildHQTilesUseCases(gameRepositories)
-	hq := app.createHQ(hqTilesUseCases, baseSizePx)
-	var hqUseCases interfaces.IHQUseCases
-	if hq != nil {
-		hqUseCases = use_cases.NewHQUseCases(hqTilesUseCases, hq)
+	hq, err := app.createHQ(hqTilesUseCases, baseSizePx)
+	if err != nil {
+		return nil, err
 	}
+	hqUseCases := use_cases.NewHQUseCases(hqTilesUseCases, hq)
 
 	if err := app.loadEnemyAIScript(mapEntity, baseSizePx); err != nil {
 		return nil, err
@@ -212,7 +232,8 @@ func (app *App) newStageState() (*states.StageState, error) {
 		tankCommonUseCases,
 		bulletUseCases,
 		hqUseCases,
-		bonusesRepository,
+		renderUseCases,
+		bonusUseCases,
 	)
 
 	return states.NewStageState(states.StageStateDependencies{
@@ -239,20 +260,16 @@ func (app *App) newStageState() (*states.StageState, error) {
 func (app *App) buildTankTilesUseCases(
 	gameRepositories interfaces.IGameRepositoriesRegistry,
 ) *use_cases.TilesUseCases {
-	tileService := services.NewTileServiceWithSpecialRepos(
+	tileService := services.NewTileServiceWithEnemyFallback(
 		app.tilesetRegistry,
 		types.TilesetTypePlayer,
 		types.TilesetTypeEnemy,
-		types.TilesetTypeSpawner,
-		types.TilesetTypeExplosion,
 	)
 
 	return use_cases.NewTilesUseCasesWithAnimations(
 		app.tilesetRegistry,
 		types.TilesetTypePlayer,
 		gameRepositories.GetAnimationsRepository(),
-		types.TilesetTypeSpawner,
-		types.TilesetTypeExplosion,
 		tileService,
 		services.NewAnimationService(),
 	)
@@ -262,20 +279,15 @@ func (app *App) buildTankTilesUseCases(
 func (app *App) buildHQTilesUseCases(
 	gameRepositories interfaces.IGameRepositoriesRegistry,
 ) *use_cases.TilesUseCases {
-	tileService := services.NewTileServiceWithSpecialRepos(
+	tileService := services.NewTileService(
 		app.tilesetRegistry,
 		types.TilesetTypePlayer,
-		types.TilesetType(""),
-		types.TilesetTypeSpawner,
-		types.TilesetTypeExplosion,
 	)
 
 	return use_cases.NewTilesUseCasesWithAnimations(
 		app.tilesetRegistry,
 		types.TilesetTypeHQ,
 		gameRepositories.GetAnimationsRepository(),
-		types.TilesetTypeSpawner,
-		types.TilesetTypeExplosion,
 		tileService,
 		services.NewAnimationService(),
 	)
@@ -297,10 +309,10 @@ func (app *App) buildTilesUseCases(
 func (app *App) createHQ(
 	tilesUseCases *use_cases.TilesUseCases,
 	baseSizePx uint,
-) *types.HQEntity {
+) (*types.HQEntity, error) {
 	hqPos := app.config.GetHQPosition()
 	if len(hqPos) != 2 {
-		return nil
+		return nil, fmt.Errorf("invalid hq_position in config: %v", hqPos)
 	}
 
 	hqPosition := types.Position{
@@ -308,21 +320,18 @@ func (app *App) createHQ(
 		Y: float64(hqPos[1]) * float64(baseSizePx),
 	}
 
-	var imageGetter types.IImageProvider
-	if tilesUseCases != nil {
-		hqImageGetter, err := tilesUseCases.CreateStaticTile("hq_intact")
-		if err == nil {
-			imageGetter = hqImageGetter
-		}
+	imageGetter, err := tilesUseCases.CreateStaticTile("hq_intact")
+	if err != nil {
+		return nil, fmt.Errorf("failed to create hq tile: %w", err)
 	}
 
 	return &types.HQEntity{
 		Position: hqPosition,
-		Size:     types.Size{Width: 16, Height: 16},
+		Size:     types.Size{Width: hqSizePx, Height: hqSizePx},
 		Altitude: types.SURFACE,
 		Image:    imageGetter,
 		State:    types.HQStateIntact,
-	}
+	}, nil
 }
 
 // loadEnemyAIScript задаёт скрипту глобальные параметры карты
@@ -364,18 +373,12 @@ func (app *App) buildStageRenderer(
 	tankCommonUseCases interfaces.ITankCommonUseCases,
 	bulletUseCases interfaces.IBulletUseCases,
 	hqUseCases interfaces.IHQUseCases,
-	bonusesRepository interfaces.IBonusesRepository,
+	renderUseCases interfaces.IRenderUseCases,
+	bonusUseCases interfaces.IBonusUseCases,
 ) *stage.StageRendererAdapter {
-	renderAnimationService := services.NewAnimationService()
-
 	mapBlocksCount := app.config.GetMapBlocksCount()
 	rendererTileSize := int(app.config.GetTileBaseSize())
 	mapWidthHeightForAdapter := mapBlocksCount.Width * rendererTileSize
-
-	// Раскладка экрана как в NES: поле 208x208 со смещением (16,8),
-	// справа остаётся панель HUD шириной 32px
-	mapOffsetY := 8
-	mapOffsetX := 16
 
 	return stage.NewStageRendererAdapter(stage.StageRendererDependencies{
 		MapUseCases:        mapUseCases,
@@ -383,48 +386,16 @@ func (app *App) buildStageRenderer(
 		BulletUseCases:     bulletUseCases,
 		HQUseCases:         hqUseCases,
 		HUDUseCases:        use_cases.NewHUDUseCases(),
-		MapTilesUseCases: app.buildTilesUseCases(
-			types.TilesetTypeBlocks,
-			renderAnimationService,
-		),
-		TankTilesUseCases: app.buildTilesUseCases(
-			types.TilesetTypePlayer,
-			renderAnimationService,
-		),
-		BulletTilesUseCases: app.buildTilesUseCases(
-			types.TilesetTypeBullet,
-			renderAnimationService,
-		),
-		SpawnerTilesUseCases: app.buildTilesUseCases(
-			types.TilesetTypeSpawner,
-			renderAnimationService,
-		),
-		ExplosionTilesUseCases: app.buildTilesUseCases(
-			types.TilesetTypeExplosion,
-			renderAnimationService,
-		),
-		HQTilesUseCases: app.buildTilesUseCases(
-			types.TilesetTypeHQ,
-			renderAnimationService,
-		),
-		BonusTilesUseCases: app.buildTilesUseCases(
-			types.TilesetTypeBonuses,
-			renderAnimationService,
-		),
-		HUDTilesUseCases: app.buildTilesUseCases(
-			types.TilesetTypeHUD,
-			renderAnimationService,
-		),
-		BonusesRepository: bonusesRepository,
-		FontFace:          app.textFace,
-		HUDFontFace:       app.hudTextFace,
-		TileMinSize:       rendererTileSize,
-		MapOffsetX:        mapOffsetX,
-		MapOffsetY:        mapOffsetY,
-		MapWidthHeight:    mapWidthHeightForAdapter,
-		TitleFontSize:     int(app.config.GetTitleFontSize()),
-		SubtitleFontSize:  int(app.config.GetSubtitleFontSize()),
-		RegularFontSize:   int(app.config.GetRegularFontSize()),
-		StageNumber:       app.session.Level,
+		RenderUseCases:     renderUseCases,
+		BonusUseCases:      bonusUseCases,
+		SpriteCache:        app.spriteCache,
+		FontFace:           app.textFace,
+		HUDFontFace:        app.hudTextFace,
+		MapOffsetX:         stageMapOffsetX,
+		MapOffsetY:         stageMapOffsetY,
+		MapWidthHeight:     mapWidthHeightForAdapter,
+		TitleFontSize:      int(app.config.GetTitleFontSize()),
+		SubtitleFontSize:   int(app.config.GetSubtitleFontSize()),
+		RegularFontSize:    int(app.config.GetRegularFontSize()),
 	})
 }
