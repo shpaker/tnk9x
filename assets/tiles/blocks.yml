@@ -5,5 +5,11 @@ images:
   brick: [0, 0]
   steel: [0, 1]
   forest: [0, 2]
+  water_1: [0, 3]
+  water_2: [0, 4]
+  ice: [0, 5]
 
 animations:
+  water:
+    duration: 32
+    frames: [water_1, water_2]

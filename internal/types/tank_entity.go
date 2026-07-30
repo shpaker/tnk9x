@@ -37,6 +37,7 @@ type TankEntity struct {
 	Direction     Direction
 	State         TankState
 	NextDirection *Direction
+	SlideTarget   *float64 // Зафиксированная цель скольжения на льду (nil — обычное торможение)
 	role          TankRole
 	specs         *SpecsEntity // Спецификации танка
 	withBonus     bool

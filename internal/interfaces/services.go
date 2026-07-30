@@ -6,7 +6,7 @@ import (
 )
 
 type ITankBrakingService interface {
-	HandleBrakingState(tank *types.TankEntity, dt float64) error
+	HandleBrakingState(tank *types.TankEntity, dt float64, onIce bool) error
 	HandleRotateWhileBraking(tank *types.TankEntity, direction types.Direction)
 }
 

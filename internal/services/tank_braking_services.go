@@ -22,12 +22,39 @@ type brakingMovementContext struct {
 func (s *TankBrakingService) HandleBrakingState(
 	tank *types.TankEntity,
 	dt float64,
+	onIce bool,
 ) error {
+	if onIce && tank.SlideTarget == nil {
+		s.latchSlideTarget(tank)
+	}
+
 	ctx := s.getBrakingMovementContext(tank)
 
 	s.moveTowardsTarget(tank, ctx, dt)
 
 	return nil
+}
+
+// latchSlideTarget фиксирует цель скольжения один раз при входе
+// в торможение на льду: обычная точка остановки плюс ещё 4px
+// по инерции. Пересчёт каждый тик сдвигал бы цель бесконечно.
+func (s *TankBrakingService) latchSlideTarget(tank *types.TankEntity) {
+	var target float64
+
+	switch tank.Direction {
+	case types.DirectionUp:
+		target = s.getNearestMultipleOf4InDirection(tank.Position.Y, false) - 4
+	case types.DirectionDown:
+		target = s.getNearestMultipleOf4InDirection(tank.Position.Y, true) + 4
+	case types.DirectionLeft:
+		target = s.getNearestMultipleOf4InDirection(tank.Position.X, false) - 4
+	case types.DirectionRight:
+		target = s.getNearestMultipleOf4InDirection(tank.Position.X, true) + 4
+	default:
+		return
+	}
+
+	tank.SlideTarget = &target
 }
 
 func (s *TankBrakingService) getBrakingMovementContext(
@@ -66,6 +93,10 @@ func (s *TankBrakingService) getBrakingMovementContext(
 			true,
 		)
 		isMovingForward = true
+	}
+
+	if tank.SlideTarget != nil {
+		targetMultipleOf4 = *tank.SlideTarget
 	}
 
 	return brakingMovementContext{
@@ -141,6 +172,7 @@ func (s *TankBrakingService) completeBraking(tank *types.TankEntity) {
 }
 
 func (s *TankBrakingService) finishBraking(tank *types.TankEntity) {
+	tank.SlideTarget = nil
 	if tank.NextDirection != nil {
 		tank.Direction = *tank.NextDirection
 		tank.NextDirection = nil

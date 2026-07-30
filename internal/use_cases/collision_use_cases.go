@@ -322,6 +322,11 @@ func (uc *CollisionUseCases) checkBulletWallCollision(
 ) bool {
 	mapBlocks := uc.mapUseCases.GetBlocks()
 	for _, block := range mapBlocks {
+		// вода не останавливает снаряды
+		if block.Data != nil && block.Data.Name == types.Water {
+			continue
+		}
+
 		if uc.bulletCollisionService.CheckBulletBlockCollision(
 			bullet,
 			block,

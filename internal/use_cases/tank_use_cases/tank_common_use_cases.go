@@ -14,6 +14,7 @@ type TankCommonUseCases struct {
 	renderUseCases  interfaces.IRenderUseCases
 	tanksRepository interfaces.ITanksRepository
 	specsUseCases   interfaces.ISpecsUseCases
+	mapUseCases     interfaces.IMapUseCases
 }
 
 func NewTankCommonUseCases(
@@ -21,12 +22,14 @@ func NewTankCommonUseCases(
 	renderUseCases interfaces.IRenderUseCases,
 	tanksRepository interfaces.ITanksRepository,
 	specsUseCases interfaces.ISpecsUseCases,
+	mapUseCases interfaces.IMapUseCases,
 ) *TankCommonUseCases {
 	return &TankCommonUseCases{
 		brakingService:  brakingService,
 		renderUseCases:  renderUseCases,
 		tanksRepository: tanksRepository,
 		specsUseCases:   specsUseCases,
+		mapUseCases:     mapUseCases,
 	}
 }
 
@@ -43,7 +46,7 @@ func (uc *TankCommonUseCases) Update(tank *types.TankEntity, dt float64) error {
 	oldDirection := tank.Direction
 
 	if tank.State == types.TankStateBraking {
-		err := uc.brakingService.HandleBrakingState(tank, dt)
+		err := uc.brakingService.HandleBrakingState(tank, dt, uc.isOnIce(tank))
 
 		if oldDirection != tank.Direction {
 			uc.renderUseCases.UpdateTankAnimation(tank)
@@ -78,6 +81,18 @@ func (uc *TankCommonUseCases) Update(tank *types.TankEntity, dt float64) error {
 	uc.renderUseCases.SyncTankAnimationWithState(tank)
 
 	return nil
+}
+
+// isOnIce — центр танка находится на блоке льда
+func (uc *TankCommonUseCases) isOnIce(tank *types.TankEntity) bool {
+	if uc.mapUseCases == nil {
+		return false
+	}
+	center := types.Position{
+		X: tank.Position.X + float64(tank.Size.Width)/2,
+		Y: tank.Position.Y + float64(tank.Size.Height)/2,
+	}
+	return uc.mapUseCases.IsIceAt(center)
 }
 
 func (uc *TankCommonUseCases) UpdateAllTanks(dt float64) error {

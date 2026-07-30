@@ -53,6 +53,10 @@ func NewBlockEntity(
 		altitude = AIR
 	}
 
+	if blockType == string(Ice) {
+		altitude = GROUND
+	}
+
 	return &BlockEntity{
 		Position: Position{X: positionX, Y: positionY},
 		Size:     Size{Width: size, Height: size},

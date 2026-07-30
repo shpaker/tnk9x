@@ -20,7 +20,7 @@ func runBrakingUntilDone(
 		if tank.State != types.TankStateBraking {
 			return
 		}
-		if err := service.HandleBrakingState(tank, brakingTestDT); err != nil {
+		if err := service.HandleBrakingState(tank, brakingTestDT, false); err != nil {
 			t.Fatalf("HandleBrakingState returned error: %v", err)
 		}
 	}
@@ -105,6 +105,114 @@ func TestTankBrakingService_FinishesOnMultipleOf4(t *testing.T) {
 	}
 }
 
+// На льду танк доскальзывает лишние 4px за обычной точкой остановки
+func TestTankBrakingService_IceSlideExtendsStop(t *testing.T) {
+	service := NewTankBrakingService()
+
+	tests := []struct {
+		name      string
+		direction types.Direction
+		start     types.Position
+		want      types.Position
+	}{
+		{
+			"right off-grid",
+			types.DirectionRight,
+			types.Position{X: 5, Y: 100},
+			types.Position{X: 12, Y: 100},
+		},
+		{
+			"right exactly on grid line",
+			types.DirectionRight,
+			types.Position{X: 8, Y: 100},
+			types.Position{X: 12, Y: 100},
+		},
+		{
+			"left off-grid",
+			types.DirectionLeft,
+			types.Position{X: 5, Y: 100},
+			types.Position{X: 0, Y: 100},
+		},
+		{
+			"up exactly on grid line",
+			types.DirectionUp,
+			types.Position{X: 100, Y: 8},
+			types.Position{X: 100, Y: 4},
+		},
+		{
+			"down off-grid",
+			types.DirectionDown,
+			types.Position{X: 100, Y: 101.3},
+			types.Position{X: 100, Y: 108},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tank := types.NewDefaultTankEntity(
+				types.TankRolePlayer1,
+				tt.direction,
+			)
+			tank.Position = tt.start
+			tank.State = types.TankStateBraking
+
+			for i := 0; i < 600 && tank.State == types.TankStateBraking; i++ {
+				err := service.HandleBrakingState(&tank, brakingTestDT, true)
+				if err != nil {
+					t.Fatalf("HandleBrakingState returned error: %v", err)
+				}
+			}
+
+			if tank.Position != tt.want {
+				t.Errorf(
+					"позиция %v, ожидалась %v (start=%v dir=%v)",
+					tank.Position,
+					tt.want,
+					tt.start,
+					tt.direction,
+				)
+			}
+			if tank.State != types.TankStateStopped {
+				t.Errorf("состояние %v, ожидалось Stopped", tank.State)
+			}
+			if tank.SlideTarget != nil {
+				t.Errorf("SlideTarget не сброшен: %v", *tank.SlideTarget)
+			}
+		})
+	}
+}
+
+// Цель скольжения фиксируется один раз: съехав со льда посреди
+// скольжения, танк всё равно доезжает до зафиксированной точки
+func TestTankBrakingService_SlideTargetLatchedOnce(t *testing.T) {
+	service := NewTankBrakingService()
+
+	tank := types.NewDefaultTankEntity(
+		types.TankRolePlayer1,
+		types.DirectionRight,
+	)
+	tank.Position = types.Position{X: 5, Y: 100}
+	tank.State = types.TankStateBraking
+
+	if err := service.HandleBrakingState(&tank, brakingTestDT, true); err != nil {
+		t.Fatalf("HandleBrakingState returned error: %v", err)
+	}
+
+	for i := 0; i < 600 && tank.State == types.TankStateBraking; i++ {
+		err := service.HandleBrakingState(&tank, brakingTestDT, false)
+		if err != nil {
+			t.Fatalf("HandleBrakingState returned error: %v", err)
+		}
+	}
+
+	if tank.Position.X != 12 {
+		t.Errorf("X = %v, ожидалось 12", tank.Position.X)
+	}
+	if tank.SlideTarget != nil {
+		t.Errorf("SlideTarget не сброшен: %v", *tank.SlideTarget)
+	}
+}
+
 func TestTankBrakingService_AdoptsNextDirectionOnFinish(t *testing.T) {
 	service := NewTankBrakingService()
 
@@ -118,7 +226,7 @@ func TestTankBrakingService_AdoptsNextDirectionOnFinish(t *testing.T) {
 	tank.NextDirection = &next
 
 	for i := 0; i < 600 && tank.State == types.TankStateBraking; i++ {
-		if err := service.HandleBrakingState(&tank, brakingTestDT); err != nil {
+		if err := service.HandleBrakingState(&tank, brakingTestDT, false); err != nil {
 			t.Fatalf("HandleBrakingState returned error: %v", err)
 		}
 	}

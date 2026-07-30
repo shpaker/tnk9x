@@ -19,6 +19,7 @@ type IMapUseCases interface {
 	RemoveBlock(block *types.BlockEntity) error
 	GetSizePx() types.Size
 	GetRandomBonusSpawnPosition() types.Position
+	IsIceAt(position types.Position) bool
 }
 
 type ICollisionUseCases interface {
