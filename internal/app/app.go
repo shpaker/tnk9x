@@ -24,6 +24,10 @@ import (
 
 const audioSampleRate = 44100
 
+// hudFontSize — размер пиксельного шрифта HUD: глифы PressStart2P
+// нарисованы сеткой 8x8, целый размер даёт чёткие пиксели без фильтрации
+const hudFontSize = 8
+
 // gameState — контракт состояния приложения, определён у потребителя;
 // Update возвращает запрос перехода (нулевое значение — остаться)
 type gameState interface {
@@ -48,6 +52,7 @@ type App struct {
 	scriptsRepository interfaces.IScriptsRepository
 	soundsRepository  interfaces.ISoundsRepository
 	textFace          text.Face
+	hudTextFace       text.Face
 	scriptEngine      interfaces.IAIScriptEngine
 	audioContext      *audio.Context
 
@@ -92,6 +97,12 @@ func New(cfg *Config) *App {
 		panic(err)
 	}
 
+	hudTextFace, err := buildTextFace(fontsRepository, hudFontSize)
+	if err != nil {
+		fmt.Printf("Error creating HUD text face: %v\n", err)
+		panic(err)
+	}
+
 	mapSizePx := types.Size{
 		Width:  cfg.MapBlocksCount.Width * int(cfg.TileBaseSize),
 		Height: cfg.MapBlocksCount.Height * int(cfg.TileBaseSize),
@@ -107,6 +118,7 @@ func New(cfg *Config) *App {
 		scriptsRepository: scriptsRepository,
 		soundsRepository:  soundsRepository,
 		textFace:          textFace,
+		hudTextFace:       hudTextFace,
 		scriptEngine:      scripting.NewLuaEngine(),
 		audioContext:      audioContext,
 		boundaryCollisionService: collision_services.NewBoundaryCollisionService(

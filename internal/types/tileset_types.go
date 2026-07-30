@@ -12,4 +12,5 @@ const (
 	TilesetTypeExplosion TilesetType = "explosion"
 	TilesetTypeHQ        TilesetType = "hq"
 	TilesetTypeBonuses   TilesetType = "bonuses"
+	TilesetTypeHUD       TilesetType = "hud"
 )

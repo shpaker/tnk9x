@@ -13,6 +13,7 @@ import (
 // чтобы не тащить ebiten в пакет контрактов
 type StageRenderer interface {
 	DrawAll(screen *ebiten.Image)
+	DrawSidebar(screen *ebiten.Image, hud types.StageHUDData)
 	DrawPauseOverlay(screen *ebiten.Image)
 	DrawStageEndOverlay(screen *ebiten.Image, label string)
 }
@@ -261,6 +262,17 @@ func (state *StageState) updateBlinkObjects() {
 
 func (state *StageState) Draw(screen *ebiten.Image) {
 	state.renderer.DrawAll(screen)
+
+	state.renderer.DrawSidebar(screen, types.StageHUDData{
+		EnemiesForSpawn: state.stageSession.EnemiesForSpawnCount(),
+		PlayerCount:     state.stageSession.GetPlayerCount(),
+		Player1Lives: state.stageSession.GetPlayerLives(
+			types.PlayerTankNumPlayer1,
+		),
+		Player2Lives: state.stageSession.GetPlayerLives(
+			types.PlayerTankNumPlayer2,
+		),
+	})
 
 	if state.stageUseCases.IsStageFinished() {
 		label := "VICTORY"

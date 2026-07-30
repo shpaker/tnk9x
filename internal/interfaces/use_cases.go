@@ -132,6 +132,15 @@ type IBonusUseCases interface {
 	SpawnRandomBonusEntity(position types.Position) *types.BonusEntity
 }
 
+type IHUDUseCases interface {
+	EnemyIconOffsets(
+		count uint,
+		columns int,
+		rows int,
+		iconSize int,
+	) []types.Position
+}
+
 type IStageSelectorUseCases interface {
 	Next(selector *types.StageSelectorEntity) uint
 	Previous(selector *types.StageSelectorEntity) uint
