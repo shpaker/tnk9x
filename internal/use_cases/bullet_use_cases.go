@@ -113,6 +113,9 @@ func (uc *BulletUseCases) pruneFinishedImpacts() {
 		}
 		animation, ok := effect.Image.(*image_providers.AnimationProvider)
 		if ok && animation.IsFinished() {
+			// Провайдер тоже удаляется, иначе репозиторий анимаций
+			// растёт с каждым выстрелом
+			uc.tilesUseCases.RemoveAnimation(animation)
 			uc.effectsRepository.RemoveEffect(effect)
 		}
 	}

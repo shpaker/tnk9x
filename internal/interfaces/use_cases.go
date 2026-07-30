@@ -41,6 +41,7 @@ type ITilesUseCases interface {
 		isEnemy bool,
 	) (*image_providers.AnimationProvider, error)
 	AddAnimation(animation *image_providers.AnimationProvider)
+	RemoveAnimation(animation *image_providers.AnimationProvider)
 	UpdateAnimations()
 	StartAnimation(animation *image_providers.AnimationProvider)
 	StopAnimation(animation *image_providers.AnimationProvider)

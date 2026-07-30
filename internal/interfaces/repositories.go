@@ -41,6 +41,8 @@ type IAnimationsRepository interface {
 	AddAnimation(animation *image_providers.AnimationProvider)
 
 	GetAllAnimations() []*image_providers.AnimationProvider
+
+	RemoveAnimation(animation *image_providers.AnimationProvider)
 }
 
 type ITanksRepository interface {

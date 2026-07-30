@@ -26,3 +26,17 @@ func (ar *AnimationsRepository) AddAnimation(
 func (ar *AnimationsRepository) GetAllAnimations() []*image_providers.AnimationProvider {
 	return ar.animations
 }
+
+func (ar *AnimationsRepository) RemoveAnimation(
+	animation *image_providers.AnimationProvider,
+) {
+	for i, current := range ar.animations {
+		if current == animation {
+			ar.animations = append(
+				ar.animations[:i],
+				ar.animations[i+1:]...,
+			)
+			return
+		}
+	}
+}

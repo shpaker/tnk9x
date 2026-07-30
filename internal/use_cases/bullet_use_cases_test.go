@@ -7,6 +7,7 @@ import (
 	game "github.com/shpaker/tnk9x/internal/repositories/game"
 	"github.com/shpaker/tnk9x/internal/testutil"
 	"github.com/shpaker/tnk9x/internal/types"
+	image_providers "github.com/shpaker/tnk9x/internal/types/image_providers"
 	"github.com/shpaker/tnk9x/internal/use_cases"
 )
 
@@ -230,5 +231,69 @@ func TestBulletUseCases_RemoveBullet(t *testing.T) {
 	}
 	if err := env.bulletUC.RemoveBullet(bullet); err == nil {
 		t.Error("повторное удаление не вернуло ошибку")
+	}
+}
+
+// Взрыв пули живёт до конца анимации и удаляется вместе с провайдером
+func TestBulletUseCases_SpawnImpact_PrunedWhenFinished(t *testing.T) {
+	animations := game.NewAnimationsRepository()
+	effects := game.NewEffectsRepository()
+	tilesUC := use_cases.NewTilesUseCasesWithAnimations(
+		nil,
+		types.TilesetTypeBullet,
+		animations,
+		&testutil.FakeTileService{},
+		nil,
+	)
+	bulletUC := use_cases.NewBulletUseCases(
+		game.NewBulletsRepository(),
+		effects,
+		tilesUC,
+		16,
+	)
+
+	bullet := types.NewBulletEntity(
+		types.Position{X: 100, Y: 60},
+		types.Size{Width: 4, Height: 4},
+		types.SURFACE,
+		nil,
+		types.DirectionUp,
+		nil,
+		nil,
+	)
+
+	bulletUC.SpawnImpact(bullet)
+
+	impacts := bulletUC.GetImpacts()
+	if len(impacts) != 1 {
+		t.Fatalf("эффектов %d, ожидался 1", len(impacts))
+	}
+	if len(animations.GetAllAnimations()) != 1 {
+		t.Fatal("анимация взрыва не зарегистрирована")
+	}
+
+	// Пока анимация идёт, эффект не удаляется
+	if err := bulletUC.UpdateBullets(1.0 / 60.0); err != nil {
+		t.Fatalf("обновление: %v", err)
+	}
+	if len(bulletUC.GetImpacts()) != 1 {
+		t.Fatal("эффект удалён до конца анимации")
+	}
+
+	// Завершаем анимацию: эффект и провайдер вычищаются
+	animation, ok := impacts[0].Image.(*image_providers.AnimationProvider)
+	if !ok {
+		t.Fatal("изображение эффекта не AnimationProvider")
+	}
+	animation.IsAnimating = false
+
+	if err := bulletUC.UpdateBullets(1.0 / 60.0); err != nil {
+		t.Fatalf("обновление: %v", err)
+	}
+	if got := len(bulletUC.GetImpacts()); got != 0 {
+		t.Errorf("эффект не удалён: %d", got)
+	}
+	if got := len(animations.GetAllAnimations()); got != 0 {
+		t.Errorf("провайдер не удалён из репозитория анимаций: %d", got)
 	}
 }

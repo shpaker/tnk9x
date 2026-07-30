@@ -80,6 +80,15 @@ func (tuc *TilesUseCases) AddAnimation(
 	tuc.animationsRepository.AddAnimation(animation)
 }
 
+func (tuc *TilesUseCases) RemoveAnimation(
+	animation *image_providers.AnimationProvider,
+) {
+	if tuc.animationsRepository == nil || animation == nil {
+		return
+	}
+	tuc.animationsRepository.RemoveAnimation(animation)
+}
+
 func (tuc *TilesUseCases) UpdateAnimations() {
 	if tuc.animationsRepository == nil {
 		return

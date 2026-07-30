@@ -11,3 +11,4 @@ animations:
     duration: 5
     frames: [explosion_1, explosion_2, explosion_3]
     offset: [-6, -6]
+    repeats: 1   # Проиграть один раз, иначе взрыв зациклится навсегда
