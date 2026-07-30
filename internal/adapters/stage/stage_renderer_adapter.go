@@ -466,15 +466,17 @@ func (r *StageRendererAdapter) DrawAll(screen *ebiten.Image) {
 
 	r.drawMapBackground(screen)
 
+	// Блоки-подложки рисуются до танков и пуль: пуля летит НАД водой,
+	// а не под ней; поверх всех только лес (AIR)
 	r.drawBlocksByAltitude(screen, types.GROUND)
+
+	r.drawBlocksByAltitude(screen, types.SURFACE)
 
 	r.drawHeadquarters(screen)
 
 	r.drawTanks(screen)
 
 	r.drawBullets(screen)
-
-	r.drawBlocksByAltitude(screen, types.SURFACE)
 
 	r.drawBonuses(screen)
 
