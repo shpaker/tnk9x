@@ -15,7 +15,7 @@ var MapCharsBlocksMapping = map[string]types.BlockType{
 	"@": types.Steel,
 	"%": types.Forest,
 	"~": types.Water,
-	"=": types.Ice,
+	"-": types.Ice,
 }
 
 var _ interfaces.IMapsDataRepository = (*MapsDataRepository)(nil)
@@ -71,8 +71,9 @@ func (mdr *MapsDataRepository) createBlockFromChar(
 		)
 	}
 
-	tileEntity := &image_providers.StaticProvider{
-		ImageID: string(blockType),
+	tileEntity, err := mdr.createImageProvider(blockType)
+	if err != nil {
+		return nil, err
 	}
 
 	positionX := float64(x) * float64(tileBaseSize)
@@ -87,6 +88,30 @@ func (mdr *MapsDataRepository) createBlockFromChar(
 	)
 
 	return block, nil
+}
+
+// createImageProvider возвращает анимированный провайдер для воды
+// и статичный для остальных блоков
+func (mdr *MapsDataRepository) createImageProvider(
+	blockType types.BlockType,
+) (types.IImageProvider, error) {
+	if blockType != types.Water {
+		return &image_providers.StaticProvider{
+			ImageID: string(blockType),
+		}, nil
+	}
+
+	animationData, err := mdr.tilesetRegistry.GetBlocksAnimationData(
+		string(types.Water),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get water animation: %w", err)
+	}
+
+	provider := image_providers.NewAnimationProvider(animationData)
+	provider.IsAnimating = true
+
+	return provider, nil
 }
 
 func (mdr *MapsDataRepository) parseLevelLines(

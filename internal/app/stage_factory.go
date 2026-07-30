@@ -12,6 +12,7 @@ import (
 	"github.com/shpaker/tnk9x/internal/services"
 	"github.com/shpaker/tnk9x/internal/states"
 	"github.com/shpaker/tnk9x/internal/types"
+	image_providers "github.com/shpaker/tnk9x/internal/types/image_providers"
 	"github.com/shpaker/tnk9x/internal/use_cases"
 	state_use_cases "github.com/shpaker/tnk9x/internal/use_cases/state_use_cases"
 	tank_use_cases "github.com/shpaker/tnk9x/internal/use_cases/tank_use_cases"
@@ -35,6 +36,13 @@ func (app *App) newStageState() (*states.StageState, error) {
 
 	stageSession := app.session.StageSession()
 	gameRepositories := game_repos.NewGameRepositoriesRegistry()
+
+	// анимации блоков карты (вода) продвигаются общим UpdateAnimations
+	for _, block := range mapEntity.GetBlocks() {
+		if anim, ok := block.Image.(*image_providers.AnimationProvider); ok {
+			gameRepositories.GetAnimationsRepository().AddAnimation(anim)
+		}
+	}
 
 	soundAdapter, err := stage.NewSoundAdapter(
 		app.soundsRepository,
@@ -63,11 +71,14 @@ func (app *App) newStageState() (*states.StageState, error) {
 
 	renderUseCases := use_cases.NewRenderUseCases(tankTilesUseCases)
 
+	mapUseCases := use_cases.NewMapUseCases(mapEntity)
+
 	tankCommonUseCases := tank_use_cases.NewTankCommonUseCases(
 		app.tankBrakingService,
 		renderUseCases,
 		gameRepositories.GetTanksRepository(),
 		app.specsUseCases,
+		mapUseCases,
 	)
 
 	spawnLayout := types.SpawnLayout{
@@ -89,8 +100,6 @@ func (app *App) newStageState() (*states.StageState, error) {
 		app.specsUseCases,
 		spawnLayout,
 	)
-
-	mapUseCases := use_cases.NewMapUseCases(mapEntity)
 
 	tankActionsUseCases := tank_use_cases.NewTankActionsUseCases(
 		app.tankBrakingService,

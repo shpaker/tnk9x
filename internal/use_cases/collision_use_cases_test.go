@@ -105,6 +105,8 @@ func (s *stubMapUseCases) GetRandomBonusSpawnPosition() types.Position {
 	return types.Position{}
 }
 
+func (s *stubMapUseCases) IsIceAt(_ types.Position) bool { return false }
+
 type collisionTestEnv struct {
 	tanksRepo   *game.TanksRepository
 	bulletsRepo *game.BulletsRepository
@@ -146,6 +148,7 @@ func newCollisionTestEnv(blocks types.MapBlocks) *collisionTestEnv {
 		render,
 		tanksRepo,
 		specsUC,
+		mapUC,
 	)
 	tankActions := tank_use_cases.NewTankActionsUseCases(
 		braking,
@@ -214,6 +217,10 @@ func (env *collisionTestEnv) newTank(
 
 func brick(x, y float64) *types.BlockEntity {
 	return types.NewBlockEntity("brick", x, y, 8, &stubImageProvider{})
+}
+
+func water(x, y float64) *types.BlockEntity {
+	return types.NewBlockEntity("water", x, y, 8, &stubImageProvider{})
 }
 
 // M1: регрессия бага QA — два танка давят друг на друга лоб-в-лоб,
@@ -525,6 +532,62 @@ func TestBulletTankCollision_TwoHitsSameTick(t *testing.T) {
 	}
 	if enemy2.GetHitPoints() != 1 {
 		t.Errorf("враг 2 не получил урон: hp=%d", enemy2.GetHitPoints())
+	}
+}
+
+// Вода не останавливает пули: пуля над водой выживает, блок цел
+func TestBulletWallCollision_BulletPassesOverWater(t *testing.T) {
+	blocks := types.MapBlocks{water(120, 96)}
+	env := newCollisionTestEnv(blocks)
+
+	shooter := env.newTank(
+		types.TankRolePlayer1,
+		types.DirectionRight,
+		0,
+		192,
+		0,
+	)
+	env.tanksRepo.SetPlayer(types.PlayerTankNumPlayer1, shooter)
+
+	specs := env.specsUC.GetTankSpecs(false, 0)
+	bullet := types.NewBulletEntity(
+		types.Position{X: 121, Y: 97},
+		types.Size{Width: 4, Height: 4},
+		types.SURFACE,
+		&stubImageProvider{},
+		types.DirectionRight,
+		specs,
+		shooter,
+	)
+	if err := env.bulletsRepo.AddBullet(bullet); err != nil {
+		t.Fatalf("не удалось добавить пулю: %v", err)
+	}
+
+	env.collision.UpdateCollisions()
+
+	if got := len(env.bulletUC.GetBullets()); got != 1 {
+		t.Errorf("пуля погибла над водой: осталось %d пуль", got)
+	}
+	if got := len(env.mapEntity.GetBlocks()); got != 1 {
+		t.Errorf("вода удалена: осталось %d блоков", got)
+	}
+}
+
+// Вода блокирует танки как обычная стена
+func TestTankWallCollision_WaterBlocksTank(t *testing.T) {
+	blocks := types.MapBlocks{water(120, 96), water(120, 104)}
+	env := newCollisionTestEnv(blocks)
+
+	tank := env.newTank(types.TankRolePlayer1, types.DirectionRight, 96, 96, 0)
+	env.tanksRepo.SetPlayer(types.PlayerTankNumPlayer1, tank)
+
+	for i := 0; i < 40; i++ {
+		_ = env.tankActions.Move(tank)
+		env.tick()
+	}
+
+	if tank.Position.X != 104 {
+		t.Errorf("танк не упёрся в воду: X=%v, ожидалось 104", tank.Position.X)
 	}
 }
 

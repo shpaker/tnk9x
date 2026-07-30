@@ -86,6 +86,7 @@ func (uc *TankActionsUseCases) Move(tank *types.TankEntity) error {
 
 	if tank.State == types.TankStateBraking {
 		if tank.NextDirection == nil {
+			tank.SlideTarget = nil
 			tank.State = types.TankStateMoving
 		}
 		return nil
@@ -130,26 +131,42 @@ func (uc *TankActionsUseCases) ApplyDecision(
 
 func (uc *TankActionsUseCases) SetMinXPosition(tank *types.TankEntity) {
 	tank.Position.X = 0
+	uc.stopSlideAtBoundary(tank)
 }
 
 func (uc *TankActionsUseCases) SetMaxXPosition(tank *types.TankEntity) {
 	mapSizePx := uc.mapUseCases.GetSizePx()
 	maxX := float64(mapSizePx.Width - tank.Size.Width)
 	tank.Position.X = maxX
+	uc.stopSlideAtBoundary(tank)
 }
 
 func (uc *TankActionsUseCases) SetMinYPosition(tank *types.TankEntity) {
 	tank.Position.Y = 0
+	uc.stopSlideAtBoundary(tank)
 }
 
 func (uc *TankActionsUseCases) SetMaxYPosition(tank *types.TankEntity) {
 	mapSizePx := uc.mapUseCases.GetSizePx()
 	maxY := float64(mapSizePx.Height - tank.Size.Height)
 	tank.Position.Y = maxY
+	uc.stopSlideAtBoundary(tank)
+}
+
+// stopSlideAtBoundary прерывает скольжение у края карты: танк клампится
+// каждый тик, зафиксированная цель недостижима — без сброса он навсегда
+// останется в состоянии торможения
+func (uc *TankActionsUseCases) stopSlideAtBoundary(tank *types.TankEntity) {
+	if tank.SlideTarget == nil {
+		return
+	}
+	tank.SlideTarget = nil
+	tank.State = types.TankStateStopped
 }
 
 func (uc *TankActionsUseCases) handleStopByCollision(tank *types.TankEntity) {
 	// Позиция уже разрешена коллизией (вплотную/откат) — округление
 	// сдвигало бы танк с места контакта и порождало дрожание
+	tank.SlideTarget = nil
 	tank.State = types.TankStateStopped
 }

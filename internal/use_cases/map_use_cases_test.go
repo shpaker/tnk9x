@@ -113,6 +113,31 @@ func TestMapUseCases_GetRandomBonusSpawnPosition(t *testing.T) {
 	}
 }
 
+func TestMapUseCases_IsIceAt(t *testing.T) {
+	ice := types.NewBlockEntity("ice", 16, 16, 8, &stubImageProvider{})
+	mapUC := use_cases.NewMapUseCases(types.NewMapEntity(
+		types.Size{Width: 208, Height: 208},
+		types.MapBlocks{brick(0, 0), ice},
+		nil,
+	))
+
+	if !mapUC.IsIceAt(types.Position{X: 20, Y: 20}) {
+		t.Error("точка внутри льда: ожидалось true")
+	}
+	if !mapUC.IsIceAt(types.Position{X: 16, Y: 16}) {
+		t.Error("левая/верхняя граница включительно: ожидалось true")
+	}
+	if mapUC.IsIceAt(types.Position{X: 24, Y: 20}) {
+		t.Error("правая граница исключительно: ожидалось false")
+	}
+	if mapUC.IsIceAt(types.Position{X: 4, Y: 4}) {
+		t.Error("кирпич не лёд: ожидалось false")
+	}
+	if use_cases.NewMapUseCases(nil).IsIceAt(types.Position{X: 20, Y: 20}) {
+		t.Error("без карты: ожидалось false")
+	}
+}
+
 // Без карты use case возвращает нейтральные значения
 func TestMapUseCases_NilMapEntity(t *testing.T) {
 	mapUC := use_cases.NewMapUseCases(nil)

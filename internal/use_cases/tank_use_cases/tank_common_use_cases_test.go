@@ -25,6 +25,7 @@ func newCommonTestEnv() *commonTestEnv {
 		&stubRenderUseCases{},
 		tanksRepo,
 		specsUC,
+		use_cases.NewMapUseCases(nil),
 	)
 
 	return &commonTestEnv{
@@ -202,6 +203,51 @@ func TestTankCommonUseCases_Update_BrakingPartialStep(t *testing.T) {
 	}
 	if tank.State != types.TankStateBraking {
 		t.Errorf("состояние %v, ожидалось Braking", tank.State)
+	}
+}
+
+// Торможение на льду: танк доскальзывает +4px за обычной точкой остановки
+func TestTankCommonUseCases_Update_BrakingSlidesOnIce(t *testing.T) {
+	tanksRepo := game.NewTanksRepository()
+	specsUC := use_cases.NewSpecsUseCases()
+
+	// Лёд (104,104)-(112,112) накрывает центр танка (109,108)
+	ice := types.NewBlockEntity("ice", 104, 104, 8, nil)
+	mapEntity := types.NewMapEntity(
+		types.Size{Width: 208, Height: 208},
+		types.MapBlocks{ice},
+		nil,
+	)
+	common := tank_use_cases.NewTankCommonUseCases(
+		services.NewTankBrakingService(),
+		&stubRenderUseCases{},
+		tanksRepo,
+		specsUC,
+		use_cases.NewMapUseCases(mapEntity),
+	)
+
+	tankValue := types.NewDefaultTankEntity(
+		types.TankRolePlayer1,
+		types.DirectionRight,
+	)
+	tank := &tankValue
+	tank.Position = types.Position{X: 101, Y: 100}
+	tank.State = types.TankStateBraking
+	tank.SetSpecs(specsUC.GetTankSpecs(false, 0))
+
+	if err := common.Update(tank, 1.0); err != nil {
+		t.Fatalf("обновление: %v", err)
+	}
+
+	// Обычная остановка на 104, на льду — 108
+	if tank.Position.X != 108 {
+		t.Errorf("X = %v, ожидалось 108", tank.Position.X)
+	}
+	if tank.State != types.TankStateStopped {
+		t.Errorf("состояние %v, ожидалось Stopped", tank.State)
+	}
+	if tank.SlideTarget != nil {
+		t.Errorf("SlideTarget не сброшен: %v", *tank.SlideTarget)
 	}
 }
 

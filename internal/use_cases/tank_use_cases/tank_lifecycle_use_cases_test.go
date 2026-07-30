@@ -122,6 +122,7 @@ func newLifecycleTestEnv() *lifecycleTestEnv {
 		render,
 		tanksRepo,
 		specs,
+		use_cases.NewMapUseCases(nil),
 	)
 	spawnCollision := &stubSpawnCollisionService{}
 	lifecycle := tank_use_cases.NewTankLifecycleUseCases(
