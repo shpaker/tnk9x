@@ -14,8 +14,9 @@ func RequiredSprites() types.SpriteManifest {
 			types.TilesetTypeBonuses: bonusSpriteIDs(),
 		},
 		Animations: map[types.TilesetType][]string{
-			types.TilesetTypeSpawner:   {"spawner"},
-			types.TilesetTypeExplosion: {"explosion_tank"},
+			types.TilesetTypeSpawner:         {"spawner"},
+			types.TilesetTypeExplosion:       {"explosion_tank"},
+			types.TilesetTypeBulletExplosion: {"bullet_explosion"},
 			types.TilesetTypePlayer: tankAnimationIDs(
 				types.TankRolePlayer1,
 				types.TankRolePlayer2,

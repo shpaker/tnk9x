@@ -33,6 +33,13 @@ func (uc *MapUseCases) RemoveBlock(block *types.BlockEntity) error {
 	return uc.mapEntity.RemoveBlock(block)
 }
 
+func (uc *MapUseCases) AddBlock(block *types.BlockEntity) {
+	if uc.mapEntity == nil || block == nil {
+		return
+	}
+	uc.mapEntity.AddBlock(block)
+}
+
 func (uc *MapUseCases) GetSizePx() types.Size {
 	if uc.mapEntity == nil {
 		return types.Size{}

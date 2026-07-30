@@ -368,8 +368,8 @@ func TestTankCommonUseCases_LevelUpDownClamping(t *testing.T) {
 	if got := tank.GetSpecs().GetLevel(); got != 3 {
 		t.Errorf("уровень после повышений: %d, ожидалось 3", got)
 	}
-	if got := tank.GetSpecs().GetSpeed(); got != 40.0 {
-		t.Errorf("скорость игрока 3 уровня: %v, ожидалось 40", got)
+	if !tank.GetSpecs().GetBulletsReinforced() {
+		t.Error("пули игрока 3 уровня не усиленные")
 	}
 
 	for i := 0; i < 5; i++ {

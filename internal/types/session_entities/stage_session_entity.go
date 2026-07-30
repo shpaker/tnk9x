@@ -6,53 +6,63 @@ import (
 
 const (
 	defaultStageRespawnDelay = 3 * 60
-	defaultStagePlayer1Lives = 3
-	defaultStagePlayer2Lives = 3
+
+	// defaultMaxActiveEnemies — канонический лимит NES: не более 4
+	// врагов на экране одновременно
+	defaultMaxActiveEnemies = 4
 )
 
+// StageSessionEntity — состояние одного этапа: счётчики спавна и
+// уничтожения врагов, пауза. Данные забега (жизни, очки, звёзды,
+// номер этапа) делегируются RunSessionEntity и переживают этап.
 type StageSessionEntity struct {
+	run *RunSessionEntity
+
 	totalEnemies     uint
 	spawnedEnemies   uint
 	destroyedEnemies uint
 
+	// enemyQueue — уровни врагов волны этапа в порядке спавна
+	enemyQueue []uint
+
 	// Танки, уже учтённые счётчиком destroyedEnemies
 	countedDestroyedEnemies map[*types.TankEntity]struct{}
-
-	playerLives        []uint
-	playerInitialLives []uint
 
 	enemyRespawnDelay uint
 	enemySpawnTicks   uint
 
 	maxActiveEnemies uint
 
-	playerCount uint
+	// enemyFreezeTicks — оставшееся время заморозки врагов (бонус «таймер»)
+	enemyFreezeTicks uint
 
-	stageNumber uint
+	// shovelTicks — оставшееся время стального кольца вокруг штаба
+	shovelTicks uint
+
+	// stageTicks — время с начала этапа; определяет фазу AI врагов
+	stageTicks uint
 
 	isPaused bool
 }
 
-func NewStageSessionEntity() *StageSessionEntity {
-	playerLives := make([]uint, 2)
-	playerInitialLives := make([]uint, 2)
-
-	playerLives[types.PlayerTankNumPlayer1] = defaultStagePlayer1Lives
-	playerInitialLives[types.PlayerTankNumPlayer1] = defaultStagePlayer1Lives
-	playerLives[types.PlayerTankNumPlayer2] = defaultStagePlayer2Lives
-	playerInitialLives[types.PlayerTankNumPlayer2] = defaultStagePlayer2Lives
+func NewStageSessionEntity(run *RunSessionEntity) *StageSessionEntity {
+	if run == nil {
+		run = NewRunSessionEntity()
+	}
 
 	return &StageSessionEntity{
+		run:                     run,
 		totalEnemies:            20,
 		destroyedEnemies:        0,
 		countedDestroyedEnemies: make(map[*types.TankEntity]struct{}),
-		playerLives:             playerLives,
-		playerInitialLives:      playerInitialLives,
 		enemyRespawnDelay:       defaultStageRespawnDelay,
 		enemySpawnTicks:         defaultStageRespawnDelay,
-		maxActiveEnemies:        5,
-		playerCount:             1,
+		maxActiveEnemies:        defaultMaxActiveEnemies,
 	}
+}
+
+func (s *StageSessionEntity) RunSession() *RunSessionEntity {
+	return s.run
 }
 
 func (s *StageSessionEntity) AreAllEnemiesDefeated() bool {
@@ -108,68 +118,96 @@ func (s *StageSessionEntity) EnemiesForSpawnCount() uint {
 	return s.totalEnemies - s.spawnedEnemies
 }
 
-func (s *StageSessionEntity) Reset() {
+// SetEnemyQueue задаёт состав волны этапа;
+// размер волны определяет totalEnemies
+func (s *StageSessionEntity) SetEnemyQueue(tiers []uint) {
+	s.enemyQueue = append([]uint(nil), tiers...)
+	if len(s.enemyQueue) > 0 {
+		s.totalEnemies = uint(len(s.enemyQueue))
+	}
+}
+
+// NextEnemyTier — уровень следующего врага по очереди волны
+func (s *StageSessionEntity) NextEnemyTier() uint {
+	if int(s.spawnedEnemies) < len(s.enemyQueue) {
+		return s.enemyQueue[s.spawnedEnemies]
+	}
+	return 0
+}
+
+// NextEnemySpawnIndex — порядковый номер следующего спавна (0-based);
+// точки спавна перебираются по нему циклически
+func (s *StageSessionEntity) NextEnemySpawnIndex() uint {
+	return s.spawnedEnemies
+}
+
+// ResetStage готовит сессию к новому этапу: счётчики спавна, пауза и
+// пер-этапные итоги очищаются; жизни и очки забега не трогаются
+func (s *StageSessionEntity) ResetStage() {
 	s.spawnedEnemies = 0
 	s.destroyedEnemies = 0
 	s.isPaused = false
+	s.enemyFreezeTicks = 0
+	s.shovelTicks = 0
+	s.stageTicks = 0
 	s.ClearDestroyedEnemiesTracking()
-
-	playerCount := int(s.GetPlayerCount())
-	if playerCount < 1 {
-		playerCount = 1
-	}
-	if playerCount > 2 {
-		playerCount = 2
-	}
-	for i := 0; i < playerCount; i++ {
-		s.playerLives[i] = s.GetPlayerInitialLives(types.PlayerTankNum(i))
-	}
+	s.run.ResetStageTallies()
 	s.ResetEnemySpawnCountdown()
 }
 
-func (s *StageSessionEntity) GetPlayerLives(num types.PlayerTankNum) uint {
-	if int(num) >= 0 && int(num) < len(s.playerLives) {
-		return s.playerLives[num]
+func (s *StageSessionEntity) SetEnemyFreezeTicks(ticks uint) {
+	s.enemyFreezeTicks = ticks
+}
+
+func (s *StageSessionEntity) AreEnemiesFrozen() bool {
+	return s.enemyFreezeTicks > 0
+}
+
+func (s *StageSessionEntity) TickEnemyFreeze() {
+	if s.enemyFreezeTicks > 0 {
+		s.enemyFreezeTicks--
 	}
-	return 0
+}
+
+func (s *StageSessionEntity) IncrementStageTicks() {
+	s.stageTicks++
+}
+
+func (s *StageSessionEntity) GetStageTicks() uint {
+	return s.stageTicks
+}
+
+func (s *StageSessionEntity) SetShovelTicks(ticks uint) {
+	s.shovelTicks = ticks
+}
+
+func (s *StageSessionEntity) GetShovelTicks() uint {
+	return s.shovelTicks
+}
+
+func (s *StageSessionEntity) GetPlayerLives(num types.PlayerTankNum) uint {
+	return s.run.GetPlayerLives(num)
 }
 
 func (s *StageSessionEntity) GetPlayerInitialLives(
 	num types.PlayerTankNum,
 ) uint {
-	if int(num) >= 0 && int(num) < len(s.playerInitialLives) {
-		if s.playerInitialLives[num] == 0 {
-			if num == types.PlayerTankNumPlayer1 {
-				return defaultStagePlayer1Lives
-			} else if num == types.PlayerTankNumPlayer2 {
-				return defaultStagePlayer2Lives
-			}
-		}
-		return s.playerInitialLives[num]
-	}
-	return 0
+	return s.run.GetPlayerInitialLives(num)
 }
 
 func (s *StageSessionEntity) IsPlayerDefeated(num types.PlayerTankNum) bool {
-	return s.GetPlayerLives(num) == 0
+	return s.run.IsPlayerDefeated(num)
 }
 
 func (s *StageSessionEntity) SetPlayerLives(
 	num types.PlayerTankNum,
 	lives uint,
 ) {
-	if int(num) >= 0 && int(num) < len(s.playerLives) {
-		s.playerLives[num] = lives
-	}
+	s.run.SetPlayerLives(num, lives)
 }
 
 func (s *StageSessionEntity) DecrementPlayerLives(num types.PlayerTankNum) {
-	if int(num) >= 0 && int(num) < len(s.playerLives) {
-		if s.playerLives[num] == 0 {
-			return
-		}
-		s.playerLives[num]--
-	}
+	s.run.DecrementPlayerLives(num)
 }
 
 func (s *StageSessionEntity) RegisterEnemySpawned() {
@@ -220,8 +258,8 @@ func (s *StageSessionEntity) GetMaxActiveEnemies() uint {
 }
 
 func (s *StageSessionEntity) SetMaxActiveEnemies(value uint) {
-	if value < 3 {
-		value = 3
+	if value < 1 {
+		value = defaultMaxActiveEnemies
 	}
 	if value > 10 {
 		value = 10
@@ -230,33 +268,17 @@ func (s *StageSessionEntity) SetMaxActiveEnemies(value uint) {
 }
 
 func (s *StageSessionEntity) GetPlayerCount() uint {
-	return s.playerCount
+	return s.run.GetPlayerCount()
 }
 
 func (s *StageSessionEntity) GetStageNumber() uint {
-	return s.stageNumber
+	return s.run.GetStage()
 }
 
 func (s *StageSessionEntity) SetStageNumber(number uint) {
-	s.stageNumber = number
+	s.run.SetStage(number)
 }
 
 func (s *StageSessionEntity) SetPlayerCount(count uint) {
-	if count < 1 {
-		count = 1
-	}
-	if count > 2 {
-		count = 2
-	}
-	s.playerCount = count
-
-	if count == 1 {
-		s.playerLives[types.PlayerTankNumPlayer2] = 0
-		s.playerInitialLives[types.PlayerTankNumPlayer2] = 0
-	} else {
-		if s.playerInitialLives[types.PlayerTankNumPlayer2] == 0 {
-			s.playerLives[types.PlayerTankNumPlayer2] = defaultStagePlayer2Lives
-			s.playerInitialLives[types.PlayerTankNumPlayer2] = defaultStagePlayer2Lives
-		}
-	}
+	s.run.SetPlayerCount(count)
 }

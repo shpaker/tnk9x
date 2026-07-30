@@ -55,6 +55,7 @@ type App struct {
 	tilesetRegistry   interfaces.ITilesetRepositoryRegistry
 	spriteCache       *stage.SpriteCache
 	mapsRepository    interfaces.IMapsDataRepository
+	wavesRepository   interfaces.IWavesRepository
 	scriptsRepository interfaces.IScriptsRepository
 	soundsRepository  interfaces.ISoundsRepository
 	textFace          text.Face
@@ -154,6 +155,7 @@ func New(cfg *Config) *App {
 		tilesetRegistry:   tilesetRegistry,
 		spriteCache:       spriteCache,
 		mapsRepository:    mapsRepository,
+		wavesRepository:   processed.NewWavesRepository(fileRepository),
 		scriptsRepository: scriptsRepository,
 		soundsRepository:  soundsRepository,
 		textFace:          textFace,
@@ -179,12 +181,7 @@ func New(cfg *Config) *App {
 		debugUseCases:      use_cases.NewDebugUseCases(Version),
 	}
 
-	selectState, err := app.newStageSelectState()
-	if err != nil {
-		fmt.Printf("Error creating StageSelectState: %v\n", err)
-		panic(err)
-	}
-	app.state = selectState
+	app.state = app.newTitleState()
 
 	return app
 }
@@ -221,19 +218,38 @@ func (app *App) Update() error {
 }
 
 // applyTransition применяет запрошенный стейтом переход:
-// записывает параметры в сессию и собирает новое состояние
+// записывает параметры в сессию забега и собирает новое состояние
 func (app *App) applyTransition(transition types.StateTransition) error {
 	switch transition.Target {
 	case types.TransitionNone:
 		return nil
+	case types.TransitionToTitle:
+		app.state = app.newTitleState()
+		app.stageState = nil
+	case types.TransitionToCurtain:
+		runSession := app.session.RunSession()
+		if transition.NewRun {
+			runSession.ResetRun(transition.PlayerCount, transition.Level)
+		} else if transition.Level > 0 {
+			runSession.SetStage(transition.Level)
+		}
+
+		curtainState, err := app.newCurtainState(transition.NewRun)
+		if err != nil {
+			return err
+		}
+		app.state = curtainState
+		app.stageState = nil
 	case types.TransitionToStage:
+		if transition.Level > 0 {
+			app.session.RunSession().SetStage(transition.Level)
+		}
 		stageSession := app.session.StageSession()
 		if stageSession != nil {
-			stageSession.SetMaxActiveEnemies(transition.MaxActiveEnemies)
-			stageSession.SetPlayerCount(transition.PlayerCount)
-			stageSession.SetStageNumber(transition.Level)
+			stageSession.SetMaxActiveEnemies(
+				app.config.GetMaxActiveEnemies(),
+			)
 		}
-		app.session.Level = int(transition.Level)
 
 		stageState, err := app.newStageState()
 		if err != nil {
@@ -242,12 +258,15 @@ func (app *App) applyTransition(transition types.StateTransition) error {
 		stageState.SetDebugEnabled(Debug)
 		app.state = stageState
 		app.stageState = stageState
-	case types.TransitionToStageSelect:
-		selectState, err := app.newStageSelectState()
+	case types.TransitionToScore:
+		scoreState, err := app.newScoreState(transition.StageWon)
 		if err != nil {
 			return err
 		}
-		app.state = selectState
+		app.state = scoreState
+		app.stageState = nil
+	case types.TransitionToGameOver:
+		app.state = app.newGameOverState()
 		app.stageState = nil
 	}
 

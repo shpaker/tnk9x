@@ -14,6 +14,7 @@ type fakeScriptEngine struct {
 
 	gotX, gotY              float64
 	gotDirection, gotState  int
+	gotContext              types.EnemyAIContext
 	updateEnemyAICallsCount int
 }
 
@@ -24,10 +25,12 @@ func (e *fakeScriptEngine) SetGlobalNumber(name string, value float64) {}
 func (e *fakeScriptEngine) UpdateEnemyAI(
 	x, y float64,
 	direction, state int,
+	context types.EnemyAIContext,
 ) (types.EnemyAIDecision, error) {
 	e.updateEnemyAICallsCount++
 	e.gotX, e.gotY = x, y
 	e.gotDirection, e.gotState = direction, state
+	e.gotContext = context
 	return e.decision, e.err
 }
 
@@ -37,7 +40,7 @@ func TestAIUseCasesExecuteAINilTank(t *testing.T) {
 	engine := &fakeScriptEngine{}
 	uc := use_cases.NewAIUseCases(engine)
 
-	_, err := uc.ExecuteAI(nil)
+	_, err := uc.ExecuteAI(nil, types.EnemyAIContext{})
 	if err == nil {
 		t.Fatal("expected error for nil tank")
 	}
@@ -59,7 +62,13 @@ func TestAIUseCasesExecuteAIPassesTankData(t *testing.T) {
 	tank.Position = types.Position{X: 48, Y: 96}
 	tank.State = types.TankStateStopped
 
-	decision, err := uc.ExecuteAI(&tank)
+	context := types.EnemyAIContext{
+		Phase:     types.EnemyAIPhaseSiege,
+		TargetX:   104,
+		TargetY:   200,
+		HasTarget: true,
+	}
+	decision, err := uc.ExecuteAI(&tank, context)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -75,6 +84,9 @@ func TestAIUseCasesExecuteAIPassesTankData(t *testing.T) {
 	if engine.gotState != int(types.TankStateStopped) {
 		t.Fatalf("state not passed: %d", engine.gotState)
 	}
+	if engine.gotContext != context {
+		t.Fatalf("context not passed: %+v", engine.gotContext)
+	}
 }
 
 func TestAIUseCasesExecuteAIPropagatesError(t *testing.T) {
@@ -85,7 +97,7 @@ func TestAIUseCasesExecuteAIPropagatesError(t *testing.T) {
 		types.TankRoleEnemy,
 		types.DirectionUp,
 	)
-	if _, err := uc.ExecuteAI(&tank); err == nil {
+	if _, err := uc.ExecuteAI(&tank, types.EnemyAIContext{}); err == nil {
 		t.Fatal("expected engine error to propagate")
 	}
 }

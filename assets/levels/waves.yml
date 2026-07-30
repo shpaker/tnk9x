@@ -1,0 +1,166 @@
+---
+# Состав вражеских волн по этапам, как в NES-версии Battle City.
+# Каждый этап — 20 врагов, группы спавнятся по порядку.
+# Уровни: basic (0), fast (1), power (2), armor (3).
+stages:
+  1:
+    - {tier: basic, count: 18}
+    - {tier: fast, count: 2}
+  2:
+    - {tier: basic, count: 14}
+    - {tier: fast, count: 4}
+    - {tier: armor, count: 2}
+  3:
+    - {tier: basic, count: 14}
+    - {tier: fast, count: 4}
+    - {tier: armor, count: 2}
+  4:
+    - {tier: basic, count: 2}
+    - {tier: fast, count: 5}
+    - {tier: power, count: 10}
+    - {tier: armor, count: 3}
+  5:
+    - {tier: basic, count: 8}
+    - {tier: fast, count: 5}
+    - {tier: power, count: 5}
+    - {tier: armor, count: 2}
+  6:
+    - {tier: basic, count: 9}
+    - {tier: fast, count: 2}
+    - {tier: power, count: 7}
+    - {tier: armor, count: 2}
+  7:
+    - {tier: basic, count: 7}
+    - {tier: fast, count: 4}
+    - {tier: power, count: 6}
+    - {tier: armor, count: 3}
+  8:
+    - {tier: basic, count: 7}
+    - {tier: fast, count: 4}
+    - {tier: power, count: 7}
+    - {tier: armor, count: 2}
+  9:
+    - {tier: basic, count: 6}
+    - {tier: fast, count: 4}
+    - {tier: power, count: 7}
+    - {tier: armor, count: 3}
+  10:
+    - {tier: basic, count: 12}
+    - {tier: fast, count: 2}
+    - {tier: power, count: 4}
+    - {tier: armor, count: 2}
+  11:
+    - {tier: basic, count: 5}
+    - {tier: fast, count: 5}
+    - {tier: power, count: 5}
+    - {tier: armor, count: 5}
+  12:
+    - {tier: fast, count: 6}
+    - {tier: power, count: 8}
+    - {tier: armor, count: 6}
+  13:
+    - {tier: fast, count: 8}
+    - {tier: power, count: 8}
+    - {tier: armor, count: 4}
+  14:
+    - {tier: fast, count: 10}
+    - {tier: power, count: 4}
+    - {tier: armor, count: 6}
+  15:
+    - {tier: fast, count: 2}
+    - {tier: power, count: 10}
+    - {tier: armor, count: 8}
+  16:
+    - {tier: basic, count: 16}
+    - {tier: fast, count: 2}
+    - {tier: armor, count: 2}
+  17:
+    - {tier: basic, count: 8}
+    - {tier: fast, count: 2}
+    - {tier: power, count: 8}
+    - {tier: armor, count: 2}
+  18:
+    - {tier: basic, count: 2}
+    - {tier: fast, count: 8}
+    - {tier: power, count: 6}
+    - {tier: armor, count: 4}
+  19:
+    - {tier: basic, count: 4}
+    - {tier: fast, count: 4}
+    - {tier: power, count: 4}
+    - {tier: armor, count: 8}
+  20:
+    - {tier: basic, count: 2}
+    - {tier: fast, count: 8}
+    - {tier: power, count: 2}
+    - {tier: armor, count: 8}
+  21:
+    - {tier: basic, count: 6}
+    - {tier: fast, count: 2}
+    - {tier: power, count: 8}
+    - {tier: armor, count: 4}
+  22:
+    - {tier: basic, count: 6}
+    - {tier: fast, count: 8}
+    - {tier: power, count: 2}
+    - {tier: armor, count: 4}
+  23:
+    - {tier: fast, count: 10}
+    - {tier: power, count: 4}
+    - {tier: armor, count: 6}
+  24:
+    - {tier: basic, count: 10}
+    - {tier: fast, count: 4}
+    - {tier: power, count: 4}
+    - {tier: armor, count: 2}
+  25:
+    - {tier: fast, count: 8}
+    - {tier: power, count: 2}
+    - {tier: armor, count: 10}
+  26:
+    - {tier: basic, count: 4}
+    - {tier: fast, count: 6}
+    - {tier: power, count: 4}
+    - {tier: armor, count: 6}
+  27:
+    - {tier: basic, count: 2}
+    - {tier: fast, count: 8}
+    - {tier: power, count: 2}
+    - {tier: armor, count: 8}
+  28:
+    - {tier: basic, count: 15}
+    - {tier: fast, count: 2}
+    - {tier: power, count: 2}
+    - {tier: armor, count: 1}
+  29:
+    - {tier: fast, count: 4}
+    - {tier: power, count: 10}
+    - {tier: armor, count: 6}
+  30:
+    - {tier: basic, count: 4}
+    - {tier: fast, count: 8}
+    - {tier: power, count: 4}
+    - {tier: armor, count: 4}
+  31:
+    - {tier: basic, count: 3}
+    - {tier: fast, count: 8}
+    - {tier: power, count: 8}
+    - {tier: armor, count: 1}
+  32:
+    - {tier: basic, count: 6}
+    - {tier: fast, count: 4}
+    - {tier: power, count: 4}
+    - {tier: armor, count: 6}
+  33:
+    - {tier: basic, count: 4}
+    - {tier: fast, count: 4}
+    - {tier: power, count: 4}
+    - {tier: armor, count: 8}
+  34:
+    - {tier: fast, count: 10}
+    - {tier: power, count: 4}
+    - {tier: armor, count: 6}
+  35:
+    - {tier: fast, count: 6}
+    - {tier: power, count: 4}
+    - {tier: armor, count: 10}

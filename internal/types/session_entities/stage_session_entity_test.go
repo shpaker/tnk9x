@@ -66,14 +66,14 @@ func TestStageSessionEntity_IncrementDestroyedEnemies(t *testing.T) {
 }
 
 func TestStageSessionEntity_Player1Lives_Default(t *testing.T) {
-	session := NewStageSessionEntity()
+	session := NewStageSessionEntity(nil)
 
 	if session.GetPlayerLives(
 		types.PlayerTankNumPlayer1,
-	) != defaultStagePlayer1Lives {
+	) != defaultRunPlayerLives {
 		t.Fatalf(
 			"expected default player lives to be %d, got %d",
-			defaultStagePlayer1Lives,
+			defaultRunPlayerLives,
 			session.GetPlayerLives(types.PlayerTankNumPlayer1),
 		)
 	}
@@ -84,17 +84,17 @@ func TestStageSessionEntity_Player1Lives_Default(t *testing.T) {
 
 	if session.GetPlayerInitialLives(
 		types.PlayerTankNumPlayer1,
-	) != defaultStagePlayer1Lives {
+	) != defaultRunPlayerLives {
 		t.Fatalf(
 			"expected initial player lives to be %d, got %d",
-			defaultStagePlayer1Lives,
+			defaultRunPlayerLives,
 			session.GetPlayerInitialLives(types.PlayerTankNumPlayer1),
 		)
 	}
 }
 
 func TestStageSessionEntity_Player1Lives_Decrement(t *testing.T) {
-	session := NewStageSessionEntity()
+	session := NewStageSessionEntity(nil)
 	session.SetPlayerLives(types.PlayerTankNumPlayer1, 1)
 	session.DecrementPlayerLives(types.PlayerTankNumPlayer1)
 	session.DecrementPlayerLives(types.PlayerTankNumPlayer1)
@@ -112,7 +112,7 @@ func TestStageSessionEntity_Player1Lives_Decrement(t *testing.T) {
 }
 
 func TestStageSessionEntity_RemainingEnemies(t *testing.T) {
-	session := NewStageSessionEntity()
+	session := NewStageSessionEntity(nil)
 	session.totalEnemies = 2
 
 	if session.GetRemainingEnemies() != 2 {
@@ -139,9 +139,9 @@ func TestStageSessionEntity_RemainingEnemies(t *testing.T) {
 	}
 }
 
-// Пауза хранится в сессии; Reset снимает её
+// Пауза хранится в сессии; ResetStage снимает её
 func TestStageSessionEntity_Pause(t *testing.T) {
-	session := NewStageSessionEntity()
+	session := NewStageSessionEntity(nil)
 
 	if session.IsPaused() {
 		t.Error("новая сессия не должна быть на паузе")
@@ -152,15 +152,41 @@ func TestStageSessionEntity_Pause(t *testing.T) {
 		t.Error("SetPaused(true) не включил паузу")
 	}
 
-	session.Reset()
+	session.ResetStage()
 	if session.IsPaused() {
-		t.Error("Reset должен снимать паузу")
+		t.Error("ResetStage должен снимать паузу")
+	}
+}
+
+// ResetStage готовит следующий этап, не трогая жизни забега
+func TestStageSessionEntity_ResetStage_KeepsLives(t *testing.T) {
+	run := NewRunSessionEntity()
+	session := NewStageSessionEntity(run)
+
+	session.DecrementPlayerLives(types.PlayerTankNumPlayer1)
+	session.IncrementSpawnedEnemies()
+	session.IncrementDestroyedEnemies()
+
+	session.ResetStage()
+
+	if got := session.GetPlayerLives(types.PlayerTankNumPlayer1); got != defaultRunPlayerLives-1 {
+		t.Errorf(
+			"жизни после ResetStage %d, ожидалось %d",
+			got,
+			defaultRunPlayerLives-1,
+		)
+	}
+	if session.EnemiesForSpawnCount() != session.GetTotalEnemies() {
+		t.Error("счётчик спавна не сброшен")
+	}
+	if session.GetRemainingEnemies() != session.GetTotalEnemies() {
+		t.Error("счётчик уничтоженных не сброшен")
 	}
 }
 
 // Каждый танк учитывается счётчиком уничтоженных ровно один раз
 func TestStageSessionEntity_TrackDestroyedEnemy(t *testing.T) {
-	session := NewStageSessionEntity()
+	session := NewStageSessionEntity(nil)
 	tankValue := types.NewDefaultTankEntity(
 		types.TankRoleEnemy,
 		types.DirectionUp,
@@ -189,9 +215,9 @@ func TestStageSessionEntity_TrackDestroyedEnemy(t *testing.T) {
 		t.Error("после сброса трекинга танк учитывается заново")
 	}
 
-	// Полный Reset обнуляет и счётчик, и трекинг
-	session.Reset()
+	// ResetStage обнуляет и счётчик, и трекинг
+	session.ResetStage()
 	if got := session.GetTotalEnemies() - session.GetRemainingEnemies(); got != 0 {
-		t.Errorf("после Reset уничтожено %d, ожидалось 0", got)
+		t.Errorf("после ResetStage уничтожено %d, ожидалось 0", got)
 	}
 }

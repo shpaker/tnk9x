@@ -129,26 +129,73 @@ function randomAllowedDirection(x, y, currentDirection)
     end
 end
 
--- Основная функция AI
--- Параметры: x, y, direction, state
-function updateEnemyAI(
-    x,        -- Позиция X танка
-    y,        -- Позиция Y танка
-    direction, -- Направление танка
-    state     -- Состояние танка
-)
-    -- В одном из 8 случаев выбираем случайное направление из разрешенных
-    -- Обратное направление в 2 раза реже, чем боковое
-    if math.random(1, 8) == 1 then
-        local newDirection = randomAllowedDirection(x, y, direction)
-        return true, newDirection
+-- Возвращает направления, ведущие к цели
+function directionsToward(x, y, targetX, targetY)
+    local toward = {}
+    if targetY < y then
+        table.insert(toward, DIRECTION_UP)
+    end
+    if targetY > y then
+        table.insert(toward, DIRECTION_DOWN)
+    end
+    if targetX < x then
+        table.insert(toward, DIRECTION_LEFT)
+    end
+    if targetX > x then
+        table.insert(toward, DIRECTION_RIGHT)
+    end
+    return toward
+end
+
+-- Выбор направления со смещением к цели: в половине случаев танк
+-- поворачивает к цели, иначе — обычный случайный выбор
+function biasedDirection(x, y, currentDirection, targetX, targetY)
+    if math.random(1, 2) == 1 then
+        local allowed = getAllowedDirections(x, y)
+        local toward = directionsToward(x, y, targetX, targetY)
+
+        local candidates = {}
+        for i = 1, #toward do
+            if isDirectionAllowed(toward[i], allowed) then
+                table.insert(candidates, toward[i])
+            end
+        end
+
+        if #candidates > 0 then
+            return candidates[math.random(1, #candidates)]
+        end
     end
 
-    -- Иначе возвращаем текущее направление (если оно разрешено)
-    -- Если текущее направление ведет к краю, выбираем другое разрешенное
+    return randomAllowedDirection(x, y, currentDirection)
+end
+
+-- Основная функция AI
+-- Фазы этапа, как в оригинале: 1 — свободный обход со смещением вниз,
+-- 2 — охота на игрока, 3 — атака штаба (цель передаёт движок)
+function updateEnemyAI(
+    x,         -- Позиция X танка
+    y,         -- Позиция Y танка
+    direction, -- Направление танка
+    state,     -- Состояние танка
+    phase,     -- Фаза AI (1-3)
+    targetX,   -- Цель X (игрок или штаб)
+    targetY,   -- Цель Y
+    hasTarget  -- Цель задана движком
+)
+    -- Без цели смещаемся к нижней части карты (к базе игроков)
+    local goalX, goalY = targetX, targetY
+    if not hasTarget then
+        goalX, goalY = x, MAP_HEIGHT_PX
+    end
+
+    -- В одном из 8 случаев выбираем новое направление со смещением к цели
+    if math.random(1, 8) == 1 then
+        return true, biasedDirection(x, y, direction, goalX, goalY)
+    end
+
+    -- Если текущее направление ведет к краю, выбираем другое
     if isNearEdge(x, y, direction) then
-        local newDirection = randomAllowedDirection(x, y, direction)
-        return true, newDirection
+        return true, biasedDirection(x, y, direction, goalX, goalY)
     end
 
     return true, direction

@@ -129,6 +129,23 @@ func (tuc *TilesUseCases) CreateSpawnAnimation() (*image_providers.AnimationProv
 	return animation, nil
 }
 
+func (tuc *TilesUseCases) CreateBulletExplosionAnimation() (*image_providers.AnimationProvider, error) {
+	if tuc.animationsRepository == nil {
+		return nil, fmt.Errorf("animations repository is not configured")
+	}
+
+	animation, err := tuc.tileService.CreateAnimationTileFromTileset(
+		types.TilesetTypeBulletExplosion,
+		"bullet_explosion",
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	tuc.AddAnimation(animation)
+	return animation, nil
+}
+
 func (tuc *TilesUseCases) CreateExplosionAnimation() (*image_providers.AnimationProvider, error) {
 	if tuc.animationsRepository == nil {
 		return nil, fmt.Errorf("animations repository is not configured")

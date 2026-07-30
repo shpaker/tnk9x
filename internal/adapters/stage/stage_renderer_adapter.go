@@ -333,7 +333,36 @@ func (r *StageRendererAdapter) DrawAll(screen *ebiten.Image) {
 
 	r.drawExplosions(screen)
 
+	r.drawImpacts(screen)
+
 	r.drawBlocksByAltitude(screen, types.AIR)
+}
+
+// drawImpacts рисует короткие взрывы пуль
+func (r *StageRendererAdapter) drawImpacts(screen *ebiten.Image) {
+	for _, effect := range r.bulletUseCases.GetImpacts() {
+		if effect == nil || effect.Image == nil {
+			continue
+		}
+
+		imageID, err := effect.Image.GetImageID()
+		if err != nil {
+			continue
+		}
+
+		position := effect.Position
+		if anim, ok := effect.Image.(*image_providers.AnimationProvider); ok {
+			position.X += anim.Offset[0]
+			position.Y += anim.Offset[1]
+		}
+
+		r.drawEntitySprite(
+			screen,
+			types.TilesetTypeBulletExplosion,
+			imageID,
+			position,
+		)
+	}
 }
 
 // Раскладка боковой панели HUD (как в NES Battle City): колонка справа
@@ -496,7 +525,7 @@ func (r *StageRendererAdapter) DrawStageEndOverlay(
 	screen *ebiten.Image,
 	message string,
 ) {
-	r.drawOverlayMessage(screen, message, "press any key to continue")
+	r.drawOverlayMessage(screen, message, "")
 }
 
 func (r *StageRendererAdapter) drawOverlayMessage(

@@ -13,6 +13,14 @@ type IGameRepositoriesRegistry interface {
 	GetTanksRepository() ITanksRepository
 	GetBonusesRepository() IBonusesRepository
 	GetSoundEventsRepository() ISoundEventsRepository
+	GetEffectsRepository() IEffectsRepository
+}
+
+// IEffectsRepository хранит короткоживущие визуальные эффекты
+type IEffectsRepository interface {
+	AddEffect(effect *types.EffectEntity)
+	GetAllEffects() []*types.EffectEntity
+	RemoveEffect(effect *types.EffectEntity)
 }
 
 // ISoundEventsRepository хранит очередь звуковых событий кадра
@@ -43,9 +51,16 @@ type ITanksRepository interface {
 	GetActivePlayerTanks() []*types.TankEntity
 
 	AddEnemy(enemy *types.TankEntity)
+	RemoveEnemy(enemy *types.TankEntity)
 	GetAllEnemies() []*types.TankEntity
 
 	GetAllTanks() []*types.TankEntity
+}
+
+// IWavesRepository — состав вражеских волн по этапам
+type IWavesRepository interface {
+	GetWave(stage int) (types.StageWave, error)
+	GetStages() ([]int, error)
 }
 
 type IBonusesRepository interface {

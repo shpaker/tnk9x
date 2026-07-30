@@ -12,6 +12,7 @@ type GameRepositoriesRegistry struct {
 	tanksRepository       interfaces.ITanksRepository
 	bonusesRepository     interfaces.IBonusesRepository
 	soundEventsRepository interfaces.ISoundEventsRepository
+	effectsRepository     interfaces.IEffectsRepository
 }
 
 func NewGameRepositoriesRegistry() *GameRepositoriesRegistry {
@@ -21,6 +22,7 @@ func NewGameRepositoriesRegistry() *GameRepositoriesRegistry {
 		tanksRepository:       NewTanksRepository(),
 		bonusesRepository:     NewBonusesRepository(),
 		soundEventsRepository: NewSoundEventsRepository(),
+		effectsRepository:     NewEffectsRepository(),
 	}
 }
 
@@ -42,4 +44,8 @@ func (gr *GameRepositoriesRegistry) GetBonusesRepository() interfaces.IBonusesRe
 
 func (gr *GameRepositoriesRegistry) GetSoundEventsRepository() interfaces.ISoundEventsRepository {
 	return gr.soundEventsRepository
+}
+
+func (gr *GameRepositoriesRegistry) GetEffectsRepository() interfaces.IEffectsRepository {
+	return gr.effectsRepository
 }

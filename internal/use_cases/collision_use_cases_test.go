@@ -64,21 +64,25 @@ type stubTankLifecycle struct {
 	exploded []*types.TankEntity
 }
 
-func (s *stubTankLifecycle) OnStageSetUpEnemiesSpawn() ([3]*types.TankEntity, error) {
-	return [3]*types.TankEntity{}, nil
-}
-
-func (s *stubTankLifecycle) SpawnEnemyWithLevel(
-	index *int,
-	ignoreRespawnDelay bool,
-	remainingEnemies uint,
+func (s *stubTankLifecycle) SpawnEnemy(
+	spawnIndex uint,
+	ignoreBlocked bool,
+	level uint,
 ) (*types.TankEntity, error) {
 	return nil, nil
 }
 
-func (s *stubTankLifecycle) SpawnPlayer1() (*types.TankEntity, error) { return nil, nil }
+func (s *stubTankLifecycle) SpawnPlayer1(
+	level uint,
+) (*types.TankEntity, error) {
+	return nil, nil
+}
 
-func (s *stubTankLifecycle) SpawnPlayer2() (*types.TankEntity, error) { return nil, nil }
+func (s *stubTankLifecycle) SpawnPlayer2(
+	level uint,
+) (*types.TankEntity, error) {
+	return nil, nil
+}
 
 func (s *stubTankLifecycle) GetPlayerTank(
 	num types.PlayerTankNum,
@@ -98,6 +102,8 @@ func (s *stubTankLifecycle) Explode(tank *types.TankEntity) error {
 	return nil
 }
 
+func (s *stubTankLifecycle) RemoveEnemy(tank *types.TankEntity) {}
+
 func (s *stubTankLifecycle) UpdateAllTanksLifecycle() error { return nil }
 
 type stubMapUseCases struct {
@@ -108,6 +114,10 @@ func (s *stubMapUseCases) GetBlocks() types.MapBlocks { return s.mapEntity.GetBl
 
 func (s *stubMapUseCases) RemoveBlock(block *types.BlockEntity) error {
 	return s.mapEntity.RemoveBlock(block)
+}
+
+func (s *stubMapUseCases) AddBlock(block *types.BlockEntity) {
+	s.mapEntity.AddBlock(block)
 }
 
 func (s *stubMapUseCases) GetSizePx() types.Size { return s.mapEntity.GetSizePx() }
@@ -153,7 +163,7 @@ func newCollisionTestEnv(blocks types.MapBlocks) *collisionTestEnv {
 	render := &stubRenderUseCases{}
 	soundUC := use_cases.NewSoundUseCases(game.NewSoundEventsRepository())
 
-	bulletUC := use_cases.NewBulletUseCases(bulletsRepo, nil, 16)
+	bulletUC := use_cases.NewBulletUseCases(bulletsRepo, nil, nil, 16)
 	tankCommon := tank_use_cases.NewTankCommonUseCases(
 		braking,
 		render,
@@ -670,5 +680,246 @@ func TestBulletWallCollision_NoPhantomHitOnDestroyedBrick(t *testing.T) {
 	}
 	if remaining[0] != trailing {
 		t.Errorf("выжила не та пуля")
+	}
+}
+
+// makeBullet создаёт пулю в точке с владельцем для тестов правил боя
+func makeBullet(
+	env *collisionTestEnv,
+	x, y float64,
+	owner *types.TankEntity,
+) *types.BulletEntity {
+	bullet := types.NewBulletEntity(
+		types.Position{X: x, Y: y},
+		types.Size{Width: 4, Height: 4},
+		types.SURFACE,
+		&stubImageProvider{},
+		types.DirectionUp,
+		owner.GetSpecs(),
+		owner,
+	)
+	if err := env.bulletsRepo.AddBullet(bullet); err != nil {
+		panic(err)
+	}
+	return bullet
+}
+
+// Вражеская пуля убивает игрока независимо от уровня звёзд
+func TestBulletTankCollision_EnemyBulletKillsLeveledPlayer(t *testing.T) {
+	env := newCollisionTestEnv(nil)
+
+	player := env.newTank(types.TankRolePlayer1, types.DirectionUp, 64, 64, 2)
+	env.tanksRepo.SetPlayer(types.PlayerTankNumPlayer1, player)
+	enemy := env.newTank(types.TankRoleEnemy, types.DirectionDown, 160, 160, 0)
+	env.tanksRepo.AddEnemy(enemy)
+
+	makeBullet(env, 70, 70, enemy)
+	env.collision.UpdateCollisions()
+
+	if len(env.lifecycle.exploded) != 1 || env.lifecycle.exploded[0] != player {
+		t.Errorf("игрок не взорван: %v", env.lifecycle.exploded)
+	}
+	if got := player.GetSpecs().GetLevel(); got != 2 {
+		t.Errorf("уровень изменился: %d, понижение уровня отменено", got)
+	}
+}
+
+// Щит поглощает вражескую пулю без урона
+func TestBulletTankCollision_ShieldAbsorbsBullet(t *testing.T) {
+	env := newCollisionTestEnv(nil)
+
+	player := env.newTank(types.TankRolePlayer1, types.DirectionUp, 64, 64, 0)
+	player.SetShieldTicks(60)
+	env.tanksRepo.SetPlayer(types.PlayerTankNumPlayer1, player)
+	enemy := env.newTank(types.TankRoleEnemy, types.DirectionDown, 160, 160, 0)
+	env.tanksRepo.AddEnemy(enemy)
+
+	makeBullet(env, 70, 70, enemy)
+	env.collision.UpdateCollisions()
+
+	if len(env.lifecycle.exploded) != 0 {
+		t.Errorf("игрок под щитом взорван: %v", env.lifecycle.exploded)
+	}
+	if got := len(env.bulletUC.GetBullets()); got != 0 {
+		t.Errorf("пуля не поглощена щитом: %d", got)
+	}
+}
+
+// Дружественный огонь: союзник замирает без урона
+func TestBulletTankCollision_FriendlyFireFreezes(t *testing.T) {
+	env := newCollisionTestEnv(nil)
+
+	player1 := env.newTank(
+		types.TankRolePlayer1,
+		types.DirectionUp,
+		160,
+		160,
+		0,
+	)
+	player2 := env.newTank(types.TankRolePlayer2, types.DirectionUp, 64, 64, 0)
+	env.tanksRepo.SetPlayer(types.PlayerTankNumPlayer1, player1)
+	env.tanksRepo.SetPlayer(types.PlayerTankNumPlayer2, player2)
+
+	makeBullet(env, 70, 70, player1)
+	env.collision.UpdateCollisions()
+
+	if len(env.lifecycle.exploded) != 0 {
+		t.Errorf("союзник взорван: %v", env.lifecycle.exploded)
+	}
+	if !player2.IsFrozen() {
+		t.Error("союзник не заморожен после дружественного попадания")
+	}
+	if got := len(env.bulletUC.GetBullets()); got != 0 {
+		t.Errorf("пуля не удалена: %d", got)
+	}
+}
+
+// Пули врагов проходят сквозь друг друга; пара игрок-враг гасится
+func TestBulletBulletCollision_EnemyPairPassesThrough(t *testing.T) {
+	env := newCollisionTestEnv(nil)
+
+	enemy1 := env.newTank(types.TankRoleEnemy, types.DirectionDown, 0, 0, 0)
+	enemy2 := env.newTank(types.TankRoleEnemy, types.DirectionUp, 32, 0, 0)
+	env.tanksRepo.AddEnemy(enemy1)
+	env.tanksRepo.AddEnemy(enemy2)
+
+	makeBullet(env, 100, 100, enemy1)
+	makeBullet(env, 102, 100, enemy2)
+	env.collision.UpdateCollisions()
+
+	if got := len(env.bulletUC.GetBullets()); got != 2 {
+		t.Fatalf("вражеские пули погасили друг друга: осталось %d", got)
+	}
+
+	// Пуля игрока гасит вражескую (и наоборот)
+	player := env.newTank(types.TankRolePlayer1, types.DirectionUp, 64, 192, 0)
+	env.tanksRepo.SetPlayer(types.PlayerTankNumPlayer1, player)
+	makeBullet(env, 101, 100, player)
+	env.collision.UpdateCollisions()
+
+	if got := len(env.bulletUC.GetBullets()); got != 1 {
+		t.Errorf("после пары игрок-враг осталось %d пуль, ожидалась 1", got)
+	}
+}
+
+// makeDirectedBullet — пуля с явным направлением для проверки полос
+func makeDirectedBullet(
+	env *collisionTestEnv,
+	x, y float64,
+	direction types.Direction,
+	owner *types.TankEntity,
+) *types.BulletEntity {
+	bullet := types.NewBulletEntity(
+		types.Position{X: x, Y: y},
+		types.Size{Width: 4, Height: 4},
+		types.SURFACE,
+		&stubImageProvider{},
+		direction,
+		owner.GetSpecs(),
+		owner,
+	)
+	if err := env.bulletsRepo.AddBullet(bullet); err != nil {
+		panic(err)
+	}
+	return bullet
+}
+
+// Обычная пуля срезает полосу кирпича 16px шириной и 8px глубиной:
+// клетка 16x16 пробивается насквозь за два выстрела
+func TestBulletWallCollision_BrickStrip(t *testing.T) {
+	// Клетка кирпича 16x16 (по сетке клеток) из четырёх тайлов 8x8
+	blocks := types.MapBlocks{
+		brick(112, 96),
+		brick(120, 96),
+		brick(112, 104),
+		brick(120, 104),
+	}
+	env := newCollisionTestEnv(blocks)
+	shooter := env.newTank(
+		types.TankRolePlayer1,
+		types.DirectionRight,
+		0,
+		96,
+		0,
+	)
+	env.tanksRepo.SetPlayer(types.PlayerTankNumPlayer1, shooter)
+
+	// Пуля летит вправо и попадает в левую колонку клетки
+	makeDirectedBullet(env, 110, 98, types.DirectionRight, shooter)
+	env.collision.UpdateCollisions()
+
+	remaining := env.mapEntity.GetBlocks()
+	if len(remaining) != 2 {
+		t.Fatalf(
+			"после выстрела осталось %d тайлов, ожидалось 2",
+			len(remaining),
+		)
+	}
+	for _, block := range remaining {
+		if block.GetPosition().X != 120 {
+			t.Errorf(
+				"снята не та колонка: остался тайл %v",
+				block.GetPosition(),
+			)
+		}
+	}
+
+	// Второй выстрел пробивает клетку насквозь
+	makeDirectedBullet(env, 118, 98, types.DirectionRight, shooter)
+	env.collision.UpdateCollisions()
+
+	if got := len(env.mapEntity.GetBlocks()); got != 0 {
+		t.Errorf("после второго выстрела осталось %d тайлов", got)
+	}
+}
+
+// Усиленная пуля сносит кирпичную клетку насквозь одним выстрелом
+// и разрушает сталь полосой
+func TestBulletWallCollision_ReinforcedFullCellAndSteel(t *testing.T) {
+	steel := func(x, y float64) *types.BlockEntity {
+		return types.NewBlockEntity("steel", x, y, 8, &stubImageProvider{})
+	}
+	blocks := types.MapBlocks{
+		brick(112, 96),
+		brick(120, 96),
+		brick(112, 104),
+		brick(120, 104),
+		steel(112, 144),
+		steel(120, 144),
+	}
+	env := newCollisionTestEnv(blocks)
+	// Уровень 3: усиленные пули
+	shooter := env.newTank(
+		types.TankRolePlayer1,
+		types.DirectionRight,
+		0,
+		96,
+		3,
+	)
+	env.tanksRepo.SetPlayer(types.PlayerTankNumPlayer1, shooter)
+
+	makeDirectedBullet(env, 110, 98, types.DirectionRight, shooter)
+	env.collision.UpdateCollisions()
+
+	for _, block := range env.mapEntity.GetBlocks() {
+		if block.Data.Name == types.Brick {
+			t.Errorf(
+				"кирпич уцелел после усиленной пули: %v",
+				block.GetPosition(),
+			)
+		}
+	}
+
+	// Сталь: пуля сверху снимает горизонтальную пару
+	makeDirectedBullet(env, 114, 142, types.DirectionDown, shooter)
+	env.collision.UpdateCollisions()
+
+	for _, block := range env.mapEntity.GetBlocks() {
+		if block.Data.Name == types.Steel {
+			t.Errorf(
+				"сталь уцелела после усиленной пули: %v",
+				block.GetPosition(),
+			)
+		}
 	}
 }

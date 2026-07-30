@@ -38,6 +38,8 @@ func (uc *TankCommonUseCases) Update(tank *types.TankEntity, dt float64) error {
 		return errors.New("tank is not active")
 	}
 
+	tank.TickStatusEffects()
+
 	uc.renderUseCases.SyncTankAnimationWithState(tank)
 
 	tank.PrevPosition = tank.Position

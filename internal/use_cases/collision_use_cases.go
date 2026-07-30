@@ -1,6 +1,8 @@
 package use_cases
 
 import (
+	"math"
+
 	"github.com/shpaker/tnk9x/internal/interfaces"
 	"github.com/shpaker/tnk9x/internal/types"
 )
@@ -101,6 +103,7 @@ func (uc *CollisionUseCases) checkBulletsCollisions(
 		if uc.checkBulletBoundaryCollision(bullet) ||
 			uc.checkBulletHQCollision(bullet, hq) ||
 			uc.checkBulletWallCollision(bullet) {
+			uc.bulletUseCases.SpawnImpact(bullet)
 			_ = uc.bulletUseCases.RemoveBullet(bullet)
 			bullets = uc.bulletUseCases.GetBullets()
 			index--
@@ -128,8 +131,21 @@ func (uc *CollisionUseCases) checkBulletBulletCollision(
 		return false
 	}
 
+	// Пули врагов проходят сквозь друг друга; гасятся только пары
+	// с участием пули игрока
+	firstOwner := first.GetOwner()
+	secondOwner := second.GetOwner()
+	if firstOwner != nil && secondOwner != nil &&
+		firstOwner.IsEnemy() && secondOwner.IsEnemy() {
+		return false
+	}
+
 	return uc.entitiesCollisionService.CheckColliders(first, second)
 }
+
+// friendlyFireFreezeTicks — заморозка союзника после дружественного
+// попадания (~3 секунды при 60 TPS)
+const friendlyFireFreezeTicks = 180
 
 func (uc *CollisionUseCases) checkTankBulletCollisions(
 	tank *types.TankEntity,
@@ -143,38 +159,53 @@ func (uc *CollisionUseCases) checkTankBulletCollisions(
 			bullet,
 			tank,
 		) {
+			uc.bulletUseCases.SpawnImpact(bullet)
 			_ = uc.bulletUseCases.RemoveBullet(bullet)
 			if tank.IsActive() {
-				// Для игроков понижаем уровень вместо взрыва
 				if !tank.IsEnemy() {
-					currentLevel := uint(0)
-					if tank.GetSpecs() != nil {
-						currentLevel = tank.GetSpecs().GetLevel()
+					// Щит поглощает пулю без урона
+					if tank.HasShield() {
+						return
 					}
 
-					if currentLevel > 0 {
-						// Понижаем уровень
-						uc.tankCommonUseCases.LevelDown(tank)
-						uc.soundUseCases.RequestSound(
-							types.SoundIDExplosion,
-							false,
-						)
-					} else {
-						// Уровень уже минимальный - взрываем танк
-						// Жизни будут уменьшены при респавне в TryRespawnPlayersTanks()
-						uc.soundUseCases.RequestSound(
-							types.SoundIDExplosion,
-							false,
-						)
-						_ = uc.tankLifecycleUseCases.Explode(tank)
+					// Дружественный огонь: союзник временно замирает,
+					// урона нет, как в оригинале
+					if owner := bullet.GetOwner(); owner != nil &&
+						!owner.IsEnemy() {
+						tank.SetFrozenTicks(friendlyFireFreezeTicks)
+						uc.tankActions.Stop(tank, true)
+						return
 					}
+
+					// Попадание врага — гибель танка независимо от
+					// уровня; жизни спишутся при респавне
+					uc.soundUseCases.RequestSound(
+						types.SoundIDExplosion,
+						false,
+					)
+					_ = uc.tankLifecycleUseCases.Explode(tank)
 				} else {
+					// Первое попадание по мигающему танку роняет бонус
+					// на поле, мигание прекращается
+					if tank.GetWithBonus() {
+						tank.SetWithBonus(false)
+						if uc.bonusUseCases != nil {
+							uc.bonusUseCases.SpawnBonusOnField()
+						}
+					}
+
 					// Для врагов проверяем здоровье
 					// Тяжёлый танк (уровень 3) требует несколько попаданий
 					currentHitPoints := tank.GetHitPoints()
 
 					// Если здоровье уже 1 или меньше, взрываем сразу
 					if currentHitPoints <= 1 {
+						// Запоминаем автора добивающего выстрела
+						// для начисления очков
+						if owner := bullet.GetOwner(); owner != nil &&
+							!owner.IsEnemy() {
+							tank.SetDestroyedBy(owner.GetRole())
+						}
 						uc.soundUseCases.RequestSound(
 							types.SoundIDExplosion,
 							false,
@@ -334,12 +365,18 @@ func (uc *CollisionUseCases) checkBulletWallCollision(
 
 			if block.Data != nil {
 				if block.Data.Name == types.Brick {
-					_ = uc.mapUseCases.RemoveBlock(block)
+					// Выстрел срезает полосу шириной в клетку 16px;
+					// усиленная пуля пробивает клетку насквозь
+					uc.destroyBlockStrip(
+						bullet,
+						block,
+						bullet.IsReinforced(),
+					)
 					uc.soundUseCases.RequestSound(types.SoundIDBrick, false)
 				} else if block.Data.Name == types.Steel {
 					if bullet.IsReinforced() {
-						// Усиленные пули могут ломать стальные блоки
-						_ = uc.mapUseCases.RemoveBlock(block)
+						// Усиленные пули срезают сталь той же полосой
+						uc.destroyBlockStrip(bullet, block, false)
 					}
 					uc.soundUseCases.RequestSound(types.SoundIDSteel, false)
 				}
@@ -350,6 +387,99 @@ func (uc *CollisionUseCases) checkBulletWallCollision(
 	}
 
 	return false
+}
+
+// destroyBlockStrip удаляет блоки полосы шириной в полную клетку 16px
+// перпендикулярно полёту пули; fullCell дополнительно снимает вторую
+// половину клетки по оси полёта (сквозное пробитие)
+func (uc *CollisionUseCases) destroyBlockStrip(
+	bullet *types.BulletEntity,
+	block *types.BlockEntity,
+	fullCell bool,
+) {
+	if block.Data == nil {
+		return
+	}
+	blockType := block.Data.Name
+
+	for _, position := range stripPositions(bullet, block, fullCell) {
+		if target := uc.blockOfTypeAt(position, blockType); target != nil {
+			_ = uc.mapUseCases.RemoveBlock(target)
+		}
+	}
+}
+
+// stripPositions возвращает координаты 8px-тайлов, снимаемых выстрелом:
+// пара тайлов клетки поперёк полёта, при fullCell — вся клетка 16x16
+func stripPositions(
+	bullet *types.BulletEntity,
+	block *types.BlockEntity,
+	fullCell bool,
+) []types.Position {
+	blockPosition := block.GetPosition()
+	tileSize := float64(block.GetSize().Width)
+	cellSize := tileSize * 2
+
+	// Вторая координата тайла внутри клетки 16px по указанной оси
+	cellNeighbor := func(coordinate float64) float64 {
+		cellStart := math.Floor(coordinate/cellSize) * cellSize
+		if coordinate == cellStart {
+			return cellStart + tileSize
+		}
+		return cellStart
+	}
+
+	horizontalStrip := bullet.Direction == types.DirectionUp ||
+		bullet.Direction == types.DirectionDown
+
+	positions := []types.Position{blockPosition}
+	if horizontalStrip {
+		positions = append(positions, types.Position{
+			X: cellNeighbor(blockPosition.X),
+			Y: blockPosition.Y,
+		})
+	} else {
+		positions = append(positions, types.Position{
+			X: blockPosition.X,
+			Y: cellNeighbor(blockPosition.Y),
+		})
+	}
+
+	if !fullCell {
+		return positions
+	}
+
+	// Вторая половина клетки по оси полёта
+	depth := len(positions)
+	for i := 0; i < depth; i++ {
+		position := positions[i]
+		if horizontalStrip {
+			position.Y = cellNeighbor(position.Y)
+		} else {
+			position.X = cellNeighbor(position.X)
+		}
+		positions = append(positions, position)
+	}
+
+	return positions
+}
+
+// blockOfTypeAt находит блок указанного типа в точке карты
+func (uc *CollisionUseCases) blockOfTypeAt(
+	position types.Position,
+	blockType types.BlockType,
+) *types.BlockEntity {
+	for _, block := range uc.mapUseCases.GetBlocks() {
+		if block == nil || block.Data == nil ||
+			block.Data.Name != blockType {
+			continue
+		}
+		blockPosition := block.GetPosition()
+		if blockPosition.X == position.X && blockPosition.Y == position.Y {
+			return block
+		}
+	}
+	return nil
 }
 
 func (uc *CollisionUseCases) checkBulletHQCollision(

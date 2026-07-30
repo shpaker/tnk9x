@@ -2,7 +2,6 @@ package tank_use_cases
 
 import (
 	"fmt"
-	"math/rand"
 
 	"github.com/shpaker/tnk9x/internal/interfaces"
 	"github.com/shpaker/tnk9x/internal/types"
@@ -40,65 +39,30 @@ func NewTankLifecycleUseCases(
 	}
 }
 
-func (uc *TankLifecycleUseCases) OnStageSetUpEnemiesSpawn() ([3]*types.TankEntity, error) {
-	var spawnedEnemies [3]*types.TankEntity
-
-	if len(uc.spawnLayout.EnemySpawners) == 0 {
-		return spawnedEnemies, nil
-	}
-
-	// Первые три танка всегда 0 уровня
-	// Используем большое значение remainingEnemies чтобы получить уровень 0
-	remainingEnemies := uint(20) // Максимальное значение для первых трех танков
-
-	for index := 0; index < len(uc.spawnLayout.EnemySpawners) &&
-		index < len(spawnedEnemies); index++ {
-		spawned, err := uc.SpawnEnemyWithLevel(&index, true, remainingEnemies)
-		if err != nil {
-			return spawnedEnemies, err
-		}
-		spawnedEnemies[index] = spawned
-	}
-
-	return spawnedEnemies, nil
-}
-
-func (uc *TankLifecycleUseCases) SpawnEnemyWithLevel(
-	index *int,
-	ignoreRespawnDelay bool,
-	remainingEnemies uint,
+// SpawnEnemy спавнит врага заданного уровня; точка спавна выбирается
+// циклическим перебором по порядковому номеру спавна, как в NES.
+// Возвращает (nil, nil), если точка занята и ignoreBlocked == false.
+func (uc *TankLifecycleUseCases) SpawnEnemy(
+	spawnIndex uint,
+	ignoreBlocked bool,
+	level uint,
 ) (*types.TankEntity, error) {
-	selectedIndex := 0
-	if index != nil {
-		selectedIndex = *index
-	} else if len(uc.spawnLayout.EnemySpawners) > 0 {
-		selectedIndex = rand.Intn(len(uc.spawnLayout.EnemySpawners))
-	} else {
+	if len(uc.spawnLayout.EnemySpawners) == 0 {
 		return nil, fmt.Errorf("enemy spawners missing")
 	}
 
-	if selectedIndex >= len(uc.spawnLayout.EnemySpawners) {
-		return nil, fmt.Errorf("enemy spawner index out of range")
-	}
-
+	selectedIndex := int(spawnIndex) % len(uc.spawnLayout.EnemySpawners)
 	spawnPosition := uc.spawnLayout.EnemySpawners[selectedIndex]
 
-	spawnerBlocked := uc.isSpawnerBlocked(spawnPosition)
-
-	if !ignoreRespawnDelay && spawnerBlocked {
+	if !ignoreBlocked && uc.isSpawnerBlocked(spawnPosition) {
 		return nil, nil
 	}
 
-	// Определяем уровень врага на основе количества оставшихся врагов
-	enemyLevel := uc.specsUseCases.GetEnemyLevelByRemainingCount(
-		remainingEnemies,
-	)
-
 	tank, err := uc.spawnTank(
-		types.DirectionUp,
+		types.DirectionDown,
 		spawnPosition,
 		types.TankRoleEnemy,
-		enemyLevel,
+		level,
 	)
 	if err != nil {
 		return nil, err
@@ -109,7 +73,11 @@ func (uc *TankLifecycleUseCases) SpawnEnemyWithLevel(
 	return &tank, nil
 }
 
-func (uc *TankLifecycleUseCases) SpawnPlayer1() (*types.TankEntity, error) {
+// SpawnPlayer1 спавнит первого игрока с указанным уровнем звёзд
+// (уровень переживает переход между этапами, но не гибель танка)
+func (uc *TankLifecycleUseCases) SpawnPlayer1(
+	level uint,
+) (*types.TankEntity, error) {
 	if uc.isSpawnerBlocked(uc.spawnLayout.Player1Spawner) {
 		return nil, nil
 	}
@@ -117,7 +85,7 @@ func (uc *TankLifecycleUseCases) SpawnPlayer1() (*types.TankEntity, error) {
 		types.DirectionUp,
 		uc.spawnLayout.Player1Spawner,
 		types.TankRolePlayer1,
-		0, // Игроки всегда начинают с уровня 0
+		level,
 	)
 	if err != nil {
 		return nil, err
@@ -129,7 +97,10 @@ func (uc *TankLifecycleUseCases) SpawnPlayer1() (*types.TankEntity, error) {
 	return tankPtr, nil
 }
 
-func (uc *TankLifecycleUseCases) SpawnPlayer2() (*types.TankEntity, error) {
+// SpawnPlayer2 спавнит второго игрока с указанным уровнем звёзд
+func (uc *TankLifecycleUseCases) SpawnPlayer2(
+	level uint,
+) (*types.TankEntity, error) {
 	if uc.isSpawnerBlocked(uc.spawnLayout.Player2Spawner) {
 		return nil, nil
 	}
@@ -137,7 +108,7 @@ func (uc *TankLifecycleUseCases) SpawnPlayer2() (*types.TankEntity, error) {
 		types.DirectionUp,
 		uc.spawnLayout.Player2Spawner,
 		types.TankRolePlayer2,
-		0, // Игроки всегда начинают с уровня 0
+		level,
 	)
 	if err != nil {
 		return nil, err
@@ -227,11 +198,21 @@ func (uc *TankLifecycleUseCases) Explode(tank *types.TankEntity) error {
 	return nil
 }
 
+func (uc *TankLifecycleUseCases) RemoveEnemy(tank *types.TankEntity) {
+	uc.tanksRepository.RemoveEnemy(tank)
+}
+
+// spawnShieldTicks — щит игрока после появления (~3 секунды)
+const spawnShieldTicks = 180
+
 func (uc *TankLifecycleUseCases) finishSpawnAnimation(
 	tank *types.TankEntity,
 ) {
 	uc.renderUseCases.UpdateTankAnimation(tank)
 	tank.State = types.TankStateStopped
+	if !tank.IsEnemy() {
+		tank.SetShieldTicks(spawnShieldTicks)
+	}
 }
 
 func (uc *TankLifecycleUseCases) UpdateAllTanksLifecycle() error {

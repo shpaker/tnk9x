@@ -13,11 +13,14 @@ type IBulletUseCases interface {
 	UpdateBullets(dt float64) error
 	GetBullets() []*types.BulletEntity
 	RemoveBullet(bullet *types.BulletEntity) error
+	SpawnImpact(bullet *types.BulletEntity)
+	GetImpacts() []*types.EffectEntity
 }
 
 type IMapUseCases interface {
 	GetBlocks() types.MapBlocks
 	RemoveBlock(block *types.BlockEntity) error
+	AddBlock(block *types.BlockEntity)
 	GetSizePx() types.Size
 	GetRandomBonusSpawnPosition() types.Position
 	IsIceAt(position types.Position) bool
@@ -32,6 +35,7 @@ type ITilesUseCases interface {
 	CreateStaticTile(id string) (IImageProvider, error)
 	CreateSpawnAnimation() (*image_providers.AnimationProvider, error)
 	CreateExplosionAnimation() (*image_providers.AnimationProvider, error)
+	CreateBulletExplosionAnimation() (*image_providers.AnimationProvider, error)
 	CreateTankAnimationTile(
 		id string,
 		isEnemy bool,
@@ -72,17 +76,17 @@ type IRenderUseCases interface {
 }
 
 type ITankLifecycleUseCases interface {
-	OnStageSetUpEnemiesSpawn() ([3]*types.TankEntity, error)
-	SpawnEnemyWithLevel(
-		index *int,
-		ignoreRespawnDelay bool,
-		remainingEnemies uint,
+	SpawnEnemy(
+		spawnIndex uint,
+		ignoreBlocked bool,
+		level uint,
 	) (*types.TankEntity, error)
-	SpawnPlayer1() (*types.TankEntity, error)
+	SpawnPlayer1(level uint) (*types.TankEntity, error)
+	SpawnPlayer2(level uint) (*types.TankEntity, error)
 	GetPlayerTank(num types.PlayerTankNum) *types.TankEntity
 	SetPlayerTank(num types.PlayerTankNum, tank *types.TankEntity)
-	SpawnPlayer2() (*types.TankEntity, error)
 	Explode(tank *types.TankEntity) error
+	RemoveEnemy(tank *types.TankEntity)
 	UpdateAllTanksLifecycle() error
 }
 
@@ -100,7 +104,10 @@ type ITankActionsUseCases interface {
 }
 
 type IAIUseCases interface {
-	ExecuteAI(tank *types.TankEntity) (types.EnemyAIDecision, error)
+	ExecuteAI(
+		tank *types.TankEntity,
+		context types.EnemyAIContext,
+	) (types.EnemyAIDecision, error)
 }
 
 type IHQUseCases interface {
@@ -117,6 +124,7 @@ type IStageUseCases interface {
 	TryRespawnPlayersTanks() (*types.TankEntity, *types.TankEntity)
 	GetPlayersTanks() []*types.TankEntity
 	UpdateGameObjects(dt float64)
+	AreEnemiesFrozen() bool
 	TogglePause()
 	IsPaused() bool
 	PauseStageState()
@@ -128,7 +136,6 @@ type IStageUseCases interface {
 
 type ISpecsUseCases interface {
 	GetTankSpecs(isEnemy bool, level uint) *types.SpecsEntity
-	GetEnemyLevelByRemainingCount(remainingEnemies uint) uint
 }
 
 type ISoundUseCases interface {
@@ -141,7 +148,14 @@ type ISoundUseCases interface {
 type IBonusUseCases interface {
 	Apply(bonus *types.BonusEntity, tank *types.TankEntity)
 	SpawnRandomBonusEntity(position types.Position) *types.BonusEntity
+	SpawnBonusOnField()
 	VisibleBonuses() []*types.BonusEntity
+}
+
+// IFortressUseCases — укрепление кольца вокруг штаба (бонус «лопата»)
+type IFortressUseCases interface {
+	Apply()
+	Update()
 }
 
 type IHUDUseCases interface {
@@ -158,6 +172,4 @@ type IStageSelectorUseCases interface {
 	Previous(selector *types.StageSelectorEntity) uint
 	String(selector *types.StageSelectorEntity) string
 	Select(selector *types.StageSelectorEntity) uint
-	NextMaxActiveEnemies(current uint) uint
-	PreviousMaxActiveEnemies(current uint) uint
 }

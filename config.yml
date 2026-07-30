@@ -19,5 +19,5 @@ game:
 
   # Игровые константы
   base_size_px: 16
-  enemy_respawn_delay_ticks: 120  # Задержка между спавнами врагов в тиках (3 секунды при 60 FPS)
   map_blocks_count: [26, 26]  # Размер карты в блоках [width, height]
+  max_active_enemies: 4  # Лимит врагов на экране (канон NES — 4)

@@ -20,7 +20,7 @@ end
 		t.Fatalf("LoadScript failed: %v", err)
 	}
 
-	decision, err := engine.UpdateEnemyAI(10, 20, 0, 0)
+	decision, err := engine.UpdateEnemyAI(10, 20, 0, 0, types.EnemyAIContext{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -44,7 +44,7 @@ end
 		t.Fatalf("LoadScript failed: %v", err)
 	}
 
-	decision, err := engine.UpdateEnemyAI(0, 0, 0, 0)
+	decision, err := engine.UpdateEnemyAI(0, 0, 0, 0, types.EnemyAIContext{})
 	if err != nil {
 		t.Fatalf("expected nil error for shouldMove=false, got: %v", err)
 	}
@@ -67,7 +67,7 @@ end
 	}
 
 	// Не-булево первое значение трактуется как false
-	decision, err := engine.UpdateEnemyAI(0, 0, 0, 0)
+	decision, err := engine.UpdateEnemyAI(0, 0, 0, 0, types.EnemyAIContext{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -80,7 +80,7 @@ func TestLuaEngineUpdateEnemyAIMissingFunction(t *testing.T) {
 	engine := NewLuaEngine()
 	defer engine.Close()
 
-	if _, err := engine.UpdateEnemyAI(0, 0, 0, 0); err == nil {
+	if _, err := engine.UpdateEnemyAI(0, 0, 0, 0, types.EnemyAIContext{}); err == nil {
 		t.Fatal("expected error when updateEnemyAI is not defined")
 	}
 }
@@ -92,8 +92,9 @@ func TestLuaEngineReceivesArgumentsAndGlobals(t *testing.T) {
 	engine.SetGlobalNumber("MAP_WIDTH_PX", 208)
 
 	script := `
-function updateEnemyAI(x, y, direction, state)
+function updateEnemyAI(x, y, direction, state, phase, targetX, targetY, hasTarget)
     if x == 16 and y == 32 and direction == 2 and state == 1
+        and phase == 2 and targetX == 64 and targetY == 128 and hasTarget
         and MAP_WIDTH_PX == 208 then
         return true, direction
     end
@@ -104,7 +105,12 @@ end
 		t.Fatalf("LoadScript failed: %v", err)
 	}
 
-	decision, err := engine.UpdateEnemyAI(16, 32, 2, 1)
+	decision, err := engine.UpdateEnemyAI(16, 32, 2, 1, types.EnemyAIContext{
+		Phase:     types.EnemyAIPhaseHunt,
+		TargetX:   64,
+		TargetY:   128,
+		HasTarget: true,
+	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

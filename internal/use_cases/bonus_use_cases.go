@@ -10,6 +10,18 @@ import (
 
 var _ interfaces.IBonusUseCases = (*BonusUseCases)(nil)
 
+// Тайминги бонусов, как в оригинале
+const (
+	// helmetShieldTicks — щит от бонуса «шлем» (~10 секунд)
+	helmetShieldTicks = 600
+
+	// timerFreezeTicks — заморозка врагов бонусом «таймер» (~10 секунд)
+	timerFreezeTicks = 600
+)
+
+// bonusFieldSpawnAttempts — попыток найти свободную клетку для бонуса
+const bonusFieldSpawnAttempts = 3
+
 type BonusUseCases struct {
 	tankCommonUseCases    interfaces.ITankCommonUseCases
 	tankLifecycleUseCases interfaces.ITankLifecycleUseCases
@@ -19,6 +31,9 @@ type BonusUseCases struct {
 	tilesUseCases         interfaces.ITilesUseCases
 	renderUseCases        interfaces.IRenderUseCases
 	soundUseCases         interfaces.ISoundUseCases
+	mapUseCases           interfaces.IMapUseCases
+	spawnCollisionService interfaces.ISpawnCollisionService
+	fortressUseCases      interfaces.IFortressUseCases
 }
 
 func NewBonusUseCases(
@@ -30,6 +45,9 @@ func NewBonusUseCases(
 	tilesUseCases interfaces.ITilesUseCases,
 	renderUseCases interfaces.IRenderUseCases,
 	soundUseCases interfaces.ISoundUseCases,
+	mapUseCases interfaces.IMapUseCases,
+	spawnCollisionService interfaces.ISpawnCollisionService,
+	fortressUseCases interfaces.IFortressUseCases,
 ) *BonusUseCases {
 	return &BonusUseCases{
 		tankCommonUseCases:    tankCommonUseCases,
@@ -40,6 +58,9 @@ func NewBonusUseCases(
 		tilesUseCases:         tilesUseCases,
 		renderUseCases:        renderUseCases,
 		soundUseCases:         soundUseCases,
+		mapUseCases:           mapUseCases,
+		spawnCollisionService: spawnCollisionService,
+		fortressUseCases:      fortressUseCases,
 	}
 }
 
@@ -52,6 +73,7 @@ func (uc *BonusUseCases) Apply(
 	}
 
 	uc.soundUseCases.RequestSound(types.SoundIDBonus, false)
+	uc.awardBonusPoints(tank)
 
 	switch bonus.GetType() {
 	case types.BonusTypeHelmet:
@@ -62,26 +84,53 @@ func (uc *BonusUseCases) Apply(
 		uc.applyShovel(tank)
 	case types.BonusTypeStar:
 		uc.applyStar(tank)
-		uc.removeBonus(bonus)
 	case types.BonusTypeGrenade:
 		uc.applyGrenade(tank)
-		uc.removeBonus(bonus)
 	case types.BonusTypeTank:
 		uc.applyTank(tank)
-		uc.removeBonus(bonus)
+	}
+
+	uc.removeBonus(bonus)
+}
+
+// awardBonusPoints начисляет 500 очков подобравшему игроку
+func (uc *BonusUseCases) awardBonusPoints(tank *types.TankEntity) {
+	if uc.stageSession == nil || tank.IsEnemy() {
+		return
+	}
+	run := uc.stageSession.RunSession()
+	if run == nil {
+		return
+	}
+	run.AddBonusPoints(types.RoleToPlayerTankNum(tank.GetRole()))
+}
+
+// applyHelmet даёт подобравшему танку временный щит
+func (uc *BonusUseCases) applyHelmet(tank *types.TankEntity) {
+	tank.SetShieldTicks(helmetShieldTicks)
+}
+
+// applyTimer замораживает всех врагов: активные останавливаются,
+// AI не обновляется до конца заморозки
+func (uc *BonusUseCases) applyTimer(tank *types.TankEntity) {
+	if uc.stageSession == nil {
+		return
+	}
+	uc.stageSession.SetEnemyFreezeTicks(timerFreezeTicks)
+
+	for _, enemyTank := range uc.tankCommonUseCases.GetAllTanks() {
+		if enemyTank == nil || !enemyTank.IsEnemy() || !enemyTank.IsActive() {
+			continue
+		}
+		enemyTank.State = types.TankStateStopped
 	}
 }
 
-func (uc *BonusUseCases) applyHelmet(tank *types.TankEntity) {
-	// Защита - логика будет добавлена позже
-}
-
-func (uc *BonusUseCases) applyTimer(tank *types.TankEntity) {
-	// Заморозка врагов - логика будет добавлена позже
-}
-
+// applyShovel укрепляет кольцо вокруг штаба сталью
 func (uc *BonusUseCases) applyShovel(tank *types.TankEntity) {
-	// Укрепление базы - логика будет добавлена позже
+	if uc.fortressUseCases != nil {
+		uc.fortressUseCases.Apply()
+	}
 }
 
 func (uc *BonusUseCases) applyStar(tank *types.TankEntity) {
@@ -94,6 +143,16 @@ func (uc *BonusUseCases) applyStar(tank *types.TankEntity) {
 	uc.tankCommonUseCases.LevelUp(tank)
 	// Обновляем анимацию танка для отображения нового уровня
 	uc.renderUseCases.UpdateTankAnimation(tank)
+
+	// Сохраняем уровень в забеге: звёзды переживают переход между этапами
+	if uc.stageSession != nil && !tank.IsEnemy() && tank.GetSpecs() != nil {
+		if run := uc.stageSession.RunSession(); run != nil {
+			run.SetStarLevel(
+				types.RoleToPlayerTankNum(tank.GetRole()),
+				tank.GetSpecs().GetLevel(),
+			)
+		}
+	}
 }
 
 func (uc *BonusUseCases) applyGrenade(tank *types.TankEntity) {
@@ -141,14 +200,80 @@ func (uc *BonusUseCases) VisibleBonuses() []*types.BonusEntity {
 	return visible
 }
 
-// GetRandomBonusType возвращает случайный тип бонуса
+// GetRandomBonusType возвращает случайный тип из всех шести бонусов
 func (uc *BonusUseCases) GetRandomBonusType() types.BonusType {
 	bonusTypes := []types.BonusType{
+		types.BonusTypeHelmet,
+		types.BonusTypeTimer,
+		types.BonusTypeShovel,
 		types.BonusTypeGrenade,
 		types.BonusTypeTank,
 		types.BonusTypeStar,
 	}
 	return bonusTypes[rand.Intn(len(bonusTypes))]
+}
+
+// SpawnBonusOnField размещает случайный бонус на свободной клетке;
+// вызывается при первом попадании по мигающему танку
+func (uc *BonusUseCases) SpawnBonusOnField() {
+	if uc.mapUseCases == nil || uc.bonusesRepository == nil {
+		return
+	}
+
+	baseSizePx := uc.configProvider.GetBaseSizePx()
+	bonusSize := types.Size{
+		Width:  int(baseSizePx),
+		Height: int(baseSizePx),
+	}
+
+	for attempt := 0; attempt < bonusFieldSpawnAttempts; attempt++ {
+		position := uc.mapUseCases.GetRandomBonusSpawnPosition()
+
+		if uc.isFieldPositionBlocked(position, bonusSize) {
+			continue
+		}
+
+		bonus := uc.SpawnRandomBonusEntity(position)
+		if bonus != nil {
+			uc.bonusesRepository.AddBonus(bonus)
+			return
+		}
+	}
+}
+
+// isFieldPositionBlocked — клетка занята танком или блоком карты
+func (uc *BonusUseCases) isFieldPositionBlocked(
+	position types.Position,
+	size types.Size,
+) bool {
+	if uc.spawnCollisionService != nil && uc.tankCommonUseCases != nil {
+		blocked := uc.spawnCollisionService.IsSpawnerBlocked(
+			types.Position{
+				X: position.X / float64(size.Width),
+				Y: position.Y / float64(size.Height),
+			},
+			size,
+			uc.tankCommonUseCases.GetAllTanks(),
+		)
+		if blocked {
+			return true
+		}
+	}
+
+	for _, block := range uc.mapUseCases.GetBlocks() {
+		if block == nil {
+			continue
+		}
+		blockPosition := block.GetPosition()
+		blockSize := block.GetSize()
+		if position.X < blockPosition.X+float64(blockSize.Width) &&
+			position.X+float64(size.Width) > blockPosition.X &&
+			position.Y < blockPosition.Y+float64(blockSize.Height) &&
+			position.Y+float64(size.Height) > blockPosition.Y {
+			return true
+		}
+	}
+	return false
 }
 
 // SpawnRandomBonusEntity создает новый бонус со случайным типом

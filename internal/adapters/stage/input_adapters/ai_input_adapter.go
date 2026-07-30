@@ -2,21 +2,40 @@ package input_adapters
 
 import (
 	"math"
+	"math/rand"
 
 	"github.com/shpaker/tnk9x/internal/interfaces"
 	"github.com/shpaker/tnk9x/internal/types"
+	"github.com/shpaker/tnk9x/internal/types/session_entities"
 )
 
 var _ interfaces.IAiInputAdapter = (*AiInputAdapter)(nil)
 
+// Фазы AI по времени этапа: свободный обход, охота на игрока,
+// атака штаба (~60 и ~120 секунд при 60 TPS)
+const (
+	aiPhaseWanderTicks = 3600
+	aiPhaseHuntTicks   = 7200
+)
+
+// Случайный интервал между выстрелами врага в тиках
+const (
+	aiShotDelayMin  = 30
+	aiShotDelaySpan = 61
+)
+
 type AiInputAdapter struct {
-	tankActions    interfaces.ITankActionsUseCases
+	tankActions        interfaces.ITankActionsUseCases
+	aiUseCases         interfaces.IAIUseCases
+	tankCommonUseCases interfaces.ITankCommonUseCases
+	stageSession       *session_entities.StageSessionEntity
+
 	tanks          []*types.TankEntity
 	updateInterval int
 	tickCounter    int
-	aiUseCases     interfaces.IAIUseCases
 	lastShotTick   map[*types.TankEntity]int
-	shootCooldown  int
+	shotDelay      map[*types.TankEntity]int
+	hqPosition     types.Position
 }
 
 func NewAiInputAdapter(
@@ -24,15 +43,21 @@ func NewAiInputAdapter(
 	tank *types.TankEntity,
 	updateInterval int,
 	aiUseCases interfaces.IAIUseCases,
+	tankCommonUseCases interfaces.ITankCommonUseCases,
+	stageSession *session_entities.StageSessionEntity,
+	hqPosition types.Position,
 ) (*AiInputAdapter, error) {
 	adapter := &AiInputAdapter{
-		tankActions:    tankActions,
-		tanks:          make([]*types.TankEntity, 0, 1),
-		updateInterval: updateInterval,
-		tickCounter:    0,
-		aiUseCases:     aiUseCases,
-		lastShotTick:   make(map[*types.TankEntity]int),
-		shootCooldown:  20,
+		tankActions:        tankActions,
+		aiUseCases:         aiUseCases,
+		tankCommonUseCases: tankCommonUseCases,
+		stageSession:       stageSession,
+		tanks:              make([]*types.TankEntity, 0, 1),
+		updateInterval:     updateInterval,
+		tickCounter:        0,
+		lastShotTick:       make(map[*types.TankEntity]int),
+		shotDelay:          make(map[*types.TankEntity]int),
+		hqPosition:         hqPosition,
 	}
 
 	if tank != nil {
@@ -49,6 +74,13 @@ func (a *AiInputAdapter) Update(dt float64) {
 		return
 	}
 
+	a.pruneExplodedTanks()
+
+	// Решения AI принимаются раз в updateInterval тиков;
+	// контроль торможения работает каждый тик
+	makeDecisions := a.updateInterval <= 0 ||
+		a.tickCounter%a.updateInterval == 0
+
 	for _, tank := range a.tanks {
 		if tank == nil || !tank.IsActive() {
 			continue
@@ -58,35 +90,120 @@ func (a *AiInputAdapter) Update(dt float64) {
 			a.checkAndSetBraking(tank)
 		}
 
-		if tank.IsStopped() {
+		if makeDecisions && tank.IsStopped() {
 			a.updateAI(tank)
 		}
 	}
 }
 
-func (a *AiInputAdapter) updateAI(tank *types.TankEntity) {
-	if a.aiUseCases != nil {
-		decision, err := a.aiUseCases.ExecuteAI(tank)
-		if err == nil && tank != nil {
-
-			a.tankActions.ApplyDecision(tank, decision)
-
-			if a.canShoot(tank) {
-				_ = a.tankActions.Shoot(tank)
-				a.lastShotTick[tank] = a.tickCounter
+// pruneExplodedTanks убирает взорванные танки из списка и карт
+// кулдаунов, иначе они копятся до конца уровня
+func (a *AiInputAdapter) pruneExplodedTanks() {
+	for i := len(a.tanks) - 1; i >= 0; i-- {
+		tank := a.tanks[i]
+		if tank == nil || tank.State == types.TankStateExploded {
+			a.tanks = append(a.tanks[:i], a.tanks[i+1:]...)
+			if tank != nil {
+				delete(a.lastShotTick, tank)
+				delete(a.shotDelay, tank)
 			}
 		}
 	}
 }
 
-func (a *AiInputAdapter) canShoot(tank *types.TankEntity) bool {
-	lastShotTick, ok := a.lastShotTick[tank]
-	if !ok {
-		lastShotTick = -a.shootCooldown
+func (a *AiInputAdapter) updateAI(tank *types.TankEntity) {
+	if a.aiUseCases == nil {
+		return
 	}
 
-	ticksSinceLastShot := a.tickCounter - lastShotTick
-	return ticksSinceLastShot >= a.shootCooldown
+	decision, err := a.aiUseCases.ExecuteAI(tank, a.buildContext(tank))
+	if err != nil {
+		return
+	}
+
+	a.tankActions.ApplyDecision(tank, decision)
+
+	if a.canShoot(tank) {
+		_ = a.tankActions.Shoot(tank)
+		a.lastShotTick[tank] = a.tickCounter
+		a.shotDelay[tank] = randomShotDelay()
+	}
+}
+
+// buildContext определяет фазу AI по времени этапа и цель:
+// на охоте — ближайший игрок, при атаке — штаб
+func (a *AiInputAdapter) buildContext(
+	tank *types.TankEntity,
+) types.EnemyAIContext {
+	stageTicks := uint(0)
+	if a.stageSession != nil {
+		stageTicks = a.stageSession.GetStageTicks()
+	}
+
+	switch {
+	case stageTicks < aiPhaseWanderTicks:
+		return types.EnemyAIContext{Phase: types.EnemyAIPhaseWander}
+	case stageTicks < aiPhaseHuntTicks:
+		if player := a.nearestPlayer(tank); player != nil {
+			return types.EnemyAIContext{
+				Phase:     types.EnemyAIPhaseHunt,
+				TargetX:   player.Position.X,
+				TargetY:   player.Position.Y,
+				HasTarget: true,
+			}
+		}
+		return types.EnemyAIContext{Phase: types.EnemyAIPhaseHunt}
+	default:
+		return types.EnemyAIContext{
+			Phase:     types.EnemyAIPhaseSiege,
+			TargetX:   a.hqPosition.X,
+			TargetY:   a.hqPosition.Y,
+			HasTarget: true,
+		}
+	}
+}
+
+// nearestPlayer — ближайший активный танк игрока
+func (a *AiInputAdapter) nearestPlayer(
+	tank *types.TankEntity,
+) *types.TankEntity {
+	if a.tankCommonUseCases == nil {
+		return nil
+	}
+
+	var nearest *types.TankEntity
+	nearestDistance := math.MaxFloat64
+	for _, player := range a.tankCommonUseCases.GetAllPlayerTanks() {
+		if player == nil || !player.IsActive() {
+			continue
+		}
+		distance := math.Abs(player.Position.X-tank.Position.X) +
+			math.Abs(player.Position.Y-tank.Position.Y)
+		if distance < nearestDistance {
+			nearestDistance = distance
+			nearest = player
+		}
+	}
+	return nearest
+}
+
+func randomShotDelay() int {
+	return aiShotDelayMin + rand.Intn(aiShotDelaySpan)
+}
+
+func (a *AiInputAdapter) canShoot(tank *types.TankEntity) bool {
+	delay, ok := a.shotDelay[tank]
+	if !ok {
+		delay = randomShotDelay()
+		a.shotDelay[tank] = delay
+	}
+
+	lastShotTick, ok := a.lastShotTick[tank]
+	if !ok {
+		lastShotTick = a.tickCounter - delay
+	}
+
+	return a.tickCounter-lastShotTick >= delay
 }
 
 func (a *AiInputAdapter) checkAndSetBraking(tank *types.TankEntity) {
@@ -126,10 +243,8 @@ func (a *AiInputAdapter) AddTank(tank *types.TankEntity) {
 	}
 
 	a.tanks = append(a.tanks, tank)
-	if a.lastShotTick == nil {
-		a.lastShotTick = make(map[*types.TankEntity]int)
-	}
-	a.lastShotTick[tank] = a.tickCounter - a.shootCooldown
+	a.shotDelay[tank] = randomShotDelay()
+	a.lastShotTick[tank] = a.tickCounter
 }
 
 func (a *AiInputAdapter) RemoveTank(tank *types.TankEntity) {
@@ -144,7 +259,6 @@ func (a *AiInputAdapter) RemoveTank(tank *types.TankEntity) {
 		}
 	}
 
-	if a.lastShotTick != nil {
-		delete(a.lastShotTick, tank)
-	}
+	delete(a.lastShotTick, tank)
+	delete(a.shotDelay, tank)
 }

@@ -33,7 +33,7 @@ func newBulletTestEnv() *bulletTestEnv {
 		registry:    registry,
 		bulletsRepo: bulletsRepo,
 		specsUC:     use_cases.NewSpecsUseCases(),
-		bulletUC:    use_cases.NewBulletUseCases(bulletsRepo, tilesUC, 16),
+		bulletUC:    use_cases.NewBulletUseCases(bulletsRepo, nil, tilesUC, 16),
 	}
 }
 
@@ -59,9 +59,9 @@ func TestBulletUseCases_ShootBullet_MuzzlePositions(t *testing.T) {
 		wantY     float64
 	}{
 		{"вверх", types.DirectionUp, 106, 56},
-		{"вниз", types.DirectionDown, 106, 68},
+		{"вниз", types.DirectionDown, 106, 76},
 		{"влево", types.DirectionLeft, 96, 66},
-		{"вправо", types.DirectionRight, 108, 66},
+		{"вправо", types.DirectionRight, 116, 66},
 	}
 
 	for _, tt := range tests {

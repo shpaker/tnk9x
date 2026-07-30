@@ -33,12 +33,14 @@ func (e *luaEngine) SetGlobalNumber(name string, value float64) {
 	e.L.SetGlobal(name, lua.LNumber(value))
 }
 
-// UpdateEnemyAI вызывает Lua-функцию updateEnemyAI(x, y, direction, state),
-// возвращающую пару (shouldMove, direction). При shouldMove == false
-// возвращается нулевое решение без ошибки.
+// UpdateEnemyAI вызывает Lua-функцию updateEnemyAI(x, y, direction,
+// state, phase, targetX, targetY, hasTarget), возвращающую пару
+// (shouldMove, direction). При shouldMove == false возвращается
+// нулевое решение без ошибки.
 func (e *luaEngine) UpdateEnemyAI(
 	x, y float64,
 	direction, state int,
+	context types.EnemyAIContext,
 ) (types.EnemyAIDecision, error) {
 	fn := e.L.GetGlobal("updateEnemyAI")
 	if fn == lua.LNil {
@@ -56,6 +58,10 @@ func (e *luaEngine) UpdateEnemyAI(
 		lua.LNumber(y),
 		lua.LNumber(direction),
 		lua.LNumber(state),
+		lua.LNumber(context.Phase),
+		lua.LNumber(context.TargetX),
+		lua.LNumber(context.TargetY),
+		lua.LBool(context.HasTarget),
 	)
 	if err != nil {
 		return types.EnemyAIDecision{}, err

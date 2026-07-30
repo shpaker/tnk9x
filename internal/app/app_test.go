@@ -93,7 +93,7 @@ func TestApp_ApplyTransition_None(t *testing.T) {
 	}
 }
 
-// Параметры уровня записываются в сессию до сборки состояния:
+// Параметры уровня записываются в сессию забега до сборки состояния:
 // даже при ошибке сборки сессия уже обновлена
 func TestApp_ApplyTransition_ToStage_SessionWrittenBeforeBuild(
 	t *testing.T,
@@ -101,24 +101,21 @@ func TestApp_ApplyTransition_ToStage_SessionWrittenBeforeBuild(
 	app, state := newAppTestEnv()
 
 	err := app.applyTransition(types.StateTransition{
-		Target:           types.TransitionToStage,
-		Level:            7,
-		PlayerCount:      2,
-		MaxActiveEnemies: 8,
+		Target: types.TransitionToStage,
+		Level:  7,
 	})
 	if !errors.Is(err, errLevelUnavailable) {
 		t.Fatalf("ошибка %v, ожидалась errLevelUnavailable", err)
 	}
 
-	if app.session.Level != 7 {
-		t.Errorf("уровень сессии %d, ожидался 7", app.session.Level)
+	if got := app.session.RunSession().GetStage(); got != 7 {
+		t.Errorf("этап забега %d, ожидался 7", got)
 	}
+	// Лимит врагов берётся из конфига; нулевое значение конфига
+	// нормализуется сессией к канону NES (4)
 	stageSession := app.session.StageSession()
-	if got := stageSession.GetPlayerCount(); got != 2 {
-		t.Errorf("игроков %d, ожидалось 2", got)
-	}
-	if got := stageSession.GetMaxActiveEnemies(); got != 8 {
-		t.Errorf("максимум врагов %d, ожидалось 8", got)
+	if got := stageSession.GetMaxActiveEnemies(); got != 4 {
+		t.Errorf("максимум врагов %d, ожидалось 4", got)
 	}
 
 	// Состояние при ошибке сборки не меняется
@@ -127,27 +124,41 @@ func TestApp_ApplyTransition_ToStage_SessionWrittenBeforeBuild(
 	}
 }
 
-// Полный цикл на настоящем графе зависимостей: меню -> уровень -> меню
+// Полный цикл на настоящем графе зависимостей:
+// титул -> шторка -> уровень -> итоги -> шторка -> game over -> титул
 func TestApp_ApplyTransition_FullApp(t *testing.T) {
 	app := newFullApp(t)
 
-	if _, ok := app.state.(*states.StageSelectState); !ok {
+	if _, ok := app.state.(*states.TitleState); !ok {
 		t.Fatalf(
-			"начальное состояние %T, ожидалось StageSelectState",
+			"начальное состояние %T, ожидалось TitleState",
 			app.state,
 		)
 	}
 
 	err := app.applyTransition(types.StateTransition{
-		Target:           types.TransitionToStage,
-		Level:            2,
-		PlayerCount:      1,
-		MaxActiveEnemies: 5,
+		Target:      types.TransitionToCurtain,
+		Level:       2,
+		PlayerCount: 1,
+		NewRun:      true,
+	})
+	if err != nil {
+		t.Fatalf("переход на шторку: %v", err)
+	}
+	if _, ok := app.state.(*states.StageCurtainState); !ok {
+		t.Fatalf("состояние %T, ожидалось StageCurtainState", app.state)
+	}
+	if got := app.session.RunSession().GetStage(); got != 2 {
+		t.Errorf("этап забега %d, ожидался 2", got)
+	}
+
+	err = app.applyTransition(types.StateTransition{
+		Target: types.TransitionToStage,
+		Level:  2,
 	})
 	if err != nil {
 		t.Fatalf("переход на уровень: %v", err)
 	}
-
 	stageState, ok := app.state.(*states.StageState)
 	if !ok {
 		t.Fatalf("состояние %T, ожидалось StageState", app.state)
@@ -155,21 +166,51 @@ func TestApp_ApplyTransition_FullApp(t *testing.T) {
 	if app.stageState != stageState {
 		t.Error("ссылка на StageState не сохранена")
 	}
-	if app.session.Level != 2 {
-		t.Errorf("уровень сессии %d, ожидался 2", app.session.Level)
-	}
 
 	err = app.applyTransition(types.StateTransition{
-		Target: types.TransitionToStageSelect,
+		Target:   types.TransitionToScore,
+		StageWon: true,
 	})
 	if err != nil {
-		t.Fatalf("возврат в меню: %v", err)
+		t.Fatalf("переход на итоги: %v", err)
 	}
-	if _, ok := app.state.(*states.StageSelectState); !ok {
-		t.Fatalf("состояние %T, ожидалось StageSelectState", app.state)
+	if _, ok := app.state.(*states.ScoreState); !ok {
+		t.Fatalf("состояние %T, ожидалось ScoreState", app.state)
 	}
 	if app.stageState != nil {
 		t.Error("ссылка на StageState не очищена")
+	}
+
+	err = app.applyTransition(types.StateTransition{
+		Target: types.TransitionToCurtain,
+		Level:  3,
+	})
+	if err != nil {
+		t.Fatalf("переход на шторку следующего этапа: %v", err)
+	}
+	if _, ok := app.state.(*states.StageCurtainState); !ok {
+		t.Fatalf("состояние %T, ожидалось StageCurtainState", app.state)
+	}
+	if got := app.session.RunSession().GetStage(); got != 3 {
+		t.Errorf("этап забега %d, ожидался 3", got)
+	}
+
+	if err := app.applyTransition(types.StateTransition{
+		Target: types.TransitionToGameOver,
+	}); err != nil {
+		t.Fatalf("переход на game over: %v", err)
+	}
+	if _, ok := app.state.(*states.GameOverState); !ok {
+		t.Fatalf("состояние %T, ожидалось GameOverState", app.state)
+	}
+
+	if err := app.applyTransition(types.StateTransition{
+		Target: types.TransitionToTitle,
+	}); err != nil {
+		t.Fatalf("возврат на титул: %v", err)
+	}
+	if _, ok := app.state.(*states.TitleState); !ok {
+		t.Fatalf("состояние %T, ожидалось TitleState", app.state)
 	}
 }
 

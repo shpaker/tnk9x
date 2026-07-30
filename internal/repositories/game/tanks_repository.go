@@ -60,6 +60,15 @@ func (tr *TanksRepository) AddEnemy(enemy *types.TankEntity) {
 	tr.enemies = append(tr.enemies, enemy)
 }
 
+func (tr *TanksRepository) RemoveEnemy(enemy *types.TankEntity) {
+	for i, current := range tr.enemies {
+		if current == enemy {
+			tr.enemies = append(tr.enemies[:i], tr.enemies[i+1:]...)
+			return
+		}
+	}
+}
+
 func (tr *TanksRepository) GetAllEnemies() []*types.TankEntity {
 	return tr.enemies
 }

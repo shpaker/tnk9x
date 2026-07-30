@@ -25,7 +25,7 @@ internal/
 - Экземпляры use cases общие для всех сущностей одного типа; entity передаются как параметры методов.
 - Сервисы коллизий (`internal/services/collision_services/`) только проверяют коллизии и возвращают `bool`; изменения вносят use cases. Универсальная проверка — через `IEntityCollider`.
 - Entity живут только в Domain, поля унифицированы по порядку и смыслу.
-- `GameSessionEntity` допустима только в `internal/app`; в стейтах и их use cases — `StageSessionEntity` (источник данных о прогрессе уровня для `StageState`).
+- `GameSessionEntity` допустима только в `internal/app`; в стейтах и их use cases — `StageSessionEntity` (прогресс уровня) и `RunSessionEntity` (данные забега: жизни, очки, звёзды, номер этапа; живут между этапами).
 - Переходы между состояниями — через `types.StateTransition`, возвращаемый из `Update()`; контракт стейта определён у потребителя (`internal/app`).
 - Runtime-состояние игры (танки, пули, бонусы, анимации, звуковые события) — в `internal/repositories/game`, пересоздаётся на каждый уровень.
 - Отрисовка — только через адаптеры рендера (`*renderer_adapter`).

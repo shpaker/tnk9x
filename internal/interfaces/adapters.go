@@ -10,7 +10,6 @@ type IConfigProvider interface {
 	GetPlayer2Spawn() types.Position
 	GetHQPosition() [2]int
 	GetAIUpdateIntervalTicks() int
-	GetEnemyRespawnDelayTicks() uint
 	GetBaseSizePx() uint
 	GetMapBlocksCount() types.Size
 	GetTileBaseSize() uint
@@ -44,6 +43,7 @@ type IAIScriptEngine interface {
 	UpdateEnemyAI(
 		x, y float64,
 		direction, state int,
+		context types.EnemyAIContext,
 	) (types.EnemyAIDecision, error)
 	Close()
 }

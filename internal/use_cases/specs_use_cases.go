@@ -1,8 +1,6 @@
 package use_cases
 
 import (
-	"math/rand"
-
 	"github.com/shpaker/tnk9x/internal/interfaces"
 	"github.com/shpaker/tnk9x/internal/types"
 )
@@ -39,22 +37,22 @@ func NewSpecsUseCases() *SpecsUseCases {
 		1,     // Лимит пуль: 1
 	)
 
-	// Уровень 2: может ломать сталь, увеличенная скорость пуль
+	// Уровень 2: две пули одновременно (как в оригинале)
 	uc.playersSpecs[2] = types.NewSpecsEntity(
 		2,     // Уровень 2
 		32.0,  // Скорость танка без изменений
-		true,  // Пули усиленные (могут ломать сталь)
+		false, // Пули не усиленные
 		150.0, // Увеличенная скорость пули
-		1,     // Лимит пуль: 1
+		2,     // Лимит пуль: 2
 	)
 
-	// Уровень 3: максимальные характеристики - быстрее, может ломать сталь, больше пуль
+	// Уровень 3: усиленные пули ломают сталь; скорость танка не меняется
 	uc.playersSpecs[3] = types.NewSpecsEntity(
 		3,     // Уровень 3
-		40.0,  // Увеличенная скорость танка
-		true,  // Пули усиленные
+		32.0,  // Скорость танка без изменений
+		true,  // Пули усиленные (могут ломать сталь)
 		150.0, // Увеличенная скорость пули
-		2,     // Лимит пуль: 2 (может стрелять двумя пулями одновременно)
+		2,     // Лимит пуль: 2
 	)
 
 	// Инициализируем спецификации для вражеских танков согласно Battle City
@@ -116,48 +114,4 @@ func (uc *SpecsUseCases) GetTankSpecs(
 		return uc.playersSpecs[level]
 	}
 	return nil
-}
-
-// GetEnemyLevelByRemainingCount определяет уровень вражеского танка
-// на основе количества оставшихся врагов
-func (uc *SpecsUseCases) GetEnemyLevelByRemainingCount(
-	remainingEnemies uint,
-) uint {
-	// Первые три танка всегда 0 уровня (оставшиеся 18-20)
-	if remainingEnemies > 17 {
-		return 0
-	}
-
-	// Танки 4-5 (оставшиеся 16-17): всегда уровень 1
-	if remainingEnemies > 15 {
-		return 1
-	}
-
-	// Танки 6-10 (оставшиеся 11-15): либо 0 ур либо 1 ур (вероятность 50 процентов)
-	if remainingEnemies > 10 {
-		if rand.Intn(2) == 0 {
-			return 1
-		}
-		return 2
-	}
-
-	// Танки 11-15 (оставшиеся 6-10): 0 ур - вероятность 4 к 10, 1 ур - 4 к 10, 2 ур - 2 к 10
-	if remainingEnemies > 5 {
-		roll := rand.Intn(10)
-		if roll < 4 {
-			return 1
-		} else if roll < 8 {
-			return 2
-		}
-		return 3
-	}
-
-	// Танки 16-20 (оставшиеся 1-5): 1 ур - вероятность 2 к 10, 2 ур - 2 к 10, 3 ур - 6 к 10
-	roll := rand.Intn(10)
-	if roll < 2 {
-		return 1
-	} else if roll < 4 {
-		return 2
-	}
-	return 3
 }

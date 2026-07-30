@@ -54,6 +54,9 @@ func (uc *TankActionsUseCases) Rotate(
 	if !tank.IsActive() {
 		return errors.New("tank is not active")
 	}
+	if tank.IsFrozen() {
+		return nil
+	}
 	if direction == tank.Direction {
 		return nil
 	}
@@ -82,6 +85,9 @@ func (uc *TankActionsUseCases) Rotate(
 func (uc *TankActionsUseCases) Move(tank *types.TankEntity) error {
 	if !tank.IsActive() {
 		return errors.New("tank is not active")
+	}
+	if tank.IsFrozen() {
+		return nil
 	}
 
 	if tank.State == types.TankStateBraking {
@@ -112,6 +118,9 @@ func (uc *TankActionsUseCases) Stop(tank *types.TankEntity, byCollision bool) {
 func (uc *TankActionsUseCases) Shoot(tank *types.TankEntity) error {
 	if !tank.IsActive() {
 		return errors.New("tank is not active")
+	}
+	if tank.IsFrozen() {
+		return nil
 	}
 	if !tank.IsEnemy() {
 		uc.soundUseCases.RequestSound(types.SoundIDFire, false)

@@ -44,6 +44,14 @@ type TankEntity struct {
 	blinkCounter  int  // Счетчик тиков для мигания
 	blinkFlag     bool // Флаг видимости
 	hitPoints     uint // Количество попаданий до уничтожения (для тяжёлых танков)
+
+	// destroyedBy — роль игрока, чья пуля уничтожила танк;
+	// hasDestroyedBy false — уничтожен не игроком (например, гранатой)
+	destroyedBy    TankRole
+	hasDestroyedBy bool
+
+	shieldTicks uint // Тики неуязвимости (щит при спавне, шлем)
+	frozenTicks uint // Тики заморозки (дружественный огонь, таймер)
 }
 
 func NewDefaultTankEntity(role TankRole, direction Direction) TankEntity {
@@ -225,6 +233,41 @@ func (t *TankEntity) UpdateBlink() {
 		t.blinkCounter = 0
 		t.blinkFlag = !t.blinkFlag
 	}
+}
+
+func (t *TankEntity) SetShieldTicks(ticks uint) {
+	t.shieldTicks = ticks
+}
+
+func (t *TankEntity) HasShield() bool {
+	return t.shieldTicks > 0
+}
+
+func (t *TankEntity) SetFrozenTicks(ticks uint) {
+	t.frozenTicks = ticks
+}
+
+func (t *TankEntity) IsFrozen() bool {
+	return t.frozenTicks > 0
+}
+
+// TickStatusEffects уменьшает счётчики щита и заморозки на один тик
+func (t *TankEntity) TickStatusEffects() {
+	if t.shieldTicks > 0 {
+		t.shieldTicks--
+	}
+	if t.frozenTicks > 0 {
+		t.frozenTicks--
+	}
+}
+
+func (t *TankEntity) SetDestroyedBy(role TankRole) {
+	t.destroyedBy = role
+	t.hasDestroyedBy = true
+}
+
+func (t *TankEntity) GetDestroyedBy() (TankRole, bool) {
+	return t.destroyedBy, t.hasDestroyedBy
 }
 
 func (t *TankEntity) GetHitPoints() uint {

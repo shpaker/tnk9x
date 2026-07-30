@@ -63,8 +63,13 @@ type StageState struct {
 
 	isSetUp         bool
 	endSoundHandled bool
+	finishTicks     int
 	debugEnabled    bool // Флаг дебаг-режима
 }
+
+// stageFinishDelayTicks — пауза после завершения этапа перед
+// переходом на экран итогов (~3 секунды при 60 TPS)
+const stageFinishDelayTicks = 180
 
 func NewStageState(deps StageStateDependencies) *StageState {
 	return &StageState{
@@ -96,8 +101,9 @@ func (state *StageState) SetUp() {
 	state.soundUseCases.RequestStopAll()
 	state.soundUseCases.RequestSound(types.SoundIDGameStart, false)
 
-	// Сбрасываем сессию перед спавном танков, чтобы восстановить жизни игроков
-	state.stageSession.Reset()
+	// Готовим сессию этапа: счётчики спавна и пер-этапные итоги;
+	// жизни и очки забега сохраняются между этапами
+	state.stageSession.ResetStage()
 
 	playerCount := int(state.stageSession.GetPlayerCount())
 	if playerCount < 1 {
@@ -157,6 +163,13 @@ func (state *StageState) Update() types.StateTransition {
 		}
 	}
 
+	// Пауза обрабатывается единожды здесь, а не в адаптерах игроков:
+	// два адаптера на одной клавише гасили бы toggle друг друга
+	if !state.stageUseCases.IsStageFinished() &&
+		inpututil.IsKeyJustPressed(ebiten.KeyP) {
+		state.stageUseCases.TogglePause()
+	}
+
 	for _, adapter := range state.inputAdapters {
 		if adapter != nil {
 			adapter.Update(dt)
@@ -177,11 +190,14 @@ func (state *StageState) Update() types.StateTransition {
 			}
 			state.endSoundHandled = true
 		}
-		if len(inpututil.AppendJustPressedKeys(nil)) > 0 {
-			// Глушим звук завершения при выходе на экран выбора уровня
+		state.finishTicks++
+		if state.finishTicks >= stageFinishDelayTicks {
 			state.soundUseCases.RequestStopAll()
 			transition = types.StateTransition{
-				Target: types.TransitionToStageSelect,
+				Target:      types.TransitionToScore,
+				Level:       state.stageSession.GetStageNumber(),
+				PlayerCount: state.stageSession.GetPlayerCount(),
+				StageWon:    state.stageUseCases.IsStageWon(),
 			}
 		}
 	}
@@ -213,7 +229,10 @@ func (state *StageState) Update() types.StateTransition {
 			state.enemyInputAdapter.AddTank(spawned)
 		}
 
-		state.enemyInputAdapter.Update(dt)
+		// Бонус «таймер»: AI врагов не обновляется до конца заморозки
+		if !state.stageUseCases.AreEnemiesFrozen() {
+			state.enemyInputAdapter.Update(dt)
+		}
 
 		state.tilesUseCases.UpdateAnimations()
 
@@ -257,6 +276,15 @@ func (state *StageState) applySoundEvent(event types.SoundEntity) {
 	}
 }
 
+// reserveLives — NES-семантика счётчика жизней в HUD:
+// показывается запас без активного танка
+func reserveLives(lives uint) uint {
+	if lives == 0 {
+		return 0
+	}
+	return lives - 1
+}
+
 // updateBlinkObjects обновляет мигание бонусов и танков с бонусом
 func (state *StageState) updateBlinkObjects() {
 	var blinkObjects []types.IBlink
@@ -268,7 +296,12 @@ func (state *StageState) updateBlinkObjects() {
 	}
 
 	for _, tank := range state.tankCommonUseCases.GetAllTanks() {
-		if tank != nil && tank.IsEnemy() && tank.GetWithBonus() {
+		if tank == nil {
+			continue
+		}
+		if tank.IsEnemy() && tank.GetWithBonus() {
+			blinkObjects = append(blinkObjects, tank)
+		} else if !tank.IsEnemy() && tank.HasShield() {
 			blinkObjects = append(blinkObjects, tank)
 		}
 	}
@@ -284,12 +317,12 @@ func (state *StageState) Draw(screen *ebiten.Image) {
 	state.renderer.DrawSidebar(screen, types.StageHUDData{
 		EnemiesForSpawn: state.stageSession.EnemiesForSpawnCount(),
 		PlayerCount:     state.stageSession.GetPlayerCount(),
-		Player1Lives: state.stageSession.GetPlayerLives(
+		Player1Lives: reserveLives(state.stageSession.GetPlayerLives(
 			types.PlayerTankNumPlayer1,
-		),
-		Player2Lives: state.stageSession.GetPlayerLives(
+		)),
+		Player2Lives: reserveLives(state.stageSession.GetPlayerLives(
 			types.PlayerTankNumPlayer2,
-		),
+		)),
 		StageNumber: state.stageSession.GetStageNumber(),
 	})
 

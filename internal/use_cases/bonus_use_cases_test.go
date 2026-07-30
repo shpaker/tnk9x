@@ -49,23 +49,23 @@ type recordingLifecycle struct {
 	exploded []*types.TankEntity
 }
 
-func (s *recordingLifecycle) OnStageSetUpEnemiesSpawn() ([3]*types.TankEntity, error) {
-	return [3]*types.TankEntity{}, nil
-}
-
-func (s *recordingLifecycle) SpawnEnemyWithLevel(
-	index *int,
-	ignoreRespawnDelay bool,
-	remainingEnemies uint,
+func (s *recordingLifecycle) SpawnEnemy(
+	spawnIndex uint,
+	ignoreBlocked bool,
+	level uint,
 ) (*types.TankEntity, error) {
 	return nil, nil
 }
 
-func (s *recordingLifecycle) SpawnPlayer1() (*types.TankEntity, error) {
+func (s *recordingLifecycle) SpawnPlayer1(
+	level uint,
+) (*types.TankEntity, error) {
 	return nil, nil
 }
 
-func (s *recordingLifecycle) SpawnPlayer2() (*types.TankEntity, error) {
+func (s *recordingLifecycle) SpawnPlayer2(
+	level uint,
+) (*types.TankEntity, error) {
 	return nil, nil
 }
 
@@ -87,6 +87,8 @@ func (s *recordingLifecycle) Explode(tank *types.TankEntity) error {
 	return nil
 }
 
+func (s *recordingLifecycle) RemoveEnemy(tank *types.TankEntity) {}
+
 func (s *recordingLifecycle) UpdateAllTanksLifecycle() error { return nil }
 
 // stubConfigProvider отдаёт только размер базового тайла
@@ -103,9 +105,8 @@ func (s *stubConfigProvider) GetPlayer2Spawn() types.Position {
 	return types.Position{}
 }
 
-func (s *stubConfigProvider) GetHQPosition() [2]int           { return [2]int{} }
-func (s *stubConfigProvider) GetAIUpdateIntervalTicks() int   { return 0 }
-func (s *stubConfigProvider) GetEnemyRespawnDelayTicks() uint { return 0 }
+func (s *stubConfigProvider) GetHQPosition() [2]int         { return [2]int{} }
+func (s *stubConfigProvider) GetAIUpdateIntervalTicks() int { return 0 }
 
 func (s *stubConfigProvider) GetBaseSizePx() uint { return s.baseSizePx }
 
@@ -117,6 +118,14 @@ func (s *stubConfigProvider) GetRegularFontSize() uint      { return 0 }
 func (s *stubConfigProvider) GetGameTitle() string          { return "" }
 func (s *stubConfigProvider) GetVolume() float64            { return 0 }
 
+// recordingFortress фиксирует вызовы укрепления штаба
+type recordingFortress struct {
+	applies int
+}
+
+func (s *recordingFortress) Apply()  { s.applies++ }
+func (s *recordingFortress) Update() {}
+
 type bonusTestEnv struct {
 	tankCommon  *recordingTankCommon
 	lifecycle   *recordingLifecycle
@@ -124,13 +133,14 @@ type bonusTestEnv struct {
 	bonusesRepo *game.BonusesRepository
 	sounds      *use_cases.SoundUseCases
 	registry    *testutil.FakeTilesetRegistry
+	fortress    *recordingFortress
 	bonusUC     *use_cases.BonusUseCases
 }
 
 func newBonusTestEnv() *bonusTestEnv {
 	tankCommon := &recordingTankCommon{}
 	lifecycle := &recordingLifecycle{}
-	session := session_entities.NewStageSessionEntity()
+	session := session_entities.NewStageSessionEntity(nil)
 	bonusesRepo := game.NewBonusesRepository()
 	sounds := use_cases.NewSoundUseCases(game.NewSoundEventsRepository())
 	registry := &testutil.FakeTilesetRegistry{}
@@ -141,6 +151,7 @@ func newBonusTestEnv() *bonusTestEnv {
 		nil,
 	)
 
+	fortress := &recordingFortress{}
 	bonusUC := use_cases.NewBonusUseCases(
 		tankCommon,
 		lifecycle,
@@ -150,6 +161,9 @@ func newBonusTestEnv() *bonusTestEnv {
 		tilesUC,
 		&stubRenderUseCases{},
 		sounds,
+		use_cases.NewMapUseCases(nil),
+		nil, // spawnCollisionService: не задействован в этих сценариях
+		fortress,
 	)
 
 	return &bonusTestEnv{
@@ -159,6 +173,7 @@ func newBonusTestEnv() *bonusTestEnv {
 		bonusesRepo: bonusesRepo,
 		sounds:      sounds,
 		registry:    registry,
+		fortress:    fortress,
 		bonusUC:     bonusUC,
 	}
 }
@@ -269,33 +284,56 @@ func TestBonusUseCases_Apply_Tank(t *testing.T) {
 	}
 }
 
-// Каска/таймер/лопата пока не реализованы: бонус остаётся, но звук играет
-func TestBonusUseCases_Apply_UnimplementedTypesKeepBonus(t *testing.T) {
-	for _, bonusType := range []types.BonusType{
-		types.BonusTypeHelmet,
-		types.BonusTypeTimer,
-		types.BonusTypeShovel,
-	} {
-		t.Run(string(bonusType), func(t *testing.T) {
-			env := newBonusTestEnv()
-			bonus := env.newBonus(bonusType)
-			tank := newPlayerTank(types.TankRolePlayer1)
+// Шлем: временный щит подобравшему танку, бонус удаляется
+func TestBonusUseCases_Apply_Helmet(t *testing.T) {
+	env := newBonusTestEnv()
+	bonus := env.newBonus(types.BonusTypeHelmet)
+	tank := newPlayerTank(types.TankRolePlayer1)
 
-			env.bonusUC.Apply(bonus, tank)
+	env.bonusUC.Apply(bonus, tank)
 
-			if got := len(env.bonusesRepo.GetAllBonuses()); got != 1 {
-				t.Errorf("бонус удалён: осталось %d", got)
-			}
-			if len(env.tankCommon.leveledUp) != 0 {
-				t.Errorf("неожиданный LevelUp")
-			}
-			if len(env.lifecycle.exploded) != 0 {
-				t.Errorf("неожиданный взрыв")
-			}
-			if got := len(env.sounds.GetEvents()); got != 1 {
-				t.Errorf("ожидался 1 звук, получено %d", got)
-			}
-		})
+	if !tank.HasShield() {
+		t.Error("щит не выдан")
+	}
+	if got := len(env.bonusesRepo.GetAllBonuses()); got != 0 {
+		t.Errorf("бонус не удалён: %d", got)
+	}
+}
+
+// Таймер: враги замораживаются, активные останавливаются
+func TestBonusUseCases_Apply_Timer(t *testing.T) {
+	env := newBonusTestEnv()
+	bonus := env.newBonus(types.BonusTypeTimer)
+	player := newPlayerTank(types.TankRolePlayer1)
+	movingEnemy := newEnemyTankInState(types.TankStateMoving)
+	env.tankCommon.tanks = []*types.TankEntity{movingEnemy, player}
+
+	env.bonusUC.Apply(bonus, player)
+
+	if !env.session.AreEnemiesFrozen() {
+		t.Error("заморозка врагов не включена")
+	}
+	if movingEnemy.State != types.TankStateStopped {
+		t.Errorf("движущийся враг не остановлен: %v", movingEnemy.State)
+	}
+	if got := len(env.bonusesRepo.GetAllBonuses()); got != 0 {
+		t.Errorf("бонус не удалён: %d", got)
+	}
+}
+
+// Лопата: укрепление кольца делегируется FortressUseCases
+func TestBonusUseCases_Apply_Shovel(t *testing.T) {
+	env := newBonusTestEnv()
+	bonus := env.newBonus(types.BonusTypeShovel)
+	tank := newPlayerTank(types.TankRolePlayer1)
+
+	env.bonusUC.Apply(bonus, tank)
+
+	if env.fortress.applies != 1 {
+		t.Errorf("укрепление вызвано %d раз, ожидался 1", env.fortress.applies)
+	}
+	if got := len(env.bonusesRepo.GetAllBonuses()); got != 0 {
+		t.Errorf("бонус не удалён: %d", got)
 	}
 }
 
@@ -318,6 +356,9 @@ func TestBonusUseCases_Apply_NilArguments(t *testing.T) {
 func TestBonusUseCases_GetRandomBonusType(t *testing.T) {
 	env := newBonusTestEnv()
 	allowed := map[types.BonusType]bool{
+		types.BonusTypeHelmet:  true,
+		types.BonusTypeTimer:   true,
+		types.BonusTypeShovel:  true,
 		types.BonusTypeGrenade: true,
 		types.BonusTypeTank:    true,
 		types.BonusTypeStar:    true,
@@ -334,6 +375,9 @@ func TestBonusUseCases_SpawnRandomBonusEntity(t *testing.T) {
 	env := newBonusTestEnv()
 	position := types.Position{X: 48, Y: 96}
 	allowed := map[types.BonusType]bool{
+		types.BonusTypeHelmet:  true,
+		types.BonusTypeTimer:   true,
+		types.BonusTypeShovel:  true,
 		types.BonusTypeGrenade: true,
 		types.BonusTypeTank:    true,
 		types.BonusTypeStar:    true,

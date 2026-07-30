@@ -23,6 +23,7 @@ func NewAIUseCases(
 
 func (uc *AIUseCases) ExecuteAI(
 	tank *types.TankEntity,
+	context types.EnemyAIContext,
 ) (types.EnemyAIDecision, error) {
 	if tank == nil {
 		return types.EnemyAIDecision{}, errors.New("tank is nil")
@@ -33,5 +34,6 @@ func (uc *AIUseCases) ExecuteAI(
 		tank.Position.Y,
 		int(tank.Direction),
 		int(tank.State),
+		context,
 	)
 }

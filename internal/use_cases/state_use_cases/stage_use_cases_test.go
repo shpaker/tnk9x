@@ -12,37 +12,32 @@ import (
 const testDT = 1.0 / 60.0
 
 type spawnEnemyCall struct {
-	index     *int
-	ignore    bool
-	remaining uint
+	spawnIndex uint
+	ignore     bool
+	level      uint
 }
 
 // stubLifecycle записывает вызовы спавна; фабрики nextEnemy/nextPlayer*
 // позволяют вернуть nil (заблокированный спавнер) или новый танк
 type stubLifecycle struct {
-	initialEnemies [3]*types.TankEntity
-	nextEnemy      func() *types.TankEntity
-	nextPlayer1    func() *types.TankEntity
-	nextPlayer2    func() *types.TankEntity
-	spawnCalls     []spawnEnemyCall
-	player1Calls   int
-	player2Calls   int
-	players        [2]*types.TankEntity
+	nextEnemy    func() *types.TankEntity
+	nextPlayer1  func() *types.TankEntity
+	nextPlayer2  func() *types.TankEntity
+	spawnCalls   []spawnEnemyCall
+	player1Calls int
+	player2Calls int
+	players      [2]*types.TankEntity
 }
 
-func (s *stubLifecycle) OnStageSetUpEnemiesSpawn() ([3]*types.TankEntity, error) {
-	return s.initialEnemies, nil
-}
-
-func (s *stubLifecycle) SpawnEnemyWithLevel(
-	index *int,
-	ignoreRespawnDelay bool,
-	remainingEnemies uint,
+func (s *stubLifecycle) SpawnEnemy(
+	spawnIndex uint,
+	ignoreBlocked bool,
+	level uint,
 ) (*types.TankEntity, error) {
 	s.spawnCalls = append(s.spawnCalls, spawnEnemyCall{
-		index:     index,
-		ignore:    ignoreRespawnDelay,
-		remaining: remainingEnemies,
+		spawnIndex: spawnIndex,
+		ignore:     ignoreBlocked,
+		level:      level,
 	})
 	if s.nextEnemy == nil {
 		return nil, nil
@@ -50,7 +45,7 @@ func (s *stubLifecycle) SpawnEnemyWithLevel(
 	return s.nextEnemy(), nil
 }
 
-func (s *stubLifecycle) SpawnPlayer1() (*types.TankEntity, error) {
+func (s *stubLifecycle) SpawnPlayer1(level uint) (*types.TankEntity, error) {
 	s.player1Calls++
 	if s.nextPlayer1 == nil {
 		return nil, nil
@@ -60,7 +55,7 @@ func (s *stubLifecycle) SpawnPlayer1() (*types.TankEntity, error) {
 	return tank, nil
 }
 
-func (s *stubLifecycle) SpawnPlayer2() (*types.TankEntity, error) {
+func (s *stubLifecycle) SpawnPlayer2(level uint) (*types.TankEntity, error) {
 	s.player2Calls++
 	if s.nextPlayer2 == nil {
 		return nil, nil
@@ -84,6 +79,8 @@ func (s *stubLifecycle) SetPlayerTank(
 }
 
 func (s *stubLifecycle) Explode(tank *types.TankEntity) error { return nil }
+
+func (s *stubLifecycle) RemoveEnemy(tank *types.TankEntity) {}
 
 func (s *stubLifecycle) UpdateAllTanksLifecycle() error { return nil }
 
@@ -129,6 +126,10 @@ func (s *stubBulletUseCases) RemoveBullet(bullet *types.BulletEntity) error {
 	return nil
 }
 
+func (s *stubBulletUseCases) SpawnImpact(bullet *types.BulletEntity) {}
+
+func (s *stubBulletUseCases) GetImpacts() []*types.EffectEntity { return nil }
+
 type stubCollisionUseCases struct {
 	updateCalls int
 }
@@ -173,7 +174,7 @@ func newStageTestEnv(enemyRespawnDelay uint) *stageTestEnv {
 	bullets := &stubBulletUseCases{}
 	collision := &stubCollisionUseCases{}
 	hq := &stubHQUseCases{}
-	session := session_entities.NewStageSessionEntity()
+	session := session_entities.NewStageSessionEntity(nil)
 	bonuses := game.NewBonusesRepository()
 
 	stage := state_use_cases.NewStageUseCases(
@@ -185,8 +186,8 @@ func newStageTestEnv(enemyRespawnDelay uint) *stageTestEnv {
 		session,
 		enemyRespawnDelay,
 		bonuses,
-		nil, // mapUseCases: пути с ним защищены nil-проверками
-		nil, // bonusUseCases: пути с ним защищены nil-проверками
+		nil, // fortressUseCases: пути с ним защищены nil-проверками
+		nil, // soundUseCases: пути с ним защищены nil-проверками
 	)
 
 	return &stageTestEnv{
@@ -317,6 +318,7 @@ func TestStageUseCases_WinLoseTruthTable(t *testing.T) {
 		{
 			name: "жив только второй игрок",
 			setup: func(env *stageTestEnv) {
+				env.session.SetPlayerCount(2)
 				env.destroyAllEnemies()
 				env.session.SetPlayerLives(types.PlayerTankNumPlayer1, 0)
 			},
@@ -376,7 +378,7 @@ func TestStageUseCases_WinLoseTruthTable(t *testing.T) {
 
 // Без hqUseCases победа определяется только по врагам и игрокам
 func TestStageUseCases_IsStageWon_WithoutHQUseCases(t *testing.T) {
-	session := session_entities.NewStageSessionEntity()
+	session := session_entities.NewStageSessionEntity(nil)
 	stage := state_use_cases.NewStageUseCases(
 		nil, nil, nil, nil, nil, session, 0, nil, nil, nil,
 	)
@@ -442,7 +444,7 @@ func TestStageUseCases_TrySpawnEnemy_RespawnDelay(t *testing.T) {
 		t.Fatalf("вызовов спавна %d", len(env.lifecycle.spawnCalls))
 	}
 	call := env.lifecycle.spawnCalls[0]
-	if call.index != nil || call.ignore || call.remaining != 20 {
+	if call.spawnIndex != 0 || call.ignore {
 		t.Errorf("аргументы спавна: %+v", call)
 	}
 
@@ -472,12 +474,12 @@ func TestStageUseCases_TrySpawnEnemy_DefaultDelay(t *testing.T) {
 	}
 }
 
-// Лимит одновременно активных врагов (по умолчанию 5)
+// Лимит одновременно активных врагов (по умолчанию 4, как в NES)
 func TestStageUseCases_TrySpawnEnemy_MaxActiveEnemiesCap(t *testing.T) {
 	env := newStageTestEnv(1)
 	env.lifecycle.nextEnemy = newEnemyFactory()
 
-	for i := 0; i < 5; i++ {
+	for i := 0; i < 4; i++ {
 		env.common.tanks = append(
 			env.common.tanks,
 			newTankInState(types.TankRoleEnemy, types.TankStateStopped),
@@ -533,7 +535,8 @@ func TestStageUseCases_BonusEnemySequence(t *testing.T) {
 	env := newStageTestEnv(1)
 	env.lifecycle.nextEnemy = newEnemyFactory()
 
-	bonusNumbers := map[uint]bool{4: true, 9: true, 15: true}
+	// Канонические номера мигающих танков из оригинала
+	bonusNumbers := map[uint]bool{4: true, 11: true, 18: true}
 
 	for number := uint(1); number <= 20; number++ {
 		env.stage.UpdateGameObjects(testDT)
@@ -558,25 +561,78 @@ func TestStageUseCases_BonusEnemySequence(t *testing.T) {
 	}
 }
 
-// Начальный спавн: nil-слоты пропускаются, номера 1-3 без бонусов
+// Начальный спавн: три врага очереди волны, блокировка игнорируется,
+// номера 1-3 без бонусов
 func TestStageUseCases_SpawnInitialEnemyTanks(t *testing.T) {
 	env := newStageTestEnv(1)
-	enemy1 := newTankInState(types.TankRoleEnemy, types.TankStateSpawning)
-	enemy2 := newTankInState(types.TankRoleEnemy, types.TankStateSpawning)
-	env.lifecycle.initialEnemies = [3]*types.TankEntity{enemy1, enemy2, nil}
+	env.session.SetEnemyQueue([]uint{2, 3, 0, 1})
+	env.lifecycle.nextEnemy = newEnemyFactory()
 
 	spawned := env.stage.SpawnInitialEnemyTanks()
 
-	if len(spawned) != 2 {
-		t.Fatalf("заспавнено %d, ожидалось 2", len(spawned))
+	if len(spawned) != 3 {
+		t.Fatalf("заспавнено %d, ожидалось 3", len(spawned))
 	}
 	for i, tank := range spawned {
 		if tank.GetWithBonus() {
 			t.Errorf("начальный враг %d получил бонус", i)
 		}
 	}
-	if got := env.session.GetNextEnemyNumber(); got != 3 {
-		t.Errorf("следующий номер врага %d, ожидался 3", got)
+	wantLevels := []uint{2, 3, 0}
+	for i, call := range env.lifecycle.spawnCalls {
+		if !call.ignore {
+			t.Errorf("вызов %d без игнорирования блокировки", i)
+		}
+		if call.spawnIndex != uint(i) {
+			t.Errorf(
+				"вызов %d: точка спавна %d, ожидалась %d",
+				i,
+				call.spawnIndex,
+				i,
+			)
+		}
+		if call.level != wantLevels[i] {
+			t.Errorf(
+				"вызов %d: уровень %d, ожидался %d",
+				i,
+				call.level,
+				wantLevels[i],
+			)
+		}
+	}
+	if got := env.session.GetNextEnemyNumber(); got != 4 {
+		t.Errorf("следующий номер врага %d, ожидался 4", got)
+	}
+}
+
+// TrySpawnEnemy берёт уровень из очереди волны и передаёт
+// порядковый номер спавна для циклического выбора точки
+func TestStageUseCases_TrySpawnEnemy_UsesWaveQueue(t *testing.T) {
+	env := newStageTestEnv(1)
+	env.session.SetEnemyQueue([]uint{3, 1})
+	env.lifecycle.nextEnemy = newEnemyFactory()
+
+	env.stage.UpdateGameObjects(testDT)
+	if got := env.stage.TrySpawnEnemy(); got == nil {
+		t.Fatal("враг не заспавнился")
+	}
+	env.stage.UpdateGameObjects(testDT)
+	if got := env.stage.TrySpawnEnemy(); got == nil {
+		t.Fatal("второй враг не заспавнился")
+	}
+
+	if len(env.lifecycle.spawnCalls) != 2 {
+		t.Fatalf(
+			"вызовов спавна %d, ожидалось 2",
+			len(env.lifecycle.spawnCalls),
+		)
+	}
+	first, second := env.lifecycle.spawnCalls[0], env.lifecycle.spawnCalls[1]
+	if first.level != 3 || first.spawnIndex != 0 {
+		t.Errorf("первый спавн: %+v", first)
+	}
+	if second.level != 1 || second.spawnIndex != 1 {
+		t.Errorf("второй спавн: %+v", second)
 	}
 }
 
@@ -782,6 +838,36 @@ func TestStageUseCases_TrackDestroyedEnemies(t *testing.T) {
 	}
 }
 
+// Очки начисляются автору добивающего выстрела; враг без атрибуции
+// (например, взорванный гранатой) очков не приносит
+func TestStageUseCases_TrackDestroyedEnemies_AwardsScore(t *testing.T) {
+	env := newStageTestEnv(1)
+
+	killedByPlayer := newTankInState(
+		types.TankRoleEnemy,
+		types.TankStateExploded,
+	)
+	killedByPlayer.SetDestroyedBy(types.TankRolePlayer1)
+
+	killedByGrenade := newTankInState(
+		types.TankRoleEnemy,
+		types.TankStateExploded,
+	)
+
+	env.common.tanks = []*types.TankEntity{killedByPlayer, killedByGrenade}
+	env.stage.UpdateGameObjects(testDT)
+
+	run := env.session.RunSession()
+	// Танк без спецификаций — уровень 0, 100 очков
+	if got := run.GetScore(types.PlayerTankNumPlayer1); got != 100 {
+		t.Errorf("счёт P1 %d, ожидалось 100", got)
+	}
+	kills := run.GetStageKills(types.PlayerTankNumPlayer1)
+	if kills[0] != 1 {
+		t.Errorf("убийств уровня 0: %d, ожидалось 1", kills[0])
+	}
+}
+
 // SpawnInitialEnemyTanks очищает учёт уничтоженных врагов:
 // тот же взорванный танк учитывается заново
 func TestStageUseCases_TrackDestroyedEnemies_ResetOnInitialSpawn(
@@ -809,17 +895,12 @@ func TestStageUseCases_TrackDestroyedEnemies_ResetOnInitialSpawn(
 	}
 }
 
-// Уничтожение бонусного врага удаляет бонусы без владельца
-func TestStageUseCases_TrackDestroyedEnemies_BonusEnemyClearsBonuses(
+// Появление мигающего танка убирает лежащий на поле бонус
+func TestStageUseCases_BonusEnemyAppearanceClearsFieldBonuses(
 	t *testing.T,
 ) {
 	env := newStageTestEnv(1)
-	bonusEnemy := newTankInState(
-		types.TankRoleEnemy,
-		types.TankStateExploded,
-	)
-	bonusEnemy.SetWithBonus(true)
-	env.common.tanks = []*types.TankEntity{bonusEnemy}
+	env.lifecycle.nextEnemy = newEnemyFactory()
 
 	ownerless := types.NewBonusEntity(
 		types.BonusTypeStar,
@@ -840,11 +921,17 @@ func TestStageUseCases_TrackDestroyedEnemies_BonusEnemyClearsBonuses(
 	env.bonuses.AddBonus(ownerless)
 	env.bonuses.AddBonus(owned)
 
-	env.stage.UpdateGameObjects(testDT)
+	// Спавним врагов до появления мигающего №4
+	for number := uint(1); number <= 4; number++ {
+		env.stage.UpdateGameObjects(testDT)
+		if tank := env.stage.TrySpawnEnemy(); tank == nil {
+			t.Fatalf("враг %d не заспавнился", number)
+		}
+	}
 
 	remaining := env.bonuses.GetAllBonuses()
 	if len(remaining) != 1 || remaining[0] != owned {
-		t.Errorf("бонусы после уничтожения: %v", remaining)
+		t.Errorf("бонусы после появления мигающего танка: %v", remaining)
 	}
 }
 

@@ -44,7 +44,7 @@ func stageFactoryRequiredSprites() types.SpriteManifest {
 func (app *App) newStageState() (*states.StageState, error) {
 	tileBaseSize := int(app.config.GetTileBaseSize())
 	mapEntity, err := app.mapsRepository.GetLevel(
-		app.session.Level,
+		int(app.session.RunSession().GetStage()),
 		tileBaseSize,
 	)
 	if err != nil {
@@ -56,6 +56,19 @@ func (app *App) newStageState() (*states.StageState, error) {
 
 	stageSession := app.session.StageSession()
 	gameRepositories := game_repos.NewGameRepositoriesRegistry()
+
+	// Состав волны и интервал спавна — по таблицам и формуле NES
+	stageNumber := app.session.RunSession().GetStage()
+	wave, err := app.wavesRepository.GetWave(int(stageNumber))
+	if err != nil {
+		return nil, err
+	}
+	stageSession.SetEnemyQueue(wave.Tiers)
+
+	enemySpawnDelay := use_cases.NewWaveUseCases().SpawnDelayTicks(
+		stageNumber,
+		stageSession.GetPlayerCount(),
+	)
 
 	// анимации блоков карты (вода) продвигаются общим UpdateAnimations
 	for _, block := range mapEntity.GetBlocks() {
@@ -71,12 +84,18 @@ func (app *App) newStageState() (*states.StageState, error) {
 	tankTilesUseCases := app.buildTankTilesUseCases(gameRepositories)
 
 	baseSizePx := app.config.GetBaseSizePx()
+	// Тайлы пуль с анимациями: взрыв пули тикается общим репозиторием
+	bulletTilesUseCases := use_cases.NewTilesUseCasesWithAnimations(
+		app.tilesetRegistry,
+		types.TilesetTypeBullet,
+		gameRepositories.GetAnimationsRepository(),
+		services.NewTileService(app.tilesetRegistry, types.TilesetTypeBullet),
+		services.NewAnimationService(),
+	)
 	bulletUseCases := use_cases.NewBulletUseCases(
 		gameRepositories.GetBulletsRepository(),
-		app.buildTilesUseCases(
-			types.TilesetTypeBullet,
-			services.NewAnimationService(),
-		),
+		gameRepositories.GetEffectsRepository(),
+		bulletTilesUseCases,
 		baseSizePx,
 	)
 
@@ -137,18 +156,35 @@ func (app *App) newStageState() (*states.StageState, error) {
 		updateInterval = app.config.GetAIUpdateIntervalTicks()
 	}
 
+	// Центр штаба — цель врагов в фазе атаки
+	hqPos := app.config.GetHQPosition()
+	hqCenter := types.Position{
+		X: float64(hqPos[0])*float64(baseSizePx) + float64(baseSizePx)/2,
+		Y: float64(hqPos[1])*float64(baseSizePx) + float64(baseSizePx)/2,
+	}
+
 	aiUseCases := use_cases.NewAIUseCases(app.scriptEngine)
 	enemyInputAdapter, err := input_adapters.NewAiInputAdapter(
 		tankActionsUseCases,
 		nil,
 		updateInterval,
 		aiUseCases,
+		tankCommonUseCases,
+		stageSession,
+		hqCenter,
 	)
 	if err != nil {
 		return nil, err
 	}
 
 	bonusesRepository := gameRepositories.GetBonusesRepository()
+
+	fortressUseCases := use_cases.NewFortressUseCases(
+		mapUseCases,
+		stageSession,
+		app.fortressRingPositions(),
+		tileBaseSize,
+	)
 
 	bonusUseCases := use_cases.NewBonusUseCases(
 		tankCommonUseCases,
@@ -162,6 +198,9 @@ func (app *App) newStageState() (*states.StageState, error) {
 		),
 		renderUseCases,
 		soundUseCases,
+		mapUseCases,
+		app.spawnCollisionService,
+		fortressUseCases,
 	)
 
 	collisionUseCases := use_cases.NewCollisionUseCases(
@@ -188,10 +227,10 @@ func (app *App) newStageState() (*states.StageState, error) {
 		collisionUseCases,
 		hqUseCases,
 		stageSession,
-		app.config.GetEnemyRespawnDelayTicks(),
+		enemySpawnDelay,
 		bonusesRepository,
-		mapUseCases,
-		bonusUseCases,
+		fortressUseCases,
+		soundUseCases,
 	)
 
 	inputAdapter1 := input_adapters.NewStageKeyboardInputAdapter(
@@ -203,7 +242,6 @@ func (app *App) newStageState() (*states.StageState, error) {
 		ebiten.KeyA,
 		ebiten.KeyD,
 		ebiten.KeySpace,
-		ebiten.KeyP,
 	)
 
 	inputAdapter2 := input_adapters.NewStageKeyboardInputAdapter(
@@ -215,7 +253,6 @@ func (app *App) newStageState() (*states.StageState, error) {
 		ebiten.KeyArrowLeft,
 		ebiten.KeyArrowRight,
 		ebiten.KeyEnter,
-		ebiten.KeyP,
 	)
 
 	rendererAdapter := app.buildStageRenderer(
@@ -323,6 +360,45 @@ func (app *App) createHQ(
 		Image:    imageGetter,
 		State:    types.HQStateIntact,
 	}, nil
+}
+
+// fortressRingPositions возвращает px-координаты 8px-тайлов кольца
+// вокруг штаба: ряд сверху и колонки по бокам (низ — край карты)
+func (app *App) fortressRingPositions() []types.Position {
+	hqPos := app.config.GetHQPosition()
+	baseSizePx := int(app.config.GetBaseSizePx())
+	tileBaseSize := int(app.config.GetTileBaseSize())
+	mapBlocks := app.config.GetMapBlocksCount()
+
+	if tileBaseSize == 0 || len(hqPos) != 2 {
+		return nil
+	}
+
+	// Координаты штаба в 8px-тайлах и его размер в тайлах
+	hqTileX := hqPos[0] * baseSizePx / tileBaseSize
+	hqTileY := hqPos[1] * baseSizePx / tileBaseSize
+	hqTiles := baseSizePx / tileBaseSize
+
+	var ring []types.Position
+	addTile := func(x, y int) {
+		if x < 0 || y < 0 || x >= mapBlocks.Width || y >= mapBlocks.Height {
+			return
+		}
+		ring = append(ring, types.Position{
+			X: float64(x * tileBaseSize),
+			Y: float64(y * tileBaseSize),
+		})
+	}
+
+	for x := hqTileX - 1; x <= hqTileX+hqTiles; x++ {
+		addTile(x, hqTileY-1)
+	}
+	for y := hqTileY; y < hqTileY+hqTiles; y++ {
+		addTile(hqTileX-1, y)
+		addTile(hqTileX+hqTiles, y)
+	}
+
+	return ring
 }
 
 // loadEnemyAIScript задаёт скрипту глобальные параметры карты

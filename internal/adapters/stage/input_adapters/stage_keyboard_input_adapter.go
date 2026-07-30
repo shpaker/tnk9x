@@ -21,7 +21,6 @@ type StageKeyboardInputAdapter struct {
 	leftButton  ebiten.Key
 	rightButton ebiten.Key
 	shootButton ebiten.Key
-	pauseButton ebiten.Key
 }
 
 func (a *StageKeyboardInputAdapter) SetPlayerTank(tank *types.TankEntity) {
@@ -37,7 +36,6 @@ func NewStageKeyboardInputAdapter(
 	leftButton ebiten.Key,
 	rightButton ebiten.Key,
 	shootButton ebiten.Key,
-	pauseButton ebiten.Key,
 ) *StageKeyboardInputAdapter {
 	return &StageKeyboardInputAdapter{
 		tankActions:   tankActions,
@@ -48,23 +46,12 @@ func NewStageKeyboardInputAdapter(
 		leftButton:    leftButton,
 		rightButton:   rightButton,
 		shootButton:   shootButton,
-		pauseButton:   pauseButton,
 	}
 }
 
 func (a *StageKeyboardInputAdapter) Update(dt float64) {
-	a.handlePauseToggle()
 	a.keyPressedEvents()
 	a.keyReleasedEvents()
-}
-
-func (a *StageKeyboardInputAdapter) handlePauseToggle() {
-	if a.stageUseCases == nil {
-		return
-	}
-	if inpututil.IsKeyJustPressed(a.pauseButton) {
-		a.stageUseCases.TogglePause()
-	}
 }
 
 func (a *StageKeyboardInputAdapter) keyPressedEvents() {

@@ -24,15 +24,15 @@ type appConfigSchema struct {
 }
 
 type gameConfigSchema struct {
-	EnemySpawners          [][2]int `yaml:"enemy_spawners"`
-	Player1Spawn           [2]int   `yaml:"players_1_spawn_at"`
-	Player2Spawn           [2]int   `yaml:"players_2_spawn_at"`
-	HQPosition             [2]int   `yaml:"hq_position"`               // Позиция базы [x, y]
-	AIUpdateIntervalTicks  int      `yaml:"ai_update_interval_ticks"`  // Интервал обновления AI в тиках (по умолчанию 60 тиков = 1000мс)
-	EnemyRespawnDelayTicks uint     `yaml:"enemy_respawn_delay_ticks"` // Задержка между спавнами врагов в тиках
+	EnemySpawners         [][2]int `yaml:"enemy_spawners"`
+	Player1Spawn          [2]int   `yaml:"players_1_spawn_at"`
+	Player2Spawn          [2]int   `yaml:"players_2_spawn_at"`
+	HQPosition            [2]int   `yaml:"hq_position"`              // Позиция базы [x, y]
+	AIUpdateIntervalTicks int      `yaml:"ai_update_interval_ticks"` // Интервал обновления AI в тиках (по умолчанию 60 тиков = 1000мс)
 
-	BaseSizePx     uint   `yaml:"base_size_px"`
-	MapBlocksCount [2]int `yaml:"map_blocks_count"` // Размер карты в блоках [width, height]
+	BaseSizePx       uint   `yaml:"base_size_px"`
+	MapBlocksCount   [2]int `yaml:"map_blocks_count"`   // Размер карты в блоках [width, height]
+	MaxActiveEnemies uint   `yaml:"max_active_enemies"` // Лимит врагов на экране (канон NES — 4)
 }
 
 type Config struct {
@@ -43,15 +43,15 @@ type Config struct {
 	GameTitle        string
 	Volume           float64
 
-	EnemySpawners          []types.Position
-	Player1Spawn           types.Position
-	Player2Spawn           types.Position
-	HQPosition             [2]int
-	AIUpdateIntervalTicks  int
-	EnemyRespawnDelayTicks uint
+	EnemySpawners         []types.Position
+	Player1Spawn          types.Position
+	Player2Spawn          types.Position
+	HQPosition            [2]int
+	AIUpdateIntervalTicks int
 
-	BaseSizePx     uint
-	MapBlocksCount types.Size
+	BaseSizePx       uint
+	MapBlocksCount   types.Size
+	MaxActiveEnemies uint
 
 	TileBaseSize uint
 }
@@ -92,15 +92,15 @@ func LoadConfig() (*Config, error) {
 		Player2Spawn: convertCoordToPosition(
 			schema.Game.Player2Spawn,
 		),
-		HQPosition:             schema.Game.HQPosition,
-		AIUpdateIntervalTicks:  schema.Game.AIUpdateIntervalTicks,
-		EnemyRespawnDelayTicks: schema.Game.EnemyRespawnDelayTicks,
+		HQPosition:            schema.Game.HQPosition,
+		AIUpdateIntervalTicks: schema.Game.AIUpdateIntervalTicks,
 
 		BaseSizePx: schema.Game.BaseSizePx,
 		MapBlocksCount: types.Size{
 			Width:  schema.Game.MapBlocksCount[0],
 			Height: schema.Game.MapBlocksCount[1],
 		},
+		MaxActiveEnemies: schema.Game.MaxActiveEnemies,
 	}
 
 	cfg.TileBaseSize = cfg.BaseSizePx / 2
@@ -117,8 +117,8 @@ func LoadConfig() (*Config, error) {
 		cfg.SubtitleFontSize = cfg.RegularFontSize
 	}
 
-	if cfg.EnemyRespawnDelayTicks == 0 {
-		cfg.EnemyRespawnDelayTicks = 3 * 60
+	if cfg.MaxActiveEnemies == 0 {
+		cfg.MaxActiveEnemies = 4
 	}
 
 	// Если громкость указана в конфиге, используем её значение
@@ -170,12 +170,12 @@ func (c *Config) GetAIUpdateIntervalTicks() int {
 	return c.AIUpdateIntervalTicks
 }
 
-func (c *Config) GetEnemyRespawnDelayTicks() uint {
-	return c.EnemyRespawnDelayTicks
-}
-
 func (c *Config) GetBaseSizePx() uint {
 	return c.BaseSizePx
+}
+
+func (c *Config) GetMaxActiveEnemies() uint {
+	return c.MaxActiveEnemies
 }
 
 func (c *Config) GetMapBlocksCount() types.Size {

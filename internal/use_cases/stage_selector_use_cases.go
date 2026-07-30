@@ -56,27 +56,3 @@ func (uc *StageSelectorUseCases) Select(
 ) uint {
 	return selector.CurrentStage
 }
-
-// Диапазон лимита одновременно активных врагов
-const (
-	minMaxActiveEnemies uint = 3
-	maxMaxActiveEnemies uint = 10
-)
-
-// NextMaxActiveEnemies увеличивает лимит врагов с переходом 10 -> 3
-func (uc *StageSelectorUseCases) NextMaxActiveEnemies(current uint) uint {
-	if current < minMaxActiveEnemies || current >= maxMaxActiveEnemies {
-		return minMaxActiveEnemies
-	}
-	return current + 1
-}
-
-// PreviousMaxActiveEnemies уменьшает лимит врагов с переходом 3 -> 10
-func (uc *StageSelectorUseCases) PreviousMaxActiveEnemies(
-	current uint,
-) uint {
-	if current <= minMaxActiveEnemies || current > maxMaxActiveEnemies {
-		return maxMaxActiveEnemies
-	}
-	return current - 1
-}

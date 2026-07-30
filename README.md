@@ -6,15 +6,13 @@ A modern remake and tribute to the classic arcade game Battle City (NES, 1985), 
 
 ## Development Status
 
-**Playable now:** full game loop, two-player keyboard controls, tank movement with braking and grid snap, bullets and destructible terrain, all five surface types (brick, steel, forest, water, ice) with ice sliding and water blocking, Lua-scripted enemies of four types with probability-based levels, player lives/levels/damage, bonuses (grenade, tank, star) and power-ups, HQ with victory/defeat overlays, level selection, pause, sound effects and music, NES-style sidebar HUD (enemy reserve, player lives, stage flag) on an authentic 256x224 screen.
+**Playable now:** NES-faithful campaign flow (title screen, STAGE N curtain with stage select, 35 stages with auto-advance and loop, per-stage score tally, GAME OVER screen), lives/score/star levels carried across stages, scoring with 100-400 points per enemy tier, 500 per power-up, extra life at 20000 and session HI-SCORE, fixed NES enemy wave tables with cyclic spawners and stage-scaled spawn delay, all six bonuses (star, grenade, tank, helmet, timer, shovel with steel-ring fortification), canonical combat rules (death on hit, spawn shield, friendly-fire freeze, flashing bonus tanks #4/#11/#18 dropping power-ups on first hit), full-cell-wide brick strip destruction with bullet impact explosions, phase-based enemy AI (wander, hunt player, siege HQ), two-player keyboard controls, all five surface types with ice sliding, pause, sound, NES-style sidebar HUD on an authentic 256x224 screen.
 
 **Under the hood:** Clean Architecture with depguard-enforced layer boundaries, constructor-only DI from a composition root, repository pattern, scripting behind a domain-typed engine interface, app-lifetime GPU sprite cache with startup preload, fail-fast sprite/animation validation on startup, unit tests with a >=70% use-cases coverage gate, CI/CD (fmt, lint, test, build, release).
 
 ### Roadmap
-- Bonuses: helmet, timer, shovel
-- Enemy AI difficulty scaling
-- HQ: defeat screen, protection mechanics
-- UI: score, main menu, game over screen, settings
+- Persistent HI-SCORE and settings
+- Two-player tally bonuses, red palette flash for bonus tanks
 - Test coverage >80% total, performance profiling
 
 ## Installation and Running
@@ -55,10 +53,11 @@ The project follows **Clean Architecture** principles with clear separation of c
 │  ┌──────────────┐  ┌──────────────────────┐             │
 │  │   States     │  │      Adapters        │             │
 │  │              │  │                      │             │
-│  │ StageState   │  │ Renderer             │             │
-│  │ StageSelect  │  │ Input                │             │
-│  │              │  │ Sound                │             │
-│  │              │  │ Scripting (Lua)      │             │
+│  │ Title        │  │ Renderer             │             │
+│  │ StageCurtain │  │ Input                │             │
+│  │ StageState   │  │ Sound                │             │
+│  │ Score        │  │ Scripting (Lua)      │             │
+│  │ GameOver     │  │                      │             │
 │  └──────┬───────┘  └───────┬──────────────┘             │
 │         └─────────┬────────┘                            │
 │                   │ (depends on)                        │
