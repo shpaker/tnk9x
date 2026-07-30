@@ -1,6 +1,7 @@
 package use_cases_test
 
 import (
+	"image/color"
 	"testing"
 
 	game "github.com/shpaker/tnk9x/internal/repositories/game"
@@ -40,6 +41,16 @@ func (s *stubRenderUseCases) SyncTankAnimationWithState(
 }
 
 func (s *stubRenderUseCases) UpdateBlink(blinkObjects []types.IBlink) {}
+
+func (s *stubRenderUseCases) IsTankVisible(tank *types.TankEntity) bool {
+	return true
+}
+
+func (s *stubRenderUseCases) TankHealthOverlay(
+	tank *types.TankEntity,
+) (color.NRGBA, bool) {
+	return color.NRGBA{}, false
+}
 
 type stubHQUseCases struct{}
 

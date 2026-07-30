@@ -61,11 +61,28 @@ func NewDefaultTankEntity(role TankRole, direction Direction) TankEntity {
 	}
 }
 
+// TankAnimationDirections перечисляет имена направлений в
+// идентификаторах анимаций танков
+func TankAnimationDirections() []string {
+	return []string{"up", "left", "down", "right"}
+}
+
+// TankAnimationNameFor возвращает идентификатор анимации танка для роли,
+// номера модели (1-4) и имени направления — единственное место, где
+// задан формат имени
+func TankAnimationNameFor(
+	role TankRole,
+	model uint,
+	direction string,
+) string {
+	return fmt.Sprintf("%s_level%d_tank_%s", role, model, direction)
+}
+
 // AnimationName возвращает имя анимации танка, производное от уровня
 // спецификаций, роли и направления; для nil-танка — имя по умолчанию.
 func (t *TankEntity) AnimationName() string {
 	if t == nil {
-		return "player1_level1_tank_up"
+		return TankAnimationNameFor(TankRolePlayer1, 1, "up")
 	}
 
 	// Получаем уровень танка из спецификаций
@@ -76,14 +93,11 @@ func (t *TankEntity) AnimationName() string {
 	if tankLevel > 3 {
 		tankLevel = 3
 	}
-	modelName := fmt.Sprintf("level%d", tankLevel+1)
 
-	roleStr := string(t.GetRole())
-	if roleStr == "" {
-		roleStr = "player1"
+	role := t.GetRole()
+	if role == "" {
+		role = TankRolePlayer1
 	}
-
-	prefix := roleStr + "_" + modelName
 
 	var direction string
 	switch t.Direction {
@@ -99,7 +113,7 @@ func (t *TankEntity) AnimationName() string {
 		direction = "up"
 	}
 
-	return fmt.Sprintf("%s_tank_%s", prefix, direction)
+	return TankAnimationNameFor(role, tankLevel+1, direction)
 }
 
 func (t *TankEntity) GetSpecs() *SpecsEntity {

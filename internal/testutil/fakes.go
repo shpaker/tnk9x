@@ -2,6 +2,7 @@
 package testutil
 
 import (
+	"fmt"
 	"image"
 
 	"github.com/shpaker/tnk9x/internal/interfaces"
@@ -52,10 +53,10 @@ func (s *FakeTileService) CreateAnimationFromConfig(
 // CreateAnimationTileFromTileset каждый раз возвращает новый
 // AnimationProvider, чтобы работали пути спавна и взрывов.
 func (s *FakeTileService) CreateAnimationTileFromTileset(
-	tilesetType string,
+	tilesetType types.TilesetType,
 	id string,
 ) (*image_providers.AnimationProvider, error) {
-	s.Created = append(s.Created, tilesetType+"/"+id)
+	s.Created = append(s.Created, string(tilesetType)+"/"+id)
 	if s.Err != nil {
 		return nil, s.Err
 	}
@@ -101,205 +102,68 @@ func (p *FakeSoundPlayer) Update() error {
 }
 
 // FakeTilesetRegistry реализует interfaces.ITilesetRepositoryRegistry:
-// каждый Get*Image возвращает провайдер с запрошенным id, GetImageData —
-// пустую картинку 1x1. Requested хранит id всех запрошенных изображений.
+// GetImageData возвращает пустую картинку 1x1, анимации — минимальный
+// однокадровый набор. Requested хранит "тайлсет/id" всех запрошенных
+// изображений. MissingIDs объявляет отдельные "тайлсет/id"
+// несуществующими.
 type FakeTilesetRegistry struct {
-	Err       error    // если задана — все Get*Image падают
-	Requested []string // id запрошенных изображений
+	Err        error    // если задана — все Get* падают
+	Requested  []string // "тайлсет/id" запрошенных изображений
+	ImageIDs   []string // ответ GetImageIDs для любого тайлсета
+	MissingIDs []string // "тайлсет/id", для которых Get* падают
 }
 
 var _ interfaces.ITilesetRepositoryRegistry = (*FakeTilesetRegistry)(nil)
 
-func (r *FakeTilesetRegistry) image(id string) (types.IImageProvider, error) {
-	r.Requested = append(r.Requested, id)
-	if r.Err != nil {
-		return nil, r.Err
+func (r *FakeTilesetRegistry) missing(key string) bool {
+	for _, missingID := range r.MissingIDs {
+		if missingID == key {
+			return true
+		}
 	}
-	return &FakeImageProvider{ImageID: id}, nil
-}
-
-func (r *FakeTilesetRegistry) animationData() (types.AnimationData, error) {
-	return types.AnimationData{{Image: "frame", Duration: 1}}, nil
-}
-
-func (r *FakeTilesetRegistry) animationConfig() (types.AnimationConfig, error) {
-	return types.AnimationConfig{Duration: 1, Frames: []string{"frame"}}, nil
-}
-
-func (r *FakeTilesetRegistry) GetBlocksImage(
-	id string,
-) (types.IImageProvider, error) {
-	return r.image(id)
-}
-
-func (r *FakeTilesetRegistry) GetBlocksAnimationData(
-	id string,
-) (types.AnimationData, error) {
-	return r.animationData()
-}
-
-func (r *FakeTilesetRegistry) GetBlocksAnimationConfig(
-	id string,
-) (types.AnimationConfig, error) {
-	return r.animationConfig()
-}
-
-func (r *FakeTilesetRegistry) GetPlayerImage(
-	id string,
-) (types.IImageProvider, error) {
-	return r.image(id)
-}
-
-func (r *FakeTilesetRegistry) GetPlayerAnimationData(
-	id string,
-) (types.AnimationData, error) {
-	return r.animationData()
-}
-
-func (r *FakeTilesetRegistry) GetPlayerAnimationConfig(
-	id string,
-) (types.AnimationConfig, error) {
-	return r.animationConfig()
-}
-
-func (r *FakeTilesetRegistry) GetEnemyImage(
-	id string,
-) (types.IImageProvider, error) {
-	return r.image(id)
-}
-
-func (r *FakeTilesetRegistry) GetEnemyAnimationData(
-	id string,
-) (types.AnimationData, error) {
-	return r.animationData()
-}
-
-func (r *FakeTilesetRegistry) GetEnemyAnimationConfig(
-	id string,
-) (types.AnimationConfig, error) {
-	return r.animationConfig()
-}
-
-func (r *FakeTilesetRegistry) GetBulletImage(
-	id string,
-) (types.IImageProvider, error) {
-	return r.image(id)
-}
-
-func (r *FakeTilesetRegistry) GetBulletAnimationData(
-	id string,
-) (types.AnimationData, error) {
-	return r.animationData()
-}
-
-func (r *FakeTilesetRegistry) GetBulletAnimationConfig(
-	id string,
-) (types.AnimationConfig, error) {
-	return r.animationConfig()
-}
-
-func (r *FakeTilesetRegistry) GetSpawnerImage(
-	id string,
-) (types.IImageProvider, error) {
-	return r.image(id)
-}
-
-func (r *FakeTilesetRegistry) GetSpawnerAnimationData(
-	id string,
-) (types.AnimationData, error) {
-	return r.animationData()
-}
-
-func (r *FakeTilesetRegistry) GetSpawnerAnimationConfig(
-	id string,
-) (types.AnimationConfig, error) {
-	return r.animationConfig()
-}
-
-func (r *FakeTilesetRegistry) GetExplosionTankImage(
-	id string,
-) (types.IImageProvider, error) {
-	return r.image(id)
-}
-
-func (r *FakeTilesetRegistry) GetExplosionTankAnimationData(
-	id string,
-) (types.AnimationData, error) {
-	return r.animationData()
-}
-
-func (r *FakeTilesetRegistry) GetExplosionTankAnimationConfig(
-	id string,
-) (types.AnimationConfig, error) {
-	return r.animationConfig()
-}
-
-func (r *FakeTilesetRegistry) GetBulletExplosionImage(
-	id string,
-) (types.IImageProvider, error) {
-	return r.image(id)
-}
-
-func (r *FakeTilesetRegistry) GetBulletExplosionAnimationData(
-	id string,
-) (types.AnimationData, error) {
-	return r.animationData()
-}
-
-func (r *FakeTilesetRegistry) GetBulletExplosionAnimationConfig(
-	id string,
-) (types.AnimationConfig, error) {
-	return r.animationConfig()
-}
-
-func (r *FakeTilesetRegistry) GetHQImage(
-	id string,
-) (types.IImageProvider, error) {
-	return r.image(id)
-}
-
-func (r *FakeTilesetRegistry) GetHQAnimationData(
-	id string,
-) (types.AnimationData, error) {
-	return r.animationData()
-}
-
-func (r *FakeTilesetRegistry) GetHQAnimationConfig(
-	id string,
-) (types.AnimationConfig, error) {
-	return r.animationConfig()
-}
-
-func (r *FakeTilesetRegistry) GetBonusesImage(
-	id string,
-) (types.IImageProvider, error) {
-	return r.image(id)
-}
-
-func (r *FakeTilesetRegistry) GetBonusesAnimationData(
-	id string,
-) (types.AnimationData, error) {
-	return r.animationData()
-}
-
-func (r *FakeTilesetRegistry) GetBonusesAnimationConfig(
-	id string,
-) (types.AnimationConfig, error) {
-	return r.animationConfig()
-}
-
-func (r *FakeTilesetRegistry) GetHUDImage(
-	id string,
-) (types.IImageProvider, error) {
-	return r.image(id)
+	return false
 }
 
 func (r *FakeTilesetRegistry) GetImageData(
-	tilesetType string,
+	tilesetType types.TilesetType,
 	id string,
 ) (image.Image, error) {
+	key := string(tilesetType) + "/" + id
+	r.Requested = append(r.Requested, key)
 	if r.Err != nil {
 		return nil, r.Err
 	}
+	if r.missing(key) {
+		return nil, fmt.Errorf("image '%s' not found", id)
+	}
 	return image.NewRGBA(image.Rect(0, 0, 1, 1)), nil
+}
+
+func (r *FakeTilesetRegistry) GetAnimationData(
+	tilesetType types.TilesetType,
+	id string,
+) (types.AnimationData, error) {
+	if r.Err != nil {
+		return nil, r.Err
+	}
+	if r.missing(string(tilesetType) + "/" + id) {
+		return nil, fmt.Errorf("animation '%s' not found", id)
+	}
+	return types.AnimationData{{Image: "frame", Duration: 1}}, nil
+}
+
+func (r *FakeTilesetRegistry) GetAnimationConfig(
+	tilesetType types.TilesetType,
+	id string,
+) (types.AnimationConfig, error) {
+	if r.Err != nil {
+		return types.AnimationConfig{}, r.Err
+	}
+	return types.AnimationConfig{Duration: 1, Frames: []string{"frame"}}, nil
+}
+
+func (r *FakeTilesetRegistry) GetImageIDs(
+	tilesetType types.TilesetType,
+) []string {
+	return r.ImageIDs
 }

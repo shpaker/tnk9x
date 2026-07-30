@@ -26,12 +26,12 @@ func NewTileService(
 	}
 }
 
-func NewTileServiceWithSpecialRepos(
+// NewTileServiceWithEnemyFallback — сервис, который при отсутствии
+// анимации в основном тайлсете ищет её в тайлсете врагов
+func NewTileServiceWithEnemyFallback(
 	tilesetRegistry interfaces.ITilesetRepositoryRegistry,
 	primaryTilesetType types.TilesetType,
 	enemyTilesetType types.TilesetType,
-	spawnerTilesetType types.TilesetType,
-	explosionTilesetType types.TilesetType,
 ) *TileService {
 	return &TileService{
 		tilesetRegistry:  tilesetRegistry,
@@ -43,13 +43,13 @@ func NewTileServiceWithSpecialRepos(
 func (s *TileService) GetTileAnimationFrames(
 	id string,
 ) (types.AnimationData, error) {
-	animationData, err := s.getAnimationDataFromTileset(s.tilesetType, id)
+	animationData, err := s.tilesetRegistry.GetAnimationData(s.tilesetType, id)
 	if err == nil {
 		return animationData, nil
 	}
 
 	if s.enemyTilesetType != "" {
-		return s.getAnimationDataFromTileset(s.enemyTilesetType, id)
+		return s.tilesetRegistry.GetAnimationData(s.enemyTilesetType, id)
 	}
 
 	return nil, fmt.Errorf("animation '%s' not found", id)
@@ -58,70 +58,19 @@ func (s *TileService) GetTileAnimationFrames(
 func (s *TileService) GetAnimationConfig(
 	id string,
 ) (types.AnimationConfig, error) {
-	config, err := s.getAnimationConfigFromTileset(s.tilesetType, id)
+	config, err := s.tilesetRegistry.GetAnimationConfig(s.tilesetType, id)
 	if err == nil {
 		return config, nil
 	}
 
 	if s.enemyTilesetType != "" {
-		return s.getAnimationConfigFromTileset(s.enemyTilesetType, id)
+		return s.tilesetRegistry.GetAnimationConfig(s.enemyTilesetType, id)
 	}
 
 	return types.AnimationConfig{}, fmt.Errorf(
 		"animation config '%s' not found",
 		id,
 	)
-}
-
-func (s *TileService) getAnimationDataFromTileset(
-	tilesetType types.TilesetType,
-	id string,
-) (types.AnimationData, error) {
-	switch tilesetType {
-	case types.TilesetTypeBlocks:
-		return s.tilesetRegistry.GetBlocksAnimationData(id)
-	case types.TilesetTypePlayer:
-		return s.tilesetRegistry.GetPlayerAnimationData(id)
-	case types.TilesetTypeEnemy:
-		return s.tilesetRegistry.GetEnemyAnimationData(id)
-	case types.TilesetTypeBullet:
-		return s.tilesetRegistry.GetBulletAnimationData(id)
-	case types.TilesetTypeSpawner:
-		return s.tilesetRegistry.GetSpawnerAnimationData(id)
-	case types.TilesetTypeExplosion:
-		return s.tilesetRegistry.GetExplosionTankAnimationData(id)
-	case types.TilesetTypeHQ:
-		return s.tilesetRegistry.GetHQAnimationData(id)
-	default:
-		return nil, fmt.Errorf("unknown tileset type: %s", tilesetType)
-	}
-}
-
-func (s *TileService) getAnimationConfigFromTileset(
-	tilesetType types.TilesetType,
-	id string,
-) (types.AnimationConfig, error) {
-	switch tilesetType {
-	case types.TilesetTypeBlocks:
-		return s.tilesetRegistry.GetBlocksAnimationConfig(id)
-	case types.TilesetTypePlayer:
-		return s.tilesetRegistry.GetPlayerAnimationConfig(id)
-	case types.TilesetTypeEnemy:
-		return s.tilesetRegistry.GetEnemyAnimationConfig(id)
-	case types.TilesetTypeBullet:
-		return s.tilesetRegistry.GetBulletAnimationConfig(id)
-	case types.TilesetTypeSpawner:
-		return s.tilesetRegistry.GetSpawnerAnimationConfig(id)
-	case types.TilesetTypeExplosion:
-		return s.tilesetRegistry.GetExplosionTankAnimationConfig(id)
-	case types.TilesetTypeHQ:
-		return s.tilesetRegistry.GetHQAnimationConfig(id)
-	default:
-		return types.AnimationConfig{}, fmt.Errorf(
-			"unknown tileset type: %s",
-			tilesetType,
-		)
-	}
 }
 
 func (s *TileService) CreateAnimationFromConfig(
@@ -158,21 +107,15 @@ func (s *TileService) HasOffset(offset [2]float64) bool {
 }
 
 func (s *TileService) CreateAnimationTileFromTileset(
-	tilesetType string,
+	tilesetType types.TilesetType,
 	id string,
 ) (*image_providers.AnimationProvider, error) {
-	config, err := s.getAnimationConfigFromTileset(
-		types.TilesetType(tilesetType),
-		id,
-	)
+	config, err := s.tilesetRegistry.GetAnimationConfig(tilesetType, id)
 	if err != nil {
 		return nil, fmt.Errorf("animation config '%s' not found: %w", id, err)
 	}
 
-	animationFrames, err := s.getAnimationDataFromTileset(
-		types.TilesetType(tilesetType),
-		id,
-	)
+	animationFrames, err := s.tilesetRegistry.GetAnimationData(tilesetType, id)
 	if err != nil {
 		return nil, fmt.Errorf("animation '%s' not found: %w", id, err)
 	}

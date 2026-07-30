@@ -26,8 +26,6 @@ func newHQTestEnv() *hqTestEnv {
 		registry,
 		types.TilesetTypeHQ,
 		animations,
-		types.TilesetTypeSpawner,
-		types.TilesetTypeExplosion,
 		tileService,
 		nil,
 	)

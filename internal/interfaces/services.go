@@ -68,7 +68,7 @@ type ITileService interface {
 		config types.AnimationConfig,
 	) *image_providers.AnimationProvider
 	CreateAnimationTileFromTileset(
-		tilesetType string,
+		tilesetType types.TilesetType,
 		id string,
 	) (*image_providers.AnimationProvider, error)
 }

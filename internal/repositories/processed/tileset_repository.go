@@ -3,6 +3,7 @@ package processed
 import (
 	"fmt"
 	"image"
+	"sort"
 
 	"gopkg.in/yaml.v3"
 
@@ -69,6 +70,16 @@ func NewTilesetDataRepository(
 
 		var animationFrames types.AnimationData
 		for _, frameID := range animationConfig.Frames {
+			// Самопроверка ассета: кадр анимации обязан существовать
+			// среди изображений тайлсета
+			if _, exists := config.Images[frameID]; !exists {
+				return nil, fmt.Errorf(
+					"tileset %s: animation '%s' references missing image '%s'",
+					tilesetName,
+					animationID,
+					frameID,
+				)
+			}
 			animationFrames = append(animationFrames, types.AnimationDataFrame{
 				Image:    frameID,
 				Duration: animationConfig.Duration,
@@ -78,6 +89,15 @@ func NewTilesetDataRepository(
 	}
 
 	return repo, nil
+}
+
+func (tr *TilesetDataRepository) imageIDs() []string {
+	ids := make([]string, 0, len(tr.imagesCache))
+	for id := range tr.imagesCache {
+		ids = append(ids, id)
+	}
+	sort.Strings(ids)
+	return ids
 }
 
 func (tr *TilesetDataRepository) getImage(

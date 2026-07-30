@@ -2,6 +2,7 @@ package interfaces
 
 import (
 	"image"
+	"image/color"
 
 	"github.com/shpaker/tnk9x/internal/types"
 	image_providers "github.com/shpaker/tnk9x/internal/types/image_providers"
@@ -35,12 +36,19 @@ type ITilesUseCases interface {
 		id string,
 		isEnemy bool,
 	) (*image_providers.AnimationProvider, error)
-	GetImage(id string) (image.Image, error)
-	GetTankImage(id string, isEnemy bool) (image.Image, error)
 	AddAnimation(animation *image_providers.AnimationProvider)
 	UpdateAnimations()
 	StartAnimation(animation *image_providers.AnimationProvider)
 	StopAnimation(animation *image_providers.AnimationProvider)
+}
+
+// ISpriteUseCases — выдача спрайтов по типу тайлсета для рендера
+type ISpriteUseCases interface {
+	GetImage(
+		tilesetType types.TilesetType,
+		id string,
+	) (image.Image, error)
+	GetImageIDs(tilesetType types.TilesetType) []string
 }
 
 type ITankCommonUseCases interface {
@@ -59,6 +67,8 @@ type IRenderUseCases interface {
 	UpdateTankAnimation(tank *types.TankEntity)
 	SyncTankAnimationWithState(tank *types.TankEntity)
 	UpdateBlink(blinkObjects []types.IBlink)
+	IsTankVisible(tank *types.TankEntity) bool
+	TankHealthOverlay(tank *types.TankEntity) (color.NRGBA, bool)
 }
 
 type ITankLifecycleUseCases interface {
@@ -130,6 +140,7 @@ type ISoundUseCases interface {
 type IBonusUseCases interface {
 	Apply(bonus *types.BonusEntity, tank *types.TankEntity)
 	SpawnRandomBonusEntity(position types.Position) *types.BonusEntity
+	VisibleBonuses() []*types.BonusEntity
 }
 
 type IHUDUseCases interface {
@@ -146,4 +157,6 @@ type IStageSelectorUseCases interface {
 	Previous(selector *types.StageSelectorEntity) uint
 	String(selector *types.StageSelectorEntity) string
 	Select(selector *types.StageSelectorEntity) uint
+	NextMaxActiveEnemies(current uint) uint
+	PreviousMaxActiveEnemies(current uint) uint
 }

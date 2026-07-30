@@ -2,6 +2,7 @@ package tank_use_cases_test
 
 import (
 	"errors"
+	"image/color"
 	"testing"
 
 	game "github.com/shpaker/tnk9x/internal/repositories/game"
@@ -65,6 +66,16 @@ func (s *stubRenderUseCases) SyncTankAnimationWithState(
 
 func (s *stubRenderUseCases) UpdateBlink(blinkObjects []types.IBlink) {}
 
+func (s *stubRenderUseCases) IsTankVisible(tank *types.TankEntity) bool {
+	return true
+}
+
+func (s *stubRenderUseCases) TankHealthOverlay(
+	tank *types.TankEntity,
+) (color.NRGBA, bool) {
+	return color.NRGBA{}, false
+}
+
 // stubSpawnCollisionService фиксирует проверенные позиции и
 // позволяет объявить спавнер заблокированным
 type stubSpawnCollisionService struct {
@@ -110,8 +121,6 @@ func newLifecycleTestEnv() *lifecycleTestEnv {
 		nil, // реестр тайлсетов не нужен для анимаций спавна и взрыва
 		types.TilesetTypePlayer,
 		animations,
-		types.TilesetTypeSpawner,
-		types.TilesetTypeExplosion,
 		tileService,
 		nil,
 	)

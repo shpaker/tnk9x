@@ -15,63 +15,42 @@ type StageSelectRendererAdapter struct {
 	selector         *types.StageSelectorEntity
 	selectorUseCases interfaces.IStageSelectorUseCases
 	fontFace         text.Face
-	screenWidth      int
-	screenHeight     int
 	titleFontSize    int
 	regularFontSize  int
 	subtitleFontSize int
 	gameTitle        string
 }
 
+// StageSelectRendererDependencies — готовый граф зависимостей рендера
+// меню; собирается composition root'ом, все поля обязательны
+type StageSelectRendererDependencies struct {
+	Selector         *types.StageSelectorEntity
+	SelectorUseCases interfaces.IStageSelectorUseCases
+	FontFace         text.Face
+	TitleFontSize    int
+	RegularFontSize  int
+	SubtitleFontSize int
+	GameTitle        string
+}
+
 func NewStageSelectRendererAdapter(
-	selector *types.StageSelectorEntity,
-	selectorUseCases interfaces.IStageSelectorUseCases,
-	fontFace text.Face,
-	screenWidth int,
-	screenHeight int,
-	titleFontSize int,
-	regularFontSize int,
-	subtitleFontSize int,
-	gameTitle string,
-) (*StageSelectRendererAdapter, error) {
-	if fontFace == nil {
-		return nil, fmt.Errorf("font face is nil")
-	}
-
-	if titleFontSize <= 0 {
-		titleFontSize = 32
-	}
-	if regularFontSize <= 0 {
-		regularFontSize = titleFontSize
-	}
-	if subtitleFontSize <= 0 {
-		subtitleFontSize = regularFontSize
-	}
-
+	deps StageSelectRendererDependencies,
+) *StageSelectRendererAdapter {
 	return &StageSelectRendererAdapter{
-		selector:         selector,
-		selectorUseCases: selectorUseCases,
-		fontFace:         fontFace,
-		screenWidth:      screenWidth,
-		screenHeight:     screenHeight,
-		titleFontSize:    titleFontSize,
-		regularFontSize:  regularFontSize,
-		subtitleFontSize: subtitleFontSize,
-		gameTitle:        gameTitle,
-	}, nil
+		selector:         deps.Selector,
+		selectorUseCases: deps.SelectorUseCases,
+		fontFace:         deps.FontFace,
+		titleFontSize:    deps.TitleFontSize,
+		regularFontSize:  deps.RegularFontSize,
+		subtitleFontSize: deps.SubtitleFontSize,
+		gameTitle:        deps.GameTitle,
+	}
 }
 
 func (r *StageSelectRendererAdapter) DrawAll(
 	screen *ebiten.Image,
-	levelActive bool,
-	playerCount int,
-	isPlayersActive bool,
-	maxActiveEnemies uint,
+	view types.StageSelectViewData,
 ) {
-	if r.selector == nil || r.selectorUseCases == nil {
-		return
-	}
-
 	screenBounds := screen.Bounds()
 	actualWidth := float64(screenBounds.Dx())
 	actualHeight := float64(screenBounds.Dy())
@@ -102,7 +81,7 @@ func (r *StageSelectRendererAdapter) DrawAll(
 	y := (actualHeight-scaledHeight)/2 + float64(r.regularFontSize)
 
 	stageColor := color.NRGBA{R: 150, G: 150, B: 150, A: 255}
-	if levelActive {
+	if view.LevelActive {
 		stageColor = color.NRGBA{R: 255, G: 255, B: 255, A: 255}
 	}
 
@@ -112,14 +91,7 @@ func (r *StageSelectRendererAdapter) DrawAll(
 	op.ColorScale.ScaleWithColor(stageColor)
 	text.Draw(screen, stageText, r.fontFace, op)
 
-	if playerCount < 1 {
-		playerCount = 1
-	}
-	if playerCount > 2 {
-		playerCount = 2
-	}
-
-	playerText := fmt.Sprintf("PLAYERS %d", playerCount)
+	playerText := fmt.Sprintf("PLAYERS %d", view.PlayerCount)
 	playerWidth, _ := text.Measure(playerText, r.fontFace, 0)
 	playerScale := scale
 	playerScaledWidth := playerWidth * playerScale
@@ -127,7 +99,7 @@ func (r *StageSelectRendererAdapter) DrawAll(
 	playerY := y + scaledHeight + float64(r.regularFontSize)
 
 	playerColor := color.NRGBA{R: 150, G: 150, B: 150, A: 255}
-	if isPlayersActive {
+	if view.PlayersActive {
 		playerColor = color.NRGBA{R: 255, G: 255, B: 255, A: 255}
 	}
 
@@ -137,14 +109,7 @@ func (r *StageSelectRendererAdapter) DrawAll(
 	playerOp.ColorScale.ScaleWithColor(playerColor)
 	text.Draw(screen, playerText, r.fontFace, playerOp)
 
-	if maxActiveEnemies < 3 {
-		maxActiveEnemies = 3
-	}
-	if maxActiveEnemies > 10 {
-		maxActiveEnemies = 10
-	}
-
-	maxEnemiesText := fmt.Sprintf("MAX ENEMIES %d", maxActiveEnemies)
+	maxEnemiesText := fmt.Sprintf("MAX ENEMIES %d", view.MaxActiveEnemies)
 	maxEnemiesWidth, _ := text.Measure(maxEnemiesText, r.fontFace, 0)
 	maxEnemiesScale := scale
 	maxEnemiesScaledWidth := maxEnemiesWidth * maxEnemiesScale
@@ -152,7 +117,7 @@ func (r *StageSelectRendererAdapter) DrawAll(
 	maxEnemiesY := playerY + scaledHeight + float64(r.regularFontSize)
 
 	maxEnemiesColor := color.NRGBA{R: 150, G: 150, B: 150, A: 255}
-	if !levelActive && !isPlayersActive {
+	if view.MaxEnemiesActive {
 		maxEnemiesColor = color.NRGBA{R: 255, G: 255, B: 255, A: 255}
 	}
 

@@ -129,6 +129,18 @@ func (uc *BonusUseCases) removeBonus(bonus *types.BonusEntity) {
 	_ = uc.bonusesRepository.RemoveBonus(bonus)
 }
 
+// VisibleBonuses возвращает бонусы в видимой фазе мигания
+func (uc *BonusUseCases) VisibleBonuses() []*types.BonusEntity {
+	var visible []*types.BonusEntity
+	for _, bonus := range uc.bonusesRepository.GetAllBonuses() {
+		if bonus == nil || !bonus.GetBlinkFlag() {
+			continue
+		}
+		visible = append(visible, bonus)
+	}
+	return visible
+}
+
 // GetRandomBonusType возвращает случайный тип бонуса
 func (uc *BonusUseCases) GetRandomBonusType() types.BonusType {
 	bonusTypes := []types.BonusType{

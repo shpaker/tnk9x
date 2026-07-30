@@ -8,7 +8,7 @@ A modern remake and tribute to the classic arcade game Battle City (NES, 1985), 
 
 **Playable now:** full game loop, two-player keyboard controls, tank movement with braking and grid snap, bullets and destructible terrain, all five surface types (brick, steel, forest, water, ice) with ice sliding and water blocking, Lua-scripted enemies of four types with probability-based levels, player lives/levels/damage, bonuses (grenade, tank, star) and power-ups, HQ with victory/defeat overlays, level selection, pause, sound effects and music, NES-style sidebar HUD (enemy reserve, player lives, stage flag) on an authentic 256x224 screen.
 
-**Under the hood:** Clean Architecture with depguard-enforced layer boundaries, constructor-only DI from a composition root, repository pattern, scripting behind a domain-typed engine interface, unit tests with a >=70% use-cases coverage gate, CI/CD (fmt, lint, test, build, release).
+**Under the hood:** Clean Architecture with depguard-enforced layer boundaries, constructor-only DI from a composition root, repository pattern, scripting behind a domain-typed engine interface, app-lifetime GPU sprite cache with startup preload, fail-fast sprite/animation validation on startup, unit tests with a >=70% use-cases coverage gate, CI/CD (fmt, lint, test, build, release).
 
 ### Roadmap
 - Bonuses: helmet, timer, shovel

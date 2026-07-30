@@ -2,7 +2,6 @@ package use_cases
 
 import (
 	"fmt"
-	"image"
 
 	"github.com/shpaker/tnk9x/internal/interfaces"
 	"github.com/shpaker/tnk9x/internal/types"
@@ -15,8 +14,6 @@ type TilesUseCases struct {
 	tilesetRegistry      interfaces.ITilesetRepositoryRegistry
 	tilesetType          types.TilesetType
 	animationsRepository interfaces.IAnimationsRepository
-	spawnerTilesetType   types.TilesetType
-	explosionTilesetType types.TilesetType
 	tileService          interfaces.ITileService
 	animationService     interfaces.IAnimationService
 }
@@ -39,43 +36,22 @@ func NewTilesUseCasesWithAnimations(
 	tilesetRegistry interfaces.ITilesetRepositoryRegistry,
 	tilesetType types.TilesetType,
 	animationsRepository interfaces.IAnimationsRepository,
-	spawnerTilesetType types.TilesetType,
-	explosionTilesetType types.TilesetType,
 	tileService interfaces.ITileService,
 	animationService interfaces.IAnimationService,
 ) *TilesUseCases {
-	tuc := &TilesUseCases{
+	return &TilesUseCases{
 		tilesetRegistry:      tilesetRegistry,
 		tilesetType:          tilesetType,
 		animationsRepository: animationsRepository,
-		spawnerTilesetType:   spawnerTilesetType,
-		explosionTilesetType: explosionTilesetType,
 		tileService:          tileService,
 		animationService:     animationService,
 	}
-
-	return tuc
-}
-
-func (tuc *TilesUseCases) GetImage(id string) (image.Image, error) {
-	return tuc.getImageFromTileset(tuc.tilesetType, id)
-}
-
-func (tuc *TilesUseCases) GetTankImage(
-	id string,
-	isEnemy bool,
-) (image.Image, error) {
-	tilesetType := types.TilesetTypePlayer
-	if isEnemy {
-		tilesetType = types.TilesetTypeEnemy
-	}
-	return tuc.getImageFromTileset(tilesetType, id)
 }
 
 func (tuc *TilesUseCases) CreateStaticTile(
 	id string,
 ) (types.IImageProvider, error) {
-	_, err := tuc.getImageFromTileset(tuc.tilesetType, id)
+	_, err := tuc.tilesetRegistry.GetImageData(tuc.tilesetType, id)
 	if err != nil {
 		return nil, fmt.Errorf("image '%s' not found: %w", id, err)
 	}
@@ -85,58 +61,12 @@ func (tuc *TilesUseCases) CreateStaticTile(
 	}, nil
 }
 
-func (tuc *TilesUseCases) getImageFromTileset(
-	tilesetType types.TilesetType,
-	id string,
-) (image.Image, error) {
-	var provider types.IImageProvider
-	var err error
-
-	switch tilesetType {
-	case types.TilesetTypeBlocks:
-		provider, err = tuc.tilesetRegistry.GetBlocksImage(id)
-	case types.TilesetTypePlayer:
-		provider, err = tuc.tilesetRegistry.GetPlayerImage(id)
-	case types.TilesetTypeEnemy:
-		provider, err = tuc.tilesetRegistry.GetEnemyImage(id)
-	case types.TilesetTypeBullet:
-		provider, err = tuc.tilesetRegistry.GetBulletImage(id)
-	case types.TilesetTypeSpawner:
-		provider, err = tuc.tilesetRegistry.GetSpawnerImage(id)
-	case types.TilesetTypeExplosion:
-		provider, err = tuc.tilesetRegistry.GetExplosionTankImage(id)
-	case types.TilesetTypeHQ:
-		provider, err = tuc.tilesetRegistry.GetHQImage(id)
-	case types.TilesetTypeBonuses:
-		provider, err = tuc.tilesetRegistry.GetBonusesImage(id)
-	case types.TilesetTypeHUD:
-		provider, err = tuc.tilesetRegistry.GetHUDImage(id)
-	default:
-		return nil, fmt.Errorf("unknown tileset type: %s", tilesetType)
-	}
-
-	if err != nil {
-		return nil, err
-	}
-
-	imageID, err := provider.GetImageID()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get image ID from provider: %w", err)
-	}
-
-	return tuc.tilesetRegistry.GetImageData(string(tilesetType), imageID)
-}
-
 func (tuc *TilesUseCases) CreateTankAnimationTile(
 	id string,
 	isEnemy bool,
 ) (*image_providers.AnimationProvider, error) {
-	tilesetType := types.TilesetTypePlayer
-	if isEnemy {
-		tilesetType = types.TilesetTypeEnemy
-	}
 	return tuc.tileService.CreateAnimationTileFromTileset(
-		string(tilesetType),
+		types.TankTilesetType(isEnemy),
 		id,
 	)
 }
@@ -183,12 +113,12 @@ func (tuc *TilesUseCases) StopAnimation(
 }
 
 func (tuc *TilesUseCases) CreateSpawnAnimation() (*image_providers.AnimationProvider, error) {
-	if tuc.spawnerTilesetType == "" {
-		return nil, fmt.Errorf("spawner tileset type not initialized")
+	if tuc.animationsRepository == nil {
+		return nil, fmt.Errorf("animations repository is not configured")
 	}
 
 	animation, err := tuc.tileService.CreateAnimationTileFromTileset(
-		string(tuc.spawnerTilesetType),
+		types.TilesetTypeSpawner,
 		"spawner",
 	)
 	if err != nil {
@@ -200,12 +130,12 @@ func (tuc *TilesUseCases) CreateSpawnAnimation() (*image_providers.AnimationProv
 }
 
 func (tuc *TilesUseCases) CreateExplosionAnimation() (*image_providers.AnimationProvider, error) {
-	if tuc.explosionTilesetType == "" {
-		return nil, fmt.Errorf("explosion tileset type not initialized")
+	if tuc.animationsRepository == nil {
+		return nil, fmt.Errorf("animations repository is not configured")
 	}
 
 	animation, err := tuc.tileService.CreateAnimationTileFromTileset(
-		string(tuc.explosionTilesetType),
+		types.TilesetTypeExplosion,
 		"explosion_tank",
 	)
 	if err != nil {
