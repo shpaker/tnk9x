@@ -1,8 +1,6 @@
 package use_cases
 
 import (
-	"math"
-
 	"github.com/shpaker/tnk9x/internal/interfaces"
 	"github.com/shpaker/tnk9x/internal/types"
 )
@@ -366,8 +364,9 @@ func (uc *CollisionUseCases) checkBulletWallCollision(
 			if block.Data != nil {
 				if block.Data.Name == types.Brick {
 					if bullet.IsReinforced() {
-						// Усиленная пуля пробивает клетку насквозь
-						uc.destroyBlockStrip(bullet, block, true)
+						// Усиленная пуля снимает целый тайл глубины —
+						// вдвое больше обычной, но не клетку насквозь
+						uc.destroyBlockStrip(bullet, block)
 					} else {
 						// Обычная пуля состругивает слой в полтайла
 						// глубиной по всей ширине клетки 16px
@@ -377,7 +376,7 @@ func (uc *CollisionUseCases) checkBulletWallCollision(
 				} else if block.Data.Name == types.Steel {
 					if bullet.IsReinforced() {
 						// Усиленные пули срезают сталь полосой в тайл
-						uc.destroyBlockStrip(bullet, block, false)
+						uc.destroyBlockStrip(bullet, block)
 					}
 					uc.soundUseCases.RequestSound(types.SoundIDSteel, false)
 				}
@@ -390,20 +389,18 @@ func (uc *CollisionUseCases) checkBulletWallCollision(
 	return false
 }
 
-// destroyBlockStrip удаляет блоки полосы шириной в полную клетку 16px
-// перпендикулярно полёту пули; fullCell дополнительно снимает вторую
-// половину клетки по оси полёта (сквозное пробитие)
+// destroyBlockStrip удаляет полосу тайлов шириной в полную клетку 16px
+// и глубиной в один тайл перпендикулярно полёту пули
 func (uc *CollisionUseCases) destroyBlockStrip(
 	bullet *types.BulletEntity,
 	block *types.BlockEntity,
-	fullCell bool,
 ) {
 	if block.Data == nil {
 		return
 	}
 	blockType := block.Data.Name
 
-	for _, position := range stripPositions(bullet, block, fullCell) {
+	for _, position := range stripPositions(bullet, block) {
 		if target := uc.blockOfTypeAt(position, blockType); target != nil {
 			_ = uc.mapUseCases.RemoveBlock(target)
 		}
@@ -422,7 +419,7 @@ func (uc *CollisionUseCases) shaveBlockStrip(
 	}
 	blockType := block.Data.Name
 
-	for _, position := range stripPositions(bullet, block, false) {
+	for _, position := range stripPositions(bullet, block) {
 		if target := uc.blockOfTypeAt(position, blockType); target != nil {
 			uc.shaveBlock(target, bullet.Direction)
 		}
@@ -462,61 +459,47 @@ func (uc *CollisionUseCases) shaveBlock(
 	}
 }
 
-// stripPositions возвращает исходные координаты 8px-тайлов, снимаемых
-// выстрелом: пара тайлов клетки поперёк полёта, при fullCell — вся
-// клетка 16x16. Расчёт идёт от позиции тайла на сетке (Data.Position),
-// поэтому уже подрезанные блоки попадают в полосу
+// stripPositions возвращает исходные координаты 8px-тайлов полосы:
+// тайл попадания и сосед поперёк полёта со стороны центра пули —
+// зона поражения 16px центрируется на пуле, а не на сетке клеток.
+// Расчёт идёт от позиции тайла на сетке (Data.Position), поэтому уже
+// подрезанные блоки попадают в полосу
 func stripPositions(
 	bullet *types.BulletEntity,
 	block *types.BlockEntity,
-	fullCell bool,
 ) []types.Position {
 	blockPosition := block.GetPosition()
 	if block.Data != nil {
 		blockPosition = block.Data.Position
 	}
 	tileSize := float64(2 * blockShaveDepth)
-	cellSize := tileSize * 2
-
-	// Вторая координата тайла внутри клетки 16px по указанной оси
-	cellNeighbor := func(coordinate float64) float64 {
-		cellStart := math.Floor(coordinate/cellSize) * cellSize
-		if coordinate == cellStart {
-			return cellStart + tileSize
-		}
-		return cellStart
-	}
 
 	horizontalStrip := bullet.Direction == types.DirectionUp ||
 		bullet.Direction == types.DirectionDown
 
 	positions := []types.Position{blockPosition}
 	if horizontalStrip {
+		bulletCenter := bullet.Position.X + float64(bullet.Size.Width)/2
+		tileCenter := blockPosition.X + tileSize/2
+		neighborX := blockPosition.X - tileSize
+		if bulletCenter >= tileCenter {
+			neighborX = blockPosition.X + tileSize
+		}
 		positions = append(positions, types.Position{
-			X: cellNeighbor(blockPosition.X),
+			X: neighborX,
 			Y: blockPosition.Y,
 		})
 	} else {
+		bulletCenter := bullet.Position.Y + float64(bullet.Size.Height)/2
+		tileCenter := blockPosition.Y + tileSize/2
+		neighborY := blockPosition.Y - tileSize
+		if bulletCenter >= tileCenter {
+			neighborY = blockPosition.Y + tileSize
+		}
 		positions = append(positions, types.Position{
 			X: blockPosition.X,
-			Y: cellNeighbor(blockPosition.Y),
+			Y: neighborY,
 		})
-	}
-
-	if !fullCell {
-		return positions
-	}
-
-	// Вторая половина клетки по оси полёта
-	depth := len(positions)
-	for i := 0; i < depth; i++ {
-		position := positions[i]
-		if horizontalStrip {
-			position.Y = cellNeighbor(position.Y)
-		} else {
-			position.X = cellNeighbor(position.X)
-		}
-		positions = append(positions, position)
 	}
 
 	return positions

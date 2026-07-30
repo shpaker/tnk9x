@@ -898,9 +898,9 @@ func TestBulletWallCollision_BrickStrip(t *testing.T) {
 	}
 }
 
-// Усиленная пуля сносит кирпичную клетку насквозь одним выстрелом
-// и разрушает сталь полосой
-func TestBulletWallCollision_ReinforcedFullCellAndSteel(t *testing.T) {
+// Усиленная пуля снимает тайл глубины (вдвое больше обычной)
+// и разрушает сталь полосой; клетку насквозь не пробивает
+func TestBulletWallCollision_ReinforcedTileStripAndSteel(t *testing.T) {
 	steel := func(x, y float64) *types.BlockEntity {
 		return types.NewBlockEntity("steel", x, y, 8, &stubImageProvider{})
 	}
@@ -923,13 +923,37 @@ func TestBulletWallCollision_ReinforcedFullCellAndSteel(t *testing.T) {
 	)
 	env.tanksRepo.SetPlayer(types.PlayerTankNumPlayer1, shooter)
 
+	// Первый выстрел снимает переднюю колонку тайлов целиком,
+	// но не пробивает клетку насквозь
 	makeDirectedBullet(env, 110, 98, types.DirectionRight, shooter)
+	env.collision.UpdateCollisions()
+
+	bricksLeft := 0
+	for _, block := range env.mapEntity.GetBlocks() {
+		if block.Data.Name != types.Brick {
+			continue
+		}
+		bricksLeft++
+		if block.GetPosition().X != 120 || block.Size.Width != 8 {
+			t.Errorf(
+				"после первого выстрела уцелел не тот кирпич: %v (ширина %d)",
+				block.GetPosition(),
+				block.Size.Width,
+			)
+		}
+	}
+	if bricksLeft != 2 {
+		t.Fatalf("кирпичей осталось %d, ожидалось 2", bricksLeft)
+	}
+
+	// Второй выстрел добивает заднюю колонку
+	makeDirectedBullet(env, 118, 98, types.DirectionRight, shooter)
 	env.collision.UpdateCollisions()
 
 	for _, block := range env.mapEntity.GetBlocks() {
 		if block.Data.Name == types.Brick {
 			t.Errorf(
-				"кирпич уцелел после усиленной пули: %v",
+				"кирпич уцелел после второго выстрела: %v",
 				block.GetPosition(),
 			)
 		}
@@ -946,5 +970,44 @@ func TestBulletWallCollision_ReinforcedFullCellAndSteel(t *testing.T) {
 				block.GetPosition(),
 			)
 		}
+	}
+}
+
+// Полоса поражения центрируется на пуле, а не на сетке клеток:
+// при попадании у границы клетки срезается сосед со стороны пули,
+// а не тайл с дальней стороны клетки
+func TestBulletWallCollision_StripFollowsBullet(t *testing.T) {
+	// Колонка из трёх тайлов; средний лежит на границе клеток 16px
+	blocks := types.MapBlocks{
+		brick(112, 88),
+		brick(112, 96),
+		brick(112, 104),
+	}
+	env := newCollisionTestEnv(blocks)
+	shooter := env.newTank(
+		types.TankRolePlayer1,
+		types.DirectionLeft,
+		160,
+		88,
+		0,
+	)
+	env.tanksRepo.SetPlayer(types.PlayerTankNumPlayer1, shooter)
+
+	// Центр пули на Y=97 — между тайлами 88 и 96: срезаются они,
+	// а не сосед тайла 96 по клетке (104)
+	makeDirectedBullet(env, 118, 95, types.DirectionLeft, shooter)
+	env.collision.UpdateCollisions()
+
+	shaved := map[float64]bool{}
+	for _, block := range env.mapEntity.GetBlocks() {
+		if block.Size.Width == 4 {
+			shaved[block.Data.Position.Y] = true
+		}
+		if block.Data.Position.Y == 104 && block.Size.Width != 8 {
+			t.Errorf("тайл 104 задет, хотя пуля летела выше")
+		}
+	}
+	if !shaved[88] || !shaved[96] {
+		t.Errorf("срезаны не те тайлы: %v, ожидались 88 и 96", shaved)
 	}
 }
