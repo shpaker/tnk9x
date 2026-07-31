@@ -425,7 +425,7 @@ func TestTilesetRepository_Integration(t *testing.T) {
 		)
 	}
 
-	fileRepo := raw.NewFileRepository("assets")
+	fileRepo := raw.NewFileRepository(os.DirFS("assets"))
 
 	registry, err := NewTilesetRepositoryRegistry(fileRepo)
 	if err != nil {

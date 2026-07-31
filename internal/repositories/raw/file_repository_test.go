@@ -1,30 +1,13 @@
 package raw
 
 import (
-	"fmt"
 	"image"
 	"image/png"
 	"os"
 	"path/filepath"
 	"testing"
+	"testing/fstest"
 )
-
-func TestGetAssetPath(t *testing.T) {
-	baseDir := "/tmp/assets"
-	assetName := "base.json"
-
-	repo := NewFileRepository(baseDir)
-	result, err := repo.getPath(assetName)
-	if err != nil {
-		t.Errorf("неожиданная ошибка: %v", err)
-		return
-	}
-
-	expected := fmt.Sprintf("%s/%s", baseDir, assetName)
-	if result != expected {
-		t.Errorf("ожидался путь %s, получен %s", expected, result)
-	}
-}
 
 func TestReadFile(t *testing.T) {
 	tempDir, err := os.MkdirTemp("", "assets_test")
@@ -43,7 +26,7 @@ func TestReadFile(t *testing.T) {
 		t.Fatalf("не удалось создать тестовый файл: %v", err)
 	}
 
-	repo := NewFileRepository(tempDir)
+	repo := NewFileRepository(os.DirFS(tempDir))
 	result, err := repo.ReadFile(testFile)
 	if err != nil {
 		t.Errorf("неожиданная ошибка: %v", err)
@@ -78,7 +61,7 @@ func TestReadImage(t *testing.T) {
 	}
 	_ = file.Close()
 
-	repo := NewFileRepository(tempDir)
+	repo := NewFileRepository(os.DirFS(tempDir))
 	result, err := repo.ReadImage(testFile)
 	if err != nil {
 		t.Errorf("неожиданная ошибка: %v", err)
@@ -87,6 +70,33 @@ func TestReadImage(t *testing.T) {
 
 	if result == nil {
 		t.Error("ожидалось изображение, получен nil")
+	}
+}
+
+func TestCountFiles(t *testing.T) {
+	fsys := fstest.MapFS{
+		"levels/1.bcmap":      &fstest.MapFile{},
+		"levels/2.bcmap":      &fstest.MapFile{},
+		"levels/readme.txt":   &fstest.MapFile{},
+		"levels/sub/3.bcmap":  &fstest.MapFile{},
+		"sounds/shot.ogg":     &fstest.MapFile{},
+		"levels/nested/x.txt": &fstest.MapFile{},
+	}
+
+	repo := NewFileRepository(fsys)
+
+	count, err := repo.CountFiles("levels", "*.bcmap")
+	if err != nil {
+		t.Fatalf("неожиданная ошибка: %v", err)
+	}
+
+	// Вложенные каталоги не учитываются — только файлы верхнего уровня
+	if count != 2 {
+		t.Errorf("ожидалось 2 файла, получено %d", count)
+	}
+
+	if _, err := repo.CountFiles("missing", "*.bcmap"); err == nil {
+		t.Error("ожидалась ошибка для несуществующего каталога")
 	}
 }
 
@@ -112,7 +122,7 @@ func TestReadConfig(t *testing.T) {
 		Value int    `yaml:"value"`
 	}
 
-	repo := NewFileRepository(tempDir)
+	repo := NewFileRepository(os.DirFS(tempDir))
 	config, err := ReadConfig[TestConfig](repo, testFile)
 	if err != nil {
 		t.Errorf("неожиданная ошибка: %v", err)

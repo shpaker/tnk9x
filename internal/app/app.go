@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
+	"runtime"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/audio"
@@ -79,7 +80,7 @@ func New(cfg *Config) *App {
 	// Создаем audio context один раз на приложение
 	audioContext := audio.NewContext(audioSampleRate)
 
-	fileRepository := raw.NewFileRepository("assets")
+	fileRepository := raw.NewFileRepository(assetsFS())
 
 	tilesetRegistry, err := processed.NewTilesetRepositoryRegistry(
 		fileRepository,
@@ -203,7 +204,9 @@ func (app *App) Update() error {
 		}
 	}
 
-	if ebiten.IsKeyPressed(ebiten.KeyEscape) {
+	// В браузере Escape не завершает игру: ebiten.Termination
+	// остановил бы game loop и заморозил canvas
+	if runtime.GOOS != "js" && ebiten.IsKeyPressed(ebiten.KeyEscape) {
 		return ebiten.Termination
 	}
 

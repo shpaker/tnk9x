@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>tnk9x</title>
+  <link rel="icon" href="data:,">
+  <style>
+    html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+    #status { position: fixed; inset: 0; display: flex; align-items: center;
+              justify-content: center; color: #9a9a9a; font: 12px monospace; }
+    #hint { position: fixed; bottom: 8px; left: 0; right: 0; text-align: center;
+            color: #555; font: 10px monospace; pointer-events: none; }
+  </style>
+</head>
+<body>
+  <div id="status">loading&hellip;</div>
+  <div id="hint">P1: WASD + Space &middot; P2: Arrows + Enter &middot; Enter: start &middot; P: pause</div>
+  <script src="wasm_exec.js"></script>
+  <script>
+    const status = document.getElementById("status");
+    const go = new Go();
+    async function instantiate() {
+      if (WebAssembly.instantiateStreaming) {
+        try {
+          return await WebAssembly.instantiateStreaming(
+            fetch("tnk9x.wasm"), go.importObject);
+        } catch (_) { /* неверный MIME у локального сервера — fallback ниже */ }
+      }
+      const buf = await (await fetch("tnk9x.wasm")).arrayBuffer();
+      return await WebAssembly.instantiate(buf, go.importObject);
+    }
+    instantiate().then((result) => {
+      status.remove();
+      go.run(result.instance);
+    }).catch((err) => { status.textContent = "failed to load: " + err; });
+  </script>
+</body>
+</html>
