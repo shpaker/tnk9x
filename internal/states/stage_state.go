@@ -16,7 +16,8 @@ import (
 type StageRenderer interface {
 	DrawAll(screen *ebiten.Image)
 	DrawSidebar(screen *ebiten.Image, hud types.StageHUDData)
-	DrawPauseOverlay(screen *ebiten.Image)
+	DrawPauseMenu(screen *ebiten.Image, view types.PauseMenuViewData)
+	PauseMenuHitTest(pos types.Position) (types.PauseMenuItem, bool)
 	DrawStageEndOverlay(screen *ebiten.Image, label string)
 }
 
@@ -36,6 +37,7 @@ type StageStateDependencies struct {
 	EnemyInputAdapter  interfaces.IAiInputAdapter
 	Renderer           StageRenderer
 	SoundPlayerAdapter interfaces.ISoundPlayerAdapter
+	TouchControls      interfaces.ITouchControlsAdapter
 
 	// Session & Repositories
 	StageSession      *session_entities.StageSessionEntity
@@ -56,6 +58,7 @@ type StageState struct {
 	enemyInputAdapter  interfaces.IAiInputAdapter
 	renderer           StageRenderer
 	soundPlayerAdapter interfaces.ISoundPlayerAdapter
+	touchControls      interfaces.ITouchControlsAdapter
 
 	// Session & Repositories
 	stageSession      *session_entities.StageSessionEntity
@@ -64,6 +67,12 @@ type StageState struct {
 	isSetUp         bool
 	endSoundHandled bool
 	debugEnabled    bool // Флаг дебаг-режима
+
+	// Меню паузы — чистая презентация поверх доменного флага паузы:
+	// видимо, пока уровень на паузе и не завершён
+	pauseMenuItems   []types.PauseMenuItem
+	pauseMenuIndex   int
+	pauseMenuWasOpen bool
 }
 
 func NewStageState(deps StageStateDependencies) *StageState {
@@ -78,8 +87,13 @@ func NewStageState(deps StageStateDependencies) *StageState {
 		enemyInputAdapter:     deps.EnemyInputAdapter,
 		renderer:              deps.Renderer,
 		soundPlayerAdapter:    deps.SoundPlayerAdapter,
+		touchControls:         deps.TouchControls,
 		stageSession:          deps.StageSession,
 		bonusesRepository:     deps.BonusesRepository,
+		pauseMenuItems: []types.PauseMenuItem{
+			types.PauseMenuItemContinue,
+			types.PauseMenuItemExitToSelect,
+		},
 	}
 }
 
@@ -188,6 +202,12 @@ func (state *StageState) Update() types.StateTransition {
 		}
 	}
 
+	// Меню паузы работает только пока уровень не завершён:
+	// на финальном оверлее любая клавиша уже означает выход
+	if !stageFinished {
+		transition = state.handlePauseMenu()
+	}
+
 	paused := state.stageUseCases.IsPaused()
 
 	if !paused {
@@ -242,6 +262,75 @@ func (state *StageState) Update() types.StateTransition {
 	state.soundPlayerAdapter.Update()
 
 	return transition
+}
+
+// handlePauseMenu — переключение паузы по ESC и управление меню:
+// клавиатурная навигация, выбор Enter/Space и тап по пункту
+func (state *StageState) handlePauseMenu() types.StateTransition {
+	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
+		state.stageUseCases.TogglePause()
+	}
+
+	menuOpen := state.stageUseCases.IsPaused()
+	// При каждом открытии меню курсор возвращается на первый пункт
+	if menuOpen && !state.pauseMenuWasOpen {
+		state.pauseMenuIndex = 0
+	}
+	state.pauseMenuWasOpen = menuOpen
+	if !menuOpen {
+		return types.StateTransition{}
+	}
+
+	state.handlePauseMenuNavigation()
+
+	if inpututil.IsKeyJustPressed(ebiten.KeyEnter) ||
+		inpututil.IsKeyJustPressed(ebiten.KeySpace) {
+		return state.applyPauseMenuSelection(
+			state.pauseMenuItems[state.pauseMenuIndex],
+		)
+	}
+
+	// Тап сразу активирует пункт: это командное меню без степперов
+	if pos, ok := state.touchControls.TapJustPressed(); ok {
+		if item, hit := state.renderer.PauseMenuHitTest(pos); hit {
+			return state.applyPauseMenuSelection(item)
+		}
+	}
+
+	return types.StateTransition{}
+}
+
+func (state *StageState) handlePauseMenuNavigation() {
+	moveUp := inpututil.IsKeyJustPressed(ebiten.KeyUp) ||
+		inpututil.IsKeyJustPressed(ebiten.KeyW)
+	moveDown := inpututil.IsKeyJustPressed(ebiten.KeyDown) ||
+		inpututil.IsKeyJustPressed(ebiten.KeyS)
+
+	if moveUp && state.pauseMenuIndex > 0 {
+		state.pauseMenuIndex--
+	}
+	if moveDown && state.pauseMenuIndex < len(state.pauseMenuItems)-1 {
+		state.pauseMenuIndex++
+	}
+}
+
+// applyPauseMenuSelection применяет выбранный пункт меню паузы
+func (state *StageState) applyPauseMenuSelection(
+	item types.PauseMenuItem,
+) types.StateTransition {
+	switch item {
+	case types.PauseMenuItemContinue:
+		state.stageUseCases.ResumeStageState()
+	case types.PauseMenuItemExitToSelect:
+		// Глушим звуки уровня при выходе на экран выбора
+		state.soundUseCases.RequestStopAll()
+
+		return types.StateTransition{
+			Target: types.TransitionToStageSelect,
+		}
+	}
+
+	return types.StateTransition{}
 }
 
 func (state *StageState) applySoundEvent(event types.SoundEntity) {
@@ -312,6 +401,9 @@ func (state *StageState) Draw(screen *ebiten.Image) {
 	}
 
 	if state.stageUseCases.IsPaused() {
-		state.renderer.DrawPauseOverlay(screen)
+		state.renderer.DrawPauseMenu(screen, types.PauseMenuViewData{
+			Items:       state.pauseMenuItems,
+			ActiveIndex: state.pauseMenuIndex,
+		})
 	}
 }

@@ -127,6 +127,21 @@ func TestApp_ApplyTransition_ToStage_SessionWrittenBeforeBuild(
 	}
 }
 
+// Переход Quit завершает игровой цикл штатно, не трогая состояние
+func TestApp_ApplyTransition_Quit(t *testing.T) {
+	app, state := newAppTestEnv()
+
+	err := app.applyTransition(types.StateTransition{
+		Target: types.TransitionToQuit,
+	})
+	if !errors.Is(err, ebiten.Termination) {
+		t.Fatalf("ошибка %v, ожидалась ebiten.Termination", err)
+	}
+	if app.state != state {
+		t.Error("состояние заменено при переходе Quit")
+	}
+}
+
 // Полный цикл на настоящем графе зависимостей: меню -> уровень -> меню
 func TestApp_ApplyTransition_FullApp(t *testing.T) {
 	app := newFullApp(t)

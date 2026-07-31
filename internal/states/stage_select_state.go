@@ -20,6 +20,9 @@ type StageSelectState struct {
 	activeMenuItem   stageSelectMenuItem
 	playerCount      int
 	maxActiveEnemies uint
+	// quitAvailable — строка QUIT есть только там, где приложение
+	// может завершиться (десктоп); в js-сборке скрыта
+	quitAvailable bool
 }
 
 type stageSelectMenuItem int
@@ -28,6 +31,7 @@ const (
 	stageSelectMenuItemLevel stageSelectMenuItem = iota
 	stageSelectMenuItemPlayers
 	stageSelectMenuItemMaxEnemies
+	stageSelectMenuItemQuit
 )
 
 func NewStageSelectState(
@@ -36,6 +40,7 @@ func NewStageSelectState(
 	textFace text.Face,
 	mapsRepository interfaces.IMapsDataRepository,
 	touchControls interfaces.ITouchControlsAdapter,
+	quitAvailable bool,
 ) (*StageSelectState, error) {
 	levelsCount, err := mapsRepository.GetLevelsCount()
 	if err != nil {
@@ -74,6 +79,7 @@ func NewStageSelectState(
 		activeMenuItem:   stageSelectMenuItemLevel,
 		playerCount:      1,
 		maxActiveEnemies: 5,
+		quitAvailable:    quitAvailable,
 	}
 
 	return state, nil
@@ -96,6 +102,12 @@ func (s *StageSelectState) Update() types.StateTransition {
 	}
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyEnter) {
+		if s.activeMenuItem == stageSelectMenuItemQuit {
+			return types.StateTransition{
+				Target: types.TransitionToQuit,
+			}
+		}
+
 		return s.startTransition()
 	}
 
@@ -107,6 +119,8 @@ func (s *StageSelectState) Draw(screen *ebiten.Image) {
 		LevelActive:      s.activeMenuItem == stageSelectMenuItemLevel,
 		PlayersActive:    s.activeMenuItem == stageSelectMenuItemPlayers,
 		MaxEnemiesActive: s.activeMenuItem == stageSelectMenuItemMaxEnemies,
+		QuitVisible:      s.quitAvailable,
+		QuitActive:       s.activeMenuItem == stageSelectMenuItemQuit,
 		PlayerCount:      uint(s.playerCount),
 		MaxActiveEnemies: s.maxActiveEnemies,
 		TouchActive:      s.touchControls.IsTouchActive(),
@@ -137,6 +151,10 @@ func (s *StageSelectState) handleMenuTap() types.StateTransition {
 	hit := s.rendererAdapter.HitTest(pos)
 	if hit == stage_select.MenuHitStart {
 		return s.startTransition()
+	}
+	// QUIT — командная зона, тап активирует её сразу
+	if hit == stage_select.MenuHitQuit {
+		return types.StateTransition{Target: types.TransitionToQuit}
 	}
 
 	item, next, ok := menuHitTarget(hit)
@@ -217,6 +235,8 @@ func (s *StageSelectState) handleMenuNavigation() {
 			s.activeMenuItem = stageSelectMenuItemLevel
 		case stageSelectMenuItemMaxEnemies:
 			s.activeMenuItem = stageSelectMenuItemPlayers
+		case stageSelectMenuItemQuit:
+			s.activeMenuItem = stageSelectMenuItemMaxEnemies
 		}
 	}
 	if moveDown {
@@ -225,6 +245,10 @@ func (s *StageSelectState) handleMenuNavigation() {
 			s.activeMenuItem = stageSelectMenuItemPlayers
 		case stageSelectMenuItemPlayers:
 			s.activeMenuItem = stageSelectMenuItemMaxEnemies
+		case stageSelectMenuItemMaxEnemies:
+			if s.quitAvailable {
+				s.activeMenuItem = stageSelectMenuItemQuit
+			}
 		}
 	}
 }

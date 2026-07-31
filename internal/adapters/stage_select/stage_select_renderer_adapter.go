@@ -23,6 +23,7 @@ const (
 	MenuHitPlayersNext
 	MenuHitMaxEnemiesPrev
 	MenuHitMaxEnemiesNext
+	MenuHitQuit
 	MenuHitStart
 )
 
@@ -38,6 +39,9 @@ type StageSelectRendererAdapter struct {
 	// Размер экрана последней отрисовки — для хит-тестов тапов
 	lastWidth  float64
 	lastHeight float64
+	// Видимость строки QUIT в последней отрисовке: без неё
+	// тап-зоны QUIT не существует
+	lastQuitVisible bool
 }
 
 // StageSelectRendererDependencies — готовый граф зависимостей рендера
@@ -73,10 +77,12 @@ type stageSelectMenuLayout struct {
 	stageTop   float64
 	playersTop float64
 	enemiesTop float64
+	quitTop    float64
 
 	menuTop        float64
 	stagePlayers   float64 // граница полос LEVEL / PLAYERS
 	playersEnemies float64 // граница полос PLAYERS / MAX ENEMIES
+	enemiesQuit    float64 // граница полос MAX ENEMIES / QUIT
 	menuBottom     float64
 	startTop       float64 // нижняя полоса запуска игры
 }
@@ -85,6 +91,7 @@ type stageSelectMenuLayout struct {
 // отрисовки и хит-тестов
 func (r *StageSelectRendererAdapter) menuLayout(
 	width, height float64,
+	quitVisible bool,
 ) stageSelectMenuLayout {
 	stageText := r.selectorUseCases.String(r.selector)
 	_, textHeight := text.Measure(stageText, r.fontFace, 0)
@@ -97,16 +104,24 @@ func (r *StageSelectRendererAdapter) menuLayout(
 	stageTop := (height-rowHeight)/2 + gap
 	playersTop := stageTop + rowHeight + gap
 	enemiesTop := playersTop + rowHeight + gap
+	quitTop := enemiesTop + rowHeight + gap
+
+	menuBottom := enemiesTop + rowHeight + gap
+	if quitVisible {
+		menuBottom = quitTop + rowHeight + gap
+	}
 
 	return stageSelectMenuLayout{
 		rowHeight:      rowHeight,
 		stageTop:       stageTop,
 		playersTop:     playersTop,
 		enemiesTop:     enemiesTop,
+		quitTop:        quitTop,
 		menuTop:        stageTop - gap,
 		stagePlayers:   (stageTop + rowHeight + playersTop) / 2,
 		playersEnemies: (playersTop + rowHeight + enemiesTop) / 2,
-		menuBottom:     enemiesTop + rowHeight + gap,
+		enemiesQuit:    (enemiesTop + rowHeight + quitTop) / 2,
+		menuBottom:     menuBottom,
 		startTop:       height - 3*float64(r.subtitleFontSize),
 	}
 }
@@ -117,7 +132,7 @@ func (r *StageSelectRendererAdapter) HitTest(pos types.Position) MenuHit {
 	if r.lastWidth <= 0 || r.lastHeight <= 0 {
 		return MenuHitNone
 	}
-	layout := r.menuLayout(r.lastWidth, r.lastHeight)
+	layout := r.menuLayout(r.lastWidth, r.lastHeight, r.lastQuitVisible)
 	next := pos.X >= r.lastWidth/2
 	switch {
 	case pos.Y >= layout.startTop:
@@ -128,10 +143,12 @@ func (r *StageSelectRendererAdapter) HitTest(pos types.Position) MenuHit {
 		return pickHit(MenuHitLevelPrev, MenuHitLevelNext, next)
 	case pos.Y < layout.playersEnemies:
 		return pickHit(MenuHitPlayersPrev, MenuHitPlayersNext, next)
-	default:
+	case !r.lastQuitVisible || pos.Y < layout.enemiesQuit:
 		return pickHit(
 			MenuHitMaxEnemiesPrev, MenuHitMaxEnemiesNext, next,
 		)
+	default:
+		return MenuHitQuit
 	}
 }
 
@@ -152,7 +169,8 @@ func (r *StageSelectRendererAdapter) DrawAll(
 	actualHeight := float64(screenBounds.Dy())
 	r.lastWidth = actualWidth
 	r.lastHeight = actualHeight
-	layout := r.menuLayout(actualWidth, actualHeight)
+	r.lastQuitVisible = view.QuitVisible
+	layout := r.menuLayout(actualWidth, actualHeight, view.QuitVisible)
 
 	screen.Fill(color.Black)
 
@@ -224,6 +242,24 @@ func (r *StageSelectRendererAdapter) DrawAll(
 	maxEnemiesOp.GeoM.Translate(maxEnemiesX, maxEnemiesY)
 	maxEnemiesOp.ColorScale.ScaleWithColor(maxEnemiesColor)
 	text.Draw(screen, maxEnemiesText, r.fontFace, maxEnemiesOp)
+
+	if view.QuitVisible {
+		quitText := "QUIT"
+		quitWidth, _ := text.Measure(quitText, r.fontFace, 0)
+		quitX := (actualWidth - quitWidth*scale) / 2
+		quitY := layout.quitTop
+
+		quitColor := color.NRGBA{R: 150, G: 150, B: 150, A: 255}
+		if view.QuitActive {
+			quitColor = color.NRGBA{R: 255, G: 255, B: 255, A: 255}
+		}
+
+		quitOp := &text.DrawOptions{}
+		quitOp.GeoM.Scale(scale, scale)
+		quitOp.GeoM.Translate(quitX, quitY)
+		quitOp.ColorScale.ScaleWithColor(quitColor)
+		text.Draw(screen, quitText, r.fontFace, quitOp)
+	}
 
 	subtitleText := "PRESS ENTER TO START"
 	if view.TouchActive {

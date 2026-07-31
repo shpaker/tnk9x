@@ -257,6 +257,7 @@ func (app *App) newStageState() (*states.StageState, error) {
 		EnemyInputAdapter:  enemyInputAdapter,
 		Renderer:           rendererAdapter,
 		SoundPlayerAdapter: app.soundAdapter,
+		TouchControls:      app.touchControls,
 		StageSession:       stageSession,
 		BonusesRepository:  bonusesRepository,
 	}), nil

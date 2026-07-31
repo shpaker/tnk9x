@@ -31,6 +31,12 @@ type StageRendererAdapter struct {
 	mapOffsetX         int
 	mapOffsetY         int
 	mapWidthHeight     int
+
+	// Последняя отрисовка меню паузы — для хит-тестов тапов;
+	// до первого кадра меню зоны неизвестны
+	lastWidth      float64
+	lastHeight     float64
+	pauseMenuItems []types.PauseMenuItem
 }
 
 // StageRendererDependencies — готовый граф зависимостей рендера уровня;
@@ -486,10 +492,6 @@ func (r *StageRendererAdapter) drawHUDText(
 	op.GeoM.Translate(x, y)
 	op.ColorScale.ScaleWithColor(color.Black)
 	text.Draw(screen, message, r.hudFontFace, op)
-}
-
-func (r *StageRendererAdapter) DrawPauseOverlay(screen *ebiten.Image) {
-	r.drawOverlayMessage(screen, "PAUSED", "")
 }
 
 func (r *StageRendererAdapter) DrawStageEndOverlay(

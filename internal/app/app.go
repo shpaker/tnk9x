@@ -3,7 +3,6 @@ package app
 import (
 	"context"
 	"fmt"
-	"runtime"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/audio"
@@ -210,12 +209,6 @@ func (app *App) Update() error {
 		}
 	}
 
-	// В браузере Escape не завершает игру: ebiten.Termination
-	// остановил бы game loop и заморозил canvas
-	if runtime.GOOS != "js" && ebiten.IsKeyPressed(ebiten.KeyEscape) {
-		return ebiten.Termination
-	}
-
 	if inpututil.IsKeyJustPressed(ebiten.KeyF1) {
 		Debug = !Debug
 		// Обновляем флаг дебаг-режима в текущем игровом состоянии
@@ -262,6 +255,10 @@ func (app *App) applyTransition(transition types.StateTransition) error {
 		}
 		app.state = selectState
 		app.stageState = nil
+	case types.TransitionToQuit:
+		// Выход через пункт QUIT главного меню; в js-сборке пункт
+		// скрыт, поэтому переход возможен только на десктопе
+		return ebiten.Termination
 	}
 
 	return nil

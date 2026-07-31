@@ -7,6 +7,7 @@ const (
 	TransitionNone TransitionTarget = iota
 	TransitionToStage
 	TransitionToStageSelect
+	TransitionToQuit
 )
 
 // StateTransition — запрос смены состояния, возвращаемый из Update стейта;
