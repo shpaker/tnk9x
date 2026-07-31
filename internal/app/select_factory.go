@@ -13,5 +13,6 @@ func (app *App) newStageSelectState() (*states.StageSelectState, error) {
 		use_cases.NewStageSelectorUseCases(),
 		app.textFace,
 		app.mapsRepository,
+		app.touchControls,
 	)
 }

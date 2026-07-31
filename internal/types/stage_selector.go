@@ -30,4 +30,7 @@ type StageSelectViewData struct {
 	MaxEnemiesActive bool
 	PlayerCount      uint
 	MaxActiveEnemies uint
+	// TouchActive — управление с экрана: подсказка меню меняется
+	// с клавиатурной на тач-вариант
+	TouchActive bool
 }

@@ -13,6 +13,7 @@ import (
 
 	"github.com/shpaker/tnk9x/internal/adapters/scripting"
 	"github.com/shpaker/tnk9x/internal/adapters/stage"
+	"github.com/shpaker/tnk9x/internal/adapters/touch_controls"
 	"github.com/shpaker/tnk9x/internal/interfaces"
 	"github.com/shpaker/tnk9x/internal/repositories/processed"
 	"github.com/shpaker/tnk9x/internal/repositories/raw"
@@ -62,6 +63,7 @@ type App struct {
 	hudTextFace       text.Face
 	scriptEngine      interfaces.IAIScriptEngine
 	soundAdapter      *stage.SoundAdapter
+	touchControls     *touch_controls.TouchControlsAdapter
 
 	// Stateless-сервисы
 	boundaryCollisionService interfaces.IBoundaryCollisionService
@@ -161,6 +163,10 @@ func New(cfg *Config) *App {
 		hudTextFace:       hudTextFace,
 		scriptEngine:      scripting.NewLuaEngine(),
 		soundAdapter:      soundAdapter,
+		touchControls: touch_controls.NewTouchControlsAdapter(
+			cfg.ScreenWidth()/screenScaleFactor,
+			cfg.ScreenHeight()/screenScaleFactor,
+		),
 		boundaryCollisionService: collision_services.NewBoundaryCollisionService(
 			mapSizePx,
 		),
@@ -217,6 +223,10 @@ func (app *App) Update() error {
 			app.stageState.SetDebugEnabled(Debug)
 		}
 	}
+
+	// Сенсорный ввод опрашивается один раз на кадр до обновления
+	// состояния: события кадра общие для стейта и адаптеров
+	app.touchControls.Update()
 
 	transition := app.state.Update()
 

@@ -2,11 +2,16 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <title>tnk9x</title>
   <link rel="icon" href="data:,">
   <style>
-    html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+    html, body { margin: 0; height: 100%; background: #000; overflow: hidden;
+                 touch-action: none; overscroll-behavior: none;
+                 -webkit-user-select: none; user-select: none;
+                 -webkit-tap-highlight-color: transparent;
+                 -webkit-touch-callout: none; }
+    canvas { touch-action: none; }
     #status { position: fixed; inset: 0; display: flex; align-items: center;
               justify-content: center; color: #9a9a9a; font: 12px monospace; }
     #hint { position: fixed; bottom: 8px; left: 0; right: 0; text-align: center;
@@ -22,6 +27,11 @@
   <a id="repo" href="https://github.com/shpaker/tnk9x" target="_blank" rel="noopener">github.com/shpaker/tnk9x</a>
   <script src="wasm_exec.js"></script>
   <script>
+    // На сенсорных устройствах клавиатурная подсказка не нужна
+    if (navigator.maxTouchPoints > 0 || "ontouchstart" in window) {
+      document.getElementById("hint").textContent =
+        "Tap the menu to start · D-pad: move · button: fire";
+    }
     const status = document.getElementById("status");
     const go = new Go();
     async function instantiate() {

@@ -16,6 +16,7 @@ type StageSelectState struct {
 	selectorUseCases interfaces.IStageSelectorUseCases
 	inputAdapter     *stage_select.StageSelectKeyboardInputAdapter
 	rendererAdapter  *stage_select.StageSelectRendererAdapter
+	touchControls    interfaces.ITouchControlsAdapter
 	activeMenuItem   stageSelectMenuItem
 	playerCount      int
 	maxActiveEnemies uint
@@ -34,6 +35,7 @@ func NewStageSelectState(
 	selectorUseCases interfaces.IStageSelectorUseCases,
 	textFace text.Face,
 	mapsRepository interfaces.IMapsDataRepository,
+	touchControls interfaces.ITouchControlsAdapter,
 ) (*StageSelectState, error) {
 	levelsCount, err := mapsRepository.GetLevelsCount()
 	if err != nil {
@@ -68,6 +70,7 @@ func NewStageSelectState(
 		selectorUseCases: selectorUseCases,
 		inputAdapter:     inputAdapter,
 		rendererAdapter:  rendererAdapter,
+		touchControls:    touchControls,
 		activeMenuItem:   stageSelectMenuItemLevel,
 		playerCount:      1,
 		maxActiveEnemies: 5,
@@ -87,15 +90,13 @@ func (s *StageSelectState) Update() types.StateTransition {
 		s.handleMaxActiveEnemiesSelection()
 	}
 
-	if inpututil.IsKeyJustPressed(ebiten.KeyEnter) {
-		selectedLevel := s.selectorUseCases.Select(s.selector)
+	transition := s.handleMenuTap()
+	if transition.Target != types.TransitionNone {
+		return transition
+	}
 
-		return types.StateTransition{
-			Target:           types.TransitionToStage,
-			Level:            selectedLevel,
-			PlayerCount:      uint(s.playerCount),
-			MaxActiveEnemies: s.maxActiveEnemies,
-		}
+	if inpututil.IsKeyJustPressed(ebiten.KeyEnter) {
+		return s.startTransition()
 	}
 
 	return types.StateTransition{}
@@ -108,7 +109,100 @@ func (s *StageSelectState) Draw(screen *ebiten.Image) {
 		MaxEnemiesActive: s.activeMenuItem == stageSelectMenuItemMaxEnemies,
 		PlayerCount:      uint(s.playerCount),
 		MaxActiveEnemies: s.maxActiveEnemies,
+		TouchActive:      s.touchControls.IsTouchActive(),
 	})
+}
+
+// startTransition собирает переход к запуску выбранного уровня
+func (s *StageSelectState) startTransition() types.StateTransition {
+	selectedLevel := s.selectorUseCases.Select(s.selector)
+
+	return types.StateTransition{
+		Target:           types.TransitionToStage,
+		Level:            selectedLevel,
+		PlayerCount:      uint(s.playerCount),
+		MaxActiveEnemies: s.maxActiveEnemies,
+	}
+}
+
+// handleMenuTap — тап-управление меню: тап по строке фокусирует её,
+// повторный тап меняет значение (левая половина экрана — назад,
+// правая — вперёд), нижняя полоса запускает игру
+func (s *StageSelectState) handleMenuTap() types.StateTransition {
+	pos, ok := s.touchControls.TapJustPressed()
+	if !ok {
+		return types.StateTransition{}
+	}
+
+	hit := s.rendererAdapter.HitTest(pos)
+	if hit == stage_select.MenuHitStart {
+		return s.startTransition()
+	}
+
+	item, next, ok := menuHitTarget(hit)
+	if !ok {
+		return types.StateTransition{}
+	}
+	if s.activeMenuItem != item {
+		s.activeMenuItem = item
+
+		return types.StateTransition{}
+	}
+	s.applyMenuStep(item, next)
+
+	return types.StateTransition{}
+}
+
+// menuHitTarget сопоставляет тап-зоне строку меню и направление шага
+func menuHitTarget(
+	hit stage_select.MenuHit,
+) (stageSelectMenuItem, bool, bool) {
+	switch hit {
+	case stage_select.MenuHitLevelPrev:
+		return stageSelectMenuItemLevel, false, true
+	case stage_select.MenuHitLevelNext:
+		return stageSelectMenuItemLevel, true, true
+	case stage_select.MenuHitPlayersPrev:
+		return stageSelectMenuItemPlayers, false, true
+	case stage_select.MenuHitPlayersNext:
+		return stageSelectMenuItemPlayers, true, true
+	case stage_select.MenuHitMaxEnemiesPrev:
+		return stageSelectMenuItemMaxEnemies, false, true
+	case stage_select.MenuHitMaxEnemiesNext:
+		return stageSelectMenuItemMaxEnemies, true, true
+	}
+
+	return 0, false, false
+}
+
+// applyMenuStep меняет значение активной строки меню на один шаг
+func (s *StageSelectState) applyMenuStep(
+	item stageSelectMenuItem,
+	next bool,
+) {
+	switch item {
+	case stageSelectMenuItemLevel:
+		if next {
+			s.selectorUseCases.Next(s.selector)
+		} else {
+			s.selectorUseCases.Previous(s.selector)
+		}
+	case stageSelectMenuItemPlayers:
+		s.playerCount = 1
+		if next {
+			s.playerCount = 2
+		}
+	case stageSelectMenuItemMaxEnemies:
+		if next {
+			s.maxActiveEnemies = s.selectorUseCases.NextMaxActiveEnemies(
+				s.maxActiveEnemies,
+			)
+		} else {
+			s.maxActiveEnemies = s.selectorUseCases.PreviousMaxActiveEnemies(
+				s.maxActiveEnemies,
+			)
+		}
+	}
 }
 
 func (s *StageSelectState) handleMenuNavigation() {

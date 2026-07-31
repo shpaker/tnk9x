@@ -36,6 +36,22 @@ type IAiInputAdapter interface {
 	RemoveTank(tank *types.TankEntity)
 }
 
+// ITouchControlsAdapter — источник событий сенсорного управления;
+// Update опрашивается раз в кадр из game loop до обновления состояния
+type ITouchControlsAdapter interface {
+	Update()
+	// IsTouchActive — «тач замечен хотя бы раз»: защёлка активации
+	// экранных контролов
+	IsTouchActive() bool
+	// DPadDirection — текущее направление виртуальной крестовины
+	DPadDirection() (types.Direction, bool)
+	FireJustPressed() bool
+	PauseJustPressed() bool
+	// TapJustPressed — тап по игровому экрану в его логических
+	// координатах, каким он реально нарисован (для меню и оверлеев)
+	TapJustPressed() (types.Position, bool)
+}
+
 // IAIScriptEngine — контракт движка AI-скриптов; реализация инкапсулирует
 // скриптовый рантайм, наружу выходят только доменные типы.
 type IAIScriptEngine interface {

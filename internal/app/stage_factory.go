@@ -218,6 +218,19 @@ func (app *App) newStageState() (*states.StageState, error) {
 		ebiten.KeyP,
 	)
 
+	// Первый игрок управляется и клавиатурой, и экранными
+	// контроллами: композит применяет оба источника каждый кадр
+	touchInputAdapter := input_adapters.NewStageTouchInputAdapter(
+		tankActionsUseCases,
+		nil,
+		stageUseCases,
+		app.touchControls,
+	)
+	player1InputAdapter := input_adapters.NewCompositeInputAdapter(
+		inputAdapter1,
+		touchInputAdapter,
+	)
+
 	rendererAdapter := app.buildStageRenderer(
 		mapUseCases,
 		tankCommonUseCases,
@@ -235,7 +248,7 @@ func (app *App) newStageState() (*states.StageState, error) {
 		StageUseCases:         stageUseCases,
 		SoundUseCases:         soundUseCases,
 		InputAdapters: [2]interfaces.IInputAdapter{
-			inputAdapter1,
+			player1InputAdapter,
 			inputAdapter2,
 		},
 		EnemyInputAdapter:  enemyInputAdapter,

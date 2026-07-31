@@ -177,7 +177,9 @@ func (state *StageState) Update() types.StateTransition {
 			}
 			state.endSoundHandled = true
 		}
-		if len(inpututil.AppendJustPressedKeys(nil)) > 0 {
+		// Оверлей закрывается любой клавишей или тапом по экрану
+		if len(inpututil.AppendJustPressedKeys(nil)) > 0 ||
+			len(inpututil.AppendJustPressedTouchIDs(nil)) > 0 {
 			// Глушим звук завершения при выходе на экран выбора уровня
 			state.soundUseCases.RequestStopAll()
 			transition = types.StateTransition{
