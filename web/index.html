@@ -11,11 +11,15 @@
               justify-content: center; color: #9a9a9a; font: 12px monospace; }
     #hint { position: fixed; bottom: 8px; left: 0; right: 0; text-align: center;
             color: #555; font: 10px monospace; pointer-events: none; }
+    #repo { position: fixed; top: 8px; right: 8px; color: #555;
+            font: 10px monospace; text-decoration: none; z-index: 1; }
+    #repo:hover { color: #9a9a9a; }
   </style>
 </head>
 <body>
   <div id="status">loading&hellip;</div>
   <div id="hint">P1: WASD + Space &middot; P2: Arrows + Enter &middot; Enter: start &middot; P: pause</div>
+  <a id="repo" href="https://github.com/shpaker/tnk9x" target="_blank" rel="noopener">github.com/shpaker/tnk9x</a>
   <script src="wasm_exec.js"></script>
   <script>
     const status = document.getElementById("status");
