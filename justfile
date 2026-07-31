@@ -50,6 +50,24 @@ build-all: build-macos build-windows
     #!/bin/bash
     echo "macOS и Windows сборки готовы"
 
+build-wasm:
+    #!/bin/bash
+    set -euo pipefail
+    out_dir="dist/web"
+    rm -rf "$out_dir"
+    mkdir -p "$out_dir"
+    VERSION="dev-$(date -u +%Y-%m-%dT%H:%M)"
+    echo "Building WebAssembly (version $VERSION) -> $out_dir"
+    GOOS="js" GOARCH="wasm" {{gocmd}} build -trimpath -ldflags "-s -w -X github.com/shpaker/tnk9x/internal/app.Version=${VERSION}" -o "$out_dir/{{binary_name}}.wasm" ./cmd
+    cp "$({{gocmd}} env GOROOT)/lib/wasm/wasm_exec.js" "$out_dir/"
+    cp web/index.html "$out_dir/"
+    echo "WASM build stored in $out_dir"
+
+serve-wasm: build-wasm
+    #!/bin/bash
+    echo "Serving http://localhost:8000 ..."
+    python3 -m http.server 8000 -d dist/web
+
 package-macos:
     #!/bin/bash
     set -euo pipefail

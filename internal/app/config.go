@@ -6,6 +6,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
+	"github.com/shpaker/tnk9x"
 	"github.com/shpaker/tnk9x/internal/types"
 )
 
@@ -57,15 +58,14 @@ type Config struct {
 }
 
 func LoadConfig() (*Config, error) {
-	configPath := "config.yml"
-
-	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		return nil, fmt.Errorf("config file not found: %s", configPath)
-	}
-
-	data, err := os.ReadFile(configPath)
+	// Диск в приоритете (правки пользователя рядом с бинарником),
+	// иначе — встроенная копия (wasm, самодостаточный бинарник)
+	data, err := os.ReadFile("config.yml")
 	if err != nil {
-		return nil, fmt.Errorf("failed to read config file: %w", err)
+		data, err = tnk9x.FS.ReadFile("config.yml")
+		if err != nil {
+			return nil, fmt.Errorf("failed to read config file: %w", err)
+		}
 	}
 
 	var schema configSchema

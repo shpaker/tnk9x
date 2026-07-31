@@ -4,9 +4,8 @@ import (
 	"bytes"
 	"image"
 	_ "image/png"
-	"os"
-	"path/filepath"
-	"strings"
+	"io/fs"
+	"path"
 
 	"gopkg.in/yaml.v3"
 
@@ -21,25 +20,19 @@ const (
 var _ interfaces.IFileRepository = (*FileRepository)(nil)
 
 type FileRepository struct {
-	baseDir string
+	fsys fs.FS
 }
 
-func NewFileRepository(baseDir string) *FileRepository {
+// NewFileRepository создаёт репозиторий поверх любой fs.FS:
+// os.DirFS для каталога на диске или embed.FS для встроенных ресурсов
+func NewFileRepository(fsys fs.FS) *FileRepository {
 	return &FileRepository{
-		baseDir: baseDir,
+		fsys: fsys,
 	}
-}
-
-func (fr *FileRepository) getPath(name string) (string, error) {
-	return filepath.Abs(filepath.Join(fr.baseDir, name))
 }
 
 func (fr *FileRepository) ReadFile(name string) ([]byte, error) {
-	path, err := fr.getPath(name)
-	if err != nil {
-		return nil, err
-	}
-	data, err := os.ReadFile(path)
+	data, err := fs.ReadFile(fr.fsys, name)
 	if err != nil {
 		return nil, err
 	}
@@ -62,41 +55,24 @@ func (fr *FileRepository) CountFiles(
 	dirPath string,
 	pattern string,
 ) (int, error) {
-	fullPath, err := fr.getPath(dirPath)
-	if err != nil {
-		return 0, err
-	}
-
-	entries, err := os.ReadDir(fullPath)
+	entries, err := fs.ReadDir(fr.fsys, dirPath)
 	if err != nil {
 		return 0, err
 	}
 
 	count := 0
 
-	patternExt := ""
-	if strings.HasPrefix(pattern, "*") {
-		patternExt = pattern[1:]
-	}
-
 	for _, entry := range entries {
 		if entry.IsDir() {
 			continue
 		}
 
-		if patternExt != "" {
-			if strings.HasSuffix(entry.Name(), patternExt) {
-				count++
-			}
-		} else {
-
-			matched, err := filepath.Match(pattern, entry.Name())
-			if err != nil {
-				return 0, err
-			}
-			if matched {
-				count++
-			}
+		matched, err := path.Match(pattern, entry.Name())
+		if err != nil {
+			return 0, err
+		}
+		if matched {
+			count++
 		}
 	}
 
