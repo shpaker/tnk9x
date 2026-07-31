@@ -111,12 +111,13 @@ func (s *stubConfigProvider) GetEnemyRespawnDelayTicks() uint { return 0 }
 func (s *stubConfigProvider) GetBaseSizePx() uint { return s.baseSizePx }
 
 func (s *stubConfigProvider) GetMapBlocksCount() types.Size { return types.Size{} }
-func (s *stubConfigProvider) GetTileBaseSize() uint         { return s.tileBaseSize }
-func (s *stubConfigProvider) GetTitleFontSize() uint        { return 0 }
-func (s *stubConfigProvider) GetSubtitleFontSize() uint     { return 0 }
-func (s *stubConfigProvider) GetRegularFontSize() uint      { return 0 }
-func (s *stubConfigProvider) GetGameTitle() string          { return "" }
-func (s *stubConfigProvider) GetVolume() float64            { return 0 }
+
+func (s *stubConfigProvider) GetTileBaseSize() uint     { return s.tileBaseSize }
+func (s *stubConfigProvider) GetTitleFontSize() uint    { return 0 }
+func (s *stubConfigProvider) GetSubtitleFontSize() uint { return 0 }
+func (s *stubConfigProvider) GetRegularFontSize() uint  { return 0 }
+func (s *stubConfigProvider) GetGameTitle() string      { return "" }
+func (s *stubConfigProvider) GetVolume() float64        { return 0 }
 
 type bonusTestEnv struct {
 	tankCommon  *recordingTankCommon
@@ -440,6 +441,59 @@ func TestBonusUseCases_Apply_Shovel_Prolong(t *testing.T) {
 	}
 	if env.mapEntity.IsHQFortified() {
 		t.Error("продлённое укрепление не истекло")
+	}
+}
+
+// Лопата с уже сколотым пулями кирпичом в кольце: остаток заменяется
+// бетоном и восстанавливается в прежнем виде по истечении отсчёта
+func TestBonusUseCases_Apply_Shovel_RemnantInRing(t *testing.T) {
+	env := newBonusTestEnv()
+
+	// Остаток 8x4 в клетке кольца (88,184): тайл сколот сверху
+	remnant := types.NewBlockEntity(string(types.Brick), 88, 184, 8, nil)
+	remnant.Position = types.Position{X: 88, Y: 188}
+	remnant.Size = types.Size{Width: 8, Height: 4}
+	env.mapEntity.AddBlock(remnant)
+
+	env.bonusUC.Apply(
+		env.newBonus(types.BonusTypeShovel),
+		newPlayerTank(types.TankRolePlayer1),
+	)
+
+	steelCount := 0
+	for _, block := range env.mapEntity.GetBlocks() {
+		if block == remnant {
+			t.Fatal("остаток кирпича выжил под бетоном")
+		}
+		if block.Data != nil && block.Data.Name == types.Steel {
+			steelCount++
+		}
+	}
+	if steelCount != 8 {
+		t.Errorf("бетонных блоков %d, ожидалось 8", steelCount)
+	}
+
+	// По истечении отсчёта остаток возвращается тем же прямоугольником
+	for i := 0; i < 20*60; i++ {
+		env.bonusUC.UpdateEffects()
+	}
+	restored := false
+	for _, block := range env.mapEntity.GetBlocks() {
+		if block == remnant {
+			restored = true
+		}
+	}
+	if !restored {
+		t.Fatal("остаток кирпича не восстановлен")
+	}
+	if remnant.Position != (types.Position{X: 88, Y: 188}) ||
+		remnant.Size != (types.Size{Width: 8, Height: 4}) {
+		t.Errorf(
+			"остаток изменился: %v %dx%d",
+			remnant.Position,
+			remnant.Size.Width,
+			remnant.Size.Height,
+		)
 	}
 }
 
