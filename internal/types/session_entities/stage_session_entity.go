@@ -24,6 +24,8 @@ type StageSessionEntity struct {
 	enemyRespawnDelay uint
 	enemySpawnTicks   uint
 
+	enemyFreezeTicks uint // Оставшиеся тики заморозки врагов бонусом-таймером
+
 	maxActiveEnemies uint
 
 	playerCount uint
@@ -112,6 +114,7 @@ func (s *StageSessionEntity) Reset() {
 	s.spawnedEnemies = 0
 	s.destroyedEnemies = 0
 	s.isPaused = false
+	s.enemyFreezeTicks = 0
 	s.ClearDestroyedEnemiesTracking()
 
 	playerCount := int(s.GetPlayerCount())
@@ -213,6 +216,21 @@ func (s *StageSessionEntity) SetEnemyRespawnDelay(delay uint) {
 
 func (s *StageSessionEntity) ResetEnemySpawnCountdown() {
 	s.enemySpawnTicks = s.enemyRespawnDelay
+}
+
+// FreezeEnemies запускает заморозку врагов на заданное число тиков
+func (s *StageSessionEntity) FreezeEnemies(ticks uint) {
+	s.enemyFreezeTicks = ticks
+}
+
+func (s *StageSessionEntity) AreEnemiesFrozen() bool {
+	return s.enemyFreezeTicks > 0
+}
+
+func (s *StageSessionEntity) UpdateEnemyFreezeCountdown() {
+	if s.enemyFreezeTicks > 0 {
+		s.enemyFreezeTicks--
+	}
 }
 
 func (s *StageSessionEntity) GetMaxActiveEnemies() uint {

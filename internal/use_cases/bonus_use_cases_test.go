@@ -89,9 +89,10 @@ func (s *recordingLifecycle) Explode(tank *types.TankEntity) error {
 
 func (s *recordingLifecycle) UpdateAllTanksLifecycle() error { return nil }
 
-// stubConfigProvider отдаёт только размер базового тайла
+// stubConfigProvider отдаёт только размеры тайлов
 type stubConfigProvider struct {
-	baseSizePx uint
+	baseSizePx   uint
+	tileBaseSize uint
 }
 
 func (s *stubConfigProvider) GetEnemySpawners() []types.Position { return nil }
@@ -110,7 +111,7 @@ func (s *stubConfigProvider) GetEnemyRespawnDelayTicks() uint { return 0 }
 func (s *stubConfigProvider) GetBaseSizePx() uint { return s.baseSizePx }
 
 func (s *stubConfigProvider) GetMapBlocksCount() types.Size { return types.Size{} }
-func (s *stubConfigProvider) GetTileBaseSize() uint         { return 0 }
+func (s *stubConfigProvider) GetTileBaseSize() uint         { return s.tileBaseSize }
 func (s *stubConfigProvider) GetTitleFontSize() uint        { return 0 }
 func (s *stubConfigProvider) GetSubtitleFontSize() uint     { return 0 }
 func (s *stubConfigProvider) GetRegularFontSize() uint      { return 0 }
@@ -121,6 +122,7 @@ type bonusTestEnv struct {
 	tankCommon  *recordingTankCommon
 	lifecycle   *recordingLifecycle
 	session     *session_entities.StageSessionEntity
+	mapEntity   *types.MapEntity
 	bonusesRepo *game.BonusesRepository
 	sounds      *use_cases.SoundUseCases
 	registry    *testutil.FakeTilesetRegistry
@@ -131,6 +133,11 @@ func newBonusTestEnv() *bonusTestEnv {
 	tankCommon := &recordingTankCommon{}
 	lifecycle := &recordingLifecycle{}
 	session := session_entities.NewStageSessionEntity()
+	mapEntity := types.NewMapEntity(
+		types.Size{Width: 208, Height: 208},
+		nil,
+		nil,
+	)
 	bonusesRepo := game.NewBonusesRepository()
 	sounds := use_cases.NewSoundUseCases(game.NewSoundEventsRepository())
 	registry := &testutil.FakeTilesetRegistry{}
@@ -141,12 +148,20 @@ func newBonusTestEnv() *bonusTestEnv {
 		nil,
 	)
 
+	// Штаб 16x16 у нижней границы карты, как на реальных уровнях
+	hq := &types.HQEntity{
+		Position: types.Position{X: 96, Y: 192},
+		Size:     types.Size{Width: 16, Height: 16},
+	}
+
 	bonusUC := use_cases.NewBonusUseCases(
 		tankCommon,
 		lifecycle,
+		&stubHQUseCases{hq: hq},
 		session,
+		mapEntity,
 		bonusesRepo,
-		&stubConfigProvider{baseSizePx: 16},
+		&stubConfigProvider{baseSizePx: 16, tileBaseSize: 8},
 		tilesUC,
 		&stubRenderUseCases{},
 		sounds,
@@ -156,6 +171,7 @@ func newBonusTestEnv() *bonusTestEnv {
 		tankCommon:  tankCommon,
 		lifecycle:   lifecycle,
 		session:     session,
+		mapEntity:   mapEntity,
 		bonusesRepo: bonusesRepo,
 		sounds:      sounds,
 		registry:    registry,
@@ -269,33 +285,161 @@ func TestBonusUseCases_Apply_Tank(t *testing.T) {
 	}
 }
 
-// Каска/таймер/лопата пока не реализованы: бонус остаётся, но звук играет
-func TestBonusUseCases_Apply_UnimplementedTypesKeepBonus(t *testing.T) {
-	for _, bonusType := range []types.BonusType{
-		types.BonusTypeHelmet,
-		types.BonusTypeTimer,
-		types.BonusTypeShovel,
-	} {
-		t.Run(string(bonusType), func(t *testing.T) {
-			env := newBonusTestEnv()
-			bonus := env.newBonus(bonusType)
-			tank := newPlayerTank(types.TankRolePlayer1)
+// Каска: танк получает щит, бонус удаляется; щит истекает по отсчёту
+func TestBonusUseCases_Apply_Helmet(t *testing.T) {
+	env := newBonusTestEnv()
+	bonus := env.newBonus(types.BonusTypeHelmet)
+	tank := newPlayerTank(types.TankRolePlayer1)
+	env.tankCommon.tanks = []*types.TankEntity{tank}
 
-			env.bonusUC.Apply(bonus, tank)
+	env.bonusUC.Apply(bonus, tank)
 
-			if got := len(env.bonusesRepo.GetAllBonuses()); got != 1 {
-				t.Errorf("бонус удалён: осталось %d", got)
-			}
-			if len(env.tankCommon.leveledUp) != 0 {
-				t.Errorf("неожиданный LevelUp")
-			}
-			if len(env.lifecycle.exploded) != 0 {
-				t.Errorf("неожиданный взрыв")
-			}
-			if got := len(env.sounds.GetEvents()); got != 1 {
-				t.Errorf("ожидался 1 звук, получено %d", got)
-			}
-		})
+	if !tank.HasShield() {
+		t.Fatal("щит не активирован")
+	}
+	if got := len(env.bonusesRepo.GetAllBonuses()); got != 0 {
+		t.Errorf("бонус не удалён: %d", got)
+	}
+
+	// 10 секунд по 60 тиков — щит истекает
+	for i := 0; i < 10*60; i++ {
+		env.bonusUC.UpdateEffects()
+	}
+	if tank.HasShield() {
+		t.Error("щит не истёк")
+	}
+}
+
+// Таймер: враги замораживаются, бонус удаляется; заморозка истекает
+func TestBonusUseCases_Apply_Timer(t *testing.T) {
+	env := newBonusTestEnv()
+	bonus := env.newBonus(types.BonusTypeTimer)
+	tank := newPlayerTank(types.TankRolePlayer1)
+
+	env.bonusUC.Apply(bonus, tank)
+
+	if !env.session.AreEnemiesFrozen() {
+		t.Fatal("враги не заморожены")
+	}
+	if got := len(env.bonusesRepo.GetAllBonuses()); got != 0 {
+		t.Errorf("бонус не удалён: %d", got)
+	}
+
+	for i := 0; i < 10*60; i++ {
+		env.bonusUC.UpdateEffects()
+	}
+	if env.session.AreEnemiesFrozen() {
+		t.Error("заморозка не истекла")
+	}
+}
+
+// Лопата: кольцо вокруг штаба становится бетонным, бонус удаляется;
+// по истечении отсчёта возвращаются исходные блоки
+func TestBonusUseCases_Apply_Shovel(t *testing.T) {
+	env := newBonusTestEnv()
+
+	// Кирпич в кольце штаба и кирпич в стороне от него
+	wallBrick := types.NewBlockEntity(string(types.Brick), 88, 184, 8, nil)
+	farBrick := types.NewBlockEntity(string(types.Brick), 0, 0, 8, nil)
+	env.mapEntity.AddBlock(wallBrick)
+	env.mapEntity.AddBlock(farBrick)
+
+	bonus := env.newBonus(types.BonusTypeShovel)
+	tank := newPlayerTank(types.TankRolePlayer1)
+
+	env.bonusUC.Apply(bonus, tank)
+
+	if !env.mapEntity.IsHQFortified() {
+		t.Fatal("укрепление не активировано")
+	}
+	if got := len(env.bonusesRepo.GetAllBonuses()); got != 0 {
+		t.Errorf("бонус не удалён: %d", got)
+	}
+
+	// Штаб (96,192) 16x16 у нижней границы карты 208x208:
+	// кольцо из 8 клеток по 8px, нижний ряд за границей
+	steelCount := 0
+	for _, block := range env.mapEntity.GetBlocks() {
+		if block.Data != nil && block.Data.Name == types.Steel {
+			steelCount++
+		}
+	}
+	if steelCount != 8 {
+		t.Errorf("бетонных блоков %d, ожидалось 8", steelCount)
+	}
+
+	// Кирпич из кольца снят с карты, дальний остался
+	blocksSet := map[*types.BlockEntity]bool{}
+	for _, block := range env.mapEntity.GetBlocks() {
+		blocksSet[block] = true
+	}
+	if blocksSet[wallBrick] {
+		t.Error("кирпич кольца не заменён бетоном")
+	}
+	if !blocksSet[farBrick] {
+		t.Error("дальний кирпич пропал")
+	}
+
+	// По истечении отсчёта бетон снят, кирпич кольца возвращён
+	for i := 0; i < 20*60; i++ {
+		env.bonusUC.UpdateEffects()
+	}
+	if env.mapEntity.IsHQFortified() {
+		t.Fatal("укрепление не истекло")
+	}
+	steelCount = 0
+	restored := false
+	for _, block := range env.mapEntity.GetBlocks() {
+		if block.Data != nil && block.Data.Name == types.Steel {
+			steelCount++
+		}
+		if block == wallBrick {
+			restored = true
+		}
+	}
+	if steelCount != 0 {
+		t.Errorf("бетон не снят: %d блоков", steelCount)
+	}
+	if !restored {
+		t.Error("кирпич кольца не восстановлен")
+	}
+}
+
+// Повторная лопата продлевает укрепление, не дублируя бетон
+func TestBonusUseCases_Apply_Shovel_Prolong(t *testing.T) {
+	env := newBonusTestEnv()
+	tank := newPlayerTank(types.TankRolePlayer1)
+
+	env.bonusUC.Apply(env.newBonus(types.BonusTypeShovel), tank)
+
+	// Половина отсчёта прошла, затем вторая лопата
+	for i := 0; i < 10*60; i++ {
+		env.bonusUC.UpdateEffects()
+	}
+	env.bonusUC.Apply(env.newBonus(types.BonusTypeShovel), tank)
+
+	steelCount := 0
+	for _, block := range env.mapEntity.GetBlocks() {
+		if block.Data != nil && block.Data.Name == types.Steel {
+			steelCount++
+		}
+	}
+	if steelCount != 8 {
+		t.Errorf("бетонных блоков %d, ожидалось 8", steelCount)
+	}
+
+	// Отсчёт начат заново: спустя ещё половину срока укрепление активно
+	for i := 0; i < 10*60; i++ {
+		env.bonusUC.UpdateEffects()
+	}
+	if !env.mapEntity.IsHQFortified() {
+		t.Error("укрепление истекло раньше продлённого срока")
+	}
+	for i := 0; i < 10*60; i++ {
+		env.bonusUC.UpdateEffects()
+	}
+	if env.mapEntity.IsHQFortified() {
+		t.Error("продлённое укрепление не истекло")
 	}
 }
 
@@ -318,15 +462,24 @@ func TestBonusUseCases_Apply_NilArguments(t *testing.T) {
 func TestBonusUseCases_GetRandomBonusType(t *testing.T) {
 	env := newBonusTestEnv()
 	allowed := map[types.BonusType]bool{
+		types.BonusTypeHelmet:  true,
+		types.BonusTypeTimer:   true,
+		types.BonusTypeShovel:  true,
 		types.BonusTypeGrenade: true,
 		types.BonusTypeTank:    true,
 		types.BonusTypeStar:    true,
 	}
 
-	for i := 0; i < 200; i++ {
-		if got := env.bonusUC.GetRandomBonusType(); !allowed[got] {
+	seen := map[types.BonusType]bool{}
+	for i := 0; i < 600; i++ {
+		got := env.bonusUC.GetRandomBonusType()
+		if !allowed[got] {
 			t.Fatalf("недопустимый тип бонуса: %q", got)
 		}
+		seen[got] = true
+	}
+	if len(seen) != len(allowed) {
+		t.Errorf("выпали не все типы бонусов: %v", seen)
 	}
 }
 
@@ -334,6 +487,9 @@ func TestBonusUseCases_SpawnRandomBonusEntity(t *testing.T) {
 	env := newBonusTestEnv()
 	position := types.Position{X: 48, Y: 96}
 	allowed := map[types.BonusType]bool{
+		types.BonusTypeHelmet:  true,
+		types.BonusTypeTimer:   true,
+		types.BonusTypeShovel:  true,
 		types.BonusTypeGrenade: true,
 		types.BonusTypeTank:    true,
 		types.BonusTypeStar:    true,

@@ -90,6 +90,7 @@ func (app *App) newStageState() (*states.StageState, error) {
 		gameRepositories.GetTanksRepository(),
 		app.specsUseCases,
 		mapUseCases,
+		stageSession,
 	)
 
 	spawnLayout := types.SpawnLayout{
@@ -153,7 +154,9 @@ func (app *App) newStageState() (*states.StageState, error) {
 	bonusUseCases := use_cases.NewBonusUseCases(
 		tankCommonUseCases,
 		tankLifecycleUseCases,
+		hqUseCases,
 		stageSession,
+		mapEntity,
 		bonusesRepository,
 		app.config,
 		app.buildTilesUseCases(

@@ -147,6 +147,10 @@ func (uc *StageUseCases) UpdateGameObjects(dt float64) {
 		uc.collisionUseCases.UpdateCollisions()
 	}
 
+	if uc.bonusUseCases != nil {
+		uc.bonusUseCases.UpdateEffects()
+	}
+
 	uc.trackDestroyedEnemies()
 
 	if uc.hqUseCases != nil {

@@ -7,6 +7,7 @@ import (
 	game "github.com/shpaker/tnk9x/internal/repositories/game"
 	"github.com/shpaker/tnk9x/internal/services"
 	"github.com/shpaker/tnk9x/internal/types"
+	"github.com/shpaker/tnk9x/internal/types/session_entities"
 	"github.com/shpaker/tnk9x/internal/use_cases"
 	"github.com/shpaker/tnk9x/internal/use_cases/tank_use_cases"
 )
@@ -14,23 +15,27 @@ import (
 type commonTestEnv struct {
 	tanksRepo *game.TanksRepository
 	specsUC   *use_cases.SpecsUseCases
+	session   *session_entities.StageSessionEntity
 	common    *tank_use_cases.TankCommonUseCases
 }
 
 func newCommonTestEnv() *commonTestEnv {
 	tanksRepo := game.NewTanksRepository()
 	specsUC := use_cases.NewSpecsUseCases()
+	session := session_entities.NewStageSessionEntity()
 	common := tank_use_cases.NewTankCommonUseCases(
 		services.NewTankBrakingService(),
 		&stubRenderUseCases{},
 		tanksRepo,
 		specsUC,
 		use_cases.NewMapUseCases(nil),
+		session,
 	)
 
 	return &commonTestEnv{
 		tanksRepo: tanksRepo,
 		specsUC:   specsUC,
+		session:   session,
 		common:    common,
 	}
 }
@@ -224,6 +229,7 @@ func TestTankCommonUseCases_Update_BrakingSlidesOnIce(t *testing.T) {
 		tanksRepo,
 		specsUC,
 		use_cases.NewMapUseCases(mapEntity),
+		session_entities.NewStageSessionEntity(),
 	)
 
 	tankValue := types.NewDefaultTankEntity(
@@ -248,6 +254,39 @@ func TestTankCommonUseCases_Update_BrakingSlidesOnIce(t *testing.T) {
 	}
 	if tank.SlideTarget != nil {
 		t.Errorf("SlideTarget не сброшен: %v", *tank.SlideTarget)
+	}
+}
+
+// При заморозке враг стоит на месте, танк игрока продолжает движение
+func TestTankCommonUseCases_Update_FrozenEnemyDoesNotMove(t *testing.T) {
+	env := newCommonTestEnv()
+	enemy := env.newTank(
+		types.TankRoleEnemy,
+		types.DirectionRight,
+		types.TankStateMoving,
+		0,
+	)
+	player := env.newTank(
+		types.TankRolePlayer1,
+		types.DirectionRight,
+		types.TankStateMoving,
+		0,
+	)
+
+	env.session.FreezeEnemies(600)
+
+	if err := env.common.Update(enemy, 1.0/60.0); err != nil {
+		t.Fatalf("обновление врага: %v", err)
+	}
+	if err := env.common.Update(player, 1.0/60.0); err != nil {
+		t.Fatalf("обновление игрока: %v", err)
+	}
+
+	if enemy.Position.X != 100 {
+		t.Errorf("замороженный враг сместился: X = %v", enemy.Position.X)
+	}
+	if player.Position.X == 100 {
+		t.Error("танк игрока не сместился при заморозке врагов")
 	}
 }
 

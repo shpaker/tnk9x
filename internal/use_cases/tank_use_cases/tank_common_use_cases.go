@@ -5,6 +5,7 @@ import (
 
 	"github.com/shpaker/tnk9x/internal/interfaces"
 	"github.com/shpaker/tnk9x/internal/types"
+	"github.com/shpaker/tnk9x/internal/types/session_entities"
 )
 
 var _ interfaces.ITankCommonUseCases = (*TankCommonUseCases)(nil)
@@ -15,6 +16,7 @@ type TankCommonUseCases struct {
 	tanksRepository interfaces.ITanksRepository
 	specsUseCases   interfaces.ISpecsUseCases
 	mapUseCases     interfaces.IMapUseCases
+	stageSession    *session_entities.StageSessionEntity
 }
 
 func NewTankCommonUseCases(
@@ -23,6 +25,7 @@ func NewTankCommonUseCases(
 	tanksRepository interfaces.ITanksRepository,
 	specsUseCases interfaces.ISpecsUseCases,
 	mapUseCases interfaces.IMapUseCases,
+	stageSession *session_entities.StageSessionEntity,
 ) *TankCommonUseCases {
 	return &TankCommonUseCases{
 		brakingService:  brakingService,
@@ -30,12 +33,20 @@ func NewTankCommonUseCases(
 		tanksRepository: tanksRepository,
 		specsUseCases:   specsUseCases,
 		mapUseCases:     mapUseCases,
+		stageSession:    stageSession,
 	}
 }
 
 func (uc *TankCommonUseCases) Update(tank *types.TankEntity, dt float64) error {
 	if !tank.IsActive() {
 		return errors.New("tank is not active")
+	}
+
+	// Замороженный бонусом-таймером враг замирает на месте
+	if tank.IsEnemy() && uc.stageSession != nil &&
+		uc.stageSession.AreEnemiesFrozen() {
+		tank.PrevPosition = tank.Position
+		return nil
 	}
 
 	uc.renderUseCases.SyncTankAnimationWithState(tank)

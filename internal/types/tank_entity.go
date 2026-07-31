@@ -44,6 +44,7 @@ type TankEntity struct {
 	blinkCounter  int  // Счетчик тиков для мигания
 	blinkFlag     bool // Флаг видимости
 	hitPoints     uint // Количество попаданий до уничтожения (для тяжёлых танков)
+	shieldTicks   uint // Оставшиеся тики неуязвимости от каски
 }
 
 func NewDefaultTankEntity(role TankRole, direction Direction) TankEntity {
@@ -224,6 +225,30 @@ func (t *TankEntity) UpdateBlink() {
 	if t.blinkCounter >= 10 {
 		t.blinkCounter = 0
 		t.blinkFlag = !t.blinkFlag
+	}
+}
+
+// ActivateShield включает неуязвимость танка на заданное число тиков
+func (t *TankEntity) ActivateShield(ticks uint) {
+	if t == nil {
+		return
+	}
+	t.shieldTicks = ticks
+}
+
+func (t *TankEntity) HasShield() bool {
+	if t == nil {
+		return false
+	}
+	return t.shieldTicks > 0
+}
+
+func (t *TankEntity) UpdateShieldCountdown() {
+	if t == nil {
+		return
+	}
+	if t.shieldTicks > 0 {
+		t.shieldTicks--
 	}
 }
 

@@ -140,6 +140,7 @@ type ISoundUseCases interface {
 
 type IBonusUseCases interface {
 	Apply(bonus *types.BonusEntity, tank *types.TankEntity)
+	UpdateEffects()
 	SpawnRandomBonusEntity(position types.Position) *types.BonusEntity
 	VisibleBonuses() []*types.BonusEntity
 }

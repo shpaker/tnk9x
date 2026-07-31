@@ -5,7 +5,15 @@ import (
 
 	"github.com/shpaker/tnk9x/internal/interfaces"
 	"github.com/shpaker/tnk9x/internal/types"
+	image_providers "github.com/shpaker/tnk9x/internal/types/image_providers"
 	"github.com/shpaker/tnk9x/internal/types/session_entities"
+)
+
+// Длительности эффектов бонусов в тиках (60 тиков = 1 секунда)
+const (
+	helmetShieldDurationTicks = 10 * 60
+	enemyFreezeDurationTicks  = 10 * 60
+	hqFortifyDurationTicks    = 20 * 60
 )
 
 var _ interfaces.IBonusUseCases = (*BonusUseCases)(nil)
@@ -13,7 +21,9 @@ var _ interfaces.IBonusUseCases = (*BonusUseCases)(nil)
 type BonusUseCases struct {
 	tankCommonUseCases    interfaces.ITankCommonUseCases
 	tankLifecycleUseCases interfaces.ITankLifecycleUseCases
+	hqUseCases            interfaces.IHQUseCases
 	stageSession          *session_entities.StageSessionEntity
+	mapEntity             *types.MapEntity
 	bonusesRepository     interfaces.IBonusesRepository
 	configProvider        interfaces.IConfigProvider
 	tilesUseCases         interfaces.ITilesUseCases
@@ -24,7 +34,9 @@ type BonusUseCases struct {
 func NewBonusUseCases(
 	tankCommonUseCases interfaces.ITankCommonUseCases,
 	tankLifecycleUseCases interfaces.ITankLifecycleUseCases,
+	hqUseCases interfaces.IHQUseCases,
 	stageSession *session_entities.StageSessionEntity,
+	mapEntity *types.MapEntity,
 	bonusesRepository interfaces.IBonusesRepository,
 	configProvider interfaces.IConfigProvider,
 	tilesUseCases interfaces.ITilesUseCases,
@@ -34,7 +46,9 @@ func NewBonusUseCases(
 	return &BonusUseCases{
 		tankCommonUseCases:    tankCommonUseCases,
 		tankLifecycleUseCases: tankLifecycleUseCases,
+		hqUseCases:            hqUseCases,
 		stageSession:          stageSession,
+		mapEntity:             mapEntity,
 		bonusesRepository:     bonusesRepository,
 		configProvider:        configProvider,
 		tilesUseCases:         tilesUseCases,
@@ -57,31 +71,148 @@ func (uc *BonusUseCases) Apply(
 	case types.BonusTypeHelmet:
 		uc.applyHelmet(tank)
 	case types.BonusTypeTimer:
-		uc.applyTimer(tank)
+		uc.applyTimer()
 	case types.BonusTypeShovel:
-		uc.applyShovel(tank)
+		uc.applyShovel()
 	case types.BonusTypeStar:
 		uc.applyStar(tank)
-		uc.removeBonus(bonus)
 	case types.BonusTypeGrenade:
-		uc.applyGrenade(tank)
-		uc.removeBonus(bonus)
+		uc.applyGrenade()
 	case types.BonusTypeTank:
 		uc.applyTank(tank)
-		uc.removeBonus(bonus)
+	}
+
+	uc.removeBonus(bonus)
+}
+
+// UpdateEffects продвигает отсчёты действующих эффектов бонусов:
+// щиты танков, заморозку врагов и укрепление штаба
+func (uc *BonusUseCases) UpdateEffects() {
+	for _, tank := range uc.tankCommonUseCases.GetAllTanks() {
+		tank.UpdateShieldCountdown()
+	}
+
+	if uc.stageSession != nil {
+		uc.stageSession.UpdateEnemyFreezeCountdown()
+	}
+
+	if uc.mapEntity != nil && uc.mapEntity.UpdateHQFortifyCountdown() {
+		uc.unfortifyHQ()
 	}
 }
 
 func (uc *BonusUseCases) applyHelmet(tank *types.TankEntity) {
-	// Защита - логика будет добавлена позже
+	// Защита - временная неуязвимость танка
+	tank.ActivateShield(helmetShieldDurationTicks)
 }
 
-func (uc *BonusUseCases) applyTimer(tank *types.TankEntity) {
-	// Заморозка врагов - логика будет добавлена позже
+func (uc *BonusUseCases) applyTimer() {
+	// Заморозка врагов - все враги замирают до конца отсчёта
+	if uc.stageSession == nil {
+		return
+	}
+	uc.stageSession.FreezeEnemies(enemyFreezeDurationTicks)
 }
 
-func (uc *BonusUseCases) applyShovel(tank *types.TankEntity) {
-	// Укрепление базы - логика будет добавлена позже
+func (uc *BonusUseCases) applyShovel() {
+	// Укрепление базы - стены вокруг штаба временно становятся бетонными
+	if uc.mapEntity == nil {
+		return
+	}
+
+	// Повторная лопата лишь продлевает действующее укрепление
+	if uc.mapEntity.IsHQFortified() {
+		uc.mapEntity.ResetHQFortifyCountdown(hqFortifyDurationTicks)
+		return
+	}
+
+	blockSize := int(uc.configProvider.GetTileBaseSize())
+	if blockSize <= 0 {
+		return
+	}
+
+	var savedBlocks, steelBlocks types.MapBlocks
+	for _, position := range uc.hqWallPositions(float64(blockSize)) {
+		for _, block := range uc.blocksAt(position) {
+			_ = uc.mapEntity.RemoveBlock(block)
+			savedBlocks = append(savedBlocks, block)
+		}
+
+		steelBlock := types.NewBlockEntity(
+			string(types.Steel),
+			position.X,
+			position.Y,
+			blockSize,
+			&image_providers.StaticProvider{ImageID: string(types.Steel)},
+		)
+		uc.mapEntity.AddBlock(steelBlock)
+		steelBlocks = append(steelBlocks, steelBlock)
+	}
+
+	uc.mapEntity.SetHQFortification(
+		savedBlocks,
+		steelBlocks,
+		hqFortifyDurationTicks,
+	)
+}
+
+// unfortifyHQ снимает укрепление: убирает уцелевший бетон
+// и возвращает заменённые им блоки
+func (uc *BonusUseCases) unfortifyHQ() {
+	savedBlocks, steelBlocks := uc.mapEntity.TakeHQFortification()
+	for _, block := range steelBlocks {
+		_ = uc.mapEntity.RemoveBlock(block)
+	}
+	for _, block := range savedBlocks {
+		uc.mapEntity.AddBlock(block)
+	}
+}
+
+// hqWallPositions возвращает клетки кольца вокруг штаба в пределах карты
+func (uc *BonusUseCases) hqWallPositions(blockSize float64) []types.Position {
+	hq := uc.hqUseCases.GetHQ()
+	if hq == nil {
+		return nil
+	}
+
+	hqPosition := hq.GetPosition()
+	hqWidth := float64(hq.GetSize().Width)
+	hqHeight := float64(hq.GetSize().Height)
+	mapSize := uc.mapEntity.GetSizePx()
+
+	var positions []types.Position
+	for y := hqPosition.Y - blockSize; y < hqPosition.Y+hqHeight+blockSize; y += blockSize {
+		for x := hqPosition.X - blockSize; x < hqPosition.X+hqWidth+blockSize; x += blockSize {
+			// Клетки самого штаба не трогаем
+			if x >= hqPosition.X && x < hqPosition.X+hqWidth &&
+				y >= hqPosition.Y && y < hqPosition.Y+hqHeight {
+				continue
+			}
+			// Клетки за границей карты пропускаем
+			if x < 0 || y < 0 ||
+				x+blockSize > float64(mapSize.Width) ||
+				y+blockSize > float64(mapSize.Height) {
+				continue
+			}
+			positions = append(positions, types.Position{X: x, Y: y})
+		}
+	}
+	return positions
+}
+
+// blocksAt возвращает блоки карты, стоящие ровно в заданной клетке
+func (uc *BonusUseCases) blocksAt(position types.Position) types.MapBlocks {
+	var blocks types.MapBlocks
+	for _, block := range uc.mapEntity.GetBlocks() {
+		if block == nil {
+			continue
+		}
+		blockPosition := block.GetPosition()
+		if blockPosition.X == position.X && blockPosition.Y == position.Y {
+			blocks = append(blocks, block)
+		}
+	}
+	return blocks
 }
 
 func (uc *BonusUseCases) applyStar(tank *types.TankEntity) {
@@ -96,7 +227,7 @@ func (uc *BonusUseCases) applyStar(tank *types.TankEntity) {
 	uc.renderUseCases.UpdateTankAnimation(tank)
 }
 
-func (uc *BonusUseCases) applyGrenade(tank *types.TankEntity) {
+func (uc *BonusUseCases) applyGrenade() {
 	// Уничтожение всех врагов
 	allTanks := uc.tankCommonUseCases.GetAllTanks()
 	for _, enemyTank := range allTanks {
@@ -144,6 +275,9 @@ func (uc *BonusUseCases) VisibleBonuses() []*types.BonusEntity {
 // GetRandomBonusType возвращает случайный тип бонуса
 func (uc *BonusUseCases) GetRandomBonusType() types.BonusType {
 	bonusTypes := []types.BonusType{
+		types.BonusTypeHelmet,
+		types.BonusTypeTimer,
+		types.BonusTypeShovel,
 		types.BonusTypeGrenade,
 		types.BonusTypeTank,
 		types.BonusTypeStar,

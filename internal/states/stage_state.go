@@ -215,7 +215,10 @@ func (state *StageState) Update() types.StateTransition {
 			state.enemyInputAdapter.AddTank(spawned)
 		}
 
-		state.enemyInputAdapter.Update(dt)
+		// Замороженные бонусом-таймером враги не получают команд AI
+		if !state.stageSession.AreEnemiesFrozen() {
+			state.enemyInputAdapter.Update(dt)
+		}
 
 		state.tilesUseCases.UpdateAnimations()
 
@@ -259,7 +262,8 @@ func (state *StageState) applySoundEvent(event types.SoundEntity) {
 	}
 }
 
-// updateBlinkObjects обновляет мигание бонусов и танков с бонусом
+// updateBlinkObjects обновляет мигание бонусов, танков с бонусом
+// и танков под щитом
 func (state *StageState) updateBlinkObjects() {
 	var blinkObjects []types.IBlink
 
@@ -270,7 +274,10 @@ func (state *StageState) updateBlinkObjects() {
 	}
 
 	for _, tank := range state.tankCommonUseCases.GetAllTanks() {
-		if tank != nil && tank.IsEnemy() && tank.GetWithBonus() {
+		if tank == nil {
+			continue
+		}
+		if (tank.IsEnemy() && tank.GetWithBonus()) || tank.HasShield() {
 			blinkObjects = append(blinkObjects, tank)
 		}
 	}

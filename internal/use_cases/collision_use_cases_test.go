@@ -8,6 +8,7 @@ import (
 	"github.com/shpaker/tnk9x/internal/services"
 	"github.com/shpaker/tnk9x/internal/services/collision_services"
 	"github.com/shpaker/tnk9x/internal/types"
+	"github.com/shpaker/tnk9x/internal/types/session_entities"
 	"github.com/shpaker/tnk9x/internal/use_cases"
 	"github.com/shpaker/tnk9x/internal/use_cases/tank_use_cases"
 )
@@ -52,9 +53,11 @@ func (s *stubRenderUseCases) TankHealthOverlay(
 	return color.NRGBA{}, false
 }
 
-type stubHQUseCases struct{}
+type stubHQUseCases struct {
+	hq *types.HQEntity
+}
 
-func (s *stubHQUseCases) GetHQ() *types.HQEntity           { return nil }
+func (s *stubHQUseCases) GetHQ() *types.HQEntity           { return s.hq }
 func (s *stubHQUseCases) Explode(hq *types.HQEntity) error { return nil }
 func (s *stubHQUseCases) IsExplosionFinished(hq *types.HQEntity) {
 }
@@ -160,6 +163,7 @@ func newCollisionTestEnv(blocks types.MapBlocks) *collisionTestEnv {
 		tanksRepo,
 		specsUC,
 		mapUC,
+		session_entities.NewStageSessionEntity(),
 	)
 	tankActions := tank_use_cases.NewTankActionsUseCases(
 		braking,
@@ -543,6 +547,46 @@ func TestBulletTankCollision_TwoHitsSameTick(t *testing.T) {
 	}
 	if enemy2.GetHitPoints() != 1 {
 		t.Errorf("враг 2 не получил урон: hp=%d", enemy2.GetHitPoints())
+	}
+}
+
+// Щит от каски: пуля поглощается без урона и понижения уровня
+func TestBulletTankCollision_ShieldAbsorbsHit(t *testing.T) {
+	env := newCollisionTestEnv(nil)
+
+	player := env.newTank(types.TankRolePlayer1, types.DirectionUp, 64, 64, 1)
+	player.ActivateShield(600)
+	env.tanksRepo.SetPlayer(types.PlayerTankNumPlayer1, player)
+
+	enemy := env.newTank(types.TankRoleEnemy, types.DirectionDown, 64, 160, 0)
+	env.tanksRepo.AddEnemy(enemy)
+
+	bullet := types.NewBulletEntity(
+		types.Position{X: 70, Y: 70},
+		types.Size{Width: 4, Height: 4},
+		types.SURFACE,
+		&stubImageProvider{},
+		types.DirectionUp,
+		env.specsUC.GetTankSpecs(true, 0),
+		enemy,
+	)
+	if err := env.bulletsRepo.AddBullet(bullet); err != nil {
+		t.Fatalf("не удалось добавить пулю: %v", err)
+	}
+
+	env.collision.UpdateCollisions()
+
+	if got := len(env.bulletUC.GetBullets()); got != 0 {
+		t.Errorf("пуля не поглощена щитом: осталось %d", got)
+	}
+	if player.GetSpecs().GetLevel() != 1 {
+		t.Errorf(
+			"уровень игрока изменился под щитом: %d",
+			player.GetSpecs().GetLevel(),
+		)
+	}
+	if player.IsDestroyed() {
+		t.Error("игрок уничтожен под щитом")
 	}
 }
 

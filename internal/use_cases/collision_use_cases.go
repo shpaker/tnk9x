@@ -145,6 +145,10 @@ func (uc *CollisionUseCases) checkTankBulletCollisions(
 		) {
 			_ = uc.bulletUseCases.RemoveBullet(bullet)
 			if tank.IsActive() {
+				// Щит от каски поглощает попадание без урона
+				if tank.HasShield() {
+					return
+				}
 				// Для игроков понижаем уровень вместо взрыва
 				if !tank.IsEnemy() {
 					currentLevel := uint(0)

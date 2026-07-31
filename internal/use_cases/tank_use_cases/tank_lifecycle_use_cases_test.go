@@ -10,6 +10,7 @@ import (
 	"github.com/shpaker/tnk9x/internal/testutil"
 	"github.com/shpaker/tnk9x/internal/types"
 	image_providers "github.com/shpaker/tnk9x/internal/types/image_providers"
+	"github.com/shpaker/tnk9x/internal/types/session_entities"
 	"github.com/shpaker/tnk9x/internal/use_cases"
 	"github.com/shpaker/tnk9x/internal/use_cases/tank_use_cases"
 )
@@ -132,6 +133,7 @@ func newLifecycleTestEnv() *lifecycleTestEnv {
 		tanksRepo,
 		specs,
 		use_cases.NewMapUseCases(nil),
+		session_entities.NewStageSessionEntity(),
 	)
 	spawnCollision := &stubSpawnCollisionService{}
 	lifecycle := tank_use_cases.NewTankLifecycleUseCases(
