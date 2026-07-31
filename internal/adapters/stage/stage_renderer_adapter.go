@@ -2,6 +2,7 @@ package stage
 
 import (
 	"fmt"
+	"image"
 	"image/color"
 	"math"
 
@@ -603,11 +604,46 @@ func (r *StageRendererAdapter) drawBlocksByAltitude(
 			continue
 		}
 
-		r.drawEntitySprite(
-			screen,
-			types.TilesetTypeBlocks,
-			imageID,
-			block.Position,
-		)
+		r.drawBlockSprite(screen, imageID, block)
 	}
+}
+
+// drawBlockSprite отрисовывает блок; у сколотого пулями остатка
+// кирпича берётся соответствующий фрагмент спрайта исходного тайла
+func (r *StageRendererAdapter) drawBlockSprite(
+	screen *ebiten.Image,
+	imageID string,
+	block *types.BlockEntity,
+) {
+	img, err := r.spriteCache.Image(types.TilesetTypeBlocks, imageID)
+	if err != nil {
+		return
+	}
+
+	size := block.GetSize()
+	bounds := img.Bounds()
+	if block.Data != nil &&
+		(size.Width != bounds.Dx() || size.Height != bounds.Dy()) {
+		// Data.Position хранит origin исходного тайла: смещение
+		// остатка относительно него задаёт фрагмент спрайта
+		offsetX := int(block.Position.X - block.Data.Position.X)
+		offsetY := int(block.Position.Y - block.Data.Position.Y)
+		srcRect := image.Rect(
+			bounds.Min.X+offsetX,
+			bounds.Min.Y+offsetY,
+			bounds.Min.X+offsetX+size.Width,
+			bounds.Min.Y+offsetY+size.Height,
+		)
+		img, _ = img.SubImage(srcRect).(*ebiten.Image)
+		if img == nil {
+			return
+		}
+	}
+
+	op := &ebiten.DrawImageOptions{}
+	op.GeoM.Translate(
+		float64(r.mapOffsetX)+block.Position.X,
+		float64(r.mapOffsetY)+block.Position.Y,
+	)
+	screen.DrawImage(img, op)
 }

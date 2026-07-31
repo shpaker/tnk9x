@@ -5,6 +5,11 @@ import (
 	"github.com/shpaker/tnk9x/internal/types"
 )
 
+// brickHitDepthPx — глубина скола кирпича за одно попадание обычной
+// пули: половина тайла (нетипизированная константа: годится и для
+// float64-позиции, и для int-размера)
+const brickHitDepthPx = 4
+
 var _ interfaces.ICollisionUseCases = (*CollisionUseCases)(nil)
 
 type CollisionUseCases struct {
@@ -324,8 +329,11 @@ func (uc *CollisionUseCases) checkBulletBoundaryCollision(
 func (uc *CollisionUseCases) checkBulletWallCollision(
 	bullet *types.BulletEntity,
 ) bool {
-	mapBlocks := uc.mapUseCases.GetBlocks()
-	for _, block := range mapBlocks {
+	// Пуля на стыке тайлов накрывает несколько блоков — сначала
+	// собираем все пересечённые, потом меняем карту: RemoveBlock
+	// уплотняет срез блоков, менять его во время обхода нельзя
+	var hitBlocks []*types.BlockEntity
+	for _, block := range uc.mapUseCases.GetBlocks() {
 		// вода не останавливает снаряды
 		if block.Data != nil && block.Data.Name == types.Water {
 			continue
@@ -335,25 +343,86 @@ func (uc *CollisionUseCases) checkBulletWallCollision(
 			bullet,
 			block,
 		) {
-
-			if block.Data != nil {
-				if block.Data.Name == types.Brick {
-					_ = uc.mapUseCases.RemoveBlock(block)
-					uc.soundUseCases.RequestSound(types.SoundIDBrick, false)
-				} else if block.Data.Name == types.Steel {
-					if bullet.IsReinforced() {
-						// Усиленные пули могут ломать стальные блоки
-						_ = uc.mapUseCases.RemoveBlock(block)
-					}
-					uc.soundUseCases.RequestSound(types.SoundIDSteel, false)
-				}
-			}
-
-			return true
+			hitBlocks = append(hitBlocks, block)
 		}
 	}
 
-	return false
+	hitBrick, hitSteel := false, false
+	for _, block := range hitBlocks {
+		if block.Data == nil {
+			continue
+		}
+
+		switch block.Data.Name {
+		case types.Brick:
+			hitBrick = true
+			if bullet.IsReinforced() {
+				// Усиленные пули сносят кирпич целиком
+				_ = uc.mapUseCases.RemoveBlock(block)
+			} else {
+				uc.shaveBrickBlock(bullet, block)
+			}
+		case types.Steel:
+			hitSteel = true
+			if bullet.IsReinforced() {
+				// Усиленные пули могут ломать стальные блоки
+				_ = uc.mapUseCases.RemoveBlock(block)
+			}
+		}
+	}
+
+	// Один звук на попадание, а не на каждый задетый блок
+	if hitBrick {
+		uc.soundUseCases.RequestSound(types.SoundIDBrick, false)
+	}
+	if hitSteel {
+		uc.soundUseCases.RequestSound(types.SoundIDSteel, false)
+	}
+
+	return len(hitBlocks) > 0
+}
+
+// shaveBrickBlock срезает с кирпича слой brickHitDepthPx на всю
+// ширину остатка от грани, в которую попала пуля; остаток не толще
+// слоя уничтожается целиком
+func (uc *CollisionUseCases) shaveBrickBlock(
+	bullet *types.BulletEntity,
+	block *types.BlockEntity,
+) {
+	size := block.GetSize()
+
+	horizontal := bullet.Direction == types.DirectionLeft ||
+		bullet.Direction == types.DirectionRight
+
+	depth := size.Height
+	if horizontal {
+		depth = size.Width
+	}
+	if depth <= brickHitDepthPx {
+		_ = uc.mapUseCases.RemoveBlock(block)
+		return
+	}
+
+	// Right бьёт в левую грань, Down — в верхнюю: у них вместе с
+	// размером смещается и позиция остатка
+	switch bullet.Direction {
+	case types.DirectionRight:
+		block.Position.X += brickHitDepthPx
+	case types.DirectionDown:
+		block.Position.Y += brickHitDepthPx
+	}
+
+	if horizontal {
+		block.Size = types.Size{
+			Width:  size.Width - brickHitDepthPx,
+			Height: size.Height,
+		}
+	} else {
+		block.Size = types.Size{
+			Width:  size.Width,
+			Height: size.Height - brickHitDepthPx,
+		}
+	}
 }
 
 func (uc *CollisionUseCases) checkBulletHQCollision(

@@ -8,9 +8,31 @@ A modern remake and tribute to the classic arcade game Battle City (NES, 1985), 
 
 ## Development Status
 
-**Playable now:** full game loop, two-player keyboard controls, touch controls for mobile browsers (auto-detected virtual D-pad, fire and pause in the letterbox area, tappable menu), tank movement with braking and grid snap, bullets and destructible terrain, all five surface types (brick, steel, forest, water, ice) with ice sliding and water blocking, Lua-scripted enemies of four types with probability-based levels, player lives/levels/damage, all six bonuses (grenade, tank, star, helmet shield, enemy-freezing timer, HQ-fortifying shovel), HQ with victory/defeat overlays, level selection with a desktop quit item, pause menu on Esc/P/touch (continue, exit to level select), sound effects and music, NES-style sidebar HUD (enemy reserve, player lives, stage flag) on an authentic 256x224 screen. Runs natively and [in the browser](https://shpaker.github.io/tnk9x/) (WebAssembly, deployed to GitHub Pages on release tags).
+**Playable now:**
 
-**Under the hood:** Clean Architecture with depguard-enforced layer boundaries, constructor-only DI from a composition root, repository pattern, scripting behind a domain-typed engine interface, app-lifetime GPU sprite cache with startup preload, fail-fast sprite/animation validation on startup, unit tests with a >=70% use-cases coverage gate, CI/CD (fmt, lint, test, build, release).
+- Full game loop with HQ and victory/defeat overlays
+- Two-player keyboard controls
+- Touch controls for mobile browsers: auto-detected virtual D-pad, fire and pause in the letterbox area, tappable menu
+- Tank movement with braking and grid snap
+- Bullets and destructible terrain with incremental brick chipping: each hit shaves a half-tile slab, reinforced bullets break tiles whole
+- All five surface types (brick, steel, forest, water, ice) with ice sliding and water blocking
+- Lua-scripted enemies of four types with probability-based levels
+- Player lives, levels and damage
+- All six bonuses: grenade, tank, star, helmet shield, enemy-freezing timer, HQ-fortifying shovel
+- Level selection with a desktop quit item
+- Pause menu on Esc/P/touch (continue, exit to level select)
+- Sound effects and music
+- NES-style sidebar HUD (enemy reserve, player lives, stage flag) on an authentic 256x224 screen
+- Runs natively and [in the browser](https://shpaker.github.io/tnk9x/) (WebAssembly, deployed to GitHub Pages on release tags)
+
+**Under the hood:**
+
+- Clean Architecture with depguard-enforced layer boundaries
+- Constructor-only DI from a composition root, repository pattern
+- Scripting behind a domain-typed engine interface
+- App-lifetime GPU sprite cache with startup preload, fail-fast sprite/animation validation on startup
+- Unit tests with a >=70% use-cases coverage gate
+- CI/CD (fmt, lint, test, build, release)
 
 ### Roadmap
 - Enemy AI difficulty scaling

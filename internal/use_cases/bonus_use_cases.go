@@ -133,7 +133,7 @@ func (uc *BonusUseCases) applyShovel() {
 
 	var savedBlocks, steelBlocks types.MapBlocks
 	for _, position := range uc.hqWallPositions(float64(blockSize)) {
-		for _, block := range uc.blocksAt(position) {
+		for _, block := range uc.blocksAt(position, float64(blockSize)) {
 			_ = uc.mapEntity.RemoveBlock(block)
 			savedBlocks = append(savedBlocks, block)
 		}
@@ -200,15 +200,26 @@ func (uc *BonusUseCases) hqWallPositions(blockSize float64) []types.Position {
 	return positions
 }
 
-// blocksAt возвращает блоки карты, стоящие ровно в заданной клетке
-func (uc *BonusUseCases) blocksAt(position types.Position) types.MapBlocks {
+// blocksAt возвращает блоки карты, пересекающие заданную клетку:
+// сколотый пулями остаток кирпича меньше клетки и может не совпадать
+// с ней по позиции
+func (uc *BonusUseCases) blocksAt(
+	position types.Position,
+	blockSize float64,
+) types.MapBlocks {
 	var blocks types.MapBlocks
 	for _, block := range uc.mapEntity.GetBlocks() {
 		if block == nil {
 			continue
 		}
 		blockPosition := block.GetPosition()
-		if blockPosition.X == position.X && blockPosition.Y == position.Y {
+		size := block.GetSize()
+		// Строгие неравенства: соседние клетки, касающиеся гранью,
+		// пересечением не считаются
+		if blockPosition.X < position.X+blockSize &&
+			blockPosition.X+float64(size.Width) > position.X &&
+			blockPosition.Y < position.Y+blockSize &&
+			blockPosition.Y+float64(size.Height) > position.Y {
 			blocks = append(blocks, block)
 		}
 	}
