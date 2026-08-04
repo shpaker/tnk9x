@@ -2,9 +2,11 @@
 
 A modern remake and tribute to the classic arcade game Battle City (NES, 1985), built with Go and Ebiten. This project combines a passion for the original game with learning Go, Clean Architecture principles, and game development.
 
-**GitHub:** [https://github.com/shpaker/tnk9x](https://github.com/shpaker/tnk9x)
-
 **Play online:** [https://shpaker.github.io/tnk9x/](https://shpaker.github.io/tnk9x/)
+
+[![tnk9x running in a mobile browser](.github/screenshot-mobile.png)](https://shpaker.github.io/tnk9x/)
+
+*WebAssembly build in a mobile browser — touch controls are auto-detected.*
 
 ## Development Status
 
