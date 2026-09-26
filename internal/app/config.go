@@ -22,6 +22,7 @@ type appConfigSchema struct {
 	RegularFontSize  uint     `yaml:"regular_font_size"`
 	GameTitle        string   `yaml:"game_title"`
 	Volume           *float64 `yaml:"volume"`
+	Effects          *bool    `yaml:"effects"`
 }
 
 type gameConfigSchema struct {
@@ -43,6 +44,7 @@ type Config struct {
 	RegularFontSize  uint
 	GameTitle        string
 	Volume           float64
+	EffectsEnabled   bool
 
 	EnemySpawners          []types.Position
 	Player1Spawn           types.Position
@@ -82,7 +84,8 @@ func LoadConfig() (*Config, error) {
 		SubtitleFontSize: schema.App.SubtitleFontSize,
 		RegularFontSize:  schema.App.RegularFontSize,
 		GameTitle:        schema.App.GameTitle,
-		Volume:           1.0, // Значение по умолчанию
+		Volume:           1.0,  // Значение по умолчанию
+		EffectsEnabled:   true, // Значение по умолчанию
 		EnemySpawners: convertCoordsToPositions(
 			schema.Game.EnemySpawners,
 		),
@@ -130,6 +133,10 @@ func LoadConfig() (*Config, error) {
 		} else if cfg.Volume > 1.0 {
 			cfg.Volume = 1.0
 		}
+	}
+
+	if schema.App.Effects != nil {
+		cfg.EffectsEnabled = *schema.App.Effects
 	}
 
 	return cfg, nil
@@ -204,6 +211,10 @@ func (c *Config) GetGameTitle() string {
 
 func (c *Config) GetVolume() float64 {
 	return c.Volume
+}
+
+func (c *Config) GetEffectsEnabled() bool {
+	return c.EffectsEnabled
 }
 
 func (c *Config) ScreenWidth() int {

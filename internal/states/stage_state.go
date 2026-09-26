@@ -42,6 +42,9 @@ type StageStateDependencies struct {
 	// Session & Repositories
 	StageSession      *session_entities.StageSessionEntity
 	BonusesRepository interfaces.IBonusesRepository
+
+	// Включённость графических эффектов, общая для приложения
+	EffectsSettings *types.EffectsSettingsEntity
 }
 
 type StageState struct {
@@ -63,6 +66,9 @@ type StageState struct {
 	// Session & Repositories
 	stageSession      *session_entities.StageSessionEntity
 	bonusesRepository interfaces.IBonusesRepository
+
+	// Entities
+	effectsSettings *types.EffectsSettingsEntity
 
 	isSetUp         bool
 	endSoundHandled bool
@@ -90,8 +96,10 @@ func NewStageState(deps StageStateDependencies) *StageState {
 		touchControls:         deps.TouchControls,
 		stageSession:          deps.StageSession,
 		bonusesRepository:     deps.BonusesRepository,
+		effectsSettings:       deps.EffectsSettings,
 		pauseMenuItems: []types.PauseMenuItem{
 			types.PauseMenuItemContinue,
+			types.PauseMenuItemGraphics,
 			types.PauseMenuItemExitToSelect,
 		},
 	}
@@ -321,6 +329,9 @@ func (state *StageState) applyPauseMenuSelection(
 	switch item {
 	case types.PauseMenuItemContinue:
 		state.stageUseCases.ResumeStageState()
+	case types.PauseMenuItemGraphics:
+		// Меню остаётся открытым: смена видна сразу за оверлеем
+		state.effectsSettings.Toggle()
 	case types.PauseMenuItemExitToSelect:
 		// Глушим звуки уровня при выходе на экран выбора
 		state.soundUseCases.RequestStopAll()
@@ -402,8 +413,9 @@ func (state *StageState) Draw(screen *ebiten.Image) {
 
 	if state.stageUseCases.IsPaused() {
 		state.renderer.DrawPauseMenu(screen, types.PauseMenuViewData{
-			Items:       state.pauseMenuItems,
-			ActiveIndex: state.pauseMenuIndex,
+			Items:          state.pauseMenuItems,
+			ActiveIndex:    state.pauseMenuIndex,
+			EffectsEnabled: state.effectsSettings.IsEnabled(),
 		})
 	}
 }

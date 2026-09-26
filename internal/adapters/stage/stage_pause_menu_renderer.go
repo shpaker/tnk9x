@@ -16,6 +16,18 @@ var pauseMenuLabels = map[types.PauseMenuItem]string{
 	types.PauseMenuItemExitToSelect: "EXIT TO MENU",
 }
 
+// pauseMenuLabel — подпись пункта; у пункта графики она показывает
+// текущий режим
+func pauseMenuLabel(
+	item types.PauseMenuItem,
+	view types.PauseMenuViewData,
+) string {
+	if item == types.PauseMenuItemGraphics {
+		return types.GraphicsLabel(view.EffectsEnabled)
+	}
+	return pauseMenuLabels[item]
+}
+
 // pauseMenuLayout — вертикальная раскладка строк меню паузы и границы
 // полос тап-зон в логических координатах экрана
 type pauseMenuLayout struct {
@@ -98,7 +110,7 @@ func (r *StageRendererAdapter) DrawPauseMenu(
 	}
 
 	for i, item := range view.Items {
-		label := pauseMenuLabels[item]
+		label := pauseMenuLabel(item, view)
 		labelWidth, _ := text.Measure(label, r.fontFace, 0)
 
 		rowColor := color.NRGBA{R: 150, G: 150, B: 150, A: 255}

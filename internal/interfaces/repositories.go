@@ -82,6 +82,11 @@ type IScriptsRepository interface {
 	GetScript(name string) (string, error)
 }
 
+// IShadersRepository отдаёт исходники Kage-шейдеров по имени
+type IShadersRepository interface {
+	GetShader(name string) ([]byte, error)
+}
+
 type IFontsRepository interface {
 	GetFont(name string) ([]byte, error)
 }

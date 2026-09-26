@@ -1,0 +1,59 @@
+//kage:unit pixels
+
+// Итоговый проход: кадр логического экрана с лёгким искривлением
+// кинескопа, наложением bloom, сканлайнами и виньеткой.
+// Images[0] — кадр, Images[1] — размытое свечение того же размера
+package main
+
+// Сила наложения bloom
+var BloomStrength float
+
+// Глубина сканлайнов; 0 — выключены (мелкий масштаб)
+var ScanlineDepth float
+
+const (
+	warpX            = 0.015
+	warpY            = 0.02
+	vignetteStrength = 0.35
+	pi               = 3.14159265
+)
+
+// warp — бочкообразное искривление в координатах [0, 1]
+func warp(uv vec2) vec2 {
+	p := uv*2 - 1
+	p *= vec2(1+p.y*p.y*warpX, 1+p.x*p.x*warpY)
+	return p/2 + 0.5
+}
+
+// bloomAt — билинейная выборка свечения: размытый слой не должен
+// ступенчато повторять логические пиксели
+func bloomAt(pos vec2, origin vec2) vec3 {
+	q := pos - 0.5
+	f := fract(q)
+	base := floor(q) + 0.5 + origin
+	c00 := imageSrc1At(base).rgb
+	c10 := imageSrc1At(base + vec2(1, 0)).rgb
+	c01 := imageSrc1At(base + vec2(0, 1)).rgb
+	c11 := imageSrc1At(base + vec2(1, 1)).rgb
+	return mix(mix(c00, c10, f.x), mix(c01, c11, f.x), f.y)
+}
+
+func Fragment(dstPos vec4, srcPos vec2, color vec4) vec4 {
+	origin := imageSrc0Origin()
+	size := imageSrc0Size()
+	uv := warp((srcPos - origin) / size)
+	if uv.x < 0 || uv.y < 0 || uv.x >= 1 || uv.y >= 1 {
+		return vec4(0, 0, 0, 1)
+	}
+
+	pos := uv * size
+	c := imageSrc0At(pos+origin).rgb + bloomAt(pos, origin)*BloomStrength
+
+	// Сканлайны: центр логической строки ярче её границ
+	scan := sin(pi * fract(pos.y))
+	c *= mix(1-ScanlineDepth, 1+ScanlineDepth*0.2, scan*scan)
+
+	e := uv*2 - 1
+	c *= 1 - vignetteStrength*dot(e, e)*dot(e, e)*0.25
+	return vec4(c, 1)
+}

@@ -14,24 +14,37 @@
     canvas { touch-action: none; }
     #status { position: fixed; inset: 0; display: flex; align-items: center;
               justify-content: center; color: #9a9a9a; font: 12px monospace; }
-    #hint { position: fixed; bottom: 8px; left: 0; right: 0; text-align: center;
-            color: #555; font: 10px monospace; pointer-events: none; }
-    #repo { position: fixed; top: 8px; right: 8px; color: #555;
-            font: 10px monospace; text-decoration: none; z-index: 1; }
+    #repo { position: fixed; top: 8px; left: 8px; color: #555;
+            font: 10px monospace; text-decoration: none; z-index: 1;
+            visibility: hidden; }
     #repo:hover { color: #9a9a9a; }
   </style>
 </head>
 <body>
   <div id="status">loading&hellip;</div>
-  <div id="hint">P1: WASD + Space &middot; P2: Arrows + Enter &middot; Enter: start &middot; P: pause</div>
   <a id="repo" href="https://github.com/shpaker/tnk9x" target="_blank" rel="noopener">github.com/shpaker/tnk9x</a>
   <script src="wasm_exec.js"></script>
   <script>
-    // На сенсорных устройствах клавиатурная подсказка не нужна
-    if (navigator.maxTouchPoints > 0 || "ontouchstart" in window) {
-      document.getElementById("hint").textContent =
-        "Tap the menu to start · D-pad: move · button: fire";
+    // Подсказки управления рисует сама игра в меню. Ссылка на репозиторий
+    // занимает левый верхний угол (справа вверху — кнопка паузы тач-режима)
+    // и видна, только если угол свободен: над игровым экраном или слева
+    // от него. Геометрия экрана повторяет gameRect из touch_controls:
+    // целый масштаб 256x224 по центру холста; в тач-режиме экран может
+    // уменьшиться на шаг масштаба — поля от этого только растут
+    const repo = document.getElementById("repo");
+    function placeRepo() {
+      const dpr = window.devicePixelRatio || 1;
+      const w = Math.floor(document.body.clientWidth * dpr);
+      const h = Math.floor(document.body.clientHeight * dpr);
+      const scale = Math.max(1, Math.min(Math.floor(w / 256), Math.floor(h / 224)));
+      const top = Math.floor((h - 224 * scale) / 2) / dpr;
+      const left = Math.floor((w - 256 * scale) / 2) / dpr;
+      const box = repo.getBoundingClientRect();
+      const fits = top >= box.bottom + 4 || left >= box.right + 8;
+      repo.style.visibility = fits ? "visible" : "hidden";
     }
+    window.addEventListener("resize", placeRepo);
+    placeRepo();
     const status = document.getElementById("status");
     const go = new Go();
     async function instantiate() {

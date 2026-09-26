@@ -21,10 +21,11 @@ A modern remake and tribute to the classic arcade game Battle City (NES, 1985), 
 - Lua-scripted enemies of four types with probability-based levels
 - Player lives, levels and damage
 - All six bonuses: grenade, tank, star, helmet shield, enemy-freezing timer, HQ-fortifying shovel
-- Level selection with a desktop quit item
+- Level selection with a desktop quit item and keyboard/touch control hints
 - Pause menu on Esc/P/touch (continue, exit to level select)
 - Sound effects and music
 - NES-style sidebar HUD (enemy reserve, player lives, stage flag) on an authentic 256x224 screen
+- RTX-style effects, on by default (`config.yml`): 2D ray-traced lighting and shadows from tanks, bullets, explosions and bonuses, bloom, water/ice/steel glints, CRT filter; switch to classic graphics with F2 or the GRAPHICS item of the level select and pause menus (keyboard and touch)
 - Runs natively and [in the browser](https://shpaker.github.io/tnk9x/) (WebAssembly, deployed to GitHub Pages on release tags)
 
 **Under the hood:**
@@ -33,6 +34,7 @@ A modern remake and tribute to the classic arcade game Battle City (NES, 1985), 
 - Constructor-only DI from a composition root, repository pattern
 - Scripting behind a domain-typed engine interface
 - App-lifetime GPU sprite cache with startup preload, fail-fast sprite/animation validation on startup
+- Kage shader pipeline: lighting pass on the logical screen, bloom and CRT in the final-screen pass; shaders loaded via repository and compiled fail-fast on startup
 - Unit tests with a >=70% use-cases coverage gate
 - CI/CD (fmt, lint, test, build, release)
 

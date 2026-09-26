@@ -18,6 +18,7 @@ func (app *App) newStageSelectState() (*states.StageSelectState, error) {
 		app.textFace,
 		app.mapsRepository,
 		app.touchControls,
+		app.effectsSettings,
 		runtime.GOOS != "js",
 	)
 }

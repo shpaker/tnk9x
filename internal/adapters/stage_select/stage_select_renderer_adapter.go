@@ -23,6 +23,8 @@ const (
 	MenuHitPlayersNext
 	MenuHitMaxEnemiesPrev
 	MenuHitMaxEnemiesNext
+	MenuHitGraphicsPrev
+	MenuHitGraphicsNext
 	MenuHitQuit
 	MenuHitStart
 )
@@ -70,25 +72,52 @@ func NewStageSelectRendererAdapter(
 	}
 }
 
+// menuRow — строка меню в порядке отрисовки
+type menuRow int
+
+const (
+	menuRowLevel menuRow = iota
+	menuRowPlayers
+	menuRowMaxEnemies
+	menuRowGraphics
+	menuRowQuit
+)
+
+// hintLinesCount — строки подсказки управления над строкой запуска
+const hintLinesCount = 2
+
 // stageSelectMenuLayout — вертикальная раскладка меню и границы
 // полос тап-зон в логических координатах экрана
 type stageSelectMenuLayout struct {
-	rowHeight  float64 // высота строки меню после масштабирования
-	stageTop   float64
-	playersTop float64
-	enemiesTop float64
-	quitTop    float64
+	rowHeight float64 // высота строки меню после масштабирования
+	rows      []menuRow
+	rowTops   []float64
 
-	menuTop        float64
-	stagePlayers   float64 // граница полос LEVEL / PLAYERS
-	playersEnemies float64 // граница полос PLAYERS / MAX ENEMIES
-	enemiesQuit    float64 // граница полос MAX ENEMIES / QUIT
-	menuBottom     float64
-	startTop       float64 // нижняя полоса запуска игры
+	menuTop    float64
+	menuBottom float64
+	hintTops   [hintLinesCount]float64
+	startTop   float64 // нижняя полоса запуска игры вместе с подсказкой
+	subtitleY  float64
+}
+
+// menuRows — строки меню; QUIT есть только там, где приложение
+// может завершиться
+func menuRows(quitVisible bool) []menuRow {
+	rows := []menuRow{
+		menuRowLevel,
+		menuRowPlayers,
+		menuRowMaxEnemies,
+		menuRowGraphics,
+	}
+	if quitVisible {
+		rows = append(rows, menuRowQuit)
+	}
+	return rows
 }
 
 // menuLayout — единый источник вертикальных позиций меню для
-// отрисовки и хит-тестов
+// отрисовки и хит-тестов: строка запуска у нижнего края, над ней
+// подсказка, строки меню — по центру между заголовком и подсказкой
 func (r *StageSelectRendererAdapter) menuLayout(
 	width, height float64,
 	quitVisible bool,
@@ -101,29 +130,51 @@ func (r *StageSelectRendererAdapter) menuLayout(
 	}
 	rowHeight := textHeight * scale
 	gap := float64(r.regularFontSize)
-	stageTop := (height-rowHeight)/2 + gap
-	playersTop := stageTop + rowHeight + gap
-	enemiesTop := playersTop + rowHeight + gap
-	quitTop := enemiesTop + rowHeight + gap
 
-	menuBottom := enemiesTop + rowHeight + gap
-	if quitVisible {
-		menuBottom = quitTop + rowHeight + gap
+	subtitleY := height - float64(r.subtitleFontSize)
+	hintPitch := rowHeight + gap/2
+	var hintTops [hintLinesCount]float64
+	for i := range hintTops {
+		hintTops[i] = subtitleY - gap - float64(hintLinesCount-i)*hintPitch
+	}
+
+	rows := menuRows(quitVisible)
+	blockHeight := float64(len(rows))*(rowHeight+gap) - gap
+	titleBottom := height/4 + float64(r.titleFontSize)/2
+	areaBottom := hintTops[0] - gap
+	firstTop := titleBottom + (areaBottom-titleBottom-blockHeight)/2
+
+	rowTops := make([]float64, len(rows))
+	for i := range rowTops {
+		rowTops[i] = firstTop + float64(i)*(rowHeight+gap)
 	}
 
 	return stageSelectMenuLayout{
-		rowHeight:      rowHeight,
-		stageTop:       stageTop,
-		playersTop:     playersTop,
-		enemiesTop:     enemiesTop,
-		quitTop:        quitTop,
-		menuTop:        stageTop - gap,
-		stagePlayers:   (stageTop + rowHeight + playersTop) / 2,
-		playersEnemies: (playersTop + rowHeight + enemiesTop) / 2,
-		enemiesQuit:    (enemiesTop + rowHeight + quitTop) / 2,
-		menuBottom:     menuBottom,
-		startTop:       height - 3*float64(r.subtitleFontSize),
+		rowHeight:  rowHeight,
+		rows:       rows,
+		rowTops:    rowTops,
+		menuTop:    firstTop - gap,
+		menuBottom: rowTops[len(rowTops)-1] + rowHeight + gap,
+		hintTops:   hintTops,
+		startTop:   hintTops[0] - gap/2,
+		subtitleY:  subtitleY,
 	}
+}
+
+// rowAt — строка меню под точкой: полосы строк делятся посередине
+// промежутков
+func (layout stageSelectMenuLayout) rowAt(y float64) (menuRow, bool) {
+	if y < layout.menuTop || y >= layout.menuBottom {
+		return 0, false
+	}
+	for i := len(layout.rowTops) - 1; i > 0; i-- {
+		boundary := (layout.rowTops[i-1] + layout.rowHeight +
+			layout.rowTops[i]) / 2
+		if y >= boundary {
+			return layout.rows[i], true
+		}
+	}
+	return layout.rows[0], true
 }
 
 // HitTest определяет зону меню по тапу в логических координатах
@@ -133,20 +184,26 @@ func (r *StageSelectRendererAdapter) HitTest(pos types.Position) MenuHit {
 		return MenuHitNone
 	}
 	layout := r.menuLayout(r.lastWidth, r.lastHeight, r.lastQuitVisible)
-	next := pos.X >= r.lastWidth/2
-	switch {
-	case pos.Y >= layout.startTop:
+	if pos.Y >= layout.startTop {
 		return MenuHitStart
-	case pos.Y < layout.menuTop || pos.Y >= layout.menuBottom:
+	}
+	row, ok := layout.rowAt(pos.Y)
+	if !ok {
 		return MenuHitNone
-	case pos.Y < layout.stagePlayers:
+	}
+
+	next := pos.X >= r.lastWidth/2
+	switch row {
+	case menuRowLevel:
 		return pickHit(MenuHitLevelPrev, MenuHitLevelNext, next)
-	case pos.Y < layout.playersEnemies:
+	case menuRowPlayers:
 		return pickHit(MenuHitPlayersPrev, MenuHitPlayersNext, next)
-	case !r.lastQuitVisible || pos.Y < layout.enemiesQuit:
+	case menuRowMaxEnemies:
 		return pickHit(
 			MenuHitMaxEnemiesPrev, MenuHitMaxEnemiesNext, next,
 		)
+	case menuRowGraphics:
+		return pickHit(MenuHitGraphicsPrev, MenuHitGraphicsNext, next)
 	default:
 		return MenuHitQuit
 	}
@@ -159,6 +216,28 @@ func pickHit(prev, next MenuHit, isNext bool) MenuHit {
 
 	return prev
 }
+
+// Цвета строк меню
+var (
+	menuRowColor       = color.NRGBA{R: 150, G: 150, B: 150, A: 255}
+	menuRowActiveColor = color.NRGBA{R: 255, G: 255, B: 255, A: 255}
+	subtitleColor      = color.NRGBA{R: 200, G: 200, B: 200, A: 255}
+	// hintColor — тусклее строк меню и ниже порога свечения bloom
+	hintColor = color.NRGBA{R: 110, G: 110, B: 110, A: 255}
+)
+
+// Подсказки управления: клавиатурная и сенсорная; вторая строка
+// напоминает, что графику можно переключить на классическую
+var (
+	keyboardHintLines = [hintLinesCount]string{
+		"P1 WASD+SPACE  P2 ARROWS+ENTER",
+		"ESC/P PAUSE  F2 RTX/CLASSIC",
+	}
+	touchHintLines = [hintLinesCount]string{
+		"D-PAD MOVE  BUTTON FIRE",
+		"TAP GRAPHICS FOR RTX/CLASSIC",
+	}
+)
 
 func (r *StageSelectRendererAdapter) DrawAll(
 	screen *ebiten.Image,
@@ -184,101 +263,83 @@ func (r *StageSelectRendererAdapter) DrawAll(
 	titleOp.ColorScale.ScaleWithColor(color.White)
 	text.Draw(screen, titleText, r.fontFace, titleOp)
 
-	stageText := r.selectorUseCases.String(r.selector)
-
-	textWidth, _ := text.Measure(stageText, r.fontFace, 0)
-
-	scale := float64(r.regularFontSize) / float64(r.titleFontSize)
-	if scale <= 0 {
-		scale = 1
-	}
-	scaledWidth := textWidth * scale
-	x := (actualWidth - scaledWidth) / 2
-	y := layout.stageTop
-
-	stageColor := color.NRGBA{R: 150, G: 150, B: 150, A: 255}
-	if view.LevelActive {
-		stageColor = color.NRGBA{R: 255, G: 255, B: 255, A: 255}
-	}
-
-	op := &text.DrawOptions{}
-	op.GeoM.Scale(scale, scale)
-	op.GeoM.Translate(x, y)
-	op.ColorScale.ScaleWithColor(stageColor)
-	text.Draw(screen, stageText, r.fontFace, op)
-
-	playerText := fmt.Sprintf("PLAYERS %d", view.PlayerCount)
-	playerWidth, _ := text.Measure(playerText, r.fontFace, 0)
-	playerScale := scale
-	playerScaledWidth := playerWidth * playerScale
-	playerX := (actualWidth - playerScaledWidth) / 2
-	playerY := layout.playersTop
-
-	playerColor := color.NRGBA{R: 150, G: 150, B: 150, A: 255}
-	if view.PlayersActive {
-		playerColor = color.NRGBA{R: 255, G: 255, B: 255, A: 255}
-	}
-
-	playerOp := &text.DrawOptions{}
-	playerOp.GeoM.Scale(playerScale, playerScale)
-	playerOp.GeoM.Translate(playerX, playerY)
-	playerOp.ColorScale.ScaleWithColor(playerColor)
-	text.Draw(screen, playerText, r.fontFace, playerOp)
-
-	maxEnemiesText := fmt.Sprintf("MAX ENEMIES %d", view.MaxActiveEnemies)
-	maxEnemiesWidth, _ := text.Measure(maxEnemiesText, r.fontFace, 0)
-	maxEnemiesScale := scale
-	maxEnemiesScaledWidth := maxEnemiesWidth * maxEnemiesScale
-	maxEnemiesX := (actualWidth - maxEnemiesScaledWidth) / 2
-	maxEnemiesY := layout.enemiesTop
-
-	maxEnemiesColor := color.NRGBA{R: 150, G: 150, B: 150, A: 255}
-	if view.MaxEnemiesActive {
-		maxEnemiesColor = color.NRGBA{R: 255, G: 255, B: 255, A: 255}
-	}
-
-	maxEnemiesOp := &text.DrawOptions{}
-	maxEnemiesOp.GeoM.Scale(maxEnemiesScale, maxEnemiesScale)
-	maxEnemiesOp.GeoM.Translate(maxEnemiesX, maxEnemiesY)
-	maxEnemiesOp.ColorScale.ScaleWithColor(maxEnemiesColor)
-	text.Draw(screen, maxEnemiesText, r.fontFace, maxEnemiesOp)
-
-	if view.QuitVisible {
-		quitText := "QUIT"
-		quitWidth, _ := text.Measure(quitText, r.fontFace, 0)
-		quitX := (actualWidth - quitWidth*scale) / 2
-		quitY := layout.quitTop
-
-		quitColor := color.NRGBA{R: 150, G: 150, B: 150, A: 255}
-		if view.QuitActive {
-			quitColor = color.NRGBA{R: 255, G: 255, B: 255, A: 255}
+	regularScale := float64(r.regularFontSize) / float64(r.titleFontSize)
+	for i, row := range layout.rows {
+		label, active := r.rowView(row, view)
+		rowColor := menuRowColor
+		if active {
+			rowColor = menuRowActiveColor
 		}
+		r.drawCentered(
+			screen, label, regularScale, layout.rowTops[i], rowColor,
+		)
+	}
 
-		quitOp := &text.DrawOptions{}
-		quitOp.GeoM.Scale(scale, scale)
-		quitOp.GeoM.Translate(quitX, quitY)
-		quitOp.ColorScale.ScaleWithColor(quitColor)
-		text.Draw(screen, quitText, r.fontFace, quitOp)
+	hintLines := keyboardHintLines
+	if view.TouchActive {
+		hintLines = touchHintLines
+	}
+	for i, line := range hintLines {
+		r.drawCentered(
+			screen, line, regularScale, layout.hintTops[i], hintColor,
+		)
 	}
 
 	subtitleText := "PRESS ENTER TO START"
 	if view.TouchActive {
 		subtitleText = "TAP HERE TO START"
 	}
-	subtitleWidth, _ := text.Measure(subtitleText, r.fontFace, 0)
-	subtitleScale := float64(r.subtitleFontSize) / float64(r.titleFontSize)
-	if subtitleScale <= 0 {
-		subtitleScale = 1
-	}
-	subtitleScaledWidth := subtitleWidth * subtitleScale
-	subtitleX := (actualWidth - subtitleScaledWidth) / 2
-	subtitleY := actualHeight - float64(r.subtitleFontSize)
-
-	subtitleOp := &text.DrawOptions{}
-	subtitleOp.GeoM.Scale(subtitleScale, subtitleScale)
-	subtitleOp.GeoM.Translate(subtitleX, subtitleY)
-	subtitleOp.ColorScale.ScaleWithColor(
-		color.NRGBA{R: 200, G: 200, B: 200, A: 255},
+	r.drawCentered(
+		screen,
+		subtitleText,
+		float64(r.subtitleFontSize)/float64(r.titleFontSize),
+		layout.subtitleY,
+		subtitleColor,
 	)
-	text.Draw(screen, subtitleText, r.fontFace, subtitleOp)
+}
+
+// rowView — подпись строки меню и её выделение
+func (r *StageSelectRendererAdapter) rowView(
+	row menuRow,
+	view types.StageSelectViewData,
+) (string, bool) {
+	switch row {
+	case menuRowLevel:
+		return r.selectorUseCases.String(r.selector), view.LevelActive
+	case menuRowPlayers:
+		return fmt.Sprintf("PLAYERS %d", view.PlayerCount),
+			view.PlayersActive
+	case menuRowMaxEnemies:
+		return fmt.Sprintf("MAX ENEMIES %d", view.MaxActiveEnemies),
+			view.MaxEnemiesActive
+	case menuRowGraphics:
+		return types.GraphicsLabel(view.EffectsEnabled),
+			view.GraphicsActive
+	default:
+		return "QUIT", view.QuitActive
+	}
+}
+
+// drawCentered рисует строку по центру экрана в заданном масштабе
+// шрифта заголовка
+func (r *StageSelectRendererAdapter) drawCentered(
+	screen *ebiten.Image,
+	label string,
+	scale float64,
+	top float64,
+	textColor color.NRGBA,
+) {
+	if scale <= 0 {
+		scale = 1
+	}
+	width, _ := text.Measure(label, r.fontFace, 0)
+
+	op := &text.DrawOptions{}
+	op.GeoM.Scale(scale, scale)
+	op.GeoM.Translate(
+		(float64(screen.Bounds().Dx())-width*scale)/2,
+		top,
+	)
+	op.ColorScale.ScaleWithColor(textColor)
+	text.Draw(screen, label, r.fontFace, op)
 }

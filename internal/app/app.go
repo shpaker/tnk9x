@@ -10,6 +10,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
 
+	"github.com/shpaker/tnk9x/internal/adapters/effects"
 	"github.com/shpaker/tnk9x/internal/adapters/scripting"
 	"github.com/shpaker/tnk9x/internal/adapters/stage"
 	"github.com/shpaker/tnk9x/internal/adapters/touch_controls"
@@ -63,6 +64,10 @@ type App struct {
 	scriptEngine      interfaces.IAIScriptEngine
 	soundAdapter      *stage.SoundAdapter
 	touchControls     *touch_controls.TouchControlsAdapter
+	effectsRenderer   *effects.EffectsRendererAdapter
+
+	// Включённость графических эффектов, переключается F2
+	effectsSettings *types.EffectsSettingsEntity
 
 	// Stateless-сервисы
 	boundaryCollisionService interfaces.IBoundaryCollisionService
@@ -130,6 +135,16 @@ func New(cfg *Config) *App {
 		panic(err)
 	}
 
+	// Шейдеры компилируются при старте: ошибка в исходнике
+	// останавливает запуск до открытия окна
+	effectsRenderer, err := effects.NewEffectsRendererAdapter(
+		processed.NewShadersRepository(fileRepository),
+	)
+	if err != nil {
+		fmt.Printf("Error creating effects renderer: %v\n", err)
+		panic(err)
+	}
+
 	fontsRepository := processed.NewFontsRepository(fileRepository)
 	textFace, err := buildTextFace(fontsRepository, cfg.GetTitleFontSize())
 	if err != nil {
@@ -162,6 +177,10 @@ func New(cfg *Config) *App {
 		hudTextFace:       hudTextFace,
 		scriptEngine:      scripting.NewLuaEngine(),
 		soundAdapter:      soundAdapter,
+		effectsRenderer:   effectsRenderer,
+		effectsSettings: types.NewEffectsSettingsEntity(
+			cfg.GetEffectsEnabled(),
+		),
 		touchControls: touch_controls.NewTouchControlsAdapter(
 			cfg.ScreenWidth()/screenScaleFactor,
 			cfg.ScreenHeight()/screenScaleFactor,
@@ -215,6 +234,10 @@ func (app *App) Update() error {
 		if app.stageState != nil {
 			app.stageState.SetDebugEnabled(Debug)
 		}
+	}
+
+	if inpututil.IsKeyJustPressed(ebiten.KeyF2) {
+		app.effectsSettings.Toggle()
 	}
 
 	// Сенсорный ввод опрашивается один раз на кадр до обновления

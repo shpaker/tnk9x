@@ -28,12 +28,15 @@ type StageSelectViewData struct {
 	LevelActive      bool
 	PlayersActive    bool
 	MaxEnemiesActive bool
+	GraphicsActive   bool
 	// QuitVisible — строка QUIT показывается только там, где приложение
 	// может завершиться (десктоп); QuitActive — строка выбрана
 	QuitVisible      bool
 	QuitActive       bool
 	PlayerCount      uint
 	MaxActiveEnemies uint
+	// EffectsEnabled — строка графики показывает RTX или классику
+	EffectsEnabled bool
 	// TouchActive — управление с экрана: подсказка меню меняется
 	// с клавиатурной на тач-вариант
 	TouchActive bool

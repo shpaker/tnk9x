@@ -260,6 +260,7 @@ func (app *App) newStageState() (*states.StageState, error) {
 		TouchControls:      app.touchControls,
 		StageSession:       stageSession,
 		BonusesRepository:  bonusesRepository,
+		EffectsSettings:    app.effectsSettings,
 	}), nil
 }
 
@@ -387,6 +388,12 @@ func (app *App) buildStageRenderer(
 	mapBlocksCount := app.config.GetMapBlocksCount()
 	rendererTileSize := int(app.config.GetTileBaseSize())
 	mapWidthHeightForAdapter := mapBlocksCount.Width * rendererTileSize
+	lightingUseCases := use_cases.NewLightingUseCases(
+		tankCommonUseCases,
+		bulletUseCases,
+		hqUseCases,
+		bonusUseCases,
+	)
 
 	return stage.NewStageRendererAdapter(stage.StageRendererDependencies{
 		MapUseCases:        mapUseCases,
@@ -396,7 +403,10 @@ func (app *App) buildStageRenderer(
 		HUDUseCases:        use_cases.NewHUDUseCases(),
 		RenderUseCases:     renderUseCases,
 		BonusUseCases:      bonusUseCases,
+		LightingUseCases:   lightingUseCases,
 		SpriteCache:        app.spriteCache,
+		Effects:            app.effectsRenderer,
+		EffectsSettings:    app.effectsSettings,
 		FontFace:           app.textFace,
 		HUDFontFace:        app.hudTextFace,
 		MapOffsetX:         stageMapOffsetX,
