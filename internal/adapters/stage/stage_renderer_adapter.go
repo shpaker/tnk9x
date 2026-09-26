@@ -10,6 +10,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 
+	"github.com/shpaker/tnk9x/internal/adapters/effects"
 	"github.com/shpaker/tnk9x/internal/interfaces"
 	"github.com/shpaker/tnk9x/internal/types"
 	image_providers "github.com/shpaker/tnk9x/internal/types/image_providers"
@@ -23,7 +24,10 @@ type StageRendererAdapter struct {
 	hudUseCases        interfaces.IHUDUseCases
 	renderUseCases     interfaces.IRenderUseCases
 	bonusUseCases      interfaces.IBonusUseCases
+	lightingUseCases   interfaces.ILightingUseCases
 	spriteCache        *SpriteCache
+	effects            *effects.EffectsRendererAdapter
+	effectsSettings    *types.EffectsSettingsEntity
 	fontFace           text.Face
 	hudFontFace        text.Face
 	titleFontSize      int
@@ -38,6 +42,9 @@ type StageRendererAdapter struct {
 	lastWidth      float64
 	lastHeight     float64
 	pauseMenuItems []types.PauseMenuItem
+
+	// Поверхности кадра для маски материалов; буфер переиспользуется
+	surfaces []effects.Surface
 }
 
 // StageRendererDependencies — готовый граф зависимостей рендера уровня;
@@ -51,9 +58,14 @@ type StageRendererDependencies struct {
 	HUDUseCases        interfaces.IHUDUseCases
 	RenderUseCases     interfaces.IRenderUseCases
 	BonusUseCases      interfaces.IBonusUseCases
+	LightingUseCases   interfaces.ILightingUseCases
 
 	// Кэш GPU-спрайтов, общий для всех уровней
 	SpriteCache *SpriteCache
+
+	// Графические эффекты и их включённость, общие для всех уровней
+	Effects         *effects.EffectsRendererAdapter
+	EffectsSettings *types.EffectsSettingsEntity
 
 	// Шрифты и раскладка
 	FontFace         text.Face
@@ -77,7 +89,10 @@ func NewStageRendererAdapter(
 		hudUseCases:        deps.HUDUseCases,
 		renderUseCases:     deps.RenderUseCases,
 		bonusUseCases:      deps.BonusUseCases,
+		lightingUseCases:   deps.LightingUseCases,
 		spriteCache:        deps.SpriteCache,
+		effects:            deps.Effects,
+		effectsSettings:    deps.EffectsSettings,
 		fontFace:           deps.FontFace,
 		hudFontFace:        deps.HUDFontFace,
 		mapOffsetX:         deps.MapOffsetX,
@@ -319,7 +334,59 @@ func (r *StageRendererAdapter) drawBonuses(screen *ebiten.Image) {
 	}
 }
 
+// DrawAll рисует поле уровня; с включёнными эффектами поле рисуется
+// в буфер сцены и переносится на экран проходом освещения
 func (r *StageRendererAdapter) DrawAll(screen *ebiten.Image) {
+	if !r.effectsSettings.IsEnabled() {
+		r.drawField(screen)
+		return
+	}
+
+	scene := r.effects.BeginScene(screen.Bounds().Size())
+	r.drawField(scene)
+	r.effects.DrawLighting(
+		screen,
+		image.Rect(
+			r.mapOffsetX,
+			r.mapOffsetY,
+			r.mapOffsetX+r.mapWidthHeight,
+			r.mapOffsetY+r.mapWidthHeight,
+		),
+		r.buildSurfaces(),
+		r.buildLights(),
+	)
+}
+
+// buildSurfaces собирает поверхности блоков в экранных координатах
+// с материалами для маски освещения
+func (r *StageRendererAdapter) buildSurfaces() []effects.Surface {
+	r.surfaces = r.surfaces[:0]
+	for _, block := range r.mapUseCases.GetBlocks() {
+		if block == nil || block.Data == nil {
+			continue
+		}
+		size := block.GetSize()
+		x := r.mapOffsetX + int(block.Position.X)
+		y := r.mapOffsetY + int(block.Position.Y)
+		r.surfaces = append(r.surfaces, effects.Surface{
+			Rect:     image.Rect(x, y, x+size.Width, y+size.Height),
+			Material: r.lightingUseCases.GetMaterial(block.Data.Name),
+		})
+	}
+	return r.surfaces
+}
+
+// buildLights переводит источники света из координат поля в экранные
+func (r *StageRendererAdapter) buildLights() []types.LightEntity {
+	lights := r.lightingUseCases.GetLights()
+	for i := range lights {
+		lights[i].Position.X += float64(r.mapOffsetX)
+		lights[i].Position.Y += float64(r.mapOffsetY)
+	}
+	return lights
+}
+
+func (r *StageRendererAdapter) drawField(screen *ebiten.Image) {
 	r.drawScreenBackground(screen)
 
 	r.drawMapBackground(screen)

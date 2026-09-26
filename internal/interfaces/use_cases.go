@@ -145,6 +145,16 @@ type IBonusUseCases interface {
 	VisibleBonuses() []*types.BonusEntity
 }
 
+// ILightingUseCases — источники света кадра и материалы поверхностей
+// для графических эффектов
+type ILightingUseCases interface {
+	// GetLights возвращает не больше types.MaxLights источников
+	// в координатах поля, по убыванию приоритета
+	GetLights() []types.LightEntity
+	// GetMaterial возвращает свойства поверхности блока для освещения
+	GetMaterial(blockType types.BlockType) types.SurfaceMaterial
+}
+
 type IHUDUseCases interface {
 	EnemyIconOffsets(
 		count uint,

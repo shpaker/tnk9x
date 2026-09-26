@@ -1,0 +1,33 @@
+//kage:unit pixels
+
+// Проход bloom: выделение ярких участков и гауссово размытие
+// вдоль одного направления; два прохода (H, V) дают круглое свечение
+package main
+
+// Направление размытия в пикселях: (1, 0) или (0, 1)
+var Direction vec2
+
+// Порог яркости; 0 — без выделения (второй проход)
+var Threshold float
+
+const radius = 6
+
+// sigma = 3: вес exp(-i^2 / 18), нормировка по сумме весов ±6
+const weightsSum = 7.298
+
+func bright(c vec3) vec3 {
+	if Threshold <= 0 {
+		return c
+	}
+	luma := dot(c, vec3(0.299, 0.587, 0.114))
+	return c * (max(luma-Threshold, 0) / (1 - Threshold))
+}
+
+func Fragment(dstPos vec4, srcPos vec2, color vec4) vec4 {
+	sum := vec3(0)
+	for i := -radius; i <= radius; i++ {
+		weight := exp(-float(i*i) / 18)
+		sum += bright(imageSrc0At(srcPos+Direction*float(i)).rgb) * weight
+	}
+	return vec4(sum/weightsSum, 1)
+}

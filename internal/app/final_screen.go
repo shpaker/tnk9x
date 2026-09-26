@@ -6,9 +6,10 @@ var _ ebiten.FinalScreenDrawer = (*App)(nil)
 
 // DrawFinalScreen масштабирует логический экран 256x224 целым
 // множителем (чёткие пиксели NES), центрирует и оставляет чёрные
-// поля; геометрию считает адаптер тач-контролов — единый источник
-// правды для отрисовки и хит-тестов касаний. Экранные контроллы
-// рисуются в полях только во время уровня
+// поля; с включёнными эффектами кадр проходит bloom и CRT. Геометрию
+// считает адаптер тач-контролов — единый источник правды для
+// отрисовки и хит-тестов касаний. Экранные контроллы рисуются
+// в полях только во время уровня
 func (app *App) DrawFinalScreen(
 	screen ebiten.FinalScreen,
 	offscreen *ebiten.Image,
@@ -19,10 +20,14 @@ func (app *App) DrawFinalScreen(
 	app.touchControls.SetScreenSize(sw, sh)
 	x, y, scale := app.touchControls.GameRect()
 
-	op := &ebiten.DrawImageOptions{} // Filter по умолчанию — Nearest
-	op.GeoM.Scale(float64(scale), float64(scale))
-	op.GeoM.Translate(float64(x), float64(y))
-	screen.DrawImage(offscreen, op)
+	app.effectsRenderer.DrawFinal(
+		screen,
+		offscreen,
+		x,
+		y,
+		scale,
+		app.effectsSettings.IsEnabled(),
+	)
 
 	if app.stageState != nil {
 		app.touchControls.DrawControls(screen)

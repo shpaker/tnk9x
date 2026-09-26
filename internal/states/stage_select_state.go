@@ -17,6 +17,7 @@ type StageSelectState struct {
 	inputAdapter     *stage_select.StageSelectKeyboardInputAdapter
 	rendererAdapter  *stage_select.StageSelectRendererAdapter
 	touchControls    interfaces.ITouchControlsAdapter
+	effectsSettings  *types.EffectsSettingsEntity
 	activeMenuItem   stageSelectMenuItem
 	playerCount      int
 	maxActiveEnemies uint
@@ -31,6 +32,7 @@ const (
 	stageSelectMenuItemLevel stageSelectMenuItem = iota
 	stageSelectMenuItemPlayers
 	stageSelectMenuItemMaxEnemies
+	stageSelectMenuItemGraphics
 	stageSelectMenuItemQuit
 )
 
@@ -40,6 +42,7 @@ func NewStageSelectState(
 	textFace text.Face,
 	mapsRepository interfaces.IMapsDataRepository,
 	touchControls interfaces.ITouchControlsAdapter,
+	effectsSettings *types.EffectsSettingsEntity,
 	quitAvailable bool,
 ) (*StageSelectState, error) {
 	levelsCount, err := mapsRepository.GetLevelsCount()
@@ -76,6 +79,7 @@ func NewStageSelectState(
 		inputAdapter:     inputAdapter,
 		rendererAdapter:  rendererAdapter,
 		touchControls:    touchControls,
+		effectsSettings:  effectsSettings,
 		activeMenuItem:   stageSelectMenuItemLevel,
 		playerCount:      1,
 		maxActiveEnemies: 5,
@@ -94,6 +98,8 @@ func (s *StageSelectState) Update() types.StateTransition {
 		s.handlePlayerCountSelection()
 	} else if s.activeMenuItem == stageSelectMenuItemMaxEnemies {
 		s.handleMaxActiveEnemiesSelection()
+	} else if s.activeMenuItem == stageSelectMenuItemGraphics {
+		s.handleGraphicsSelection()
 	}
 
 	transition := s.handleMenuTap()
@@ -119,10 +125,12 @@ func (s *StageSelectState) Draw(screen *ebiten.Image) {
 		LevelActive:      s.activeMenuItem == stageSelectMenuItemLevel,
 		PlayersActive:    s.activeMenuItem == stageSelectMenuItemPlayers,
 		MaxEnemiesActive: s.activeMenuItem == stageSelectMenuItemMaxEnemies,
+		GraphicsActive:   s.activeMenuItem == stageSelectMenuItemGraphics,
 		QuitVisible:      s.quitAvailable,
 		QuitActive:       s.activeMenuItem == stageSelectMenuItemQuit,
 		PlayerCount:      uint(s.playerCount),
 		MaxActiveEnemies: s.maxActiveEnemies,
+		EffectsEnabled:   s.effectsSettings.IsEnabled(),
 		TouchActive:      s.touchControls.IsTouchActive(),
 	})
 }
@@ -188,6 +196,10 @@ func menuHitTarget(
 		return stageSelectMenuItemMaxEnemies, false, true
 	case stage_select.MenuHitMaxEnemiesNext:
 		return stageSelectMenuItemMaxEnemies, true, true
+	case stage_select.MenuHitGraphicsPrev:
+		return stageSelectMenuItemGraphics, false, true
+	case stage_select.MenuHitGraphicsNext:
+		return stageSelectMenuItemGraphics, true, true
 	}
 
 	return 0, false, false
@@ -220,6 +232,9 @@ func (s *StageSelectState) applyMenuStep(
 				s.maxActiveEnemies,
 			)
 		}
+	case stageSelectMenuItemGraphics:
+		// Два режима: шаг в любую сторону переключает графику
+		s.effectsSettings.Toggle()
 	}
 }
 
@@ -235,8 +250,10 @@ func (s *StageSelectState) handleMenuNavigation() {
 			s.activeMenuItem = stageSelectMenuItemLevel
 		case stageSelectMenuItemMaxEnemies:
 			s.activeMenuItem = stageSelectMenuItemPlayers
-		case stageSelectMenuItemQuit:
+		case stageSelectMenuItemGraphics:
 			s.activeMenuItem = stageSelectMenuItemMaxEnemies
+		case stageSelectMenuItemQuit:
+			s.activeMenuItem = stageSelectMenuItemGraphics
 		}
 	}
 	if moveDown {
@@ -246,6 +263,8 @@ func (s *StageSelectState) handleMenuNavigation() {
 		case stageSelectMenuItemPlayers:
 			s.activeMenuItem = stageSelectMenuItemMaxEnemies
 		case stageSelectMenuItemMaxEnemies:
+			s.activeMenuItem = stageSelectMenuItemGraphics
+		case stageSelectMenuItemGraphics:
 			if s.quitAvailable {
 				s.activeMenuItem = stageSelectMenuItemQuit
 			}
@@ -278,5 +297,14 @@ func (s *StageSelectState) handleMaxActiveEnemiesSelection() {
 		s.maxActiveEnemies = s.selectorUseCases.NextMaxActiveEnemies(
 			s.maxActiveEnemies,
 		)
+	}
+}
+
+func (s *StageSelectState) handleGraphicsSelection() {
+	if inpututil.IsKeyJustPressed(ebiten.KeyLeft) ||
+		inpututil.IsKeyJustPressed(ebiten.KeyA) ||
+		inpututil.IsKeyJustPressed(ebiten.KeyRight) ||
+		inpututil.IsKeyJustPressed(ebiten.KeyD) {
+		s.effectsSettings.Toggle()
 	}
 }
