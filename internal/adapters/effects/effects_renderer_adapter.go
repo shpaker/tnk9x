@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"image"
 	"image/color"
+	"math"
 
 	"github.com/hajimehoshi/ebiten/v2"
 
@@ -23,6 +24,17 @@ const (
 	// scanlinesMinScale — меньший масштаб не вмещает сканлайн
 	// в логический пиксель, линии превращаются в муар
 	scanlinesMinScale = 3
+	// Ламповый телевизор: доля яркости послесвечения за кадр, сила
+	// апертурной маски, расхождение лучей R и B у края в логических
+	// пикселях, сила зерна, сила мерцания и бегущей полосы
+	phosphorDecay = 0.6
+	maskStrength  = 0.3
+	convergence   = 0.45
+	grainStrength = 0.08
+	noiseStrength = 0.025
+	// distortionPerPixel — срыв строк на пиксель тряски кадра: полный
+	// срыв при тряске в 4 пикселя
+	distortionPerPixel = 0.25
 	// visionFadeSteps — на сколько единиц 8-битного канала за кадр
 	// гаснет память недавно увиденного: 1 — за 255 кадров, ~4 с
 	visionFadeSteps = 1
@@ -42,6 +54,7 @@ type EffectsRendererAdapter struct {
 	visionShader   *ebiten.Shader
 	lightingShader *ebiten.Shader
 	bloomShader    *ebiten.Shader
+	phosphorShader *ebiten.Shader
 	crtShader      *ebiten.Shader
 
 	// Буферы размера логического экрана, пересоздаются при его смене
@@ -55,6 +68,17 @@ type EffectsRendererAdapter struct {
 	visionPrevious *ebiten.Image
 	visionCurrent  *ebiten.Image
 
+	// Послесвечение люминофора: прошлый и текущий итоговый кадр,
+	// меняются местами каждый кадр; сбрасываются при включении эффектов
+	phosphorPrevious *ebiten.Image
+	phosphorCurrent  *ebiten.Image
+	// effectsWereEnabled — эффекты были включены в прошлом кадре
+	effectsWereEnabled bool
+
+	// distortion — срыв строк от тряски кадра уровня, от 0 до 1;
+	// гаснет после каждого итогового кадра, вне уровня нулевой
+	distortion float64
+
 	// Белый пиксель для заливки маски материалов
 	pixel *ebiten.Image
 
@@ -65,6 +89,9 @@ type EffectsRendererAdapter struct {
 	viewersUniform     []float32
 
 	frames int
+	// finalFrames — счётчик итоговых кадров для помех: CRT работает
+	// и в меню, где проход освещения не идёт
+	finalFrames int
 }
 
 func NewEffectsRendererAdapter(
@@ -82,6 +109,10 @@ func NewEffectsRendererAdapter(
 	if err != nil {
 		return nil, err
 	}
+	phosphorShader, err := loadShader(shadersRepository, "phosphor")
+	if err != nil {
+		return nil, err
+	}
 	crtShader, err := loadShader(shadersRepository, "crt")
 	if err != nil {
 		return nil, err
@@ -94,6 +125,7 @@ func NewEffectsRendererAdapter(
 		visionShader:       visionShader,
 		lightingShader:     lightingShader,
 		bloomShader:        bloomShader,
+		phosphorShader:     phosphorShader,
 		crtShader:          crtShader,
 		pixel:              pixel,
 		lightsUniform:      make([]float32, types.MaxLights*4),
@@ -157,6 +189,10 @@ func (a *EffectsRendererAdapter) DrawLighting(
 	shake image.Point,
 ) {
 	a.frames++
+	a.distortion = min(
+		1,
+		math.Hypot(float64(shake.X), float64(shake.Y))*distortionPerPixel,
+	)
 	a.drawMask(surfaces)
 
 	count := min(len(lights), types.MaxLights)
@@ -280,6 +316,8 @@ func (a *EffectsRendererAdapter) DrawFinal(
 	scale int,
 	enabled bool,
 ) {
+	wereEnabled := a.effectsWereEnabled
+	a.effectsWereEnabled = enabled
 	if !enabled {
 		op := &ebiten.DrawImageOptions{} // Filter по умолчанию — Nearest
 		op.GeoM.Scale(float64(scale), float64(scale))
@@ -288,24 +326,58 @@ func (a *EffectsRendererAdapter) DrawFinal(
 		return
 	}
 
+	a.finalFrames++
 	size := offscreen.Bounds().Size()
 	a.drawBloom(offscreen, size)
+	a.drawPhosphor(offscreen, size, !wereEnabled)
 
-	depth := float32(0)
+	// Мелкий масштаб не вмещает сканлайн и триаду маски
+	// в логический пиксель: без них нет муара
+	depth, mask := float32(0), float32(0)
 	if scale >= scanlinesMinScale {
-		depth = scanlineDepth
+		depth, mask = scanlineDepth, maskStrength
 	}
 
 	op := &ebiten.DrawRectShaderOptions{}
-	op.Images[0] = offscreen
+	op.Images[0] = a.phosphorCurrent
 	op.Images[1] = a.bloom
 	op.GeoM.Scale(float64(scale), float64(scale))
 	op.GeoM.Translate(float64(x), float64(y))
 	op.Uniforms = map[string]any{
 		"BloomStrength": float32(bloomStrength),
 		"ScanlineDepth": depth,
+		"MaskStrength":  mask,
+		"Convergence":   float32(convergence),
+		"Grain":         float32(grainStrength),
+		"Noise":         float32(noiseStrength),
+		"Distortion":    float32(a.distortion),
+		"Time":          float32(a.finalFrames),
 	}
 	screen.DrawRectShader(size.X, size.Y, a.crtShader, op)
+	a.distortion = 0
+}
+
+// drawPhosphor накладывает кадр на гаснущую историю прошлых кадров;
+// reset стирает историю — старый кадр не проступает призраком
+func (a *EffectsRendererAdapter) drawPhosphor(
+	offscreen *ebiten.Image,
+	size image.Point,
+	reset bool,
+) {
+	a.phosphorPrevious = ensureImage(a.phosphorPrevious, size)
+	a.phosphorCurrent = ensureImage(a.phosphorCurrent, size)
+	a.phosphorPrevious, a.phosphorCurrent = a.phosphorCurrent, a.phosphorPrevious
+	if reset {
+		a.phosphorPrevious.Clear()
+	}
+
+	op := &ebiten.DrawRectShaderOptions{Blend: ebiten.BlendCopy}
+	op.Images[0] = offscreen
+	op.Images[1] = a.phosphorPrevious
+	op.Uniforms = map[string]any{
+		"Decay": float32(phosphorDecay),
+	}
+	a.phosphorCurrent.DrawRectShader(size.X, size.Y, a.phosphorShader, op)
 }
 
 // drawBloom выделяет яркие участки кадра и размывает их

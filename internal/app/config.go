@@ -24,6 +24,7 @@ type appConfigSchema struct {
 	GameTitle        string   `yaml:"game_title"`
 	Volume           *float64 `yaml:"volume"`
 	Effects          *bool    `yaml:"effects"`
+	Fullscreen       *bool    `yaml:"fullscreen"`
 	Players          uint     `yaml:"players"`
 }
 
@@ -57,6 +58,7 @@ type Config struct {
 	GameTitle        string
 	Volume           float64
 	EffectsEnabled   bool
+	Fullscreen       bool
 	PlayerCount      uint
 
 	EnemySpawners          []types.Position
@@ -102,6 +104,7 @@ func LoadConfig() (*Config, error) {
 		GameTitle:        schema.App.GameTitle,
 		Volume:           1.0,  // Значение по умолчанию
 		EffectsEnabled:   true, // Значение по умолчанию
+		Fullscreen:       true, // Значение по умолчанию
 		EnemySpawners: convertCoordsToPositions(
 			schema.Game.EnemySpawners,
 		),
@@ -180,6 +183,10 @@ func LoadConfig() (*Config, error) {
 		cfg.EffectsEnabled = *schema.App.Effects
 	}
 
+	if schema.App.Fullscreen != nil {
+		cfg.Fullscreen = *schema.App.Fullscreen
+	}
+
 	return cfg, nil
 }
 
@@ -252,6 +259,11 @@ func (c *Config) GetVolume() float64 {
 
 func (c *Config) GetEffectsEnabled() bool {
 	return c.EffectsEnabled
+}
+
+// GetFullscreen — запуск на весь экран; действует только на десктопе
+func (c *Config) GetFullscreen() bool {
+	return c.Fullscreen
 }
 
 func (c *Config) GetPlayerCount() uint {

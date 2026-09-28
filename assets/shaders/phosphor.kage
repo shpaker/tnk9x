@@ -1,0 +1,16 @@
+//kage:unit pixels
+
+// Послесвечение люминофора: кадр поверх гаснущей истории прошлых
+// кадров, яркие движущиеся объекты оставляют короткий шлейф.
+// Images[0] — кадр, Images[1] — история того же размера
+package main
+
+// Доля яркости истории, сохраняемая за кадр
+var Decay float
+
+func Fragment(dstPos vec4, srcPos vec2, color vec4) vec4 {
+	frame := imageSrc0At(srcPos).rgb
+	// Синий люминофор гаснет медленнее: хвост чуть холоднее кадра
+	history := imageSrc1At(srcPos).rgb * Decay * vec3(0.9, 0.95, 1)
+	return vec4(max(frame, history), 1)
+}

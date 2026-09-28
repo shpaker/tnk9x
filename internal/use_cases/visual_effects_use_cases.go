@@ -21,6 +21,17 @@ const (
 	trackOffset = 5.0
 )
 
+// Трассер пули: искры с кормы летящей пули. Быстрая пуля искрит
+// чаще, хвост плотнее; шанс — искра в среднем раз в N тиков
+const (
+	tracerChance     = 2
+	fastTracerChance = 1
+	// tracerTail — расстояние от центра пули до точки вылета искр
+	tracerTail = 2.0
+	// baseBulletSpeed — скорость пули без прокачки: быстрее — быстрая
+	baseBulletSpeed = 120.0
+)
+
 // Тряска экрана: травма от событий, затухание за тик, смещение
 // в пикселях при полной травме. Смещение — shakeMaxOffset·травма²
 // с округлением до пикселя: травма меньше ~0.4 экран не сдвигает.
@@ -61,12 +72,14 @@ const (
 	debrisDrag     = 0.82
 )
 
-// flashSpec — вспышка света одного вида
+// flashSpec — вспышка света одного вида; coneCos > 0 — конус
+// вдоль направления события
 type flashSpec struct {
 	radius    float64
 	color     color.NRGBA
 	intensity float64
 	life      uint
+	coneCos   float64
 }
 
 var (
@@ -76,6 +89,44 @@ var (
 		colors: []color.NRGBA{
 			{R: 255, G: 240, B: 170, A: 255},
 			{R: 255, G: 200, B: 90, A: 255},
+		},
+	}
+	// Дымок из ствола: медленно уходит вперёд и расползается
+	muzzleSmoke = burstSpec{
+		count: 3, speedMin: 0.1, speedMax: 0.35, spread: 0.5,
+		lifeMin: 30, lifeMax: 45, sizeMin: 2, sizeMax: 2, drag: 0.93,
+		colors: []color.NRGBA{
+			{R: 110, G: 105, B: 100, A: 120},
+			{R: 140, G: 135, B: 125, A: 100},
+		},
+	}
+	// Искры трассера обычной пули: тёплые, гаснут за несколько тиков
+	tracerSparks = burstSpec{
+		count: 1, speedMin: 0.3, speedMax: 0.8, spread: 0.3,
+		lifeMin: 6, lifeMax: 12, sizeMin: 1, sizeMax: 1, drag: 0.8,
+		colors: []color.NRGBA{
+			{R: 255, G: 220, B: 130, A: 255},
+			{R: 255, G: 170, B: 70, A: 255},
+		},
+	}
+	// Быстрая пуля: хвост плотнее и длиннее
+	fastTracerSparks = burstSpec{
+		count: 2, speedMin: 0.3, speedMax: 1, spread: 0.3,
+		lifeMin: 8, lifeMax: 16, sizeMin: 1, sizeMax: 1, drag: 0.82,
+		colors: []color.NRGBA{
+			{R: 255, G: 235, B: 160, A: 255},
+			{R: 255, G: 180, B: 80, A: 255},
+		},
+	}
+	// Усиленная пуля, пробивающая сталь: бело-голубые искры
+	// сыплются и в стороны
+	reinforcedTracerSparks = burstSpec{
+		count: 2, speedMin: 0.4, speedMax: 1.3, spread: 0.9,
+		lifeMin: 8, lifeMax: 16, sizeMin: 1, sizeMax: 1, drag: 0.82,
+		colors: []color.NRGBA{
+			{R: 255, G: 255, B: 255, A: 255},
+			{R: 190, G: 225, B: 255, A: 255},
+			{R: 130, G: 190, B: 255, A: 255},
 		},
 	}
 	brickDust = burstSpec{
@@ -133,24 +184,32 @@ var (
 		colors: []color.NRGBA{{R: 110, G: 105, B: 95, A: 140}},
 	}
 
+	// Круговой отсвет выстрела слабее конуса: светит вокруг танка
 	muzzleFlash = flashSpec{
-		40, color.NRGBA{R: 255, G: 220, B: 150, A: 255}, 1.6, 4,
+		32, color.NRGBA{R: 255, G: 220, B: 150, A: 255}, 1.1, 4, 0,
+	}
+	// Конус дульной вспышки вперёд по стволу, узкий и короткий
+	muzzleCone = flashSpec{
+		56, color.NRGBA{R: 255, G: 230, B: 170, A: 255}, 2, 3, 0.8,
 	}
 	// Выстрел врага — короткий тусклый проблеск, а не прожектор
 	enemyMuzzleFlash = flashSpec{
-		22, color.NRGBA{R: 255, G: 200, B: 140, A: 255}, 0.8, 3,
+		22, color.NRGBA{R: 255, G: 200, B: 140, A: 255}, 0.8, 3, 0,
+	}
+	enemyMuzzleCone = flashSpec{
+		36, color.NRGBA{R: 255, G: 210, B: 150, A: 255}, 1.1, 3, 0.8,
 	}
 	brickFlash = flashSpec{
-		18, color.NRGBA{R: 255, G: 170, B: 90, A: 255}, 0.8, 3,
+		18, color.NRGBA{R: 255, G: 170, B: 90, A: 255}, 0.8, 3, 0,
 	}
 	steelFlash = flashSpec{
-		26, color.NRGBA{R: 220, G: 235, B: 255, A: 255}, 1.4, 4,
+		26, color.NRGBA{R: 220, G: 235, B: 255, A: 255}, 1.4, 4, 0,
 	}
 	clashFlash = flashSpec{
-		32, color.NRGBA{R: 255, G: 225, B: 160, A: 255}, 1.6, 5,
+		32, color.NRGBA{R: 255, G: 225, B: 160, A: 255}, 1.6, 5, 0,
 	}
 	shieldFlash = flashSpec{
-		30, color.NRGBA{R: 120, G: 220, B: 255, A: 255}, 1.2, 5,
+		30, color.NRGBA{R: 120, G: 220, B: 255, A: 255}, 1.2, 5, 0,
 	}
 )
 
@@ -166,17 +225,20 @@ type VisualEffectsUseCases struct {
 
 	// Use Cases
 	tankCommonUseCases interfaces.ITankCommonUseCases
+	bulletUseCases     interfaces.IBulletUseCases
 }
 
 func NewVisualEffectsUseCases(
 	visualEffectsRepository interfaces.IVisualEffectsRepository,
 	tilesetRegistry interfaces.ITilesetRepositoryRegistry,
 	tankCommonUseCases interfaces.ITankCommonUseCases,
+	bulletUseCases interfaces.IBulletUseCases,
 ) *VisualEffectsUseCases {
 	return &VisualEffectsUseCases{
 		visualEffectsRepository: visualEffectsRepository,
 		tilesetRegistry:         tilesetRegistry,
 		tankCommonUseCases:      tankCommonUseCases,
+		bulletUseCases:          bulletUseCases,
 	}
 }
 
@@ -192,6 +254,7 @@ func (uc *VisualEffectsUseCases) RequestEffect(
 func (uc *VisualEffectsUseCases) Update() {
 	uc.updateTanks()
 	uc.updateParticles()
+	uc.updateBullets()
 	uc.updateFlashes()
 	uc.visualEffectsRepository.GetScreenShake().Decay(shakeDecay)
 
@@ -217,6 +280,8 @@ func (uc *VisualEffectsUseCases) GetFlashLights() []types.LightEntity {
 			Radius:    flashes[i].Radius * (0.6 + 0.4*fade),
 			Color:     flashes[i].Color,
 			Intensity: flashes[i].Intensity * fade,
+			Direction: flashes[i].Direction,
+			ConeCos:   flashes[i].ConeCos,
 		})
 	}
 	return lights
@@ -268,6 +333,42 @@ func (uc *VisualEffectsUseCases) updateTanks() {
 	}
 }
 
+// updateBullets сыплет искры трассера с кормы летящих пуль;
+// вид и плотность искр зависят от прокачки пули
+func (uc *VisualEffectsUseCases) updateBullets() {
+	for _, bullet := range uc.bulletUseCases.GetBullets() {
+		if bullet == nil {
+			continue
+		}
+		spec, chance := tracerSpecOf(bullet)
+		if rand.IntN(chance) != 0 {
+			continue
+		}
+		direction := bullet.Direction.Vector()
+		size := bullet.GetSize()
+		position := types.Position{
+			X: bullet.Position.X + float64(size.Width)/2 -
+				direction.X*tracerTail,
+			Y: bullet.Position.Y + float64(size.Height)/2 -
+				direction.Y*tracerTail,
+		}
+		uc.emitBurst(position, bullet.Direction.Angle()+math.Pi, spec)
+	}
+}
+
+// tracerSpecOf выбирает искры трассера и их шанс по пуле:
+// усиленная искрит голубым, быстрая — чаще и гуще
+func tracerSpecOf(bullet *types.BulletEntity) (burstSpec, int) {
+	switch {
+	case bullet.IsReinforced():
+		return reinforcedTracerSparks, fastTracerChance
+	case bullet.GetSpeed() > baseBulletSpeed:
+		return fastTracerSparks, fastTracerChance
+	default:
+		return tracerSparks, tracerChance
+	}
+}
+
 // updateParticles двигает частицы с трением и удаляет погасшие,
 // уплотняя срез на месте
 func (uc *VisualEffectsUseCases) updateParticles() {
@@ -312,10 +413,10 @@ func (uc *VisualEffectsUseCases) applyEvent(event types.VisualEventEntity) {
 	switch event.Kind {
 	case types.VisualEventShot:
 		position := event.Position
-		flash := muzzleFlash
+		flash, cone := muzzleFlash, muzzleCone
 		if event.Tank != nil {
 			if event.Tank.IsEnemy() {
-				flash = enemyMuzzleFlash
+				flash, cone = enemyMuzzleFlash, enemyMuzzleCone
 			}
 			event.Tank.StartRecoil(recoilTicks)
 			direction := event.Tank.Direction.Vector()
@@ -326,7 +427,9 @@ func (uc *VisualEffectsUseCases) applyEvent(event types.VisualEventEntity) {
 			}
 		}
 		uc.addFlash(position, flash)
+		uc.addDirectedFlash(position, event.Direction, cone)
 		uc.emitBurst(position, event.Direction.Angle(), muzzleSparks)
+		uc.emitBurst(position, event.Direction.Angle(), muzzleSmoke)
 	case types.VisualEventBrickHit:
 		uc.addFlash(event.Position, brickFlash)
 		uc.emitBurst(event.Position, backward, brickDust)
@@ -474,14 +577,29 @@ func (uc *VisualEffectsUseCases) addFlash(
 	position types.Position,
 	spec flashSpec,
 ) {
-	uc.visualEffectsRepository.AddFlash(types.FlashEntity{
+	uc.addDirectedFlash(position, types.DirectionUp, spec)
+}
+
+// addDirectedFlash добавляет вспышку; у конусной вспышки ось
+// смотрит по direction, у круговой направление не действует
+func (uc *VisualEffectsUseCases) addDirectedFlash(
+	position types.Position,
+	direction types.Direction,
+	spec flashSpec,
+) {
+	flash := types.FlashEntity{
 		Position:  position,
 		Radius:    spec.radius,
 		Color:     spec.color,
 		Intensity: spec.intensity,
 		Life:      spec.life,
 		MaxLife:   spec.life,
-	})
+	}
+	if spec.coneCos > 0 {
+		flash.Direction = direction.Vector()
+		flash.ConeCos = spec.coneCos
+	}
+	uc.visualEffectsRepository.AddFlash(flash)
 }
 
 func randomBetween(low, high float64) float64 {

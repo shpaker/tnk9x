@@ -14,7 +14,7 @@ const (
 type PauseMenuViewData struct {
 	Items       []PauseMenuItem
 	ActiveIndex int
-	// EffectsEnabled — подпись пункта графики: RTX или классика
+	// EffectsEnabled — подпись пункта графики: обычная или классика
 	EffectsEnabled bool
 }
 
