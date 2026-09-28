@@ -1,3 +1,17 @@
+# Stage 7. Format reference: README.md in this folder.
+
+[level]
+name = STEEL MAZE
+max_active = 4
+time_3star = 180
+
+[waves]
+# tanks        delay  start
+BBBbBB          134   now
+FBbBBBB         124   left<=1
+BpBBFFA         114   left<=1
+
+[map]
 ..............@@@@........
 ..........................
 ....@@@@@@@@........@@....

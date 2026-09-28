@@ -2,7 +2,6 @@ package tank_use_cases
 
 import (
 	"fmt"
-	"math/rand"
 
 	"github.com/shpaker/tnk9x/internal/interfaces"
 	"github.com/shpaker/tnk9x/internal/types"
@@ -43,65 +42,21 @@ func NewTankLifecycleUseCases(
 	}
 }
 
-func (uc *TankLifecycleUseCases) OnStageSetUpEnemiesSpawn() ([3]*types.TankEntity, error) {
-	var spawnedEnemies [3]*types.TankEntity
-
-	if len(uc.spawnLayout.EnemySpawners) == 0 {
-		return spawnedEnemies, nil
-	}
-
-	// Первые три танка всегда 0 уровня
-	// Используем большое значение remainingEnemies чтобы получить уровень 0
-	remainingEnemies := uint(20) // Максимальное значение для первых трех танков
-
-	for index := 0; index < len(uc.spawnLayout.EnemySpawners) &&
-		index < len(spawnedEnemies); index++ {
-		spawned, err := uc.SpawnEnemyWithLevel(&index, true, remainingEnemies)
-		if err != nil {
-			return spawnedEnemies, err
-		}
-		spawnedEnemies[index] = spawned
-	}
-
-	return spawnedEnemies, nil
-}
-
-func (uc *TankLifecycleUseCases) SpawnEnemyWithLevel(
-	index *int,
-	ignoreRespawnDelay bool,
-	remainingEnemies uint,
+// SpawnEnemy создаёт врага заданного уровня на спаунере spawnerIndex
+func (uc *TankLifecycleUseCases) SpawnEnemy(
+	spawnerIndex int,
+	level uint,
 ) (*types.TankEntity, error) {
-	selectedIndex := 0
-	if index != nil {
-		selectedIndex = *index
-	} else if len(uc.spawnLayout.EnemySpawners) > 0 {
-		selectedIndex = rand.Intn(len(uc.spawnLayout.EnemySpawners))
-	} else {
-		return nil, fmt.Errorf("enemy spawners missing")
-	}
-
-	if selectedIndex >= len(uc.spawnLayout.EnemySpawners) {
+	if spawnerIndex < 0 ||
+		spawnerIndex >= len(uc.spawnLayout.EnemySpawners) {
 		return nil, fmt.Errorf("enemy spawner index out of range")
 	}
 
-	spawnPosition := uc.spawnLayout.EnemySpawners[selectedIndex]
-
-	spawnerBlocked := uc.isSpawnerBlocked(spawnPosition)
-
-	if !ignoreRespawnDelay && spawnerBlocked {
-		return nil, nil
-	}
-
-	// Определяем уровень врага на основе количества оставшихся врагов
-	enemyLevel := uc.specsUseCases.GetEnemyLevelByRemainingCount(
-		remainingEnemies,
-	)
-
 	tank, err := uc.spawnTank(
 		types.DirectionUp,
-		spawnPosition,
+		uc.spawnLayout.EnemySpawners[spawnerIndex],
 		types.TankRoleEnemy,
-		enemyLevel,
+		level,
 	)
 	if err != nil {
 		return nil, err

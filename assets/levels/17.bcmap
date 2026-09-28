@@ -1,3 +1,18 @@
+# Stage 17. Format reference: README.md in this folder.
+
+[level]
+name = ICE RINK
+max_active = 5
+time_3star = 200
+
+[waves]
+# tanks        delay  start
+BBBbB           108   now
+BBBbF            98   left<=2
+BBFBf            88   left<=2
+FAPPAA           78   left<=2
+
+[map]
 ..........................
 .......##...........##....
 ..##..###.....------####..

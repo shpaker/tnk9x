@@ -90,7 +90,11 @@ func TestGetLevel_Success(t *testing.T) {
 
 	mockTilesetRegistry := &testutil.FakeTilesetRegistry{}
 
-	mapsService := NewMapsDataRepository(mockFileRepo, mockTilesetRegistry)
+	mapsService := NewMapsDataRepository(
+		mockFileRepo,
+		mockTilesetRegistry,
+		testLevelDefaults(),
+	)
 
 	tileBaseSize := 8
 	mapEntity, err := mapsService.GetLevel(1, tileBaseSize)
@@ -102,7 +106,7 @@ func TestGetLevel_Success(t *testing.T) {
 		t.Fatal("MapEntity равен nil")
 	}
 
-	blocks := mapEntity.GetBlocks()
+	blocks := mapEntity.GetMap().GetBlocks()
 	if len(blocks) == 0 {
 		t.Fatal("Уровень пустой")
 	}
@@ -116,6 +120,7 @@ func TestGetLevel_WaterAndIceBlocks(t *testing.T) {
 	mapsService := NewMapsDataRepository(
 		mockFileRepo,
 		&testutil.FakeTilesetRegistry{},
+		testLevelDefaults(),
 	)
 
 	mapEntity, err := mapsService.GetLevel(1, 8)
@@ -124,7 +129,7 @@ func TestGetLevel_WaterAndIceBlocks(t *testing.T) {
 	}
 
 	byName := map[types.BlockType]*types.BlockEntity{}
-	for _, block := range mapEntity.GetBlocks() {
+	for _, block := range mapEntity.GetMap().GetBlocks() {
 		byName[block.Data.Name] = block
 	}
 
@@ -168,6 +173,7 @@ func TestGetLevel_UnknownEqualsChar(t *testing.T) {
 	mapsService := NewMapsDataRepository(
 		mockFileRepo,
 		&testutil.FakeTilesetRegistry{},
+		testLevelDefaults(),
 	)
 
 	if _, err := mapsService.GetLevel(1, 8); err == nil {
@@ -208,7 +214,11 @@ func TestGetLevel_InvalidSize(t *testing.T) {
 
 	mockTilesetRegistry := &testutil.FakeTilesetRegistry{}
 
-	mapsService := NewMapsDataRepository(mockFileRepo, mockTilesetRegistry)
+	mapsService := NewMapsDataRepository(
+		mockFileRepo,
+		mockTilesetRegistry,
+		testLevelDefaults(),
+	)
 
 	tileBaseSize := 8
 	_, err := mapsService.GetLevel(1, tileBaseSize)

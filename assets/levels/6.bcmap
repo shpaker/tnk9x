@@ -1,3 +1,17 @@
+# Stage 6. Format reference: README.md in this folder.
+
+[level]
+name = THICKET
+max_active = 4
+time_3star = 180
+
+[waves]
+# tanks        delay  start
+BBBbBB          137   now
+BBbBBBB         127   left<=1
+BbBFFAP         117   left<=1
+
+[map]
 ...........#..#.%%%%......
 ...........#..#.%%%%......
 ..#..@..#........#%%#..#%%

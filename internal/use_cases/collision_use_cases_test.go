@@ -68,14 +68,9 @@ type stubTankLifecycle struct {
 	exploded []*types.TankEntity
 }
 
-func (s *stubTankLifecycle) OnStageSetUpEnemiesSpawn() ([3]*types.TankEntity, error) {
-	return [3]*types.TankEntity{}, nil
-}
-
-func (s *stubTankLifecycle) SpawnEnemyWithLevel(
-	index *int,
-	ignoreRespawnDelay bool,
-	remainingEnemies uint,
+func (s *stubTankLifecycle) SpawnEnemy(
+	spawnerIndex int,
+	level uint,
 ) (*types.TankEntity, error) {
 	return nil, nil
 }
@@ -1058,7 +1053,10 @@ func TestBulletWallCollision_BrickAndSteelSeam(t *testing.T) {
 	if len(kinds) != 3 || kinds[0] != types.VisualEventBlockDebris ||
 		kinds[1] != types.VisualEventBrickHit ||
 		kinds[2] != types.VisualEventSteelHit {
-		t.Fatalf("события эффектов %v, ожидались обломки, кирпич и сталь", kinds)
+		t.Fatalf(
+			"события эффектов %v, ожидались обломки, кирпич и сталь",
+			kinds,
+		)
 	}
 	hit := env.effects.Events[1]
 	if hit.Position != (types.Position{X: 119, Y: 104}) ||

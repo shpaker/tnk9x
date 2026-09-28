@@ -6,6 +6,7 @@ import (
 
 	"github.com/shpaker/tnk9x/internal/types"
 	image_providers "github.com/shpaker/tnk9x/internal/types/image_providers"
+	"github.com/shpaker/tnk9x/internal/types/session_entities"
 )
 
 type IBulletUseCases interface {
@@ -74,12 +75,9 @@ type IRenderUseCases interface {
 }
 
 type ITankLifecycleUseCases interface {
-	OnStageSetUpEnemiesSpawn() ([3]*types.TankEntity, error)
-	SpawnEnemyWithLevel(
-		index *int,
-		ignoreRespawnDelay bool,
-		remainingEnemies uint,
-	) (*types.TankEntity, error)
+	// SpawnEnemy создаёт врага заданного уровня на спаунере с индексом
+	// spawnerIndex; занятость спаунера проверяет вызывающий
+	SpawnEnemy(spawnerIndex int, level uint) (*types.TankEntity, error)
 	SpawnPlayer1() (*types.TankEntity, error)
 	GetPlayerTank(num types.PlayerTankNum) *types.TankEntity
 	SetPlayerTank(num types.PlayerTankNum, tank *types.TankEntity)
@@ -128,11 +126,50 @@ type IStageUseCases interface {
 	IsStageWon() bool
 	IsStageLost() bool
 	IsStageFinished() bool
+	// GetStageResult — итог уровня для подсчёта звёзд
+	GetStageResult() types.StageResult
+}
+
+// IWaveUseCases — выдача врагов по волнам сценария уровня
+type IWaveUseCases interface {
+	// NextTank — следующий танк сценария, если его волна уже началась;
+	// false — врагов не осталось или следующая волна ещё ждёт условия
+	NextTank(session *session_entities.StageSessionEntity) (
+		types.WaveTank,
+		bool,
+	)
+	// CommitSpawn сдвигает курсор волн после спауна танка из NextTank
+	// и запускает паузу волны до следующего спауна
+	CommitSpawn(
+		session *session_entities.StageSessionEntity,
+		spawnerIndex int,
+	)
+}
+
+// IEnemySpawnSelectionUseCases — выбор точки спауна врага
+type IEnemySpawnSelectionUseCases interface {
+	// SelectSpawner — индекс свободного спаунера; false — все заняты
+	SelectSpawner(session *session_entities.StageSessionEntity) (int, bool)
+	// GetSpawnersCount — число спаунеров врагов
+	GetSpawnersCount() int
+}
+
+// IProgressionUseCases — звёзды за уровни и открытие кампании
+type IProgressionUseCases interface {
+	GetCampaign() *types.CampaignEntity
+	// CalcStars — звёзды за итог уровня: победа, без потерь, на время
+	CalcStars(result types.StageResult, level *types.LevelEntity) uint
+	// RecordResult сохраняет звёзды, если результат лучше прежнего
+	RecordResult(level int, stars uint) error
+	GetLevelStars(level int) uint
+	IsLevelUnlocked(level int) bool
+	GetPackStatus(packIndex int) types.PackStatus
+	// NextLevel — следующий уровень кампании и открыт ли он
+	NextLevel(level int) (int, bool)
 }
 
 type ISpecsUseCases interface {
 	GetTankSpecs(isEnemy bool, level uint) *types.SpecsEntity
-	GetEnemyLevelByRemainingCount(remainingEnemies uint) uint
 }
 
 type ISoundUseCases interface {
@@ -196,11 +233,15 @@ type IHUDUseCases interface {
 	) []types.Position
 }
 
-type IStageSelectorUseCases interface {
-	Next(selector *types.StageSelectorEntity) uint
-	Previous(selector *types.StageSelectorEntity) uint
-	String(selector *types.StageSelectorEntity) string
-	Select(selector *types.StageSelectorEntity) uint
-	NextMaxActiveEnemies(current uint) uint
-	PreviousMaxActiveEnemies(current uint) uint
+// ILevelSelectUseCases — навигация по кампании на экране выбора уровня
+type ILevelSelectUseCases interface {
+	NewSelector(lastLevel int) *types.LevelSelectorEntity
+	MoveLevel(selector *types.LevelSelectorEntity, delta int)
+	MovePack(selector *types.LevelSelectorEntity, delta int)
+	SetPosition(selector *types.LevelSelectorEntity, position int)
+	SelectedLevel(selector *types.LevelSelectorEntity) (int, bool)
+	BuildView(
+		selector *types.LevelSelectorEntity,
+		levels map[int]*types.LevelEntity,
+	) types.LevelSelectViewData
 }

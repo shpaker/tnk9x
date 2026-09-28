@@ -15,11 +15,9 @@ import (
 	"github.com/shpaker/tnk9x/internal/use_cases/tank_use_cases"
 )
 
-// forcedLevelSpecs делегирует реальным спецификациям, но позволяет
-// зафиксировать уровень врага вместо случайного выбора
+// forcedLevelSpecs делегирует реальным спецификациям
 type forcedLevelSpecs struct {
-	real        *use_cases.SpecsUseCases
-	forcedLevel *uint
+	real *use_cases.SpecsUseCases
 }
 
 func (s *forcedLevelSpecs) GetTankSpecs(
@@ -27,15 +25,6 @@ func (s *forcedLevelSpecs) GetTankSpecs(
 	level uint,
 ) *types.SpecsEntity {
 	return s.real.GetTankSpecs(isEnemy, level)
-}
-
-func (s *forcedLevelSpecs) GetEnemyLevelByRemainingCount(
-	remainingEnemies uint,
-) uint {
-	if s.forcedLevel != nil {
-		return *s.forcedLevel
-	}
-	return s.real.GetEnemyLevelByRemainingCount(remainingEnemies)
 }
 
 type stubRenderUseCases struct {
@@ -254,173 +243,73 @@ func TestTankLifecycleUseCases_SpawnPlayerBlockedSpawner(t *testing.T) {
 	}
 }
 
-func TestTankLifecycleUseCases_SpawnEnemyWithLevel_ByIndex(t *testing.T) {
+func TestTankLifecycleUseCases_SpawnEnemy_ByIndex(t *testing.T) {
 	env := newLifecycleTestEnv()
-	index := 1
 
-	tank, err := env.lifecycle.SpawnEnemyWithLevel(&index, false, 20)
+	tank, err := env.lifecycle.SpawnEnemy(1, types.EnemyLevelBasic)
 	if err != nil || tank == nil {
-		t.Fatalf("спавн врага: tank=%v err=%v", tank, err)
+		t.Fatalf("spawn: tank=%v err=%v", tank, err)
 	}
 
 	want := types.Position{X: 6 * 16, Y: 0}
 	if tank.Position != want {
-		t.Errorf("позиция %v, ожидалась %v", tank.Position, want)
+		t.Errorf("position %v, want %v", tank.Position, want)
 	}
 	if !tank.IsEnemy() {
-		t.Errorf("роль %q, ожидался враг", tank.GetRole())
+		t.Errorf("role %q, want enemy", tank.GetRole())
 	}
 	if tank.Direction != types.DirectionUp {
-		t.Errorf("направление %v, ожидалось Up", tank.Direction)
+		t.Errorf("direction %v, want Up", tank.Direction)
 	}
 	if tank.State != types.TankStateSpawning {
-		t.Errorf("состояние %v", tank.State)
+		t.Errorf("state %v", tank.State)
 	}
-	// Оставшихся 20 -> уровень 0, обычный танк с 1 хитпоинтом
 	if got := tank.GetSpecs().GetLevel(); got != 0 {
-		t.Errorf("уровень %d, ожидался 0", got)
+		t.Errorf("level %d, want 0", got)
 	}
 	if got := tank.GetHitPoints(); got != 1 {
-		t.Errorf("хитпоинты %d, ожидалось 1", got)
+		t.Errorf("hit points %d, want 1", got)
 	}
 
 	enemies := env.tanksRepo.GetAllEnemies()
 	if len(enemies) != 1 || enemies[0] != tank {
-		t.Errorf("враг не добавлен в репозиторий: %v", enemies)
+		t.Errorf("enemy not added to the repository: %v", enemies)
 	}
 }
 
 // Тяжёлый танк (враг 3 уровня) получает 4 хитпоинта
 func TestTankLifecycleUseCases_SpawnEnemyHeavyTankHitPoints(t *testing.T) {
 	env := newLifecycleTestEnv()
-	level := uint(3)
-	env.specs.forcedLevel = &level
-	index := 0
 
-	tank, err := env.lifecycle.SpawnEnemyWithLevel(&index, false, 1)
+	tank, err := env.lifecycle.SpawnEnemy(0, types.EnemyLevelArmor)
 	if err != nil || tank == nil {
-		t.Fatalf("спавн врага: tank=%v err=%v", tank, err)
+		t.Fatalf("spawn: tank=%v err=%v", tank, err)
 	}
 	if got := tank.GetSpecs().GetLevel(); got != 3 {
-		t.Errorf("уровень %d, ожидался 3", got)
+		t.Errorf("level %d, want 3", got)
 	}
 	if got := tank.GetHitPoints(); got != 4 {
-		t.Errorf("хитпоинты %d, ожидалось 4", got)
+		t.Errorf("hit points %d, want 4", got)
 	}
 }
 
-func TestTankLifecycleUseCases_SpawnEnemyBlockedSpawner(t *testing.T) {
+// Занятость спаунера проверяет вызывающий: SpawnEnemy её не смотрит
+func TestTankLifecycleUseCases_SpawnEnemyIgnoresBlocking(t *testing.T) {
 	env := newLifecycleTestEnv()
 	env.spawnCollision.blocked = true
-	index := 0
 
-	// Без ignoreRespawnDelay блокировка отменяет спавн без ошибки
-	tank, err := env.lifecycle.SpawnEnemyWithLevel(&index, false, 20)
-	if tank != nil || err != nil {
-		t.Fatalf("ожидалось nil, nil; получено tank=%v err=%v", tank, err)
-	}
-	if got := len(env.tanksRepo.GetAllEnemies()); got != 0 {
-		t.Errorf("враг добавлен при блокировке: %d", got)
-	}
-
-	// С ignoreRespawnDelay спавн проходит несмотря на блокировку
-	tank, err = env.lifecycle.SpawnEnemyWithLevel(&index, true, 20)
+	tank, err := env.lifecycle.SpawnEnemy(0, types.EnemyLevelBasic)
 	if err != nil || tank == nil {
-		t.Fatalf("ожидался спавн: tank=%v err=%v", tank, err)
+		t.Fatalf("spawn: tank=%v err=%v", tank, err)
 	}
 }
 
 func TestTankLifecycleUseCases_SpawnEnemyIndexOutOfRange(t *testing.T) {
 	env := newLifecycleTestEnv()
-	index := len(testEnemySpawners)
 
-	if _, err := env.lifecycle.SpawnEnemyWithLevel(&index, false, 20); err == nil {
-		t.Error("ожидалась ошибка для индекса вне диапазона")
-	}
-}
-
-// Без индекса спавнер выбирается случайно из настроенных
-func TestTankLifecycleUseCases_SpawnEnemyRandomSpawner(t *testing.T) {
-	env := newLifecycleTestEnv()
-
-	allowed := make(map[types.Position]bool, len(testEnemySpawners))
-	for _, spawner := range testEnemySpawners {
-		allowed[types.Position{X: spawner.X * 16, Y: spawner.Y * 16}] = true
-	}
-
-	for i := 0; i < 20; i++ {
-		tank, err := env.lifecycle.SpawnEnemyWithLevel(nil, false, 20)
-		if err != nil || tank == nil {
-			t.Fatalf("спавн врага: tank=%v err=%v", tank, err)
-		}
-		if !allowed[tank.Position] {
-			t.Fatalf("недопустимая позиция спавна: %v", tank.Position)
-		}
-	}
-}
-
-// Начальный спавн: три врага 0 уровня на всех спавнерах,
-// блокировка спавнера игнорируется
-func TestTankLifecycleUseCases_OnStageSetUpEnemiesSpawn(t *testing.T) {
-	env := newLifecycleTestEnv()
-	env.spawnCollision.blocked = true
-
-	spawned, err := env.lifecycle.OnStageSetUpEnemiesSpawn()
-	if err != nil {
-		t.Fatalf("начальный спавн: %v", err)
-	}
-
-	for i, tank := range spawned {
-		if tank == nil {
-			t.Fatalf("враг %d не создан", i)
-		}
-		want := types.Position{
-			X: testEnemySpawners[i].X * 16,
-			Y: testEnemySpawners[i].Y * 16,
-		}
-		if tank.Position != want {
-			t.Errorf(
-				"враг %d: позиция %v, ожидалась %v",
-				i,
-				tank.Position,
-				want,
-			)
-		}
-		if got := tank.GetSpecs().GetLevel(); got != 0 {
-			t.Errorf("враг %d: уровень %d, ожидался 0", i, got)
-		}
-	}
-	if got := len(env.tanksRepo.GetAllEnemies()); got != 3 {
-		t.Errorf("врагов в репозитории %d, ожидалось 3", got)
-	}
-}
-
-// Без настроенных спавнеров врагов случайный спавн невозможен,
-// а начальный спавн молча возвращает пустой результат
-func TestTankLifecycleUseCases_NoEnemySpawners(t *testing.T) {
-	env := newLifecycleTestEnv()
-	lifecycle := tank_use_cases.NewTankLifecycleUseCases(
-		nil,
-		env.render,
-		nil,
-		env.tanksRepo,
-		env.spawnCollision,
-		env.specs,
-		env.effects,
-		types.SpawnLayout{BaseSize: types.Size{Width: 16, Height: 16}},
-	)
-
-	if _, err := lifecycle.SpawnEnemyWithLevel(nil, false, 20); err == nil {
-		t.Error("SpawnEnemyWithLevel: ожидалась ошибка без спавнеров")
-	}
-
-	spawned, err := lifecycle.OnStageSetUpEnemiesSpawn()
-	if err != nil {
-		t.Fatalf("начальный спавн: %v", err)
-	}
-	for i, tank := range spawned {
-		if tank != nil {
-			t.Errorf("враг %d создан без спавнеров", i)
+	for _, index := range []int{-1, len(testEnemySpawners)} {
+		if _, err := env.lifecycle.SpawnEnemy(index, 0); err == nil {
+			t.Errorf("index %d: expected an out of range error", index)
 		}
 	}
 }
@@ -520,8 +409,7 @@ func TestTankLifecycleUseCases_UpdateLifecycle_ExplodingToExploded(
 	t *testing.T,
 ) {
 	env := newLifecycleTestEnv()
-	index := 0
-	tank, err := env.lifecycle.SpawnEnemyWithLevel(&index, false, 20)
+	tank, err := env.lifecycle.SpawnEnemy(0, types.EnemyLevelBasic)
 	if err != nil || tank == nil {
 		t.Fatalf("спавн: tank=%v err=%v", tank, err)
 	}

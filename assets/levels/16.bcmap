@@ -1,3 +1,18 @@
+# Stage 16. Format reference: README.md in this folder.
+
+[level]
+name = JUNGLE
+max_active = 5
+time_3star = 200
+
+[waves]
+# tanks        delay  start
+BBBbB           110   now
+BBBbF           100   left<=2
+BBBBf            90   left<=2
+FPPAAA           80   left<=2
+
+[map]
 ..........................
 ..........................
 ....@@%%@@................

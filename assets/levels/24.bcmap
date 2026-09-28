@@ -1,3 +1,18 @@
+# Stage 24. Format reference: README.md in this folder.
+
+[level]
+name = GLACIER
+max_active = 5
+time_3star = 210
+
+[waves]
+# tanks        delay  start
+BBBbB            89   now
+FBBbP            79   now
+PBFFfA           69   now
+PAPAAa           59   now
+
+[map]
 ....@@..##@@.........#....
 ....@@..##...........#....
 ....##..##%%..########....

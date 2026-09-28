@@ -39,9 +39,11 @@ type failingMapsRepo struct{}
 func (r *failingMapsRepo) GetLevel(
 	num int,
 	tileBaseSize int,
-) (*types.MapEntity, error) {
+) (*types.LevelEntity, error) {
 	return nil, errLevelUnavailable
 }
+
+func (r *failingMapsRepo) HasLevel(num int) bool { return false }
 
 func (r *failingMapsRepo) GetLevelsCount() (int, error) { return 0, nil }
 
@@ -50,7 +52,11 @@ func (r *failingMapsRepo) GetLevelsCount() (int, error) { return 0, nil }
 func newAppTestEnv() (*App, *stubGameState) {
 	state := &stubGameState{}
 	app := &App{
-		config:         &Config{TileBaseSize: 8, BaseSizePx: 16},
+		config: &Config{
+			TileBaseSize: 8,
+			BaseSizePx:   16,
+			PlayerCount:  2,
+		},
 		state:          state,
 		session:        session_entities.NewGameSessionEntity(),
 		mapsRepository: &failingMapsRepo{},
@@ -101,10 +107,8 @@ func TestApp_ApplyTransition_ToStage_SessionWrittenBeforeBuild(
 	app, state := newAppTestEnv()
 
 	err := app.applyTransition(types.StateTransition{
-		Target:           types.TransitionToStage,
-		Level:            7,
-		PlayerCount:      2,
-		MaxActiveEnemies: 8,
+		Target: types.TransitionToStage,
+		Level:  7,
 	})
 	if !errors.Is(err, errLevelUnavailable) {
 		t.Fatalf("ошибка %v, ожидалась errLevelUnavailable", err)
@@ -115,10 +119,10 @@ func TestApp_ApplyTransition_ToStage_SessionWrittenBeforeBuild(
 	}
 	stageSession := app.session.StageSession()
 	if got := stageSession.GetPlayerCount(); got != 2 {
-		t.Errorf("игроков %d, ожидалось 2", got)
+		t.Errorf("players %d, want 2 from config", got)
 	}
-	if got := stageSession.GetMaxActiveEnemies(); got != 8 {
-		t.Errorf("максимум врагов %d, ожидалось 8", got)
+	if got := stageSession.GetStageNumber(); got != 7 {
+		t.Errorf("stage number %d, want 7", got)
 	}
 
 	// Состояние при ошибке сборки не меняется
@@ -142,22 +146,21 @@ func TestApp_ApplyTransition_Quit(t *testing.T) {
 	}
 }
 
-// Полный цикл на настоящем графе зависимостей: меню -> уровень -> меню
+// Полный цикл на настоящем графе зависимостей:
+// выбор уровня -> уровень -> выбор уровня
 func TestApp_ApplyTransition_FullApp(t *testing.T) {
 	app := newFullApp(t)
 
-	if _, ok := app.state.(*states.StageSelectState); !ok {
+	if _, ok := app.state.(*states.LevelSelectState); !ok {
 		t.Fatalf(
-			"начальное состояние %T, ожидалось StageSelectState",
+			"initial state %T, want LevelSelectState",
 			app.state,
 		)
 	}
 
 	err := app.applyTransition(types.StateTransition{
-		Target:           types.TransitionToStage,
-		Level:            2,
-		PlayerCount:      1,
-		MaxActiveEnemies: 5,
+		Target: types.TransitionToStage,
+		Level:  2,
 	})
 	if err != nil {
 		t.Fatalf("переход на уровень: %v", err)
@@ -174,14 +177,19 @@ func TestApp_ApplyTransition_FullApp(t *testing.T) {
 		t.Errorf("уровень сессии %d, ожидался 2", app.session.Level)
 	}
 
+	if got := app.session.StageSession().GetTotalEnemies(); got == 0 {
+		t.Error("the level waves did not reach the stage session")
+	}
+
 	err = app.applyTransition(types.StateTransition{
-		Target: types.TransitionToStageSelect,
+		Target: types.TransitionToLevelSelect,
+		Level:  2,
 	})
 	if err != nil {
-		t.Fatalf("возврат в меню: %v", err)
+		t.Fatalf("back to stage select: %v", err)
 	}
-	if _, ok := app.state.(*states.StageSelectState); !ok {
-		t.Fatalf("состояние %T, ожидалось StageSelectState", app.state)
+	if _, ok := app.state.(*states.LevelSelectState); !ok {
+		t.Fatalf("state %T, want LevelSelectState", app.state)
 	}
 	if app.stageState != nil {
 		t.Error("ссылка на StageState не очищена")

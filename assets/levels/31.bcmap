@@ -1,3 +1,18 @@
+# Stage 31. Format reference: README.md in this folder.
+
+[level]
+name = ARCHIPELAGO
+max_active = 6
+time_3star = 220
+
+[waves]
+# tanks        delay  start
+BBBfB            71   now
+FPBpBF           61   now
+AFFpAP           51   now
+APAAaA           45   now
+
+[map]
 ......~~........~~........
 ......~~........~~........
 ~~~~..~~..~~~~~~~~..~~~~~~

@@ -1,3 +1,18 @@
+# Stage 18. Format reference: README.md in this folder.
+
+[level]
+name = ARMORY
+max_active = 5
+time_3star = 200
+
+[waves]
+# tanks        delay  start
+BBBfB           105   now
+FBBbB            95   left<=2
+BBFFa            85   left<=2
+PAPPAA           75   left<=2
+
+[map]
 ................@@@@@@%%..
 ................@@@@@@%%..
 ..##............@@....@@..

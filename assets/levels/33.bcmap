@@ -1,3 +1,18 @@
+# Stage 33. Format reference: README.md in this folder.
+
+[level]
+name = IRON JUNGLE
+max_active = 6
+time_3star = 230
+
+[waves]
+# tanks        delay  start
+BBFfF            65   now
+FFPbPB           55   now
+FAApAA           45   now
+PPAAaA           45   now
+
+[map]
 ........@@........@@......
 ........@@........@@......
 ..@@......@@....@@%%%%....

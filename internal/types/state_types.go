@@ -6,15 +6,15 @@ type TransitionTarget int
 const (
 	TransitionNone TransitionTarget = iota
 	TransitionToStage
-	TransitionToStageSelect
+	TransitionToLevelSelect
 	TransitionToQuit
 )
 
 // StateTransition — запрос смены состояния, возвращаемый из Update стейта;
 // нулевое значение означает «остаться в текущем состоянии»
 type StateTransition struct {
-	Target           TransitionTarget
-	Level            uint
-	PlayerCount      uint
-	MaxActiveEnemies uint
+	Target TransitionTarget
+	// Level — уровень для запуска (TransitionToStage) или уровень,
+	// на который встаёт курсор экрана выбора (TransitionToLevelSelect)
+	Level uint
 }

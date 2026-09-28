@@ -1,3 +1,18 @@
+# Stage 30. Format reference: README.md in this folder.
+
+[level]
+name = OVERGROWTH
+max_active = 6
+time_3star = 220
+
+[waves]
+# tanks        delay  start
+BBBbP            73   now
+FFPpBP           63   now
+BFFfAA           53   now
+APAAaA           45   clear
+
+[map]
 ..........................
 ..........................
 ..........................

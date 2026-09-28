@@ -1,3 +1,18 @@
+# Stage 21. Format reference: README.md in this folder.
+
+[level]
+name = BATTLEFIELD
+max_active = 5
+time_3star = 200
+
+[waves]
+# tanks        delay  start
+BBBbB            97   now
+FBBbB            87   now
+FBPFa            77   now
+FPPAAA           67   now
+
+[map]
 ..........................
 ......######....##........
 ....################......

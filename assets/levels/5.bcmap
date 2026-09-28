@@ -1,3 +1,17 @@
+# Stage 5. Format reference: README.md in this folder.
+
+[level]
+name = MOAT
+max_active = 4
+time_3star = 180
+
+[waves]
+# tanks        delay  start
+BBBbBB          139   now
+BBbBBFB         129   left<=1
+BpBBBFA         119   clear
+
+[map]
 ........####..............
 ........####..............
 ........##......@@@@@@....

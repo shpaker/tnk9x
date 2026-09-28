@@ -7,6 +7,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/shpaker/tnk9x"
+	"github.com/shpaker/tnk9x/internal/repositories/processed"
 	"github.com/shpaker/tnk9x/internal/types"
 )
 
@@ -23,6 +24,7 @@ type appConfigSchema struct {
 	GameTitle        string   `yaml:"game_title"`
 	Volume           *float64 `yaml:"volume"`
 	Effects          *bool    `yaml:"effects"`
+	Players          uint     `yaml:"players"`
 }
 
 type gameConfigSchema struct {
@@ -34,6 +36,17 @@ type gameConfigSchema struct {
 
 	BaseSizePx     uint   `yaml:"base_size_px"`
 	MapBlocksCount [2]int `yaml:"map_blocks_count"` // Размер карты в блоках [width, height]
+
+	SpawnPlayerSafeRadius float64                  `yaml:"spawn_player_safe_radius"`
+	Campaign              string                   `yaml:"campaign"`
+	DefaultLevel          defaultLevelConfigSchema `yaml:"default_level"`
+}
+
+// defaultLevelConfigSchema — дефолты уровня для карт без секций
+type defaultLevelConfigSchema struct {
+	MaxActive uint     `yaml:"max_active"`
+	Time3Star uint     `yaml:"time_3star"`
+	Waves     []string `yaml:"waves"`
 }
 
 type Config struct {
@@ -44,6 +57,7 @@ type Config struct {
 	GameTitle        string
 	Volume           float64
 	EffectsEnabled   bool
+	PlayerCount      uint
 
 	EnemySpawners          []types.Position
 	Player1Spawn           types.Position
@@ -55,6 +69,10 @@ type Config struct {
 	MapBlocksCount types.Size
 
 	TileBaseSize uint
+
+	SpawnPlayerSafeRadius float64
+	Campaign              string
+	LevelDefaults         types.LevelDefaults
 }
 
 func LoadConfig() (*Config, error) {
@@ -118,8 +136,34 @@ func LoadConfig() (*Config, error) {
 	}
 
 	if cfg.EnemyRespawnDelayTicks == 0 {
-		cfg.EnemyRespawnDelayTicks = 3 * 60
+		cfg.EnemyRespawnDelayTicks = 2 * 60
 	}
+
+	cfg.PlayerCount = schema.App.Players
+	if cfg.PlayerCount != 2 {
+		cfg.PlayerCount = 1
+	}
+
+	cfg.SpawnPlayerSafeRadius = schema.Game.SpawnPlayerSafeRadius
+	if cfg.SpawnPlayerSafeRadius <= 0 {
+		cfg.SpawnPlayerSafeRadius = 4
+	}
+
+	cfg.Campaign = schema.Game.Campaign
+	if cfg.Campaign == "" {
+		cfg.Campaign = "main"
+	}
+
+	levelDefaults, err := processed.ParseLevelDefaults(
+		schema.Game.DefaultLevel.MaxActive,
+		schema.Game.DefaultLevel.Time3Star,
+		cfg.EnemyRespawnDelayTicks,
+		schema.Game.DefaultLevel.Waves,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("invalid default_level in config: %w", err)
+	}
+	cfg.LevelDefaults = levelDefaults
 
 	// Если громкость указана в конфиге, используем её значение
 	if schema.App.Volume != nil {
@@ -208,6 +252,10 @@ func (c *Config) GetVolume() float64 {
 
 func (c *Config) GetEffectsEnabled() bool {
 	return c.EffectsEnabled
+}
+
+func (c *Config) GetPlayerCount() uint {
+	return c.PlayerCount
 }
 
 func (c *Config) ScreenWidth() int {

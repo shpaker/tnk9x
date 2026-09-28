@@ -9,12 +9,21 @@ import (
 
 var _ interfaces.IStageUseCases = (*StageUseCases)(nil)
 
+// initialEnemiesCount — сколько врагов выходит сразу при старте уровня
+const initialEnemiesCount = 3
+
+// coopExtraActiveEnemies — прибавка к лимиту активных врагов
+// при игре вдвоём, как в NES
+const coopExtraActiveEnemies = 2
+
 type StageUseCases struct {
-	tankLifecycleUseCases interfaces.ITankLifecycleUseCases
-	tankCommonUseCases    interfaces.ITankCommonUseCases
-	bulletUseCases        interfaces.IBulletUseCases
-	collisionUseCases     interfaces.ICollisionUseCases
-	hqUseCases            interfaces.IHQUseCases
+	tankLifecycleUseCases       interfaces.ITankLifecycleUseCases
+	waveUseCases                interfaces.IWaveUseCases
+	enemySpawnSelectionUseCases interfaces.IEnemySpawnSelectionUseCases
+	tankCommonUseCases          interfaces.ITankCommonUseCases
+	bulletUseCases              interfaces.IBulletUseCases
+	collisionUseCases           interfaces.ICollisionUseCases
+	hqUseCases                  interfaces.IHQUseCases
 
 	stageSession *session_entities.StageSessionEntity
 
@@ -25,32 +34,29 @@ type StageUseCases struct {
 
 func NewStageUseCases(
 	tankLifecycleUseCases interfaces.ITankLifecycleUseCases,
+	waveUseCases interfaces.IWaveUseCases,
+	enemySpawnSelectionUseCases interfaces.IEnemySpawnSelectionUseCases,
 	tankCommonUseCases interfaces.ITankCommonUseCases,
 	bulletUseCases interfaces.IBulletUseCases,
 	collisionUseCases interfaces.ICollisionUseCases,
 	hqUseCases interfaces.IHQUseCases,
 	stageSession *session_entities.StageSessionEntity,
-	enemyRespawnDelay uint,
 	bonusesRepository interfaces.IBonusesRepository,
 	mapUseCases interfaces.IMapUseCases,
 	bonusUseCases interfaces.IBonusUseCases,
 ) *StageUseCases {
-	if enemyRespawnDelay == 0 {
-		enemyRespawnDelay = 3 * 60
-	}
-	if stageSession != nil {
-		stageSession.SetEnemyRespawnDelay(enemyRespawnDelay)
-	}
 	return &StageUseCases{
-		tankLifecycleUseCases: tankLifecycleUseCases,
-		tankCommonUseCases:    tankCommonUseCases,
-		bulletUseCases:        bulletUseCases,
-		collisionUseCases:     collisionUseCases,
-		hqUseCases:            hqUseCases,
-		stageSession:          stageSession,
-		bonusesRepository:     bonusesRepository,
-		mapUseCases:           mapUseCases,
-		bonusUseCases:         bonusUseCases,
+		tankLifecycleUseCases:       tankLifecycleUseCases,
+		waveUseCases:                waveUseCases,
+		enemySpawnSelectionUseCases: enemySpawnSelectionUseCases,
+		tankCommonUseCases:          tankCommonUseCases,
+		bulletUseCases:              bulletUseCases,
+		collisionUseCases:           collisionUseCases,
+		hqUseCases:                  hqUseCases,
+		stageSession:                stageSession,
+		bonusesRepository:           bonusesRepository,
+		mapUseCases:                 mapUseCases,
+		bonusUseCases:               bonusUseCases,
 	}
 }
 
@@ -101,32 +107,29 @@ func (uc *StageUseCases) SpawnPlayerTank(
 	return playerTank
 }
 
+// SpawnInitialEnemyTanks выводит первых врагов сценария сразу
+// на разные спаунеры по порядку, как в NES
 func (uc *StageUseCases) SpawnInitialEnemyTanks() []*types.TankEntity {
-	if uc.tankLifecycleUseCases == nil {
+	if uc.stageSession == nil {
 		return nil
 	}
 
 	// Сбрасываем учёт уничтоженных врагов при спавне начальных врагов
-	if uc.stageSession != nil {
-		uc.stageSession.ClearDestroyedEnemiesTracking()
-	}
+	uc.stageSession.ClearDestroyedEnemiesTracking()
 
-	enemies, err := uc.tankLifecycleUseCases.OnStageSetUpEnemiesSpawn()
-	if err != nil {
-		return nil
-	}
+	count := min(
+		initialEnemiesCount,
+		int(uc.maxActiveEnemies()),
+		uc.enemySpawnSelectionUseCases.GetSpawnersCount(),
+	)
 
-	result := make([]*types.TankEntity, 0, len(enemies))
-	for _, enemy := range enemies {
-		if enemy == nil {
-			continue
+	result := make([]*types.TankEntity, 0, count)
+	for spawnerIndex := 0; spawnerIndex < count; spawnerIndex++ {
+		spawned := uc.spawnWaveTank(spawnerIndex)
+		if spawned == nil {
+			break
 		}
-		enemyNumber := uc.getNextEnemyNumber()
-		if uc.shouldHaveBonus(enemyNumber) {
-			enemy.SetWithBonus(true)
-		}
-		uc.registerEnemySpawned()
-		result = append(result, enemy)
+		result = append(result, spawned)
 	}
 
 	return result
@@ -138,6 +141,9 @@ func (uc *StageUseCases) UpdateGameObjects(dt float64) {
 	}
 
 	uc.updateEnemySpawnCountdown()
+	if uc.stageSession != nil {
+		uc.stageSession.UpdateStageTicks()
+	}
 
 	if uc.bulletUseCases != nil {
 		_ = uc.bulletUseCases.UpdateBullets(dt)
@@ -195,11 +201,10 @@ func (uc *StageUseCases) TryRespawnPlayersTanks() (*types.TankEntity, *types.Tan
 			respawned := uc.SpawnPlayerTank(role)
 
 			if respawned == nil {
+				// Спаунер занят: жизнь вернётся и спишется
+				// при следующей попытке
 				if !uc.stageSession.IsPlayerDefeated(num) {
-					uc.stageSession.SetPlayerLives(
-						num,
-						uc.stageSession.GetPlayerLives(num)+1,
-					)
+					uc.stageSession.RestorePlayerLife(num)
 				}
 			} else {
 				if num == types.PlayerTankNumPlayer1 {
@@ -215,96 +220,65 @@ func (uc *StageUseCases) TryRespawnPlayersTanks() (*types.TankEntity, *types.Tan
 }
 
 func (uc *StageUseCases) TrySpawnEnemy() *types.TankEntity {
-	if uc.tankLifecycleUseCases == nil {
+	if uc.stageSession == nil {
 		return nil
 	}
 
-	if uc.stageSession != nil &&
-		uc.tankCommonUseCases != nil &&
-		int(uc.stageSession.GetMaxActiveEnemies()) <= countActiveEnemies(
+	if uc.tankCommonUseCases != nil &&
+		int(uc.maxActiveEnemies()) <= countActiveEnemies(
 			uc.tankCommonUseCases.GetAllTanks(),
 		) {
 		return nil
 	}
 
-	if !uc.canSpawnEnemy() {
+	if !uc.stageSession.CanSpawnNextEnemy() {
 		return nil
 	}
 
-	// Получаем количество оставшихся врагов для определения уровня
-	remainingEnemies := uint(0)
-	if uc.stageSession != nil {
-		remainingEnemies = uc.stageSession.GetRemainingEnemies()
+	spawnerIndex, ok := uc.enemySpawnSelectionUseCases.SelectSpawner(
+		uc.stageSession,
+	)
+	if !ok {
+		return nil
 	}
 
-	spawned, err := uc.tankLifecycleUseCases.SpawnEnemyWithLevel(
-		nil,
-		false,
-		remainingEnemies,
+	return uc.spawnWaveTank(spawnerIndex)
+}
+
+// spawnWaveTank выводит следующий танк сценария на спаунер;
+// nil — волна ещё не началась или спаун не удался
+func (uc *StageUseCases) spawnWaveTank(spawnerIndex int) *types.TankEntity {
+	tank, ok := uc.waveUseCases.NextTank(uc.stageSession)
+	if !ok {
+		return nil
+	}
+
+	spawned, err := uc.tankLifecycleUseCases.SpawnEnemy(
+		spawnerIndex,
+		tank.Level,
 	)
 	if err != nil || spawned == nil {
 		return nil
 	}
 
-	enemyNumber := uc.getNextEnemyNumber()
-	if uc.shouldHaveBonus(enemyNumber) {
-		spawned.SetWithBonus(true)
-	}
-	uc.registerEnemySpawned()
+	spawned.SetWithBonus(tank.HasBonus)
+	uc.waveUseCases.CommitSpawn(uc.stageSession, spawnerIndex)
 	return spawned
+}
+
+// maxActiveEnemies — лимит активных врагов уровня с учётом кооператива
+func (uc *StageUseCases) maxActiveEnemies() uint {
+	limit := uc.stageSession.GetMaxActiveEnemies()
+	if uc.stageSession.GetPlayerCount() > 1 {
+		limit += coopExtraActiveEnemies
+	}
+	return limit
 }
 
 func (uc *StageUseCases) updateEnemySpawnCountdown() {
 	if uc.stageSession != nil {
 		uc.stageSession.UpdateEnemySpawnCountdown()
 	}
-}
-
-func (uc *StageUseCases) canSpawnEnemy() bool {
-	if uc.stageSession == nil {
-		return false
-	}
-	return uc.stageSession.CanSpawnNextEnemy()
-}
-
-func (uc *StageUseCases) registerEnemySpawned() {
-	if uc.stageSession != nil {
-		uc.stageSession.RegisterEnemySpawned()
-	}
-}
-
-func (uc *StageUseCases) getNextEnemyNumber() uint {
-	if uc.stageSession != nil {
-		return uc.stageSession.GetNextEnemyNumber()
-	}
-	return 0
-}
-
-// shouldHaveBonus проверяет, должен ли враг с данным номером иметь бонус
-// Логика: первый враг с бонусом = 4, затем каждый следующий = предыдущий + (4+i),
-// где i увеличивается на 1 после каждого спауна с бонусом
-// Последовательность: 4, 4+5=9, 9+6=15, 15+7=22, ...
-func (uc *StageUseCases) shouldHaveBonus(enemyNumber uint) bool {
-	if enemyNumber < 4 {
-		return false
-	}
-	if enemyNumber == 4 {
-		return true
-	}
-
-	// Вычисляем последовательность номеров с бонусом
-	// Первый: 4
-	// Второй: 4 + 5 = 9 (где 5 = 4+1)
-	// Третий: 9 + 6 = 15 (где 6 = 4+2)
-	// Четвертый: 15 + 7 = 22 (где 7 = 4+3)
-	// И так далее...
-	currentBonusNumber := uint(4)
-	i := uint(1)
-	for currentBonusNumber < enemyNumber {
-		currentBonusNumber = currentBonusNumber + (4 + i)
-		i++
-	}
-	return currentBonusNumber == enemyNumber
 }
 
 func (uc *StageUseCases) IsStageWon() bool {
@@ -359,6 +333,18 @@ func (uc *StageUseCases) IsStageLost() bool {
 
 func (uc *StageUseCases) IsStageFinished() bool {
 	return uc.IsStageWon() || uc.IsStageLost()
+}
+
+// GetStageResult — итог уровня: исход, потерянные жизни и время
+func (uc *StageUseCases) GetStageResult() types.StageResult {
+	if uc.stageSession == nil {
+		return types.StageResult{}
+	}
+	return types.StageResult{
+		Won:          uc.IsStageWon(),
+		LivesLost:    uc.stageSession.GetPlayerDeaths(),
+		ElapsedTicks: uc.stageSession.GetStageTicks(),
+	}
 }
 
 func (uc *StageUseCases) trackDestroyedEnemies() {

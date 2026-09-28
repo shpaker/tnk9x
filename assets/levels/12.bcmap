@@ -1,3 +1,18 @@
+# Stage 12. Format reference: README.md in this folder.
+
+[level]
+name = CANALS
+max_active = 5
+time_3star = 190
+
+[waves]
+# tanks        delay  start
+BBBbB           121   now
+BBBbB           111   left<=2
+BBFBp           101   left<=2
+PFFAA            91   left<=2
+
+[map]
 ..............######......
 ..............######......
 ..######..........##......

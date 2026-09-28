@@ -115,6 +115,10 @@ func (s *stubStageUseCases) IsStageWon() bool      { return false }
 func (s *stubStageUseCases) IsStageLost() bool     { return false }
 func (s *stubStageUseCases) IsStageFinished() bool { return false }
 
+func (s *stubStageUseCases) GetStageResult() types.StageResult {
+	return types.StageResult{}
+}
+
 func newTouchAdapterUnderTest() (
 	*StageTouchInputAdapter,
 	*stubTouchControls,

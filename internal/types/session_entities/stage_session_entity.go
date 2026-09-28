@@ -5,28 +5,43 @@ import (
 )
 
 const (
-	defaultStageRespawnDelay = 3 * 60
 	defaultStagePlayer1Lives = 3
 	defaultStagePlayer2Lives = 3
 )
 
+// noSpawner — пустой слот истории спаунеров
+const noSpawner = -1
+
+// recentSpawnersCount — глубина истории использованных спаунеров
+const recentSpawnersCount = 2
+
 type StageSessionEntity struct {
+	// Сценарий уровня: волны врагов и лимит активных
+	level *types.LevelEntity
+
 	totalEnemies     uint
 	spawnedEnemies   uint
 	destroyedEnemies uint
-
 	// Танки, уже учтённые счётчиком destroyedEnemies
 	countedDestroyedEnemies map[*types.TankEntity]struct{}
 
+	// Курсор волн: следующая волна и танк в ней
+	waveIndex     int
+	waveTankIndex int
+	// История спаунеров: последний использованный — первым
+	recentSpawners [recentSpawnersCount]int
+
 	playerLives        []uint
 	playerInitialLives []uint
+	// Потерянные жизни за уровень — для подсчёта звёзд
+	playerDeaths uint
 
-	enemyRespawnDelay uint
-	enemySpawnTicks   uint
+	enemySpawnTicks uint
 
 	enemyFreezeTicks uint // Оставшиеся тики заморозки врагов бонусом-таймером
 
-	maxActiveEnemies uint
+	// Длительность уровня в тиках без пауз
+	stageTicks uint
 
 	playerCount uint
 
@@ -38,23 +53,31 @@ type StageSessionEntity struct {
 func NewStageSessionEntity() *StageSessionEntity {
 	playerLives := make([]uint, 2)
 	playerInitialLives := make([]uint, 2)
-
 	playerLives[types.PlayerTankNumPlayer1] = defaultStagePlayer1Lives
 	playerInitialLives[types.PlayerTankNumPlayer1] = defaultStagePlayer1Lives
 	playerLives[types.PlayerTankNumPlayer2] = defaultStagePlayer2Lives
 	playerInitialLives[types.PlayerTankNumPlayer2] = defaultStagePlayer2Lives
 
 	return &StageSessionEntity{
-		totalEnemies:            20,
-		destroyedEnemies:        0,
 		countedDestroyedEnemies: make(map[*types.TankEntity]struct{}),
+		recentSpawners:          [recentSpawnersCount]int{noSpawner, noSpawner},
 		playerLives:             playerLives,
 		playerInitialLives:      playerInitialLives,
-		enemyRespawnDelay:       defaultStageRespawnDelay,
-		enemySpawnTicks:         defaultStageRespawnDelay,
-		maxActiveEnemies:        5,
 		playerCount:             1,
 	}
+}
+
+// SetUpLevel задаёт сценарий уровня: число врагов — сумма волн
+func (s *StageSessionEntity) SetUpLevel(level *types.LevelEntity) {
+	s.level = level
+	s.totalEnemies = 0
+	if level != nil {
+		s.totalEnemies = level.GetTotalEnemies()
+	}
+}
+
+func (s *StageSessionEntity) GetLevel() *types.LevelEntity {
+	return s.level
 }
 
 func (s *StageSessionEntity) AreAllEnemiesDefeated() bool {
@@ -113,6 +136,12 @@ func (s *StageSessionEntity) EnemiesForSpawnCount() uint {
 func (s *StageSessionEntity) Reset() {
 	s.spawnedEnemies = 0
 	s.destroyedEnemies = 0
+	s.waveIndex = 0
+	s.waveTankIndex = 0
+	s.recentSpawners = [recentSpawnersCount]int{noSpawner, noSpawner}
+	s.playerDeaths = 0
+	s.stageTicks = 0
+	s.enemySpawnTicks = 0
 	s.isPaused = false
 	s.enemyFreezeTicks = 0
 	s.ClearDestroyedEnemiesTracking()
@@ -127,7 +156,6 @@ func (s *StageSessionEntity) Reset() {
 	for i := 0; i < playerCount; i++ {
 		s.playerLives[i] = s.GetPlayerInitialLives(types.PlayerTankNum(i))
 	}
-	s.ResetEnemySpawnCountdown()
 }
 
 func (s *StageSessionEntity) GetPlayerLives(num types.PlayerTankNum) uint {
@@ -166,18 +194,78 @@ func (s *StageSessionEntity) SetPlayerLives(
 	}
 }
 
+// DecrementPlayerLives списывает жизнь за гибель танка игрока
 func (s *StageSessionEntity) DecrementPlayerLives(num types.PlayerTankNum) {
 	if int(num) >= 0 && int(num) < len(s.playerLives) {
 		if s.playerLives[num] == 0 {
 			return
 		}
 		s.playerLives[num]--
+		s.playerDeaths++
 	}
 }
 
-func (s *StageSessionEntity) RegisterEnemySpawned() {
+// RestorePlayerLife возвращает жизнь, списанную при неудачном
+// респауне: повторная попытка спишет её снова
+func (s *StageSessionEntity) RestorePlayerLife(num types.PlayerTankNum) {
+	if int(num) >= 0 && int(num) < len(s.playerLives) {
+		s.playerLives[num]++
+		if s.playerDeaths > 0 {
+			s.playerDeaths--
+		}
+	}
+}
+
+func (s *StageSessionEntity) GetPlayerDeaths() uint {
+	return s.playerDeaths
+}
+
+// RegisterEnemySpawned учитывает спаун врага из текущей позиции
+// курсора волн и запускает паузу до следующего
+func (s *StageSessionEntity) RegisterEnemySpawned(
+	spawnerIndex int,
+	delayTicks uint,
+) {
 	s.IncrementSpawnedEnemies()
-	s.ResetEnemySpawnCountdown()
+	s.enemySpawnTicks = delayTicks
+	for i := recentSpawnersCount - 1; i > 0; i-- {
+		s.recentSpawners[i] = s.recentSpawners[i-1]
+	}
+	s.recentSpawners[0] = spawnerIndex
+}
+
+// GetRecentSpawners — недавние спаунеры, последний — первым;
+// пустые слоты равны -1
+func (s *StageSessionEntity) GetRecentSpawners() [recentSpawnersCount]int {
+	return s.recentSpawners
+}
+
+// GetWaveCursor — индекс волны и танка в ней для следующего спауна
+func (s *StageSessionEntity) GetWaveCursor() (int, int) {
+	return s.waveIndex, s.waveTankIndex
+}
+
+// SetWaveCursor переводит курсор волн на следующий танк
+func (s *StageSessionEntity) SetWaveCursor(waveIndex, tankIndex int) {
+	s.waveIndex = waveIndex
+	s.waveTankIndex = tankIndex
+}
+
+func (s *StageSessionEntity) GetSpawnedEnemies() uint {
+	return s.spawnedEnemies
+}
+
+func (s *StageSessionEntity) GetDestroyedEnemies() uint {
+	return s.destroyedEnemies
+}
+
+// UpdateStageTicks продвигает таймер уровня на тик
+func (s *StageSessionEntity) UpdateStageTicks() {
+	s.stageTicks++
+}
+
+func (s *StageSessionEntity) GetStageTicks() uint {
+	return s.stageTicks
 }
 
 func (s *StageSessionEntity) GetTotalEnemies() uint {
@@ -204,20 +292,6 @@ func (s *StageSessionEntity) UpdateEnemySpawnCountdown() {
 	}
 }
 
-func (s *StageSessionEntity) SetEnemyRespawnDelay(delay uint) {
-	if delay == 0 {
-		delay = defaultStageRespawnDelay
-	}
-	s.enemyRespawnDelay = delay
-	if s.enemySpawnTicks == 0 || s.enemySpawnTicks > delay {
-		s.enemySpawnTicks = delay
-	}
-}
-
-func (s *StageSessionEntity) ResetEnemySpawnCountdown() {
-	s.enemySpawnTicks = s.enemyRespawnDelay
-}
-
 // FreezeEnemies запускает заморозку врагов на заданное число тиков
 func (s *StageSessionEntity) FreezeEnemies(ticks uint) {
 	s.enemyFreezeTicks = ticks
@@ -233,18 +307,12 @@ func (s *StageSessionEntity) UpdateEnemyFreezeCountdown() {
 	}
 }
 
+// GetMaxActiveEnemies — лимит одновременно активных врагов уровня
 func (s *StageSessionEntity) GetMaxActiveEnemies() uint {
-	return s.maxActiveEnemies
-}
-
-func (s *StageSessionEntity) SetMaxActiveEnemies(value uint) {
-	if value < 3 {
-		value = 3
+	if s.level == nil {
+		return 0
 	}
-	if value > 10 {
-		value = 10
-	}
-	s.maxActiveEnemies = value
+	return s.level.GetMaxActive()
 }
 
 func (s *StageSessionEntity) GetPlayerCount() uint {

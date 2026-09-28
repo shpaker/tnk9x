@@ -1,3 +1,17 @@
+# Stage 4. Format reference: README.md in this folder.
+
+[level]
+name = BRICK TOWN
+max_active = 4
+time_3star = 180
+
+[waves]
+# tanks        delay  start
+BBBfBB          142   now
+BFbBBBB         132   left<=1
+BbBBBBA         122   left<=1
+
+[map]
 ..%%%%................%%..
 ..%%%%................%%..
 %%%%......####..........%%

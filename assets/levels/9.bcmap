@@ -1,3 +1,17 @@
+# Stage 9. Format reference: README.md in this folder.
+
+[level]
+name = IRON GROVE
+max_active = 4
+time_3star = 190
+
+[waves]
+# tanks        delay  start
+BBBbBB          129   now
+BBfBBBB         119   left<=2
+BbFFPAA         109   left<=2
+
+[map]
 ......##............%%....
 ......##..........@@%%....
 ##............%%.@@@@...##

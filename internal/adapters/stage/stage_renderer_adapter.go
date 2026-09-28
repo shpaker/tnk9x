@@ -44,6 +44,7 @@ type StageRendererAdapter struct {
 	lastWidth      float64
 	lastHeight     float64
 	pauseMenuItems []types.PauseMenuItem
+	resultItems    []types.StageResultItem
 
 	// Поверхности кадра для маски материалов; буфер переиспользуется
 	surfaces []effects.Surface
@@ -686,66 +687,6 @@ func (r *StageRendererAdapter) drawHUDText(
 	op.GeoM.Translate(x, y)
 	op.ColorScale.ScaleWithColor(color.Black)
 	text.Draw(screen, message, r.hudFontFace, op)
-}
-
-func (r *StageRendererAdapter) DrawStageEndOverlay(
-	screen *ebiten.Image,
-	message string,
-) {
-	r.drawOverlayMessage(screen, message, "press any key to continue")
-}
-
-func (r *StageRendererAdapter) drawOverlayMessage(
-	screen *ebiten.Image,
-	message string,
-	subtitle string,
-) {
-	bounds := screen.Bounds()
-	width := float32(bounds.Dx())
-	height := float32(bounds.Dy())
-
-	vector.FillRect(
-		screen,
-		0,
-		0,
-		width,
-		height,
-		overlayBackdropColor,
-		false,
-	)
-
-	face := r.fontFace
-
-	textWidth, textHeight := text.Measure(message, face, 0)
-	x := (float64(bounds.Dx()) - textWidth) / 2
-	y := (float64(bounds.Dy()) - textHeight) / 2
-
-	op := &text.DrawOptions{}
-	op.GeoM.Translate(x, y)
-	op.ColorScale.ScaleWithColor(color.White)
-
-	text.Draw(screen, message, face, op)
-
-	if subtitle == "" {
-		return
-	}
-
-	scale := float64(r.subtitleFontSize) / float64(r.titleFontSize)
-	if scale <= 0 {
-		return
-	}
-
-	subtitleWidth, _ := text.Measure(subtitle, face, 0)
-	scaledWidth := subtitleWidth * scale
-	subtitleX := (float64(bounds.Dx()) - scaledWidth) / 2
-	subtitleY := float64(bounds.Dy()) - float64(r.titleFontSize)/2
-
-	subtitleOp := &text.DrawOptions{}
-	subtitleOp.GeoM.Scale(scale, scale)
-	subtitleOp.GeoM.Translate(subtitleX, subtitleY)
-	subtitleOp.ColorScale.ScaleWithColor(color.White)
-
-	text.Draw(screen, subtitle, face, subtitleOp)
 }
 
 // Цвета экрана уровня
