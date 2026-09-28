@@ -248,3 +248,30 @@ func TestVisualEffectsUseCases_ShakeStrongerForPlayer(t *testing.T) {
 		t.Errorf("тряска от попадания в игрока %v, во врага %v", player, enemy)
 	}
 }
+
+// Столкновение пуль: вспышка, искры во все стороны и тряска
+func TestVisualEffectsUseCases_BulletClash(t *testing.T) {
+	env := newVisualEffectsTestEnv()
+	env.effects.RequestEffect(types.VisualEventEntity{
+		Kind:     types.VisualEventBulletClash,
+		Position: types.Position{X: 60, Y: 60},
+	})
+	env.effects.Update()
+
+	if len(env.effects.GetParticles()) == 0 {
+		t.Error("bullet clash without sparks")
+	}
+	if len(env.effects.GetFlashLights()) != 1 {
+		t.Error("bullet clash without a flash")
+	}
+	shaken := false
+	for range 5 {
+		if env.effects.GetShakeOffset() != (types.Position{}) {
+			shaken = true
+		}
+		env.effects.Update()
+	}
+	if !shaken {
+		t.Error("bullet clash does not shake the screen")
+	}
+}

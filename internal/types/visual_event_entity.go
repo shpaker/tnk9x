@@ -13,6 +13,7 @@ const (
 	VisualEventTankExplosion                        // Взрыв танка
 	VisualEventHQExplosion                          // Взрыв штаба
 	VisualEventBlockDebris                          // Кусок стены разрушен
+	VisualEventBulletClash                          // Пули столкнулись в полёте
 )
 
 // VisualEventEntity — событие кадра для графических эффектов
