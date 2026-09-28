@@ -10,12 +10,13 @@ import (
 var _ interfaces.ITankActionsUseCases = (*TankActionsUseCases)(nil)
 
 type TankActionsUseCases struct {
-	brakingService interfaces.ITankBrakingService
-	bulletUseCases interfaces.IBulletUseCases
-	commonUseCases interfaces.ITankCommonUseCases
-	renderUseCases interfaces.IRenderUseCases
-	mapUseCases    interfaces.IMapUseCases
-	soundUseCases  interfaces.ISoundUseCases
+	brakingService        interfaces.ITankBrakingService
+	bulletUseCases        interfaces.IBulletUseCases
+	commonUseCases        interfaces.ITankCommonUseCases
+	renderUseCases        interfaces.IRenderUseCases
+	mapUseCases           interfaces.IMapUseCases
+	soundUseCases         interfaces.ISoundUseCases
+	visualEffectsUseCases interfaces.IVisualEffectsUseCases
 }
 
 func NewTankActionsUseCases(
@@ -25,14 +26,16 @@ func NewTankActionsUseCases(
 	renderUseCases interfaces.IRenderUseCases,
 	mapUseCases interfaces.IMapUseCases,
 	soundUseCases interfaces.ISoundUseCases,
+	visualEffectsUseCases interfaces.IVisualEffectsUseCases,
 ) *TankActionsUseCases {
 	return &TankActionsUseCases{
-		brakingService: brakingService,
-		bulletUseCases: bulletUseCases,
-		commonUseCases: commonUseCases,
-		renderUseCases: renderUseCases,
-		mapUseCases:    mapUseCases,
-		soundUseCases:  soundUseCases,
+		brakingService:        brakingService,
+		bulletUseCases:        bulletUseCases,
+		commonUseCases:        commonUseCases,
+		renderUseCases:        renderUseCases,
+		mapUseCases:           mapUseCases,
+		soundUseCases:         soundUseCases,
+		visualEffectsUseCases: visualEffectsUseCases,
 	}
 }
 
@@ -113,10 +116,21 @@ func (uc *TankActionsUseCases) Shoot(tank *types.TankEntity) error {
 	if !tank.IsActive() {
 		return errors.New("tank is not active")
 	}
+	fired, err := uc.bulletUseCases.ShootBullet(tank)
+	if err != nil || !fired {
+		return err
+	}
+	// Звук, вспышка у ствола и отдача — только у вылетевшей пули:
+	// пока пуля в полёте, повторные нажатия танк не дёргают
 	if !tank.IsEnemy() {
 		uc.soundUseCases.RequestSound(types.SoundIDFire, false)
 	}
-	return uc.bulletUseCases.ShootBullet(tank)
+	uc.visualEffectsUseCases.RequestEffect(types.VisualEventEntity{
+		Kind:      types.VisualEventShot,
+		Direction: tank.Direction,
+		Tank:      tank,
+	})
+	return nil
 }
 
 func (uc *TankActionsUseCases) ApplyDecision(

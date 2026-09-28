@@ -105,10 +105,11 @@ func (p *FakeSoundPlayer) Update() {
 // изображений. MissingIDs объявляет отдельные "тайлсет/id"
 // несуществующими.
 type FakeTilesetRegistry struct {
-	Err        error    // если задана — все Get* падают
-	Requested  []string // "тайлсет/id" запрошенных изображений
-	ImageIDs   []string // ответ GetImageIDs для любого тайлсета
-	MissingIDs []string // "тайлсет/id", для которых Get* падают
+	Err        error       // если задана — все Get* падают
+	Requested  []string    // "тайлсет/id" запрошенных изображений
+	ImageIDs   []string    // ответ GetImageIDs для любого тайлсета
+	MissingIDs []string    // "тайлсет/id", для которых Get* падают
+	Image      image.Image // ответ GetImageData; nil — пустая картинка 1x1
 }
 
 var _ interfaces.ITilesetRepositoryRegistry = (*FakeTilesetRegistry)(nil)
@@ -133,6 +134,9 @@ func (r *FakeTilesetRegistry) GetImageData(
 	}
 	if r.missing(key) {
 		return nil, fmt.Errorf("image '%s' not found", id)
+	}
+	if r.Image != nil {
+		return r.Image, nil
 	}
 	return image.NewRGBA(image.Rect(0, 0, 1, 1)), nil
 }
@@ -164,4 +168,42 @@ func (r *FakeTilesetRegistry) GetImageIDs(
 	tilesetType types.TilesetType,
 ) []string {
 	return r.ImageIDs
+}
+
+// FakeVisualEffectsUseCases реализует interfaces.IVisualEffectsUseCases
+// и записывает запрошенные события.
+type FakeVisualEffectsUseCases struct {
+	Events      []types.VisualEventEntity
+	FlashLights []types.LightEntity
+}
+
+var _ interfaces.IVisualEffectsUseCases = (*FakeVisualEffectsUseCases)(nil)
+
+func (f *FakeVisualEffectsUseCases) RequestEffect(
+	event types.VisualEventEntity,
+) {
+	f.Events = append(f.Events, event)
+}
+
+func (f *FakeVisualEffectsUseCases) Update() {}
+
+func (f *FakeVisualEffectsUseCases) GetParticles() []types.ParticleEntity {
+	return nil
+}
+
+func (f *FakeVisualEffectsUseCases) GetFlashLights() []types.LightEntity {
+	return f.FlashLights
+}
+
+func (f *FakeVisualEffectsUseCases) GetShakeOffset() types.Position {
+	return types.Position{}
+}
+
+// Kinds возвращает виды записанных событий по порядку.
+func (f *FakeVisualEffectsUseCases) Kinds() []types.VisualEventKind {
+	kinds := make([]types.VisualEventKind, 0, len(f.Events))
+	for _, event := range f.Events {
+		kinds = append(kinds, event.Kind)
+	}
+	return kinds
 }

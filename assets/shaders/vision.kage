@@ -1,0 +1,97 @@
+//kage:unit pixels
+
+// Зрение игроков с памятью увиденного. Images[0] — память прошлого
+// кадра, Images[1] — маска материалов (как у lighting.kage).
+// Результат: R — видно сейчас, G — видно недавно (гаснет на Fade
+// за кадр), B — видано когда-либо на этом уровне
+package main
+
+// Зрители — танки игроков: xy — глаза в пикселях экрана, zw — взгляд
+var Viewers [2]vec4
+
+var ViewerCount int
+
+// Игровое поле: xy — левый верхний угол, zw — правый нижний
+var FieldRect vec4
+
+// Угасание памяти недавно увиденного за кадр — кратно 1/255:
+// в 8-битной текстуре меньший шаг округлится до нуля
+var Fade float
+
+// Трассировка — как в lighting.kage
+const (
+	maxSteps   = 48
+	stepLength = 3.0
+	density    = 0.12
+)
+
+// Поле зрения, как types.ViewerEntity: вплотную — со всех сторон,
+// дальше — передняя полусфера с мягким краем
+const (
+	auraRadius    = 28.0
+	fieldCosOuter = -0.17
+	fieldCosInner = 0.17
+)
+
+// visibility — доля взгляда, дошедшего от точки до глаз: непрозрачная
+// стена обрывает его, лес ослабляет; стена не заслоняет саму себя.
+// Совпадает с visibility из lighting.kage
+func visibility(pos vec2, target vec2, origin vec2, steps float) float {
+	vis := 1.0
+	stepSize := distance(pos, target) / steps
+	inside := imageSrc1At(pos+origin).r > 0.99
+	for s := 1; s < maxSteps; s++ {
+		if float(s) >= steps {
+			break
+		}
+		p := mix(pos, target, float(s)/steps)
+		opacity := imageSrc1At(p + origin).r
+		if inside {
+			if opacity < 0.99 {
+				inside = false
+			}
+			continue
+		}
+		if opacity > 0.99 {
+			return 0
+		}
+		vis *= exp(-opacity * density * stepSize)
+	}
+	return vis
+}
+
+// seenBy — насколько пиксель виден хотя бы одному игроку: поле зрения
+// и взгляд до него мимо зданий
+func seenBy(pos vec2, origin vec2) float {
+	seen := 0.0
+	for v := 0; v < 2; v++ {
+		if v >= ViewerCount {
+			break
+		}
+		viewer := Viewers[v]
+		d := distance(pos, viewer.xy)
+		field := 1.0
+		if d > auraRadius {
+			field = smoothstep(fieldCosOuter, fieldCosInner,
+				dot((pos-viewer.xy)/d, viewer.zw))
+		}
+		if field <= seen {
+			continue
+		}
+		steps := clamp(ceil(d/stepLength), 1, maxSteps)
+		seen = max(seen, field*visibility(pos, viewer.xy, origin, steps))
+	}
+	return seen
+}
+
+func Fragment(dstPos vec4, srcPos vec2, color vec4) vec4 {
+	origin := imageSrc0Origin()
+	pos := srcPos - origin
+	if pos.x < FieldRect.x || pos.y < FieldRect.y ||
+		pos.x >= FieldRect.z || pos.y >= FieldRect.w {
+		return vec4(0, 0, 0, 1)
+	}
+	previous := imageSrc0At(srcPos)
+	seen := seenBy(pos, origin)
+	return vec4(seen, max(previous.g-Fade, seen), max(previous.b, seen), 1)
+}

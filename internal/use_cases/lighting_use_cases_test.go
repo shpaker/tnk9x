@@ -1,8 +1,10 @@
 package use_cases_test
 
 import (
+	"math"
 	"testing"
 
+	"github.com/shpaker/tnk9x/internal/testutil"
 	"github.com/shpaker/tnk9x/internal/types"
 	image_providers "github.com/shpaker/tnk9x/internal/types/image_providers"
 	"github.com/shpaker/tnk9x/internal/use_cases"
@@ -15,8 +17,8 @@ type stubBulletList struct {
 
 func (s *stubBulletList) ShootBullet(
 	tank *types.TankEntity,
-) error {
-	return nil
+) (bool, error) {
+	return false, nil
 }
 
 func (s *stubBulletList) UpdateBullets(
@@ -56,6 +58,7 @@ type lightingTestEnv struct {
 	bullets    *stubBulletList
 	bonuses    *stubVisibleBonuses
 	hq         *types.HQEntity
+	effects    *testutil.FakeVisualEffectsUseCases
 	lighting   *use_cases.LightingUseCases
 }
 
@@ -69,16 +72,20 @@ func newLightingTestEnv() *lightingTestEnv {
 		State:    types.HQStateDestroyed,
 	}
 
+	effects := &testutil.FakeVisualEffectsUseCases{}
+
 	return &lightingTestEnv{
 		tankCommon: tankCommon,
 		bullets:    bullets,
 		bonuses:    bonuses,
 		hq:         hq,
+		effects:    effects,
 		lighting: use_cases.NewLightingUseCases(
 			tankCommon,
 			bullets,
 			&stubHQUseCases{hq: hq},
 			bonuses,
+			effects,
 		),
 	}
 }
@@ -123,8 +130,36 @@ func TestLightingUseCases_GetLights_SkipsDestroyed(t *testing.T) {
 	}
 }
 
-// Щит заменяет собственный свет танка
-func TestLightingUseCases_GetLights_ShieldReplacesTankLight(t *testing.T) {
+// Игрок светит фарой-конусом вперёд по стволу и аурой вокруг себя
+func TestLightingUseCases_GetLights_PlayerHeadlightAndAura(t *testing.T) {
+	env := newLightingTestEnv()
+	env.tankCommon.tanks = []*types.TankEntity{
+		newPlayerTank(types.TankRolePlayer1),
+	}
+
+	lights := env.lighting.GetLights()
+
+	if len(lights) != 2 {
+		t.Fatalf("источников %d, ожидались фара и аура", len(lights))
+	}
+	headlight, aura := lights[0], lights[1]
+	if !headlight.IsCone() || aura.IsCone() {
+		t.Fatal("первой ожидалась фара-конус, второй — всенаправленная аура")
+	}
+	if headlight.Radius <= aura.Radius {
+		t.Error("фара должна светить дальше ауры")
+	}
+	// Танк 16x16 в (0,0) смотрит вверх: фара у среза ствола, ось вверх
+	if math.Abs(headlight.Direction.X) > 1e-9 || headlight.Direction.Y != -1 {
+		t.Errorf("ось фары %v, ожидалась вверх", headlight.Direction)
+	}
+	if headlight.Position.Y >= aura.Position.Y {
+		t.Error("фара должна быть вынесена вперёд от центра танка")
+	}
+}
+
+// Щит заменяет ауру танка, фара остаётся
+func TestLightingUseCases_GetLights_ShieldReplacesAura(t *testing.T) {
 	env := newLightingTestEnv()
 	plain := newPlayerTank(types.TankRolePlayer1)
 	shielded := newPlayerTank(types.TankRolePlayer1)
@@ -133,11 +168,52 @@ func TestLightingUseCases_GetLights_ShieldReplacesTankLight(t *testing.T) {
 
 	lights := env.lighting.GetLights()
 
-	if len(lights) != 2 {
-		t.Fatalf("источников %d, ожидалось 2", len(lights))
+	if len(lights) != 4 {
+		t.Fatalf("источников %d, ожидалось 4", len(lights))
 	}
-	if lights[0].Color == lights[1].Color {
-		t.Error("свет щита должен отличаться от света танка")
+	var omni []types.LightEntity
+	for _, light := range lights {
+		if !light.IsCone() {
+			omni = append(omni, light)
+		}
+	}
+	if len(omni) != 2 || omni[0].Color == omni[1].Color {
+		t.Error("свет щита должен отличаться от ауры танка")
+	}
+}
+
+// Фара доворачивается за стволом плавно, за несколько тиков
+func TestLightingUseCases_UpdateHeadlights_TurnsSmoothly(t *testing.T) {
+	env := newLightingTestEnv()
+	tank := newPlayerTank(types.TankRolePlayer1)
+	env.tankCommon.tanks = []*types.TankEntity{tank}
+	env.lighting.UpdateHeadlights()
+
+	tank.Direction = types.DirectionRight
+	env.lighting.UpdateHeadlights()
+
+	axis := env.lighting.GetLights()[0].Direction
+	if axis.X <= 0 || axis.Y >= 0 {
+		t.Errorf("после тика ось %v, ожидалась между верхом и правом", axis)
+	}
+
+	for range 30 {
+		env.lighting.UpdateHeadlights()
+	}
+	axis = env.lighting.GetLights()[0].Direction
+	if math.Abs(axis.X-1) > 1e-9 || math.Abs(axis.Y) > 1e-9 {
+		t.Errorf("ось %v, ожидалась вправо", axis)
+	}
+}
+
+// Вспышки эффектов светят наравне с остальными источниками
+func TestLightingUseCases_GetLights_IncludesFlashes(t *testing.T) {
+	env := newLightingTestEnv()
+	env.effects.FlashLights = []types.LightEntity{{Radius: 40, Intensity: 1}}
+
+	if lights := env.lighting.GetLights(); len(lights) != 1 ||
+		lights[0].Radius != 40 {
+		t.Errorf("источники %v, ожидалась вспышка", lights)
 	}
 }
 
@@ -167,7 +243,7 @@ func TestLightingUseCases_GetLights_ExplosionGrows(t *testing.T) {
 }
 
 // При переполнении остаются самые важные источники: взрывы и пули
-// вытесняют танки
+// вытесняют танки врагов
 func TestLightingUseCases_GetLights_LimitKeepsPriority(t *testing.T) {
 	env := newLightingTestEnv()
 	for range types.MaxLights {
@@ -196,7 +272,7 @@ func TestLightingUseCases_GetLights_LimitKeepsPriority(t *testing.T) {
 		t.Fatalf("источников %d, ожидалось %d", len(lights), types.MaxLights)
 	}
 	explosion, bullet := lights[0], lights[1]
-	if explosion.Radius <= bullet.Radius {
+	if explosion.Intensity <= bullet.Intensity {
 		t.Error("первым должен идти взрыв")
 	}
 	if bullet.Position != (types.Position{X: 2, Y: 2}) {
@@ -234,5 +310,54 @@ func TestLightingUseCases_GetMaterial(t *testing.T) {
 	}
 	if unknown := lighting.GetMaterial("unknown"); unknown != (types.SurfaceMaterial{}) {
 		t.Errorf("неизвестный блок: материал %v", unknown)
+	}
+}
+
+// Фара и аура игрока не вытесняются даже взрывами
+func TestLightingUseCases_GetLights_PlayerFirst(t *testing.T) {
+	env := newLightingTestEnv()
+	for range types.MaxLights {
+		env.tankCommon.tanks = append(
+			env.tankCommon.tanks,
+			newEnemyTankInState(types.TankStateExploding),
+		)
+	}
+	env.tankCommon.tanks = append(
+		env.tankCommon.tanks,
+		newPlayerTank(types.TankRolePlayer1),
+	)
+
+	lights := env.lighting.GetLights()
+
+	if len(lights) != types.MaxLights {
+		t.Fatalf("источников %d, ожидалось %d", len(lights), types.MaxLights)
+	}
+	if !lights[0].IsCone() || lights[1].IsCone() {
+		t.Error("первыми должны идти фара и аура игрока")
+	}
+}
+
+// Зрители — только активные танки игроков, взгляд — по фаре
+func TestLightingUseCases_GetViewers(t *testing.T) {
+	env := newLightingTestEnv()
+	player := newPlayerTank(types.TankRolePlayer1)
+	player.Direction = types.DirectionRight
+	env.tankCommon.tanks = []*types.TankEntity{
+		player,
+		newEnemyTankInState(types.TankStateMoving),
+		newPlayerTank(types.TankRolePlayer2),
+	}
+	env.tankCommon.tanks[2].State = types.TankStateExploding
+
+	viewers := env.lighting.GetViewers()
+
+	if len(viewers) != 1 {
+		t.Fatalf("зрителей %d, ожидался 1", len(viewers))
+	}
+	if viewers[0].Position != (types.Position{X: 8, Y: 8}) {
+		t.Errorf("глаза в %v, ожидался центр танка", viewers[0].Position)
+	}
+	if math.Abs(viewers[0].Direction.X-1) > 1e-9 {
+		t.Errorf("взгляд %v, ожидался вправо", viewers[0].Direction)
 	}
 }

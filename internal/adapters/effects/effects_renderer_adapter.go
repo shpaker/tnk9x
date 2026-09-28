@@ -13,7 +13,9 @@ import (
 
 // Параметры освещения и постобработки
 const (
-	lightingAmbient = 0.55 // освещённость поля без источников
+	// lightingAmbient — освещённость поля без источников: периферия
+	// заметно темнее обзора фары, но не пропадает
+	lightingAmbient = 0.33
 	lightingHaze    = 0.16 // видимость света на чёрном полу
 	bloomThreshold  = 0.65 // яркость, с которой начинается свечение
 	bloomStrength   = 0.9
@@ -21,6 +23,9 @@ const (
 	// scanlinesMinScale — меньший масштаб не вмещает сканлайн
 	// в логический пиксель, линии превращаются в муар
 	scanlinesMinScale = 3
+	// visionFadeSteps — на сколько единиц 8-битного канала за кадр
+	// гаснет память недавно увиденного: 1 — за 255 кадров, ~4 с
+	visionFadeSteps = 1
 )
 
 // Surface — прямоугольник поверхности на экране и её материал
@@ -34,6 +39,7 @@ type Surface struct {
 // живёт всё время работы приложения
 type EffectsRendererAdapter struct {
 	// Шейдеры
+	visionShader   *ebiten.Shader
 	lightingShader *ebiten.Shader
 	bloomShader    *ebiten.Shader
 	crtShader      *ebiten.Shader
@@ -44,12 +50,19 @@ type EffectsRendererAdapter struct {
 	bloomBuffer *ebiten.Image
 	bloom       *ebiten.Image
 
+	// Зрение с памятью увиденного: прошлый и текущий кадр, меняются
+	// местами каждый кадр; сбрасываются на новом уровне
+	visionPrevious *ebiten.Image
+	visionCurrent  *ebiten.Image
+
 	// Белый пиксель для заливки маски материалов
 	pixel *ebiten.Image
 
 	// Uniform-массивы источников, переиспользуются между кадрами
 	lightsUniform      []float32
 	lightColorsUniform []float32
+	lightConesUniform  []float32
+	viewersUniform     []float32
 
 	frames int
 }
@@ -57,6 +70,10 @@ type EffectsRendererAdapter struct {
 func NewEffectsRendererAdapter(
 	shadersRepository interfaces.IShadersRepository,
 ) (*EffectsRendererAdapter, error) {
+	visionShader, err := loadShader(shadersRepository, "vision")
+	if err != nil {
+		return nil, err
+	}
 	lightingShader, err := loadShader(shadersRepository, "lighting")
 	if err != nil {
 		return nil, err
@@ -74,12 +91,15 @@ func NewEffectsRendererAdapter(
 	pixel.Fill(color.White)
 
 	return &EffectsRendererAdapter{
+		visionShader:       visionShader,
 		lightingShader:     lightingShader,
 		bloomShader:        bloomShader,
 		crtShader:          crtShader,
 		pixel:              pixel,
 		lightsUniform:      make([]float32, types.MaxLights*4),
 		lightColorsUniform: make([]float32, types.MaxLights*4),
+		lightConesUniform:  make([]float32, types.MaxLights*4),
+		viewersUniform:     make([]float32, types.MaxViewers*4),
 	}, nil
 }
 
@@ -107,17 +127,34 @@ func loadShader(
 func (a *EffectsRendererAdapter) BeginScene(size image.Point) *ebiten.Image {
 	a.scene = ensureImage(a.scene, size)
 	a.mask = ensureImage(a.mask, size)
+	a.visionPrevious = ensureImage(a.visionPrevious, size)
+	a.visionCurrent = ensureImage(a.visionCurrent, size)
 	a.scene.Clear()
 	return a.scene
 }
 
+// ResetVisionMemory забывает увиденное — на новом уровне игрок
+// начинает с нетронутой картой
+func (a *EffectsRendererAdapter) ResetVisionMemory() {
+	if a.visionPrevious != nil {
+		a.visionPrevious.Clear()
+	}
+	if a.visionCurrent != nil {
+		a.visionCurrent.Clear()
+	}
+}
+
 // DrawLighting переносит сцену на экран с освещением: поверхности
-// задают маску материалов, источники — свет и тени внутри field
+// задают маску материалов, источники — свет и тени внутри field;
+// viewers — танки игроков: свет виден только там, куда они смотрят;
+// shake сдвигает весь кадр при тряске
 func (a *EffectsRendererAdapter) DrawLighting(
 	screen *ebiten.Image,
 	field image.Rectangle,
 	surfaces []Surface,
 	lights []types.LightEntity,
+	viewers []types.ViewerEntity,
+	shake image.Point,
 ) {
 	a.frames++
 	a.drawMask(surfaces)
@@ -133,27 +170,78 @@ func (a *EffectsRendererAdapter) DrawLighting(
 		a.lightColorsUniform[i*4+1] = float32(light.Color.G) / 0xff
 		a.lightColorsUniform[i*4+2] = float32(light.Color.B) / 0xff
 		a.lightColorsUniform[i*4+3] = 1
+		a.fillCone(i, light)
 	}
+
+	fieldRect := []float32{
+		float32(field.Min.X),
+		float32(field.Min.Y),
+		float32(field.Max.X),
+		float32(field.Max.Y),
+	}
+	a.drawVision(fieldRect, viewers)
 
 	size := a.scene.Bounds().Size()
 	op := &ebiten.DrawRectShaderOptions{}
+	op.GeoM.Translate(float64(shake.X), float64(shake.Y))
 	op.Images[0] = a.scene
 	op.Images[1] = a.mask
+	op.Images[2] = a.visionCurrent
 	op.Uniforms = map[string]any{
 		"Lights":      a.lightsUniform,
 		"LightColors": a.lightColorsUniform,
+		"LightCones":  a.lightConesUniform,
 		"LightCount":  count,
 		"Ambient":     float32(lightingAmbient),
 		"Haze":        float32(lightingHaze),
-		"FieldRect": []float32{
-			float32(field.Min.X),
-			float32(field.Min.Y),
-			float32(field.Max.X),
-			float32(field.Max.Y),
-		},
-		"Time": float32(a.frames),
+		"FieldRect":   fieldRect,
+		"Time":        float32(a.frames),
 	}
 	screen.DrawRectShader(size.X, size.Y, a.lightingShader, op)
+}
+
+// drawVision считает, что игроки видят сейчас, и обновляет память
+// увиденного: прошлый кадр — вход, текущий — результат
+func (a *EffectsRendererAdapter) drawVision(
+	fieldRect []float32,
+	viewers []types.ViewerEntity,
+) {
+	viewerCount := min(len(viewers), types.MaxViewers)
+	for i := range viewerCount {
+		a.viewersUniform[i*4] = float32(viewers[i].Position.X)
+		a.viewersUniform[i*4+1] = float32(viewers[i].Position.Y)
+		a.viewersUniform[i*4+2] = float32(viewers[i].Direction.X)
+		a.viewersUniform[i*4+3] = float32(viewers[i].Direction.Y)
+	}
+
+	a.visionPrevious, a.visionCurrent = a.visionCurrent, a.visionPrevious
+	size := a.mask.Bounds().Size()
+	op := &ebiten.DrawRectShaderOptions{Blend: ebiten.BlendCopy}
+	op.Images[0] = a.visionPrevious
+	op.Images[1] = a.mask
+	op.Uniforms = map[string]any{
+		"Viewers":     a.viewersUniform,
+		"ViewerCount": viewerCount,
+		"FieldRect":   fieldRect,
+		"Fade":        float32(visionFadeSteps) / 0xff,
+	}
+	a.visionCurrent.DrawRectShader(size.X, size.Y, a.visionShader, op)
+}
+
+// fillCone заполняет конус источника i: ось и косинусы внешнего
+// и внутреннего края; всенаправленный источник конусом не ограничен
+func (a *EffectsRendererAdapter) fillCone(i int, light types.LightEntity) {
+	if !light.IsCone() {
+		a.lightConesUniform[i*4] = 0
+		a.lightConesUniform[i*4+1] = 0
+		a.lightConesUniform[i*4+2] = -2
+		a.lightConesUniform[i*4+3] = -1
+		return
+	}
+	a.lightConesUniform[i*4] = float32(light.Direction.X)
+	a.lightConesUniform[i*4+1] = float32(light.Direction.Y)
+	a.lightConesUniform[i*4+2] = float32(light.ConeCos)
+	a.lightConesUniform[i*4+3] = float32(light.ConeInnerCos())
 }
 
 // drawMask заливает маску материалов: R — непрозрачность,

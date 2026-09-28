@@ -1,0 +1,477 @@
+package use_cases
+
+import (
+	"image"
+	"image/color"
+	"math"
+	"math/rand/v2"
+
+	"github.com/shpaker/tnk9x/internal/interfaces"
+	"github.com/shpaker/tnk9x/internal/types"
+)
+
+// Отдача и пыль
+const (
+	recoilTicks = 3 // сколько тиков танк откачен после выстрела
+	// dustChance — пыль из-под гусениц в среднем раз в dustChance тиков
+	dustChance = 6
+	// barrelReach — расстояние от центра танка до среза ствола
+	barrelReach = 8.0
+	// trackOffset — половина колеи: пыль идёт из-под двух гусениц
+	trackOffset = 5.0
+)
+
+// Тряска экрана: травма от событий, затухание за тик, смещение
+// в пикселях при полной травме. Смещение — shakeMaxOffset·травма²
+// с округлением до пикселя: травма меньше ~0.4 экран не сдвигает.
+// Попадание во врага трясёт ощутимо, в игрока — сильнее
+const (
+	shakeEnemyHit        = 0.55
+	shakeEnemyExplosion  = 0.65
+	shakePlayerHit       = 0.85
+	shakePlayerExplosion = 1.0
+	shakeHQExplosion     = 1.0
+	shakeDecay           = 0.03
+	shakeMaxOffset       = 4.0
+)
+
+// burstSpec — разлёт частиц одного вида: число, скорость
+// в пикселях за тик, половина угла разлёта, жизнь, размер и цвета
+type burstSpec struct {
+	count              int
+	speedMin, speedMax float64
+	spread             float64 // math.Pi — во все стороны
+	lifeMin, lifeMax   uint
+	sizeMin, sizeMax   float64
+	drag               float64
+	colors             []color.NRGBA
+}
+
+// Обломки стены: разрушенная область распадается на куски
+// debrisChunk x debrisChunk пикселей цвета её спрайта, которые
+// осыпаются из стены навстречу пуле
+const (
+	debrisChunk    = 2
+	debrisSpeedMin = 0.25
+	debrisSpeedMax = 1.1
+	debrisSpread   = 0.9
+	debrisLifeMin  = 18
+	debrisLifeMax  = 34
+	debrisDrag     = 0.82
+)
+
+// flashSpec — вспышка света одного вида
+type flashSpec struct {
+	radius    float64
+	color     color.NRGBA
+	intensity float64
+	life      uint
+}
+
+var (
+	muzzleSparks = burstSpec{
+		count: 4, speedMin: 1.2, speedMax: 2.2, spread: 0.35,
+		lifeMin: 6, lifeMax: 10, sizeMin: 1, sizeMax: 1, drag: 0.8,
+		colors: []color.NRGBA{
+			{R: 255, G: 240, B: 170, A: 255},
+			{R: 255, G: 200, B: 90, A: 255},
+		},
+	}
+	brickDust = burstSpec{
+		count: 3, speedMin: 0.2, speedMax: 0.5, spread: 1.2,
+		lifeMin: 20, lifeMax: 30, sizeMin: 2, sizeMax: 2, drag: 0.9,
+		colors: []color.NRGBA{{R: 120, G: 110, B: 100, A: 150}},
+	}
+	steelSparks = burstSpec{
+		count: 8, speedMin: 1.5, speedMax: 3, spread: 1.1,
+		lifeMin: 8, lifeMax: 14, sizeMin: 1, sizeMax: 1, drag: 0.82,
+		colors: []color.NRGBA{
+			{R: 255, G: 250, B: 220, A: 255},
+			{R: 255, G: 220, B: 120, A: 255},
+			{R: 200, G: 230, B: 255, A: 255},
+		},
+	}
+	shieldSparks = burstSpec{
+		count: 8, speedMin: 1, speedMax: 2.4, spread: math.Pi,
+		lifeMin: 8, lifeMax: 14, sizeMin: 1, sizeMax: 1, drag: 0.85,
+		colors: []color.NRGBA{
+			{R: 150, G: 230, B: 255, A: 255},
+			{R: 255, G: 255, B: 255, A: 255},
+		},
+	}
+	embers = burstSpec{
+		count: 14, speedMin: 0.8, speedMax: 2.6, spread: math.Pi,
+		lifeMin: 18, lifeMax: 34, sizeMin: 1, sizeMax: 2, drag: 0.88,
+		colors: []color.NRGBA{
+			{R: 255, G: 200, B: 80, A: 255},
+			{R: 255, G: 140, B: 40, A: 255},
+			{R: 255, G: 90, B: 30, A: 255},
+		},
+	}
+	smoke = burstSpec{
+		count: 6, speedMin: 0.15, speedMax: 0.5, spread: math.Pi,
+		lifeMin: 40, lifeMax: 64, sizeMin: 2, sizeMax: 3, drag: 0.95,
+		colors: []color.NRGBA{
+			{R: 70, G: 70, B: 70, A: 170},
+			{R: 95, G: 90, B: 85, A: 170},
+		},
+	}
+	trackDust = burstSpec{
+		count: 1, speedMin: 0.1, speedMax: 0.3, spread: 0.6,
+		lifeMin: 18, lifeMax: 26, sizeMin: 1, sizeMax: 2, drag: 0.9,
+		colors: []color.NRGBA{{R: 110, G: 105, B: 95, A: 140}},
+	}
+
+	muzzleFlash = flashSpec{
+		40, color.NRGBA{R: 255, G: 220, B: 150, A: 255}, 1.6, 4,
+	}
+	// Выстрел врага — короткий тусклый проблеск, а не прожектор
+	enemyMuzzleFlash = flashSpec{
+		22, color.NRGBA{R: 255, G: 200, B: 140, A: 255}, 0.8, 3,
+	}
+	brickFlash = flashSpec{
+		18, color.NRGBA{R: 255, G: 170, B: 90, A: 255}, 0.8, 3,
+	}
+	steelFlash = flashSpec{
+		26, color.NRGBA{R: 220, G: 235, B: 255, A: 255}, 1.4, 4,
+	}
+	shieldFlash = flashSpec{
+		30, color.NRGBA{R: 120, G: 220, B: 255, A: 255}, 1.2, 5,
+	}
+)
+
+var _ interfaces.IVisualEffectsUseCases = (*VisualEffectsUseCases)(nil)
+
+// VisualEffectsUseCases реализует IVisualEffectsUseCases: превращает
+// игровые события в частицы, вспышки, тряску и отдачу
+type VisualEffectsUseCases struct {
+	// Repositories
+	visualEffectsRepository interfaces.IVisualEffectsRepository
+
+	tilesetRegistry interfaces.ITilesetRepositoryRegistry
+
+	// Use Cases
+	tankCommonUseCases interfaces.ITankCommonUseCases
+}
+
+func NewVisualEffectsUseCases(
+	visualEffectsRepository interfaces.IVisualEffectsRepository,
+	tilesetRegistry interfaces.ITilesetRepositoryRegistry,
+	tankCommonUseCases interfaces.ITankCommonUseCases,
+) *VisualEffectsUseCases {
+	return &VisualEffectsUseCases{
+		visualEffectsRepository: visualEffectsRepository,
+		tilesetRegistry:         tilesetRegistry,
+		tankCommonUseCases:      tankCommonUseCases,
+	}
+}
+
+// RequestEffect реализует IVisualEffectsUseCases
+func (uc *VisualEffectsUseCases) RequestEffect(
+	event types.VisualEventEntity,
+) {
+	uc.visualEffectsRepository.AddEvent(event)
+}
+
+// Update реализует IVisualEffectsUseCases. Отдача отсчитывается
+// до разбора событий: выстрел этого тика виден все recoilTicks кадров
+func (uc *VisualEffectsUseCases) Update() {
+	uc.updateTanks()
+	uc.updateParticles()
+	uc.updateFlashes()
+	uc.visualEffectsRepository.GetScreenShake().Decay(shakeDecay)
+
+	for _, event := range uc.visualEffectsRepository.DrainEvents() {
+		uc.applyEvent(event)
+	}
+}
+
+// GetParticles реализует IVisualEffectsUseCases
+func (uc *VisualEffectsUseCases) GetParticles() []types.ParticleEntity {
+	return uc.visualEffectsRepository.GetParticles()
+}
+
+// GetFlashLights реализует IVisualEffectsUseCases: вспышка тускнеет
+// и сжимается к концу жизни
+func (uc *VisualEffectsUseCases) GetFlashLights() []types.LightEntity {
+	flashes := uc.visualEffectsRepository.GetFlashes()
+	lights := make([]types.LightEntity, 0, len(flashes))
+	for i := range flashes {
+		fade := flashes[i].Fade()
+		lights = append(lights, types.LightEntity{
+			Position:  flashes[i].Position,
+			Radius:    flashes[i].Radius * (0.6 + 0.4*fade),
+			Color:     flashes[i].Color,
+			Intensity: flashes[i].Intensity * fade,
+		})
+	}
+	return lights
+}
+
+// GetShakeOffset реализует IVisualEffectsUseCases: смещение растёт
+// как квадрат травмы, направление задаёт сумма синусоид по фазе —
+// дрожь без рывков и без генератора случайных чисел в отрисовке
+func (uc *VisualEffectsUseCases) GetShakeOffset() types.Position {
+	shake := uc.visualEffectsRepository.GetScreenShake()
+	trauma := shake.GetTrauma()
+	if trauma <= 0 {
+		return types.Position{}
+	}
+	amplitude := shakeMaxOffset * trauma * trauma
+	phase := float64(shake.GetTicks())
+	return types.Position{
+		X: math.Round(amplitude * (0.6*math.Sin(phase*2.1) +
+			0.4*math.Sin(phase*5.3+1))),
+		Y: math.Round(amplitude * (0.6*math.Sin(phase*1.7+2) +
+			0.4*math.Sin(phase*4.7))),
+	}
+}
+
+// Продвижение эффектов
+
+// updateTanks отсчитывает отдачу и пылит из-под гусениц движущихся танков
+func (uc *VisualEffectsUseCases) updateTanks() {
+	for _, tank := range uc.tankCommonUseCases.GetAllTanks() {
+		if tank == nil {
+			continue
+		}
+		tank.TickRecoil()
+		if tank.State != types.TankStateMoving || rand.IntN(dustChance) != 0 {
+			continue
+		}
+		direction := tank.Direction.Vector()
+		side := trackOffset
+		if rand.IntN(2) == 0 {
+			side = -side
+		}
+		center := tankCenter(tank)
+		// Задняя кромка танка, левая или правая гусеница
+		position := types.Position{
+			X: center.X - direction.X*barrelReach - direction.Y*side,
+			Y: center.Y - direction.Y*barrelReach + direction.X*side,
+		}
+		uc.emitBurst(position, tank.Direction.Angle()+math.Pi, trackDust)
+	}
+}
+
+// updateParticles двигает частицы с трением и удаляет погасшие,
+// уплотняя срез на месте
+func (uc *VisualEffectsUseCases) updateParticles() {
+	particles := uc.visualEffectsRepository.GetParticles()
+	alive := particles[:0]
+	for _, particle := range particles {
+		if particle.Life <= 1 {
+			continue
+		}
+		particle.Life--
+		particle.Position.X += particle.Velocity.X
+		particle.Position.Y += particle.Velocity.Y
+		particle.Velocity.X *= particle.Drag
+		particle.Velocity.Y *= particle.Drag
+		alive = append(alive, particle)
+	}
+	uc.visualEffectsRepository.SetParticles(alive)
+}
+
+// updateFlashes гасит вспышки и удаляет догоревшие
+func (uc *VisualEffectsUseCases) updateFlashes() {
+	flashes := uc.visualEffectsRepository.GetFlashes()
+	alive := flashes[:0]
+	for _, flash := range flashes {
+		if flash.Life <= 1 {
+			continue
+		}
+		flash.Life--
+		alive = append(alive, flash)
+	}
+	uc.visualEffectsRepository.SetFlashes(alive)
+}
+
+// Разбор событий
+
+// applyEvent запускает эффекты события: частицы разлетаются вдоль
+// выстрела или назад от стены, в которую попала пуля
+func (uc *VisualEffectsUseCases) applyEvent(event types.VisualEventEntity) {
+	backward := event.Direction.Angle() + math.Pi
+	shake := uc.visualEffectsRepository.GetScreenShake()
+
+	switch event.Kind {
+	case types.VisualEventShot:
+		position := event.Position
+		flash := muzzleFlash
+		if event.Tank != nil {
+			if event.Tank.IsEnemy() {
+				flash = enemyMuzzleFlash
+			}
+			event.Tank.StartRecoil(recoilTicks)
+			direction := event.Tank.Direction.Vector()
+			center := tankCenter(event.Tank)
+			position = types.Position{
+				X: center.X + direction.X*barrelReach,
+				Y: center.Y + direction.Y*barrelReach,
+			}
+		}
+		uc.addFlash(position, flash)
+		uc.emitBurst(position, event.Direction.Angle(), muzzleSparks)
+	case types.VisualEventBrickHit:
+		uc.addFlash(event.Position, brickFlash)
+		uc.emitBurst(event.Position, backward, brickDust)
+	case types.VisualEventBlockDebris:
+		uc.emitDebris(event, backward)
+	case types.VisualEventSteelHit:
+		uc.addFlash(event.Position, steelFlash)
+		uc.emitBurst(event.Position, backward, steelSparks)
+	case types.VisualEventShieldHit:
+		uc.addFlash(event.Position, shieldFlash)
+		uc.emitBurst(event.Position, backward, shieldSparks)
+	case types.VisualEventPlayerHit:
+		shake.AddTrauma(shakePlayerHit)
+		uc.emitBurst(event.Position, backward, steelSparks)
+	case types.VisualEventEnemyHit:
+		shake.AddTrauma(shakeEnemyHit)
+		uc.addFlash(event.Position, steelFlash)
+		uc.emitBurst(event.Position, backward, steelSparks)
+	case types.VisualEventTankExplosion:
+		position := event.Position
+		trauma := shakeEnemyExplosion
+		if event.Tank != nil {
+			position = tankCenter(event.Tank)
+			if !event.Tank.IsEnemy() {
+				trauma = shakePlayerExplosion
+			}
+		}
+		shake.AddTrauma(trauma)
+		uc.emitBurst(position, 0, embers)
+		uc.emitBurst(position, 0, smoke)
+	case types.VisualEventHQExplosion:
+		shake.AddTrauma(shakeHQExplosion)
+		for range 2 {
+			uc.emitBurst(event.Position, 0, embers)
+			uc.emitBurst(event.Position, 0, smoke)
+		}
+	}
+}
+
+// emitBurst выпускает частицы из точки в пределах spec.spread
+// вокруг угла angle
+func (uc *VisualEffectsUseCases) emitBurst(
+	position types.Position,
+	angle float64,
+	spec burstSpec,
+) {
+	for range spec.count {
+		heading := angle + (rand.Float64()*2-1)*spec.spread
+		speed := randomBetween(spec.speedMin, spec.speedMax)
+		life := spec.lifeMin + uint(rand.IntN(int(spec.lifeMax-spec.lifeMin)+1))
+		uc.visualEffectsRepository.AddParticle(types.ParticleEntity{
+			Position: position,
+			Velocity: types.Position{
+				X: math.Cos(heading) * speed,
+				Y: math.Sin(heading) * speed,
+			},
+			Color:   spec.colors[rand.IntN(len(spec.colors))],
+			Size:    math.Round(randomBetween(spec.sizeMin, spec.sizeMax)),
+			Life:    life,
+			MaxLife: life,
+			Drag:    spec.drag,
+		})
+	}
+}
+
+// emitDebris разбивает разрушенную область стены на куски: каждый
+// берёт цвет своего места в спрайте блока и осыпается под углом
+// angle; прозрачные места спрайта обломков не дают
+func (uc *VisualEffectsUseCases) emitDebris(
+	event types.VisualEventEntity,
+	angle float64,
+) {
+	sprite, origin, ok := uc.blockSprite(event.Block)
+	if !ok {
+		return
+	}
+	bounds := sprite.Bounds()
+	for y := 0; y < event.Size.Height; y += debrisChunk {
+		for x := 0; x < event.Size.Width; x += debrisChunk {
+			position := types.Position{
+				X: event.Position.X + float64(x),
+				Y: event.Position.Y + float64(y),
+			}
+			// Координаты куска внутри спрайта исходного тайла
+			spriteX := bounds.Min.X + int(position.X-origin.X)
+			spriteY := bounds.Min.Y + int(position.Y-origin.Y)
+			pixel, _ := color.NRGBAModel.Convert(
+				sprite.At(spriteX, spriteY),
+			).(color.NRGBA)
+			if pixel.A == 0 {
+				continue
+			}
+			heading := angle + (rand.Float64()*2-1)*debrisSpread
+			speed := randomBetween(debrisSpeedMin, debrisSpeedMax)
+			life := uint(debrisLifeMin + rand.IntN(debrisLifeMax-debrisLifeMin+1))
+			uc.visualEffectsRepository.AddParticle(types.ParticleEntity{
+				// Центр куска: частица рисуется квадратом вокруг позиции
+				Position: types.Position{
+					X: position.X + debrisChunk/2,
+					Y: position.Y + debrisChunk/2,
+				},
+				Velocity: types.Position{
+					X: math.Cos(heading) * speed,
+					Y: math.Sin(heading) * speed,
+				},
+				Color:   pixel,
+				Size:    debrisChunk,
+				Life:    life,
+				MaxLife: life,
+				Drag:    debrisDrag,
+			})
+		}
+	}
+}
+
+// blockSprite возвращает спрайт блока и origin исходного тайла
+// в координатах поля: у сколотого остатка спрайт общий с целым тайлом
+func (uc *VisualEffectsUseCases) blockSprite(
+	block *types.BlockEntity,
+) (image.Image, types.Position, bool) {
+	if block == nil || block.Data == nil {
+		return nil, types.Position{}, false
+	}
+	imageID, err := block.GetImageID()
+	if err != nil {
+		return nil, types.Position{}, false
+	}
+	sprite, err := uc.tilesetRegistry.GetImageData(
+		types.TilesetTypeBlocks,
+		imageID,
+	)
+	if err != nil {
+		return nil, types.Position{}, false
+	}
+	return sprite, block.Data.Position, true
+}
+
+func (uc *VisualEffectsUseCases) addFlash(
+	position types.Position,
+	spec flashSpec,
+) {
+	uc.visualEffectsRepository.AddFlash(types.FlashEntity{
+		Position:  position,
+		Radius:    spec.radius,
+		Color:     spec.color,
+		Intensity: spec.intensity,
+		Life:      spec.life,
+		MaxLife:   spec.life,
+	})
+}
+
+func randomBetween(low, high float64) float64 {
+	return low + rand.Float64()*(high-low)
+}
+
+// tankCenter — центр танка в координатах поля
+func tankCenter(tank *types.TankEntity) types.Position {
+	return types.Position{
+		X: tank.Position.X + float64(tank.Size.Width)/2,
+		Y: tank.Position.Y + float64(tank.Size.Height)/2,
+	}
+}

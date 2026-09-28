@@ -13,12 +13,34 @@ type IGameRepositoriesRegistry interface {
 	GetTanksRepository() ITanksRepository
 	GetBonusesRepository() IBonusesRepository
 	GetSoundEventsRepository() ISoundEventsRepository
+	GetVisualEffectsRepository() IVisualEffectsRepository
 }
 
 // ISoundEventsRepository хранит очередь звуковых событий кадра
 type ISoundEventsRepository interface {
 	Add(event types.SoundEntity)
 	Drain() []types.SoundEntity
+}
+
+// IVisualEffectsRepository хранит runtime-состояние графических эффектов
+// уровня: очередь визуальных событий кадра, частицы, вспышки и тряску
+type IVisualEffectsRepository interface {
+	AddEvent(event types.VisualEventEntity)
+	// DrainEvents возвращает накопленные события и очищает очередь
+	DrainEvents() []types.VisualEventEntity
+
+	// AddParticle добавляет частицу; сверх лимита частица отбрасывается
+	AddParticle(particle types.ParticleEntity)
+	// GetParticles возвращает частицы для изменения на месте
+	GetParticles() []types.ParticleEntity
+	// SetParticles заменяет набор частиц, например уплотнённым срезом
+	SetParticles(particles []types.ParticleEntity)
+
+	AddFlash(flash types.FlashEntity)
+	GetFlashes() []types.FlashEntity
+	SetFlashes(flashes []types.FlashEntity)
+
+	GetScreenShake() *types.ScreenShakeEntity
 }
 
 type IBulletsRepository interface {

@@ -25,14 +25,14 @@ func NewBulletUseCases(
 	}
 }
 
-func (uc *BulletUseCases) ShootBullet(tank *types.TankEntity) error {
+func (uc *BulletUseCases) ShootBullet(tank *types.TankEntity) (bool, error) {
 	if !tank.IsActive() {
-		return nil
+		return false, nil
 	}
 
 	bulletImageGetter, err := uc.tilesUseCases.CreateStaticTile("bullet")
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	bulletX := tank.Position.X + float64(uc.tankSpriteSize)/2 - 2
@@ -65,8 +65,11 @@ func (uc *BulletUseCases) ShootBullet(tank *types.TankEntity) error {
 		tank,
 	)
 
-	_ = uc.bulletsRepository.AddBullet(bullet)
-	return nil
+	// Отказ репозитория — исчерпанный лимит пуль: выстрела просто нет
+	if err := uc.bulletsRepository.AddBullet(bullet); err != nil {
+		return false, nil
+	}
+	return true, nil
 }
 
 func (uc *BulletUseCases) UpdateBullets(dt float64) error {

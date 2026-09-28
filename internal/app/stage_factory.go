@@ -93,6 +93,12 @@ func (app *App) newStageState() (*states.StageState, error) {
 		stageSession,
 	)
 
+	visualEffectsUseCases := use_cases.NewVisualEffectsUseCases(
+		gameRepositories.GetVisualEffectsRepository(),
+		app.tilesetRegistry,
+		tankCommonUseCases,
+	)
+
 	spawnLayout := types.SpawnLayout{
 		EnemySpawners:  app.config.GetEnemySpawners(),
 		Player1Spawner: app.config.GetPlayer1Spawn(),
@@ -110,6 +116,7 @@ func (app *App) newStageState() (*states.StageState, error) {
 		gameRepositories.GetTanksRepository(),
 		app.spawnCollisionService,
 		app.specsUseCases,
+		visualEffectsUseCases,
 		spawnLayout,
 	)
 
@@ -120,6 +127,7 @@ func (app *App) newStageState() (*states.StageState, error) {
 		renderUseCases,
 		mapUseCases,
 		soundUseCases,
+		visualEffectsUseCases,
 	)
 
 	hqTilesUseCases := app.buildHQTilesUseCases(gameRepositories)
@@ -127,7 +135,11 @@ func (app *App) newStageState() (*states.StageState, error) {
 	if err != nil {
 		return nil, err
 	}
-	hqUseCases := use_cases.NewHQUseCases(hqTilesUseCases, hq)
+	hqUseCases := use_cases.NewHQUseCases(
+		hqTilesUseCases,
+		visualEffectsUseCases,
+		hq,
+	)
 
 	if err := app.loadEnemyAIScript(mapEntity, baseSizePx); err != nil {
 		return nil, err
@@ -182,6 +194,7 @@ func (app *App) newStageState() (*states.StageState, error) {
 		bonusUseCases,
 		bonusesRepository,
 		soundUseCases,
+		visualEffectsUseCases,
 	)
 
 	stageUseCases := state_use_cases.NewStageUseCases(
@@ -234,6 +247,21 @@ func (app *App) newStageState() (*states.StageState, error) {
 		touchInputAdapter,
 	)
 
+	lightingUseCases := use_cases.NewLightingUseCases(
+		tankCommonUseCases,
+		bulletUseCases,
+		hqUseCases,
+		bonusUseCases,
+		visualEffectsUseCases,
+	)
+
+	visionUseCases := use_cases.NewVisionUseCases(
+		tankCommonUseCases,
+		bulletUseCases,
+		mapUseCases,
+		lightingUseCases,
+	)
+
 	rendererAdapter := app.buildStageRenderer(
 		mapUseCases,
 		tankCommonUseCases,
@@ -241,6 +269,8 @@ func (app *App) newStageState() (*states.StageState, error) {
 		hqUseCases,
 		renderUseCases,
 		bonusUseCases,
+		lightingUseCases,
+		visualEffectsUseCases,
 	)
 
 	return states.NewStageState(states.StageStateDependencies{
@@ -250,6 +280,9 @@ func (app *App) newStageState() (*states.StageState, error) {
 		TilesUseCases:         tankTilesUseCases,
 		StageUseCases:         stageUseCases,
 		SoundUseCases:         soundUseCases,
+		LightingUseCases:      lightingUseCases,
+		VisionUseCases:        visionUseCases,
+		VisualEffectsUseCases: visualEffectsUseCases,
 		InputAdapters: [2]interfaces.IInputAdapter{
 			player1InputAdapter,
 			inputAdapter2,
@@ -384,36 +417,33 @@ func (app *App) buildStageRenderer(
 	hqUseCases interfaces.IHQUseCases,
 	renderUseCases interfaces.IRenderUseCases,
 	bonusUseCases interfaces.IBonusUseCases,
+	lightingUseCases interfaces.ILightingUseCases,
+	visualEffectsUseCases interfaces.IVisualEffectsUseCases,
 ) *stage.StageRendererAdapter {
 	mapBlocksCount := app.config.GetMapBlocksCount()
 	rendererTileSize := int(app.config.GetTileBaseSize())
 	mapWidthHeightForAdapter := mapBlocksCount.Width * rendererTileSize
-	lightingUseCases := use_cases.NewLightingUseCases(
-		tankCommonUseCases,
-		bulletUseCases,
-		hqUseCases,
-		bonusUseCases,
-	)
 
 	return stage.NewStageRendererAdapter(stage.StageRendererDependencies{
-		MapUseCases:        mapUseCases,
-		TankCommonUseCases: tankCommonUseCases,
-		BulletUseCases:     bulletUseCases,
-		HQUseCases:         hqUseCases,
-		HUDUseCases:        use_cases.NewHUDUseCases(),
-		RenderUseCases:     renderUseCases,
-		BonusUseCases:      bonusUseCases,
-		LightingUseCases:   lightingUseCases,
-		SpriteCache:        app.spriteCache,
-		Effects:            app.effectsRenderer,
-		EffectsSettings:    app.effectsSettings,
-		FontFace:           app.textFace,
-		HUDFontFace:        app.hudTextFace,
-		MapOffsetX:         stageMapOffsetX,
-		MapOffsetY:         stageMapOffsetY,
-		MapWidthHeight:     mapWidthHeightForAdapter,
-		TitleFontSize:      int(app.config.GetTitleFontSize()),
-		SubtitleFontSize:   int(app.config.GetSubtitleFontSize()),
-		RegularFontSize:    int(app.config.GetRegularFontSize()),
+		MapUseCases:           mapUseCases,
+		TankCommonUseCases:    tankCommonUseCases,
+		BulletUseCases:        bulletUseCases,
+		HQUseCases:            hqUseCases,
+		HUDUseCases:           use_cases.NewHUDUseCases(),
+		RenderUseCases:        renderUseCases,
+		BonusUseCases:         bonusUseCases,
+		LightingUseCases:      lightingUseCases,
+		VisualEffectsUseCases: visualEffectsUseCases,
+		SpriteCache:           app.spriteCache,
+		Effects:               app.effectsRenderer,
+		EffectsSettings:       app.effectsSettings,
+		FontFace:              app.textFace,
+		HUDFontFace:           app.hudTextFace,
+		MapOffsetX:            stageMapOffsetX,
+		MapOffsetY:            stageMapOffsetY,
+		MapWidthHeight:        mapWidthHeightForAdapter,
+		TitleFontSize:         int(app.config.GetTitleFontSize()),
+		SubtitleFontSize:      int(app.config.GetSubtitleFontSize()),
+		RegularFontSize:       int(app.config.GetRegularFontSize()),
 	})
 }

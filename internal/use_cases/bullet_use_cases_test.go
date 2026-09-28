@@ -8,6 +8,7 @@ import (
 	"github.com/shpaker/tnk9x/internal/testutil"
 	"github.com/shpaker/tnk9x/internal/types"
 	"github.com/shpaker/tnk9x/internal/use_cases"
+	"github.com/shpaker/tnk9x/internal/use_cases/tank_use_cases"
 )
 
 var errTileNotFound = errors.New("tile not found")
@@ -69,7 +70,7 @@ func TestBulletUseCases_ShootBullet_MuzzlePositions(t *testing.T) {
 			env := newBulletTestEnv()
 			tank := env.newShooter(tt.direction, 100, 60, 0)
 
-			if err := env.bulletUC.ShootBullet(tank); err != nil {
+			if _, err := env.bulletUC.ShootBullet(tank); err != nil {
 				t.Fatalf("выстрел не удался: %v", err)
 			}
 
@@ -109,17 +110,18 @@ func TestBulletUseCases_ShootBullet_MuzzlePositions(t *testing.T) {
 	}
 }
 
-// Лимит пуль одного владельца: вторая пуля молча не добавляется
+// Лимит пуль одного владельца: вторая пуля молча не добавляется,
+// выстрел не засчитывается
 func TestBulletUseCases_ShootBullet_OwnerLimit(t *testing.T) {
 	env := newBulletTestEnv()
 
 	// Уровень 0: лимит 1 пуля
 	tank := env.newShooter(types.DirectionUp, 100, 60, 0)
-	if err := env.bulletUC.ShootBullet(tank); err != nil {
-		t.Fatalf("первый выстрел: %v", err)
+	if fired, err := env.bulletUC.ShootBullet(tank); err != nil || !fired {
+		t.Fatalf("первый выстрел: fired=%v err=%v", fired, err)
 	}
-	if err := env.bulletUC.ShootBullet(tank); err != nil {
-		t.Fatalf("повторный выстрел вернул ошибку: %v", err)
+	if fired, err := env.bulletUC.ShootBullet(tank); err != nil || fired {
+		t.Fatalf("повторный выстрел: fired=%v err=%v", fired, err)
 	}
 	if got := len(env.bulletUC.GetBullets()); got != 1 {
 		t.Fatalf("ожидалась 1 пуля при лимите 1, получено %d", got)
@@ -128,9 +130,9 @@ func TestBulletUseCases_ShootBullet_OwnerLimit(t *testing.T) {
 	// Уровень 3: лимит 2 пули
 	env = newBulletTestEnv()
 	tank = env.newShooter(types.DirectionUp, 100, 60, 3)
-	_ = env.bulletUC.ShootBullet(tank)
-	_ = env.bulletUC.ShootBullet(tank)
-	_ = env.bulletUC.ShootBullet(tank)
+	_, _ = env.bulletUC.ShootBullet(tank)
+	_, _ = env.bulletUC.ShootBullet(tank)
+	_, _ = env.bulletUC.ShootBullet(tank)
 	if got := len(env.bulletUC.GetBullets()); got != 2 {
 		t.Fatalf("ожидалось 2 пули при лимите 2, получено %d", got)
 	}
@@ -141,8 +143,8 @@ func TestBulletUseCases_ShootBullet_InactiveTank(t *testing.T) {
 	tank := env.newShooter(types.DirectionUp, 100, 60, 0)
 	tank.State = types.TankStateSpawning
 
-	if err := env.bulletUC.ShootBullet(tank); err != nil {
-		t.Fatalf("неактивный танк вернул ошибку: %v", err)
+	if fired, err := env.bulletUC.ShootBullet(tank); err != nil || fired {
+		t.Fatalf("неактивный танк: fired=%v err=%v", fired, err)
 	}
 	if got := len(env.bulletUC.GetBullets()); got != 0 {
 		t.Errorf("неактивный танк выстрелил: %d пуль", got)
@@ -157,7 +159,7 @@ func TestBulletUseCases_ShootBullet_TileError(t *testing.T) {
 	env.registry.Err = errTileNotFound
 	tank := env.newShooter(types.DirectionUp, 100, 60, 0)
 
-	if err := env.bulletUC.ShootBullet(tank); err == nil {
+	if _, err := env.bulletUC.ShootBullet(tank); err == nil {
 		t.Fatal("ожидалась ошибка создания тайла")
 	}
 	if got := len(env.bulletUC.GetBullets()); got != 0 {
@@ -188,7 +190,7 @@ func TestBulletUseCases_UpdateBullets_Movement(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			env := newBulletTestEnv()
 			tank := env.newShooter(tt.direction, 100, 60, tt.level)
-			if err := env.bulletUC.ShootBullet(tank); err != nil {
+			if _, err := env.bulletUC.ShootBullet(tank); err != nil {
 				t.Fatalf("выстрел: %v", err)
 			}
 
@@ -217,7 +219,7 @@ func TestBulletUseCases_UpdateBullets_Movement(t *testing.T) {
 func TestBulletUseCases_RemoveBullet(t *testing.T) {
 	env := newBulletTestEnv()
 	tank := env.newShooter(types.DirectionUp, 100, 60, 0)
-	if err := env.bulletUC.ShootBullet(tank); err != nil {
+	if _, err := env.bulletUC.ShootBullet(tank); err != nil {
 		t.Fatalf("выстрел: %v", err)
 	}
 	bullet := env.bulletUC.GetBullets()[0]
@@ -230,5 +232,36 @@ func TestBulletUseCases_RemoveBullet(t *testing.T) {
 	}
 	if err := env.bulletUC.RemoveBullet(bullet); err == nil {
 		t.Error("повторное удаление не вернуло ошибку")
+	}
+}
+
+// Пока пуля в полёте, повторное нажатие не даёт ни звука, ни вспышки
+// с отдачей: выстрела не было
+func TestTankActionsUseCases_Shoot_NoEffectsWhileBulletFlies(t *testing.T) {
+	env := newBulletTestEnv()
+	soundUC := use_cases.NewSoundUseCases(game.NewSoundEventsRepository())
+	effects := &testutil.FakeVisualEffectsUseCases{}
+	tankActions := tank_use_cases.NewTankActionsUseCases(
+		nil,
+		env.bulletUC,
+		nil,
+		nil,
+		nil,
+		soundUC,
+		effects,
+	)
+	tank := env.newShooter(types.DirectionUp, 100, 60, 0)
+
+	for range 3 {
+		if err := tankActions.Shoot(tank); err != nil {
+			t.Fatalf("выстрел: %v", err)
+		}
+	}
+
+	if got := len(effects.Events); got != 1 {
+		t.Errorf("эффектов выстрела %d, ожидался 1", got)
+	}
+	if got := countSounds(soundUC.GetEvents(), types.SoundIDFire); got != 1 {
+		t.Errorf("звуков выстрела %d, ожидался 1", got)
 	}
 }

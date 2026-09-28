@@ -9,17 +9,20 @@ import (
 var _ interfaces.IHQUseCases = (*HQUseCases)(nil)
 
 type HQUseCases struct {
-	tilesUseCases interfaces.ITilesUseCases
-	hq            *types.HQEntity
+	tilesUseCases         interfaces.ITilesUseCases
+	visualEffectsUseCases interfaces.IVisualEffectsUseCases
+	hq                    *types.HQEntity
 }
 
 func NewHQUseCases(
 	tilesUseCases interfaces.ITilesUseCases,
+	visualEffectsUseCases interfaces.IVisualEffectsUseCases,
 	hq *types.HQEntity,
 ) *HQUseCases {
 	return &HQUseCases{
-		tilesUseCases: tilesUseCases,
-		hq:            hq,
+		tilesUseCases:         tilesUseCases,
+		visualEffectsUseCases: visualEffectsUseCases,
+		hq:                    hq,
 	}
 }
 
@@ -38,6 +41,14 @@ func (uc *HQUseCases) Explode(hq *types.HQEntity) error {
 	hq.State = types.HQStateExploding
 
 	uc.tilesUseCases.StartAnimation(explosionAnim)
+	size := hq.GetSize()
+	uc.visualEffectsUseCases.RequestEffect(types.VisualEventEntity{
+		Kind: types.VisualEventHQExplosion,
+		Position: types.Position{
+			X: hq.Position.X + float64(size.Width)/2,
+			Y: hq.Position.Y + float64(size.Height)/2,
+		},
+	})
 	return nil
 }
 
