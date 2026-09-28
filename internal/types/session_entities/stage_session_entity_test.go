@@ -250,3 +250,54 @@ func TestStageSessionEntity_RecentSpawners(t *testing.T) {
 		t.Error("the spawn pause must block the next spawn")
 	}
 }
+
+func TestStageSessionEntity_CarryOver(t *testing.T) {
+	session := NewStageSessionEntity()
+	p1 := types.PlayerTankNumPlayer1
+
+	// Без выгоды Continue не предлагается
+	session.SaveCarryOver(p1, 2, 0)
+	if session.HasCarryOverAdvantage() {
+		t.Error("advantage with 2 lives and tier 0")
+	}
+
+	session.SaveCarryOver(p1, 1, 2)
+	if !session.HasCarryOverAdvantage() {
+		t.Error("no advantage with tier 2")
+	}
+
+	// Жизней не меньше начальных, прокачка переносится
+	session.SetCarryOver(true)
+	session.Reset()
+	if got := session.GetPlayerLives(p1); got != defaultStagePlayer1Lives {
+		t.Errorf("lives %d, want %d", got, defaultStagePlayer1Lives)
+	}
+	if got := session.GetStartTier(p1); got != 2 {
+		t.Errorf("tier %d, want 2", got)
+	}
+	if !session.IsCarryOver() {
+		t.Error("carry-over not active")
+	}
+
+	// Лишние жизни переносятся с потолком
+	session.SaveCarryOver(p1, 20, 0)
+	session.SetCarryOver(true)
+	session.Reset()
+	if got := session.GetPlayerLives(p1); got != maxCarriedLives {
+		t.Errorf("lives %d, want %d", got, maxCarriedLives)
+	}
+
+	// Обычный старт сбрасывает снимок
+	session.SetCarryOver(false)
+	session.Reset()
+	if session.IsCarryOver() || session.GetStartTier(p1) != 0 ||
+		session.GetPlayerLives(p1) != defaultStagePlayer1Lives {
+		t.Error("carry-over survived a fresh start")
+	}
+
+	// Continue без снимка не включает перенос
+	session.SetCarryOver(true)
+	if session.IsCarryOver() {
+		t.Error("carry-over enabled without snapshot")
+	}
+}

@@ -110,7 +110,8 @@ func (s *NavigationService) FindPath(
 				col: current.node.col + d.dCol,
 				row: current.node.row + d.dRow,
 			}
-			if next.col < 0 || next.row < 0 || next.col > maxCol || next.row > maxRow {
+			if next.col < 0 || next.row < 0 || next.col > maxCol ||
+				next.row > maxRow {
 				continue
 			}
 
@@ -244,7 +245,8 @@ func (s *NavigationService) CastRay(
 	for distance := 0; ; distance++ {
 		x := origin.X + dx*float64(distance)
 		y := origin.Y + dy*float64(distance)
-		if x < 0 || y < 0 || x >= float64(sizePx.Width) || y >= float64(sizePx.Height) {
+		if x < 0 || y < 0 || x >= float64(sizePx.Width) ||
+			y >= float64(sizePx.Height) {
 			return types.RayHit{Kind: types.RayHitEdge, Distance: distance}
 		}
 

@@ -30,6 +30,7 @@ A modern remake and tribute to the classic arcade game Battle City (NES, 1985), 
 - All six bonuses: grenade, tank, star, helmet shield, enemy-freezing timer, HQ-fortifying shovel
 - Campaign of 35 stages in 7 packs (`assets/levels/main.bccamp`): stage select screen with a minimap preview, enemy composition and 3-star time; stages open one after another, packs open for collected stars
 - Stars per stage: win, no lives lost, within the time limit; best results are saved (OS config folder on desktop, localStorage in the browser)
+- Continue after a win: carry lives (at least 3) and tank level to the next stage, capped at 2 stars; offered only when it gives an edge
 - Two-player mode and RTX graphics set in `config.yml` (`app.players`, `app.effects`)
 - Pause menu on Esc/P/touch (continue, graphics, exit to stage select)
 - Sound effects and music

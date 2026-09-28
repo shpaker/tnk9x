@@ -17,4 +17,6 @@ type StateTransition struct {
 	// Level — уровень для запуска (TransitionToStage) или уровень,
 	// на который встаёт курсор экрана выбора (TransitionToLevelSelect)
 	Level uint
+	// CarryOver — перенести жизни и прокачку танков с прошлого уровня
+	CarryOver bool
 }

@@ -36,11 +36,24 @@ type fakeAITanksRepository struct {
 	enemies []*types.TankEntity
 }
 
-func (r *fakeAITanksRepository) SetPlayer(types.PlayerTankNum, *types.TankEntity) {}
-func (r *fakeAITanksRepository) GetPlayer(types.PlayerTankNum) *types.TankEntity {
+func (r *fakeAITanksRepository) SetPlayer(
+	types.PlayerTankNum,
+	*types.TankEntity,
+) {
+}
+
+func (r *fakeAITanksRepository) GetPlayer(
+	types.PlayerTankNum,
+) *types.TankEntity {
 	return nil
 }
-func (r *fakeAITanksRepository) HasPlayer(types.PlayerTankNum) bool { return false }
+
+func (r *fakeAITanksRepository) HasPlayer(
+	types.PlayerTankNum,
+) bool {
+	return false
+}
+
 func (r *fakeAITanksRepository) GetAllPlayers() []*types.TankEntity { return r.players }
 func (r *fakeAITanksRepository) GetActivePlayerTanks() []*types.TankEntity {
 	return r.players
@@ -49,6 +62,7 @@ func (r *fakeAITanksRepository) GetActivePlayerTanks() []*types.TankEntity {
 func (r *fakeAITanksRepository) AddEnemy(enemy *types.TankEntity) {
 	r.enemies = append(r.enemies, enemy)
 }
+
 func (r *fakeAITanksRepository) GetAllEnemies() []*types.TankEntity { return r.enemies }
 func (r *fakeAITanksRepository) GetAllTanks() []*types.TankEntity {
 	return append(append([]*types.TankEntity{}, r.players...), r.enemies...)
@@ -62,6 +76,7 @@ func (r *fakeAIBulletsRepository) AddBullet(bullet *types.BulletEntity) error {
 	r.bullets = append(r.bullets, bullet)
 	return nil
 }
+
 func (r *fakeAIBulletsRepository) GetAllBullets() []*types.BulletEntity { return r.bullets }
 func (r *fakeAIBulletsRepository) RemoveBullet(*types.BulletEntity) error {
 	return nil
@@ -83,19 +98,32 @@ func newAIUseCases(
 	stageSession.SetStageNumber(7)
 	mapEntity := types.NewMapEntity(
 		types.Size{Width: 64, Height: 64},
-		types.MapBlocks{types.NewBlockEntity(string(types.Steel), 8, 8, 8, nil)},
+		types.MapBlocks{
+			types.NewBlockEntity(string(types.Steel), 8, 8, 8, nil),
+		},
 		nil,
 	)
 	hq := &types.HQEntity{
 		Position: types.Position{X: 24, Y: 48},
 		State:    types.HQStateIntact,
 	}
-	return use_cases.NewAIUseCases(stageSession, mapEntity, hq, tanks, bullets, engine)
+	return use_cases.NewAIUseCases(
+		stageSession,
+		mapEntity,
+		hq,
+		tanks,
+		bullets,
+		engine,
+	)
 }
 
 func TestAIUseCasesExecuteAINilTank(t *testing.T) {
 	engine := &fakeScriptEngine{}
-	uc := newAIUseCases(engine, &fakeAITanksRepository{}, &fakeAIBulletsRepository{})
+	uc := newAIUseCases(
+		engine,
+		&fakeAITanksRepository{},
+		&fakeAIBulletsRepository{},
+	)
 
 	if _, err := uc.ExecuteAI(nil, 0); err == nil {
 		t.Fatal("expected error for nil tank")
@@ -107,7 +135,10 @@ func TestAIUseCasesExecuteAINilTank(t *testing.T) {
 
 func TestAIUseCasesExecuteAIBuildsContext(t *testing.T) {
 	engine := &fakeScriptEngine{
-		decision: types.EnemyAIDecision{Direction: types.DirectionLeft, Move: true},
+		decision: types.EnemyAIDecision{
+			Direction: types.DirectionLeft,
+			Move:      true,
+		},
 	}
 	tanks := &fakeAITanksRepository{}
 	self := newTestTank(types.TankRoleEnemy, 48, 0)
@@ -142,13 +173,15 @@ func TestAIUseCasesExecuteAIBuildsContext(t *testing.T) {
 	if context.Tick != 42 || context.StageNumber != 7 {
 		t.Fatalf("tick/stage not passed: %+v", context)
 	}
-	if context.Self.ID != 1 || context.Self.Level != 2 || !context.Self.Reinforced {
+	if context.Self.ID != 1 || context.Self.Level != 2 ||
+		!context.Self.Reinforced {
 		t.Fatalf("self not described: %+v", context.Self)
 	}
 	if len(context.Enemies) != 1 || context.Enemies[0].ID != 2 {
 		t.Fatalf("only active allies expected: %+v", context.Enemies)
 	}
-	if len(context.Players) != 1 || context.Players[0].Position != player.Position {
+	if len(context.Players) != 1 ||
+		context.Players[0].Position != player.Position {
 		t.Fatalf("players not passed: %+v", context.Players)
 	}
 	if len(context.Bullets) != 1 || context.Bullets[0].FromEnemy {
@@ -164,7 +197,11 @@ func TestAIUseCasesExecuteAIBuildsContext(t *testing.T) {
 
 func TestAIUseCasesExecuteAIPropagatesError(t *testing.T) {
 	engine := &fakeScriptEngine{err: errors.New("script failed")}
-	uc := newAIUseCases(engine, &fakeAITanksRepository{}, &fakeAIBulletsRepository{})
+	uc := newAIUseCases(
+		engine,
+		&fakeAITanksRepository{},
+		&fakeAIBulletsRepository{},
+	)
 
 	if _, err := uc.ExecuteAI(newTestTank(types.TankRoleEnemy, 0, 0), 0); err == nil {
 		t.Fatal("expected engine error to propagate")

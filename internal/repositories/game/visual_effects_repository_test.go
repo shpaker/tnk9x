@@ -37,7 +37,8 @@ func TestVisualEffectsRepository_Limits(t *testing.T) {
 
 	repository.SetParticles(nil)
 	repository.SetFlashes(nil)
-	if len(repository.GetParticles()) != 0 || len(repository.GetFlashes()) != 0 {
+	if len(repository.GetParticles()) != 0 ||
+		len(repository.GetFlashes()) != 0 {
 		t.Error("набор не заменён")
 	}
 	repository.GetScreenShake().AddTrauma(0.5)

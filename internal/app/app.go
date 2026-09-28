@@ -371,6 +371,7 @@ func (app *App) applyTransition(transition types.StateTransition) error {
 		stageSession := app.session.StageSession()
 		stageSession.SetPlayerCount(app.config.GetPlayerCount())
 		stageSession.SetStageNumber(transition.Level)
+		stageSession.SetCarryOver(transition.CarryOver)
 		app.session.Level = int(transition.Level)
 
 		stageState, err := app.newStageState()

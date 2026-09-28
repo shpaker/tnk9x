@@ -25,6 +25,7 @@ type stubLifecycle struct {
 	nextPlayer2  func() *types.TankEntity
 	spawnCalls   []spawnEnemyCall
 	player1Calls int
+	player1Level uint
 	player2Calls int
 	players      [2]*types.TankEntity
 }
@@ -43,8 +44,9 @@ func (s *stubLifecycle) SpawnEnemy(
 	return s.nextEnemy(), nil
 }
 
-func (s *stubLifecycle) SpawnPlayer1() (*types.TankEntity, error) {
+func (s *stubLifecycle) SpawnPlayer1(level uint) (*types.TankEntity, error) {
 	s.player1Calls++
+	s.player1Level = level
 	if s.nextPlayer1 == nil {
 		return nil, nil
 	}
@@ -60,7 +62,7 @@ func (s *stubLifecycle) CompleteSpawn(tank *types.TankEntity) {
 	}
 }
 
-func (s *stubLifecycle) SpawnPlayer2() (*types.TankEntity, error) {
+func (s *stubLifecycle) SpawnPlayer2(uint) (*types.TankEntity, error) {
 	s.player2Calls++
 	if s.nextPlayer2 == nil {
 		return nil, nil
@@ -1048,5 +1050,58 @@ func TestStageUseCases_GetPlayersTanks(t *testing.T) {
 	}
 	if tanks[0] != tank1 || tanks[1] != nil {
 		t.Errorf("танки игроков: %v", tanks)
+	}
+}
+
+func TestStageUseCases_CarryOver(t *testing.T) {
+	env := newStageTestEnv(1)
+	p1 := types.PlayerTankNumPlayer1
+	playerTank := newTankInState(types.TankRolePlayer1, types.TankStateStopped)
+	playerTank.SetSpecs(types.NewSpecsEntity(2, 32, true, 150, 1))
+	env.lifecycle.players[p1] = playerTank
+	env.session.SetPlayerLives(p1, 5)
+
+	env.stage.SaveCarryOver()
+	env.session.SetCarryOver(true)
+	env.session.Reset()
+
+	if got := env.session.GetPlayerLives(p1); got != 5 {
+		t.Errorf("lives %d, want 5", got)
+	}
+	env.lifecycle.nextPlayer1 = func() *types.TankEntity {
+		return newTankInState(types.TankRolePlayer1, types.TankStateSpawning)
+	}
+	env.stage.PlacePlayerTank(types.TankRolePlayer1)
+	if env.lifecycle.player1Level != 2 {
+		t.Errorf("placed with tier %d, want 2", env.lifecycle.player1Level)
+	}
+	// Возрождение — всегда с нулевой прокачкой
+	env.stage.SpawnPlayerTank(types.TankRolePlayer1)
+	if env.lifecycle.player1Level != 0 {
+		t.Errorf("respawned with tier %d, want 0", env.lifecycle.player1Level)
+	}
+	if !env.stage.GetStageResult().CarriedOver {
+		t.Error("result not marked as carried over")
+	}
+}
+
+func TestStageUseCases_SaveCarryOverDestroyedTank(t *testing.T) {
+	env := newStageTestEnv(1)
+	p1 := types.PlayerTankNumPlayer1
+	playerTank := newTankInState(types.TankRolePlayer1, types.TankStateExploded)
+	playerTank.SetSpecs(types.NewSpecsEntity(3, 40, true, 150, 2))
+	env.lifecycle.players[p1] = playerTank
+	env.session.SetPlayerLives(p1, 5)
+
+	env.stage.SaveCarryOver()
+	env.session.SetCarryOver(true)
+	env.session.Reset()
+
+	// Несписанная жизнь уходит, прокачка теряется
+	if got := env.session.GetPlayerLives(p1); got != 4 {
+		t.Errorf("lives %d, want 4", got)
+	}
+	if got := env.session.GetStartTier(p1); got != 0 {
+		t.Errorf("tier %d, want 0", got)
 	}
 }

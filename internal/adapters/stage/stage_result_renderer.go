@@ -14,9 +14,10 @@ import (
 
 // stageResultLabels — подписи пунктов меню итогов
 var stageResultLabels = map[types.StageResultItem]string{
-	types.StageResultItemNext:   "NEXT STAGE",
-	types.StageResultItemRetry:  "RETRY",
-	types.StageResultItemLevels: "STAGES",
+	types.StageResultItemNext:     "NEXT STAGE",
+	types.StageResultItemContinue: "CONTINUE",
+	types.StageResultItemRetry:    "RETRY",
+	types.StageResultItemLevels:   "STAGES",
 }
 
 // Раскладка экрана итогов: доли высоты экрана
@@ -76,11 +77,17 @@ func (r *StageRendererAdapter) DrawStageResult(
 		seconds/60, seconds%60, view.LivesLost,
 	)
 	r.drawResultLine(screen, stats, height*resultStatsY, subtleTextColor)
+	lineStep := float64(r.regularFontSize) + 4
+	noteTop := height*resultStatsY + lineStep
 	if view.NewBest {
+		r.drawResultLine(screen, "NEW BEST", noteTop, newBestColor)
+		noteTop += lineStep
+	}
+	if view.CarriedOver {
 		r.drawResultLine(
-			screen, "NEW BEST",
-			height*resultStatsY+float64(r.regularFontSize)+4,
-			newBestColor,
+			screen,
+			fmt.Sprintf("CARRY-OVER: MAX %d STARS", types.MaxCarryOverStars),
+			noteTop, subtleTextColor,
 		)
 	}
 

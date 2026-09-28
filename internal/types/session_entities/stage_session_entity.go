@@ -7,6 +7,8 @@ import (
 const (
 	defaultStagePlayer1Lives = 3
 	defaultStagePlayer2Lives = 3
+	// maxCarriedLives — потолок перенесённых жизней, чтобы число влезало в HUD
+	maxCarriedLives = 9
 )
 
 // noSpawner — пустой слот истории спаунеров
@@ -35,6 +37,13 @@ type StageSessionEntity struct {
 	playerInitialLives []uint
 	// Потерянные жизни за уровень — для подсчёта звёзд
 	playerDeaths uint
+
+	// Снимок жизней и уровня танков после победы — для Continue
+	carriedLives [2]uint
+	carriedTiers [2]uint
+	hasCarryOver bool
+	// Текущий уровень запущен с переносом снимка
+	carryOver bool
 
 	enemySpawnTicks uint
 
@@ -154,8 +163,67 @@ func (s *StageSessionEntity) Reset() {
 		playerCount = 2
 	}
 	for i := 0; i < playerCount; i++ {
-		s.playerLives[i] = s.GetPlayerInitialLives(types.PlayerTankNum(i))
+		lives := s.GetPlayerInitialLives(types.PlayerTankNum(i))
+		// Перенос даёт только преимущество: жизней не меньше начальных
+		if s.carryOver {
+			lives = min(max(lives, s.carriedLives[i]), maxCarriedLives)
+		}
+		s.playerLives[i] = lives
 	}
+}
+
+// SaveCarryOver запоминает жизни и уровень танка игрока после победы
+func (s *StageSessionEntity) SaveCarryOver(
+	num types.PlayerTankNum,
+	lives uint,
+	tier uint,
+) {
+	if int(num) < 0 || int(num) >= len(s.carriedLives) {
+		return
+	}
+	s.carriedLives[num] = lives
+	s.carriedTiers[num] = tier
+	s.hasCarryOver = true
+}
+
+// HasCarryOverAdvantage — есть ли смысл в переносе: хотя бы у одного
+// игрока танк прокачан или жизней больше начальных
+func (s *StageSessionEntity) HasCarryOverAdvantage() bool {
+	if !s.hasCarryOver {
+		return false
+	}
+	for i := 0; i < int(s.GetPlayerCount()) && i < len(s.carriedLives); i++ {
+		num := types.PlayerTankNum(i)
+		if s.carriedTiers[i] > 0 ||
+			s.carriedLives[i] > s.GetPlayerInitialLives(num) {
+			return true
+		}
+	}
+	return false
+}
+
+// SetCarryOver включает перенос снимка на следующий уровень;
+// без переноса снимок сбрасывается
+func (s *StageSessionEntity) SetCarryOver(enabled bool) {
+	s.carryOver = enabled && s.hasCarryOver
+	if !s.carryOver {
+		s.carriedLives = [2]uint{}
+		s.carriedTiers = [2]uint{}
+	}
+	s.hasCarryOver = false
+}
+
+// IsCarryOver — уровень запущен с переносом
+func (s *StageSessionEntity) IsCarryOver() bool {
+	return s.carryOver
+}
+
+// GetStartTier — уровень танка игрока на старте уровня
+func (s *StageSessionEntity) GetStartTier(num types.PlayerTankNum) uint {
+	if !s.carryOver || int(num) < 0 || int(num) >= len(s.carriedTiers) {
+		return 0
+	}
+	return s.carriedTiers[num]
 }
 
 func (s *StageSessionEntity) GetPlayerLives(num types.PlayerTankNum) uint {

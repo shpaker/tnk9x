@@ -149,7 +149,12 @@ func TestCastRayHitsTargetThroughForestAndWater(t *testing.T) {
 		Size:     types.Size{Width: 16, Height: 16},
 	}}
 
-	hit := service.CastRay(grid, types.Position{X: 32, Y: 8}, types.DirectionDown, targets)
+	hit := service.CastRay(
+		grid,
+		types.Position{X: 32, Y: 8},
+		types.DirectionDown,
+		targets,
+	)
 	if hit.Kind != types.RayHitPlayer || hit.Distance != 32 {
 		t.Fatalf("unexpected hit: %+v", hit)
 	}
@@ -164,7 +169,12 @@ func TestCastRayBlockedBySteel(t *testing.T) {
 		Size:     types.Size{Width: 16, Height: 16},
 	}}
 
-	hit := service.CastRay(grid, types.Position{X: 8, Y: 28}, types.DirectionRight, targets)
+	hit := service.CastRay(
+		grid,
+		types.Position{X: 8, Y: 28},
+		types.DirectionRight,
+		targets,
+	)
 	if hit.Kind != types.RayHitSteel || hit.Distance != 24 {
 		t.Fatalf("unexpected hit: %+v", hit)
 	}
@@ -177,7 +187,8 @@ func TestCastRayHitsBrickAndEdge(t *testing.T) {
 	if hit := service.CastRay(grid, types.Position{X: 12, Y: 32}, types.DirectionUp, nil); hit.Kind != types.RayHitBrick {
 		t.Fatalf("expected brick, got %+v", hit)
 	}
-	if hit := service.CastRay(grid, types.Position{X: 32, Y: 32}, types.DirectionLeft, nil); hit.Kind != types.RayHitEdge || hit.Distance != 33 {
+	if hit := service.CastRay(grid, types.Position{X: 32, Y: 32}, types.DirectionLeft, nil); hit.Kind != types.RayHitEdge ||
+		hit.Distance != 33 {
 		t.Fatalf("expected edge, got %+v", hit)
 	}
 }
