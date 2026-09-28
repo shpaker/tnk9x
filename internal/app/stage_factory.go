@@ -96,6 +96,7 @@ func (app *App) newStageState() (*states.StageState, error) {
 		gameRepositories.GetVisualEffectsRepository(),
 		app.tilesetRegistry,
 		tankCommonUseCases,
+		bulletUseCases,
 	)
 
 	spawnLayout := types.SpawnLayout{

@@ -458,6 +458,10 @@ func (app *App) Run(ctx context.Context) error {
 	ebiten.SetWindowTitle(
 		fmt.Sprintf("%s v%s", app.config.GetGameTitle(), Version),
 	)
+	// В браузере полный экран разрешён только по жесту пользователя
+	if runtime.GOOS != "js" {
+		ebiten.SetFullscreen(app.config.GetFullscreen())
+	}
 
 	return ebiten.RunGame(app)
 }

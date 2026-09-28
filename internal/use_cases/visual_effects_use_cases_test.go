@@ -14,6 +14,7 @@ import (
 
 type visualEffectsTestEnv struct {
 	tankCommon *recordingTankCommon
+	bullets    *stubBulletList
 	tilesets   *testutil.FakeTilesetRegistry
 	repository *game.VisualEffectsRepository
 	effects    *use_cases.VisualEffectsUseCases
@@ -21,16 +22,19 @@ type visualEffectsTestEnv struct {
 
 func newVisualEffectsTestEnv() *visualEffectsTestEnv {
 	tankCommon := &recordingTankCommon{}
+	bullets := &stubBulletList{}
 	tilesets := &testutil.FakeTilesetRegistry{}
 	repository := game.NewVisualEffectsRepository()
 	return &visualEffectsTestEnv{
 		tankCommon: tankCommon,
+		bullets:    bullets,
 		tilesets:   tilesets,
 		repository: repository,
 		effects: use_cases.NewVisualEffectsUseCases(
 			repository,
 			tilesets,
 			tankCommon,
+			bullets,
 		),
 	}
 }
@@ -277,5 +281,105 @@ func TestVisualEffectsUseCases_BulletClash(t *testing.T) {
 	}
 	if !shaken {
 		t.Error("bullet clash does not shake the screen")
+	}
+}
+
+func newFlyingBullet(
+	direction types.Direction,
+	specs *types.SpecsEntity,
+) *types.BulletEntity {
+	return types.NewBulletEntity(
+		types.Position{X: 100, Y: 100},
+		types.Size{Width: 4, Height: 4},
+		types.GROUND,
+		nil,
+		direction,
+		specs,
+		nil,
+	)
+}
+
+// Трассер: искры появляются за кормой пули и летят назад
+func TestVisualEffectsUseCases_TracerBehindBullet(t *testing.T) {
+	env := newVisualEffectsTestEnv()
+	env.bullets.bullets = []*types.BulletEntity{
+		newFlyingBullet(types.DirectionRight, nil),
+	}
+	sparks := 0
+	for range 40 {
+		env.effects.Update()
+		for _, particle := range env.effects.GetParticles() {
+			sparks++
+			if particle.Position.X > 100 {
+				t.Fatalf(
+					"tracer spark at %v is ahead of the bullet tail",
+					particle.Position,
+				)
+			}
+		}
+	}
+	if sparks == 0 {
+		t.Error("flying bullet leaves no tracer sparks")
+	}
+}
+
+// Усиленная пуля искрит бело-голубым, обычная — тёплым
+func TestVisualEffectsUseCases_TracerByBulletUpgrade(t *testing.T) {
+	colorsOf := func(specs *types.SpecsEntity) []color.NRGBA {
+		env := newVisualEffectsTestEnv()
+		env.bullets.bullets = []*types.BulletEntity{
+			newFlyingBullet(types.DirectionUp, specs),
+		}
+		colors := []color.NRGBA{}
+		for range 40 {
+			env.effects.Update()
+			for _, particle := range env.effects.GetParticles() {
+				colors = append(colors, particle.Color)
+			}
+		}
+		return colors
+	}
+
+	for _, spark := range colorsOf(types.NewSpecsEntity(0, 32, false, 120, 1)) {
+		if spark.B >= spark.R {
+			t.Errorf("regular tracer spark %v is not warm", spark)
+		}
+	}
+	reinforced := colorsOf(types.NewSpecsEntity(2, 32, true, 150, 1))
+	if len(reinforced) == 0 {
+		t.Fatal("reinforced bullet leaves no tracer sparks")
+	}
+	for _, spark := range reinforced {
+		if spark.B < spark.R {
+			t.Errorf("reinforced tracer spark %v is not blue-white", spark)
+		}
+	}
+}
+
+// Выстрел: конус света вперёд по стволу и дымок
+func TestVisualEffectsUseCases_ShotConeAndSmoke(t *testing.T) {
+	env := newVisualEffectsTestEnv()
+	env.effects.RequestEffect(types.VisualEventEntity{
+		Kind:      types.VisualEventShot,
+		Position:  types.Position{X: 50, Y: 50},
+		Direction: types.DirectionRight,
+	})
+	env.effects.Update()
+
+	cone := false
+	for _, light := range env.effects.GetFlashLights() {
+		if light.IsCone() && light.Direction == (types.Position{X: 1, Y: 0}) {
+			cone = true
+		}
+	}
+	if !cone {
+		t.Error("shot without a muzzle cone along the barrel")
+	}
+
+	for range 20 {
+		env.effects.Update()
+	}
+	if len(env.effects.GetParticles()) == 0 {
+		t.Error("no muzzle smoke left after the sparks faded")
 	}
 }

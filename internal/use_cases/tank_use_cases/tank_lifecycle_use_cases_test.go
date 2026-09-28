@@ -60,7 +60,11 @@ func (s *stubRenderUseCases) IsTankVisible(tank *types.TankEntity) bool {
 	return true
 }
 
-func (s *stubRenderUseCases) TankHealthOverlay(
+func (s *stubRenderUseCases) IsTankBlinking(tank *types.TankEntity) bool {
+	return false
+}
+
+func (s *stubRenderUseCases) TankHealthTint(
 	tank *types.TankEntity,
 ) (color.NRGBA, bool) {
 	return color.NRGBA{}, false

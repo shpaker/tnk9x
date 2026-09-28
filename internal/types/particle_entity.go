@@ -31,7 +31,9 @@ type FlashEntity struct {
 	Radius    float64
 	Color     color.NRGBA
 	Intensity float64
-	Life      uint // Оставшиеся тики
+	Direction Position // Ось конуса, единичный вектор
+	ConeCos   float64  // Косинус половины угла конуса; 0 — всенаправленная
+	Life      uint     // Оставшиеся тики
 	MaxLife   uint
 }
 

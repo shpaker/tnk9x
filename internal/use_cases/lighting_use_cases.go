@@ -42,12 +42,18 @@ type lightSpec struct {
 var (
 	explosionLightColor = color.NRGBA{R: 255, G: 170, B: 60, A: 255}
 
-	// Пуля — трассер, одинаковый у всех: светится сама и освещает
-	// коридор, по которому летит, открывая то, что дальше фары
+	// Пуля — трассер: светится сама и освещает коридор, по которому
+	// летит, открывая то, что дальше фары
 	bulletLight = lightSpec{
 		44,
 		color.NRGBA{R: 255, G: 230, B: 150, A: 255},
 		1.6,
+	}
+	// Усиленная пуля, пробивающая сталь, светится бело-голубым
+	reinforcedBulletLight = lightSpec{
+		48,
+		color.NRGBA{R: 200, G: 230, B: 255, A: 255},
+		1.8,
 	}
 	// Силовое поле вспыхивает ярко, с пересветом для bloom
 	shieldLight = lightSpec{
@@ -161,7 +167,7 @@ func (uc *LightingUseCases) GetLights() []types.LightEntity {
 		}
 		buckets[lightPriorityBullet] = append(
 			buckets[lightPriorityBullet],
-			newLight(bullet.Position, bullet.GetSize(), bulletLight),
+			newLight(bullet.Position, bullet.GetSize(), bulletLightOf(bullet)),
 		)
 	}
 
@@ -346,4 +352,12 @@ func newLight(
 		Color:     spec.color,
 		Intensity: spec.intensity,
 	}
+}
+
+// bulletLightOf — свет пули по её прокачке
+func bulletLightOf(bullet *types.BulletEntity) lightSpec {
+	if bullet.IsReinforced() {
+		return reinforcedBulletLight
+	}
+	return bulletLight
 }

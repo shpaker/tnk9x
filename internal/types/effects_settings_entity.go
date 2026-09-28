@@ -22,7 +22,7 @@ func (s *EffectsSettingsEntity) Toggle() {
 // выбора уровня и паузы
 func GraphicsLabel(effectsEnabled bool) string {
 	if effectsEnabled {
-		return "GRAPHICS RTX"
+		return "GRAPHICS NORMAL"
 	}
 	return "GRAPHICS CLASSIC"
 }

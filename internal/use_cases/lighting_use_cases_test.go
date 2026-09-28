@@ -387,3 +387,28 @@ func TestLightingUseCases_GetLights_ShieldFlickers(t *testing.T) {
 		t.Error("свечение щита не мерцает")
 	}
 }
+
+// Усиленная пуля светится иначе, чем обычная
+func TestLightingUseCases_GetLights_ReinforcedBullet(t *testing.T) {
+	env := newLightingTestEnv()
+	regular := newBullet(10, 20)
+	reinforced := types.NewBulletEntity(
+		types.Position{X: 100, Y: 20},
+		types.Size{Width: 4, Height: 4},
+		types.GROUND,
+		nil,
+		types.DirectionUp,
+		types.NewSpecsEntity(2, 32, true, 150, 1),
+		nil,
+	)
+	env.bullets.bullets = []*types.BulletEntity{regular, reinforced}
+
+	lights := env.lighting.GetLights()
+
+	if len(lights) != 2 {
+		t.Fatalf("lights %d, want 2", len(lights))
+	}
+	if lights[0].Color == lights[1].Color {
+		t.Error("reinforced bullet light matches the regular one")
+	}
+}

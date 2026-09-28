@@ -389,7 +389,7 @@ func (state *StageState) applySoundEvent(event types.SoundEntity) {
 }
 
 // updateBlinkObjects обновляет мигание бонусов, танков с бонусом
-// и танков под щитом
+// и тяжёлых танков
 func (state *StageState) updateBlinkObjects() {
 	var blinkObjects []types.IBlink
 
@@ -403,7 +403,7 @@ func (state *StageState) updateBlinkObjects() {
 		if tank == nil {
 			continue
 		}
-		if tank.IsEnemy() && tank.GetWithBonus() {
+		if state.renderUseCases.IsTankBlinking(tank) {
 			blinkObjects = append(blinkObjects, tank)
 		}
 	}
