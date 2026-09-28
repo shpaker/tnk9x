@@ -101,8 +101,10 @@ type ITankActionsUseCases interface {
 	SetMaxYPosition(tank *types.TankEntity)
 }
 
+// IAIUseCases собирает снимок мира для вражеского танка и получает
+// решение от AI-скрипта
 type IAIUseCases interface {
-	ExecuteAI(tank *types.TankEntity) (types.EnemyAIDecision, error)
+	ExecuteAI(tank *types.TankEntity, tick int) (types.EnemyAIDecision, error)
 }
 
 type IHQUseCases interface {

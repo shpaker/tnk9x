@@ -133,12 +133,17 @@ func (uc *TankActionsUseCases) Shoot(tank *types.TankEntity) error {
 	return nil
 }
 
+// ApplyDecision поворачивает остановленный танк по решению AI
+// и трогает его с места, если решение требует движения
 func (uc *TankActionsUseCases) ApplyDecision(
 	tank *types.TankEntity,
 	decision types.EnemyAIDecision,
 ) {
-	if tank.IsStopped() {
-		_ = uc.Rotate(tank, decision.Direction)
+	if !tank.IsStopped() {
+		return
+	}
+	_ = uc.Rotate(tank, decision.Direction)
+	if decision.Move {
 		_ = uc.Move(tank)
 	}
 }

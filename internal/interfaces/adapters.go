@@ -9,7 +9,6 @@ type IConfigProvider interface {
 	GetPlayer1Spawn() types.Position
 	GetPlayer2Spawn() types.Position
 	GetHQPosition() [2]int
-	GetAIUpdateIntervalTicks() int
 	GetEnemyRespawnDelayTicks() uint
 	GetBaseSizePx() uint
 	GetMapBlocksCount() types.Size
@@ -57,10 +56,7 @@ type ITouchControlsAdapter interface {
 type IAIScriptEngine interface {
 	LoadScript(source string) error
 	SetGlobalNumber(name string, value float64)
-	UpdateEnemyAI(
-		x, y float64,
-		direction, state int,
-	) (types.EnemyAIDecision, error)
+	UpdateEnemyAI(context types.EnemyAIContext) (types.EnemyAIDecision, error)
 	Close()
 }
 

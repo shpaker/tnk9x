@@ -30,7 +30,6 @@ type gameConfigSchema struct {
 	Player1Spawn           [2]int   `yaml:"players_1_spawn_at"`
 	Player2Spawn           [2]int   `yaml:"players_2_spawn_at"`
 	HQPosition             [2]int   `yaml:"hq_position"`               // Позиция базы [x, y]
-	AIUpdateIntervalTicks  int      `yaml:"ai_update_interval_ticks"`  // Интервал обновления AI в тиках (по умолчанию 60 тиков = 1000мс)
 	EnemyRespawnDelayTicks uint     `yaml:"enemy_respawn_delay_ticks"` // Задержка между спавнами врагов в тиках
 
 	BaseSizePx     uint   `yaml:"base_size_px"`
@@ -50,7 +49,6 @@ type Config struct {
 	Player1Spawn           types.Position
 	Player2Spawn           types.Position
 	HQPosition             [2]int
-	AIUpdateIntervalTicks  int
 	EnemyRespawnDelayTicks uint
 
 	BaseSizePx     uint
@@ -96,7 +94,6 @@ func LoadConfig() (*Config, error) {
 			schema.Game.Player2Spawn,
 		),
 		HQPosition:             schema.Game.HQPosition,
-		AIUpdateIntervalTicks:  schema.Game.AIUpdateIntervalTicks,
 		EnemyRespawnDelayTicks: schema.Game.EnemyRespawnDelayTicks,
 
 		BaseSizePx: schema.Game.BaseSizePx,
@@ -171,10 +168,6 @@ func (c *Config) GetPlayer2Spawn() types.Position {
 
 func (c *Config) GetHQPosition() [2]int {
 	return c.HQPosition
-}
-
-func (c *Config) GetAIUpdateIntervalTicks() int {
-	return c.AIUpdateIntervalTicks
 }
 
 func (c *Config) GetEnemyRespawnDelayTicks() uint {

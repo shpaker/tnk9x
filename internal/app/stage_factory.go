@@ -145,21 +145,18 @@ func (app *App) newStageState() (*states.StageState, error) {
 		return nil, err
 	}
 
-	updateInterval := 60
-	if app.config.GetAIUpdateIntervalTicks() > 0 {
-		updateInterval = app.config.GetAIUpdateIntervalTicks()
-	}
-
-	aiUseCases := use_cases.NewAIUseCases(app.scriptEngine)
-	enemyInputAdapter, err := input_adapters.NewAiInputAdapter(
+	aiUseCases := use_cases.NewAIUseCases(
+		stageSession,
+		mapEntity,
+		hq,
+		gameRepositories.GetTanksRepository(),
+		gameRepositories.GetBulletsRepository(),
+		app.scriptEngine,
+	)
+	enemyInputAdapter := input_adapters.NewAiInputAdapter(
 		tankActionsUseCases,
-		nil,
-		updateInterval,
 		aiUseCases,
 	)
-	if err != nil {
-		return nil, err
-	}
 
 	bonusesRepository := gameRepositories.GetBonusesRepository()
 

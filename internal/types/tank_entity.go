@@ -41,6 +41,7 @@ type TankEntity struct {
 	State         TankState
 	NextDirection *Direction
 	SlideTarget   *float64 // Зафиксированная цель скольжения на льду (nil — обычное торможение)
+	id            uint     // Порядковый номер танка на уровне (для памяти AI)
 	role          TankRole
 	specs         *SpecsEntity // Спецификации танка
 	withBonus     bool
@@ -143,6 +144,20 @@ func (t *TankEntity) SetSpecs(specs *SpecsEntity) {
 		return
 	}
 	t.specs = specs
+}
+
+func (t *TankEntity) GetID() uint {
+	if t == nil {
+		return 0
+	}
+	return t.id
+}
+
+func (t *TankEntity) SetID(id uint) {
+	if t == nil {
+		return
+	}
+	t.id = id
 }
 
 func (t *TankEntity) IsEnemy() bool {

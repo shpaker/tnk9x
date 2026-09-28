@@ -105,7 +105,6 @@ func (s *stubConfigProvider) GetPlayer2Spawn() types.Position {
 }
 
 func (s *stubConfigProvider) GetHQPosition() [2]int           { return [2]int{} }
-func (s *stubConfigProvider) GetAIUpdateIntervalTicks() int   { return 0 }
 func (s *stubConfigProvider) GetEnemyRespawnDelayTicks() uint { return 0 }
 
 func (s *stubConfigProvider) GetBaseSizePx() uint { return s.baseSizePx }

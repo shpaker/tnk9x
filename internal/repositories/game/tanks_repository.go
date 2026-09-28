@@ -8,8 +8,9 @@ import (
 var _ interfaces.ITanksRepository = (*TanksRepository)(nil)
 
 type TanksRepository struct {
-	players []*types.TankEntity
-	enemies []*types.TankEntity
+	players     []*types.TankEntity
+	enemies     []*types.TankEntity
+	nextEnemyID uint
 }
 
 func NewTanksRepository() *TanksRepository {
@@ -56,7 +57,10 @@ func (tr *TanksRepository) GetActivePlayerTanks() []*types.TankEntity {
 	return activePlayers
 }
 
+// AddEnemy добавляет врага и присваивает ему порядковый номер на уровне
 func (tr *TanksRepository) AddEnemy(enemy *types.TankEntity) {
+	tr.nextEnemyID++
+	enemy.SetID(tr.nextEnemyID)
 	tr.enemies = append(tr.enemies, enemy)
 }
 

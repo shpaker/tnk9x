@@ -175,7 +175,7 @@ func New(cfg *Config) *App {
 		soundsRepository:  soundsRepository,
 		textFace:          textFace,
 		hudTextFace:       hudTextFace,
-		scriptEngine:      scripting.NewLuaEngine(),
+		scriptEngine:      scripting.NewLuaEngine(services.NewNavigationService()),
 		soundAdapter:      soundAdapter,
 		effectsRenderer:   effectsRenderer,
 		effectsSettings: types.NewEffectsSettingsEntity(
