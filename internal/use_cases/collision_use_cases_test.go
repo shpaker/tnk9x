@@ -1148,3 +1148,25 @@ func isSlab(size types.Size, remainW, remainH int) bool {
 	}
 	return size == types.Size{Width: remainW, Height: 8 - remainH}
 }
+
+// Столкновение пуль: обе удаляются, эффект — между их центрами
+func TestBulletBulletCollision_Effect(t *testing.T) {
+	env := newCollisionTestEnv(nil)
+	player := env.newTank(types.TankRolePlayer1, types.DirectionUp, 0, 96, 0)
+	enemy := env.newTank(types.TankRoleEnemy, types.DirectionDown, 96, 0, 0)
+
+	env.addBullet(t, 100, 100, types.DirectionUp, 0, player)
+	env.addBullet(t, 100, 98, types.DirectionDown, 0, enemy)
+	env.collision.UpdateCollisions()
+
+	if got := len(env.bulletUC.GetBullets()); got != 0 {
+		t.Errorf("bullets left %d, want 0", got)
+	}
+	kinds := env.effects.Kinds()
+	if len(kinds) != 1 || kinds[0] != types.VisualEventBulletClash {
+		t.Fatalf("effects %v, want one bullet clash", kinds)
+	}
+	if got := env.effects.Events[0].Position; got != (types.Position{X: 102, Y: 101}) {
+		t.Errorf("clash at %v, want the midpoint (102, 101)", got)
+	}
+}

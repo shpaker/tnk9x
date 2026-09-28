@@ -26,6 +26,7 @@ const (
 // с округлением до пикселя: травма меньше ~0.4 экран не сдвигает.
 // Попадание во врага трясёт ощутимо, в игрока — сильнее
 const (
+	shakeBulletClash     = 0.5
 	shakeEnemyHit        = 0.55
 	shakeEnemyExplosion  = 0.65
 	shakePlayerHit       = 0.85
@@ -99,6 +100,16 @@ var (
 			{R: 255, G: 255, B: 255, A: 255},
 		},
 	}
+	// Столкновение пуль: искры во все стороны
+	clashSparks = burstSpec{
+		count: 12, speedMin: 1.2, speedMax: 3, spread: math.Pi,
+		lifeMin: 8, lifeMax: 16, sizeMin: 1, sizeMax: 1, drag: 0.84,
+		colors: []color.NRGBA{
+			{R: 255, G: 250, B: 220, A: 255},
+			{R: 255, G: 210, B: 110, A: 255},
+			{R: 255, G: 150, B: 60, A: 255},
+		},
+	}
 	embers = burstSpec{
 		count: 14, speedMin: 0.8, speedMax: 2.6, spread: math.Pi,
 		lifeMin: 18, lifeMax: 34, sizeMin: 1, sizeMax: 2, drag: 0.88,
@@ -134,6 +145,9 @@ var (
 	}
 	steelFlash = flashSpec{
 		26, color.NRGBA{R: 220, G: 235, B: 255, A: 255}, 1.4, 4,
+	}
+	clashFlash = flashSpec{
+		32, color.NRGBA{R: 255, G: 225, B: 160, A: 255}, 1.6, 5,
 	}
 	shieldFlash = flashSpec{
 		30, color.NRGBA{R: 120, G: 220, B: 255, A: 255}, 1.2, 5,
@@ -321,6 +335,10 @@ func (uc *VisualEffectsUseCases) applyEvent(event types.VisualEventEntity) {
 	case types.VisualEventSteelHit:
 		uc.addFlash(event.Position, steelFlash)
 		uc.emitBurst(event.Position, backward, steelSparks)
+	case types.VisualEventBulletClash:
+		shake.AddTrauma(shakeBulletClash)
+		uc.addFlash(event.Position, clashFlash)
+		uc.emitBurst(event.Position, 0, clashSparks)
 	case types.VisualEventShieldHit:
 		uc.addFlash(event.Position, shieldFlash)
 		uc.emitBurst(event.Position, backward, shieldSparks)
