@@ -72,3 +72,19 @@ type ITileService interface {
 		id string,
 	) (*image_providers.AnimationProvider, error)
 }
+
+// INavigationService отвечает на навигационные запросы AI по сетке карты:
+// поиск пути и первое препятствие на линии огня
+type INavigationService interface {
+	FindPath(
+		grid *types.NavGridEntity,
+		from, to types.Position,
+		options types.NavOptions,
+	) (types.PathStep, bool)
+	CastRay(
+		grid *types.NavGridEntity,
+		origin types.Position,
+		direction types.Direction,
+		targets []types.RayTarget,
+	) types.RayHit
+}

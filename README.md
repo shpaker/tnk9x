@@ -19,6 +19,12 @@ A modern remake and tribute to the classic arcade game Battle City (NES, 1985), 
 - Bullets and destructible terrain with incremental brick chipping: each hit shaves a half-tile slab, reinforced bullets break tiles whole
 - All five surface types (brick, steel, forest, water, ice) with ice sliding and water blocking
 - Lua-scripted enemies of four types with probability-based levels
+- Enemy AI with per-type personalities and difficulty scaling by stage:
+  - NES-style targeting: roam, then hunt the player, then head for the HQ
+  - Aimed fire with reaction delay: turns to a player on the line of fire, breaches walls towards the HQ, never wastes shots on allies or steel
+  - Pathfinding around steel and water, shooting through bricks, recovery when stuck
+  - Active demolition: fire at walls ahead on the move and carve passages through side walls
+  - Bullet dodging and counter-fire for fast tanks on later stages
 - Player lives, levels and damage
 - All six bonuses: grenade, tank, star, helmet shield, enemy-freezing timer, HQ-fortifying shovel
 - Level selection with a desktop quit item and keyboard/touch control hints
@@ -36,7 +42,8 @@ A modern remake and tribute to the classic arcade game Battle City (NES, 1985), 
 
 - Clean Architecture with depguard-enforced layer boundaries
 - Constructor-only DI from a composition root, repository pattern
-- Scripting behind a domain-typed engine interface
+- Scripting behind a domain-typed engine interface: the Lua script owns all enemy behavior, Go passes a world snapshot and executes decisions
+- Navigation service (Dijkstra pathfinding, line-of-fire ray casting) exposed to scripts as query functions
 - App-lifetime GPU sprite cache with startup preload, fail-fast sprite/animation validation on startup
 - Kage shader pipeline: vision pass with a seen-area memory, lighting pass with omni and cone lights on the logical screen, bloom and CRT in the final-screen pass; shaders loaded via repository and compiled fail-fast on startup
 - Visual effects driven by a per-frame event queue from gameplay use cases; particles, flashes and shake live in a per-stage repository
@@ -45,7 +52,6 @@ A modern remake and tribute to the classic arcade game Battle City (NES, 1985), 
 - CI/CD (fmt, lint, test, build, release)
 
 ### Roadmap
-- Enemy AI difficulty scaling
 - HQ: defeat screen, protection mechanics
 - UI: score, main menu, game over screen, settings
 - Test coverage >80% total, performance profiling

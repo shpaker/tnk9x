@@ -9,45 +9,30 @@ import (
 
 var _ interfaces.IAiInputAdapter = (*AiInputAdapter)(nil)
 
+// AiInputAdapter — источник управления вражескими танками: на каждой
+// остановке запрашивает решение AI и исполняет его
 type AiInputAdapter struct {
-	tankActions    interfaces.ITankActionsUseCases
-	tanks          []*types.TankEntity
-	updateInterval int
-	tickCounter    int
-	aiUseCases     interfaces.IAIUseCases
-	lastShotTick   map[*types.TankEntity]int
-	shootCooldown  int
+	tanks       []*types.TankEntity
+	tickCounter int
+
+	// Use Cases
+	tankActions interfaces.ITankActionsUseCases
+	aiUseCases  interfaces.IAIUseCases
 }
 
 func NewAiInputAdapter(
 	tankActions interfaces.ITankActionsUseCases,
-	tank *types.TankEntity,
-	updateInterval int,
 	aiUseCases interfaces.IAIUseCases,
-) (*AiInputAdapter, error) {
-	adapter := &AiInputAdapter{
-		tankActions:    tankActions,
-		tanks:          make([]*types.TankEntity, 0, 1),
-		updateInterval: updateInterval,
-		tickCounter:    0,
-		aiUseCases:     aiUseCases,
-		lastShotTick:   make(map[*types.TankEntity]int),
-		shootCooldown:  20,
+) *AiInputAdapter {
+	return &AiInputAdapter{
+		tanks:       make([]*types.TankEntity, 0),
+		tankActions: tankActions,
+		aiUseCases:  aiUseCases,
 	}
-
-	if tank != nil {
-		adapter.AddTank(tank)
-	}
-
-	return adapter, nil
 }
 
 func (a *AiInputAdapter) Update(dt float64) {
 	a.tickCounter++
-
-	if len(a.tanks) == 0 {
-		return
-	}
 
 	for _, tank := range a.tanks {
 		if tank == nil || !tank.IsActive() {
@@ -64,29 +49,19 @@ func (a *AiInputAdapter) Update(dt float64) {
 	}
 }
 
+// updateAI исполняет решение скрипта: поворот, движение и выстрел;
+// лимит пуль соблюдает BulletUseCases
 func (a *AiInputAdapter) updateAI(tank *types.TankEntity) {
-	if a.aiUseCases != nil {
-		decision, err := a.aiUseCases.ExecuteAI(tank)
-		if err == nil && tank != nil {
-
-			a.tankActions.ApplyDecision(tank, decision)
-
-			if a.canShoot(tank) {
-				_ = a.tankActions.Shoot(tank)
-				a.lastShotTick[tank] = a.tickCounter
-			}
-		}
-	}
-}
-
-func (a *AiInputAdapter) canShoot(tank *types.TankEntity) bool {
-	lastShotTick, ok := a.lastShotTick[tank]
-	if !ok {
-		lastShotTick = -a.shootCooldown
+	decision, err := a.aiUseCases.ExecuteAI(tank, a.tickCounter)
+	if err != nil {
+		return
 	}
 
-	ticksSinceLastShot := a.tickCounter - lastShotTick
-	return ticksSinceLastShot >= a.shootCooldown
+	a.tankActions.ApplyDecision(tank, decision)
+
+	if decision.Shoot {
+		_ = a.tankActions.Shoot(tank)
+	}
 }
 
 func (a *AiInputAdapter) checkAndSetBraking(tank *types.TankEntity) {
@@ -126,10 +101,6 @@ func (a *AiInputAdapter) AddTank(tank *types.TankEntity) {
 	}
 
 	a.tanks = append(a.tanks, tank)
-	if a.lastShotTick == nil {
-		a.lastShotTick = make(map[*types.TankEntity]int)
-	}
-	a.lastShotTick[tank] = a.tickCounter - a.shootCooldown
 }
 
 func (a *AiInputAdapter) RemoveTank(tank *types.TankEntity) {
@@ -142,9 +113,5 @@ func (a *AiInputAdapter) RemoveTank(tank *types.TankEntity) {
 			a.tanks = append(a.tanks[:i], a.tanks[i+1:]...)
 			break
 		}
-	}
-
-	if a.lastShotTick != nil {
-		delete(a.lastShotTick, tank)
 	}
 }
