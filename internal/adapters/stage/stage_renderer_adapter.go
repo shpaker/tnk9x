@@ -185,17 +185,12 @@ func (r *StageRendererAdapter) drawTanks(screen *ebiten.Image) {
 		if err != nil {
 			continue
 		}
-		r.drawSeenImage(
-			screen,
-			img,
-			float64(r.mapOffsetX)+position.X,
-			float64(r.mapOffsetY)+position.Y,
-			visibility,
-		)
-
-		if overlayColor, ok := r.renderUseCases.TankHealthOverlay(tank); ok {
-			overlayColor.A = uint8(float64(overlayColor.A) * visibility)
-			r.drawTankHealthOverlay(screen, position, tank.Size, overlayColor)
+		x := float64(r.mapOffsetX) + position.X
+		y := float64(r.mapOffsetY) + position.Y
+		if tint, ok := r.renderUseCases.TankHealthTint(tank); ok {
+			r.drawTintedSeenImage(screen, img, x, y, visibility, tint)
+		} else {
+			r.drawSeenImage(screen, img, x, y, visibility)
 		}
 
 		if tank.HasShield() {
@@ -248,25 +243,6 @@ func (r *StageRendererAdapter) recoiledPosition(
 
 // recoilOffsetPx — откат спрайта танка при выстреле
 const recoilOffsetPx = 1
-
-// drawTankHealthOverlay отрисовывает полупрозрачный слой поверх танка
-// цветом, выбранным use case'ом по его здоровью
-func (r *StageRendererAdapter) drawTankHealthOverlay(
-	screen *ebiten.Image,
-	position types.Position,
-	size types.Size,
-	overlayColor color.NRGBA,
-) {
-	vector.FillRect(
-		screen,
-		float32(r.mapOffsetX)+float32(position.X),
-		float32(r.mapOffsetY)+float32(position.Y),
-		float32(size.Width),
-		float32(size.Height),
-		overlayColor,
-		false,
-	)
-}
 
 func (r *StageRendererAdapter) drawSpawnAnimation(
 	screen *ebiten.Image,
@@ -413,11 +389,40 @@ func (r *StageRendererAdapter) drawSeenImage(
 		screen.DrawImage(img, op)
 		return
 	}
+	op := &colorm.DrawImageOptions{}
+	op.GeoM.Translate(x, y)
+	colorm.DrawImage(screen, img, seenColorMatrix(visibility), op)
+}
+
+// seenColorMatrix — приглушение цвета спрайта по его видимости
+func seenColorMatrix(visibility float64) colorm.ColorM {
 	var colorMatrix colorm.ColorM
-	colorMatrix.ChangeHSV(
-		0,
-		visibility,
-		seenBrightnessFloor+(1-seenBrightnessFloor)*visibility,
+	if visibility < 1 {
+		colorMatrix.ChangeHSV(
+			0,
+			visibility,
+			seenBrightnessFloor+(1-seenBrightnessFloor)*visibility,
+		)
+	}
+	return colorMatrix
+}
+
+// drawTintedSeenImage рисует спрайт с учётом видимости, умножая его
+// цвета на тон: цвет ложится только на непрозрачные пиксели спрайта
+func (r *StageRendererAdapter) drawTintedSeenImage(
+	screen *ebiten.Image,
+	img *ebiten.Image,
+	x float64,
+	y float64,
+	visibility float64,
+	tint color.NRGBA,
+) {
+	colorMatrix := seenColorMatrix(visibility)
+	colorMatrix.Scale(
+		float64(tint.R)/255,
+		float64(tint.G)/255,
+		float64(tint.B)/255,
+		1,
 	)
 	op := &colorm.DrawImageOptions{}
 	op.GeoM.Translate(x, y)

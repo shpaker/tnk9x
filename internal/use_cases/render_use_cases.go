@@ -9,14 +9,15 @@ import (
 )
 
 // heavyTankLevel — уровень тяжёлого танка, у которого запас здоровья
-// показывается цветным слоем
+// показывается миганием спрайта цветным тоном
 const heavyTankLevel = 3
 
-// tankHealthOverlayColors — цвет индикации по оставшемуся здоровью
-var tankHealthOverlayColors = map[uint]color.NRGBA{
-	4: {R: 255, G: 0, B: 0, A: 128},
-	3: {R: 255, G: 255, B: 0, A: 128},
-	2: {R: 0, G: 255, B: 0, A: 128},
+// tankHealthTintColors — мультипликатор цвета спрайта по оставшемуся
+// здоровью; каналы не обнулены, чтобы сохранить объём спрайта
+var tankHealthTintColors = map[uint]color.NRGBA{
+	4: {R: 255, G: 90, B: 90, A: 255},
+	3: {R: 255, G: 230, B: 100, A: 255},
+	2: {R: 120, G: 255, B: 120, A: 255},
 }
 
 var _ interfaces.IRenderUseCases = (*RenderUseCases)(nil)
@@ -123,18 +124,38 @@ func (uc *RenderUseCases) IsTankVisible(tank *types.TankEntity) bool {
 	return !(tank.IsEnemy() && tank.GetWithBonus() && !tank.GetBlinkFlag())
 }
 
-// TankHealthOverlay возвращает цвет слоя здоровья тяжёлого танка;
-// ok=false — слой не отрисовывается
-func (uc *RenderUseCases) TankHealthOverlay(
+// IsTankBlinking — true для танка, который мигает: враг с бонусом
+// или тяжёлый враг с индикацией здоровья
+func (uc *RenderUseCases) IsTankBlinking(tank *types.TankEntity) bool {
+	if tank == nil || !tank.IsEnemy() {
+		return false
+	}
+	_, hasTint := healthTintColor(tank)
+	return tank.GetWithBonus() || hasTint
+}
+
+// TankHealthTint возвращает тон спрайта тяжёлого танка в текущем кадре;
+// ok=false — спрайт рисуется без тона. Как в NES, танк чередует обычный
+// и тонированный спрайт; танк с бонусом и так пропадает в выключенной
+// фазе мигания, поэтому видимым он всегда тонирован
+func (uc *RenderUseCases) TankHealthTint(
 	tank *types.TankEntity,
 ) (color.NRGBA, bool) {
+	tintColor, exists := healthTintColor(tank)
+	if !exists || !(tank.GetWithBonus() || tank.GetBlinkFlag()) {
+		return color.NRGBA{}, false
+	}
+	return tintColor, true
+}
+
+// healthTintColor — цвет тона по здоровью тяжёлого вражеского танка
+func healthTintColor(tank *types.TankEntity) (color.NRGBA, bool) {
 	if tank == nil || !tank.IsEnemy() || tank.GetSpecs() == nil ||
 		tank.GetSpecs().GetLevel() != heavyTankLevel {
 		return color.NRGBA{}, false
 	}
-
-	overlayColor, exists := tankHealthOverlayColors[tank.GetHitPoints()]
-	return overlayColor, exists
+	tintColor, exists := tankHealthTintColors[tank.GetHitPoints()]
+	return tintColor, exists
 }
 
 func (uc *RenderUseCases) UpdateBlink(blinkObjects []types.IBlink) {
