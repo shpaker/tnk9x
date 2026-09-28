@@ -4,6 +4,10 @@ A modern remake and tribute to the classic arcade game Battle City (NES, 1985), 
 
 **Play online:** [https://shpaker.github.io/tnk9x/](https://shpaker.github.io/tnk9x/)
 
+[![tnk9x gameplay with RTX graphics](.github/screenshot-desktop.png)](https://shpaker.github.io/tnk9x/)
+
+*Stage 1 with RTX graphics: headlight vision, lit bricks and steel, CRT filter.*
+
 [![tnk9x running in a mobile browser](.github/screenshot-mobile.png)](https://shpaker.github.io/tnk9x/)
 
 *WebAssembly build in a mobile browser — touch controls are auto-detected.*
@@ -33,6 +37,7 @@ A modern remake and tribute to the classic arcade game Battle City (NES, 1985), 
 - Continue after a win: carry lives (at least 3) and tank level to the next stage, capped at 2 stars; offered only when it gives an edge
 - Two-player mode and RTX graphics set in `config.yml` (`app.players`, `app.effects`)
 - Pause menu on Esc/P/touch (continue, graphics, exit to stage select)
+- Fullscreen toggle on F (desktop and browser)
 - Sound effects and music
 - NES-style sidebar HUD (enemy reserve, player lives, stage flag) on an authentic 256x224 screen
 - RTX-style effects, on by default (`config.yml`): 2D ray-traced lighting and shadows from tanks, bullets, explosions and bonuses, bloom, water/ice/steel glints, CRT filter; switch to classic graphics with F2 or the GRAPHICS item of the pause menu (keyboard and touch)

@@ -352,6 +352,11 @@ func (app *App) Update() error {
 		app.effectsSettings.Toggle()
 	}
 
+	// Полноэкранный режим переключается клавишей F
+	if inpututil.IsKeyJustPressed(ebiten.KeyF) {
+		ebiten.SetFullscreen(!ebiten.IsFullscreen())
+	}
+
 	// Сенсорный ввод опрашивается один раз на кадр до обновления
 	// состояния: события кадра общие для стейта и адаптеров
 	app.touchControls.Update()
