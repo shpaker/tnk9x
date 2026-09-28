@@ -1,3 +1,17 @@
+# Stage 10. Format reference: README.md in this folder.
+
+[level]
+name = SIEGE LINE
+max_active = 4
+time_3star = 190
+
+[waves]
+# tanks        delay  start
+BBBbBB          126   now
+BBfBBBB         116   left<=2
+BfBPFAA         106   clear
+
+[map]
 ..........................
 ..........................
 ...#####............#####.

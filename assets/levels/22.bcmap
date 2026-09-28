@@ -1,3 +1,18 @@
+# Stage 22. Format reference: README.md in this folder.
+
+[level]
+name = CAMOUFLAGE
+max_active = 5
+time_3star = 210
+
+[waves]
+# tanks        delay  start
+BBBbB            94   now
+FBBfB            84   now
+BPBFpA           74   now
+FAAAPa           64   now
+
+[map]
 ..........%%..............
 ..........%%..............
 ........%%@@%%............

@@ -43,18 +43,17 @@ func stageFactoryRequiredSprites() types.SpriteManifest {
 // (танки, пули, бонусы, анимации, звуковые события) создаётся заново
 func (app *App) newStageState() (*states.StageState, error) {
 	tileBaseSize := int(app.config.GetTileBaseSize())
-	mapEntity, err := app.mapsRepository.GetLevel(
+	level, err := app.mapsRepository.GetLevel(
 		app.session.Level,
 		tileBaseSize,
 	)
 	if err != nil {
 		return nil, err
 	}
-	if mapEntity == nil {
-		return nil, fmt.Errorf("map entity is nil")
-	}
+	mapEntity := level.GetMap()
 
 	stageSession := app.session.StageSession()
+	stageSession.SetUpLevel(level)
 	gameRepositories := game_repos.NewGameRepositoriesRegistry()
 
 	// анимации блоков карты (вода) продвигаются общим UpdateAnimations
@@ -194,14 +193,23 @@ func (app *App) newStageState() (*states.StageState, error) {
 		visualEffectsUseCases,
 	)
 
+	enemySpawnSelectionUseCases := use_cases.NewEnemySpawnSelectionUseCases(
+		tankCommonUseCases,
+		app.spawnCollisionService,
+		app.randomService,
+		spawnLayout,
+		app.config.SpawnPlayerSafeRadius,
+	)
+
 	stageUseCases := state_use_cases.NewStageUseCases(
 		tankLifecycleUseCases,
+		app.waveUseCases,
+		enemySpawnSelectionUseCases,
 		tankCommonUseCases,
 		bulletUseCases,
 		collisionUseCases,
 		hqUseCases,
 		stageSession,
-		app.config.GetEnemyRespawnDelayTicks(),
 		bonusesRepository,
 		mapUseCases,
 		bonusUseCases,
@@ -280,6 +288,7 @@ func (app *App) newStageState() (*states.StageState, error) {
 		LightingUseCases:      lightingUseCases,
 		VisionUseCases:        visionUseCases,
 		VisualEffectsUseCases: visualEffectsUseCases,
+		ProgressionUseCases:   app.progressionUseCases,
 		InputAdapters: [2]interfaces.IInputAdapter{
 			player1InputAdapter,
 			inputAdapter2,
@@ -291,6 +300,7 @@ func (app *App) newStageState() (*states.StageState, error) {
 		StageSession:       stageSession,
 		BonusesRepository:  bonusesRepository,
 		EffectsSettings:    app.effectsSettings,
+		Level:              level,
 	}), nil
 }
 

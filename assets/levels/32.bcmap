@@ -1,3 +1,18 @@
+# Stage 32. Format reference: README.md in this folder.
+
+[level]
+name = SNOWFIELD
+max_active = 6
+time_3star = 220
+
+[waves]
+# tanks        delay  start
+BBFbF            68   now
+BFBfFB           58   now
+PPPaAA           48   now
+AAPPaA           45   now
+
+[map]
 ------------..------------
 ------------..------------
 --------------------------

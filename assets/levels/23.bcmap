@@ -1,3 +1,18 @@
+# Stage 23. Format reference: README.md in this folder.
+
+[level]
+name = BUNKERS
+max_active = 5
+time_3star = 210
+
+[waves]
+# tanks        delay  start
+BBBbF            92   now
+BBFbF            82   now
+BPBAfP           72   now
+APPAAa           62   now
+
+[map]
 ..........................
 ..........................
 ..........@@@@............

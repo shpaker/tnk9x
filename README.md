@@ -12,13 +12,14 @@ A modern remake and tribute to the classic arcade game Battle City (NES, 1985), 
 
 **Playable now:**
 
-- Full game loop with HQ and victory/defeat overlays
+- Full game loop with HQ and a results screen: stars, time, lives lost; next stage, retry or back to stage select
 - Two-player keyboard controls
 - Touch controls for mobile browsers: auto-detected virtual D-pad, fire and pause in the letterbox area, tappable menu
 - Tank movement with braking and grid snap
 - Bullets and destructible terrain with incremental brick chipping: each hit shaves a half-tile slab, reinforced bullets break tiles whole
 - All five surface types (brick, steel, forest, water, ice) with ice sliding and water blocking
-- Lua-scripted enemies of four types with probability-based levels
+- Lua-scripted enemies of four types; each map file sets its enemy waves (tank order, pause, start condition: now, left<=N, clear), bonus carriers and on-field limit, see [assets/levels/README.md](assets/levels/README.md)
+- Weighted enemy spawn point choice: blocked points are skipped, the last used point and points near a player are picked less often
 - Enemy AI with per-type personalities and difficulty scaling by stage:
   - NES-style targeting: roam, then hunt the player, then head for the HQ
   - Aimed fire with reaction delay: turns to a player on the line of fire, breaches walls towards the HQ, never wastes shots on allies or steel
@@ -27,11 +28,13 @@ A modern remake and tribute to the classic arcade game Battle City (NES, 1985), 
   - Bullet dodging and counter-fire for fast tanks on later stages
 - Player lives, levels and damage
 - All six bonuses: grenade, tank, star, helmet shield, enemy-freezing timer, HQ-fortifying shovel
-- Level selection with a desktop quit item and keyboard/touch control hints
-- Pause menu on Esc/P/touch (continue, exit to level select)
+- Campaign of 35 stages in 7 packs (`assets/levels/main.bccamp`): stage select screen with a minimap preview, enemy composition and 3-star time; stages open one after another, packs open for collected stars
+- Stars per stage: win, no lives lost, within the time limit; best results are saved (OS config folder on desktop, localStorage in the browser)
+- Two-player mode and RTX graphics set in `config.yml` (`app.players`, `app.effects`)
+- Pause menu on Esc/P/touch (continue, graphics, exit to stage select)
 - Sound effects and music
 - NES-style sidebar HUD (enemy reserve, player lives, stage flag) on an authentic 256x224 screen
-- RTX-style effects, on by default (`config.yml`): 2D ray-traced lighting and shadows from tanks, bullets, explosions and bonuses, bloom, water/ice/steel glints, CRT filter; switch to classic graphics with F2 or the GRAPHICS item of the level select and pause menus (keyboard and touch)
+- RTX-style effects, on by default (`config.yml`): 2D ray-traced lighting and shadows from tanks, bullets, explosions and bonuses, bloom, water/ice/steel glints, CRT filter; switch to classic graphics with F2 or the GRAPHICS item of the pause menu (keyboard and touch)
   - Player field of view: a headlight cone along the barrel that turns smoothly with the tank and a soft aura around it; walls are buildings, so light falls on their facades and they block both light and sight
   - Vision shared by all tanks and bullets: objects are fully visible when they are in the player's field of view, not hidden behind buildings and lit; bullets glow like tracers and light up what lies beyond the headlight; out-of-sight objects and lights are dimmed
   - Memory of seen areas: what the player sees now is brighter, recently seen areas fade out over a few seconds, explored areas stay slightly lighter
@@ -48,12 +51,15 @@ A modern remake and tribute to the classic arcade game Battle City (NES, 1985), 
 - Kage shader pipeline: vision pass with a seen-area memory, lighting pass with omni and cone lights on the logical screen, bloom and CRT in the final-screen pass; shaders loaded via repository and compiled fail-fast on startup
 - Visual effects driven by a per-frame event queue from gameplay use cases; particles, flashes and shake live in a per-stage repository
 - Vision use case with line of sight over a block grid; light and field-of-view formulas live in the domain and match the shaders
+- Section-based text formats for maps and campaigns, parsed and validated fail-fast on startup
+- User storage behind a repository interface (file on desktop, localStorage in WASM), ready for a platform save backend
 - Unit tests with a >=70% use-cases coverage gate
 - CI/CD (fmt, lint, test, build, release)
 
 ### Roadmap
 - HQ: defeat screen, protection mechanics
-- UI: score, main menu, game over screen, settings
+- UI: score, settings
+- Yandex Games: SDK, cloud saves, ads
 - Test coverage >80% total, performance profiling
 
 ## Installation and Running

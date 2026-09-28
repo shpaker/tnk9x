@@ -1,3 +1,18 @@
+# Stage 14. Format reference: README.md in this folder.
+
+[level]
+name = MARSHLAND
+max_active = 5
+time_3star = 200
+
+[waves]
+# tanks        delay  start
+BBBbB           116   now
+BBBbB           106   left<=2
+FBBBf            96   left<=2
+FPAAPA           86   left<=2
+
+[map]
 ..........................
 ..........................
 %%%%......######......%%%%

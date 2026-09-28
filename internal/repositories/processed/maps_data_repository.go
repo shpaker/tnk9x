@@ -23,6 +23,7 @@ var _ interfaces.IMapsDataRepository = (*MapsDataRepository)(nil)
 type MapsDataRepository struct {
 	fileRepository  interfaces.IFileRepository
 	tilesetRegistry interfaces.ITilesetRepositoryRegistry
+	defaults        types.LevelDefaults
 	width           uint
 	height          uint
 }
@@ -30,26 +31,26 @@ type MapsDataRepository struct {
 func NewMapsDataRepository(
 	fileRepository interfaces.IFileRepository,
 	tilesetRegistry interfaces.ITilesetRepositoryRegistry,
+	defaults types.LevelDefaults,
 ) *MapsDataRepository {
 	return &MapsDataRepository{
 		fileRepository:  fileRepository,
 		tilesetRegistry: tilesetRegistry,
+		defaults:        defaults,
 		width:           0,
 		height:          0,
 	}
 }
 
-func (mdr *MapsDataRepository) readFile(levelNumber int) ([]string, error) {
+func (mdr *MapsDataRepository) readFile(levelNumber int) (string, error) {
 	levelName := "levels/" + strconv.Itoa(levelNumber) + ".bcmap"
 
 	data, err := mdr.fileRepository.ReadFile(levelName)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read level %d: %w", levelNumber, err)
+		return "", fmt.Errorf("failed to read level %d: %w", levelNumber, err)
 	}
 
-	lines := strings.Split(strings.TrimSpace(string(data)), "\n")
-
-	return lines, nil
+	return string(data), nil
 }
 
 func (mdr *MapsDataRepository) createBlockFromChar(
@@ -174,18 +175,28 @@ func (mdr *MapsDataRepository) parseLevelLines(
 	return level, bonusSpawnPositions, nil
 }
 
+// GetLevel читает и разбирает уровень; каждый вызов создаёт новую
+// карту, потому что блоки разрушаются по ходу игры
 func (mdr *MapsDataRepository) GetLevel(
 	levelNumber int,
 	tileBaseSize int,
-) (*types.MapEntity, error) {
-	lines, err := mdr.readFile(levelNumber)
+) (*types.LevelEntity, error) {
+	data, err := mdr.readFile(levelNumber)
 	if err != nil {
 		return nil, err
 	}
 
-	blocks, bonusSpawnPositions, err := mdr.parseLevelLines(lines, tileBaseSize)
+	file, err := parseLevelFile(data, mdr.defaults)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("level %d: %w", levelNumber, err)
+	}
+
+	blocks, bonusSpawnPositions, err := mdr.parseLevelLines(
+		file.mapLines,
+		tileBaseSize,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("level %d: %w", levelNumber, err)
 	}
 
 	sizePx := types.Size{
@@ -195,7 +206,26 @@ func (mdr *MapsDataRepository) GetLevel(
 
 	mapEntity := types.NewMapEntity(sizePx, blocks, bonusSpawnPositions)
 
-	return mapEntity, nil
+	name := file.name
+	if name == "" {
+		name = fmt.Sprintf("STAGE %02d", levelNumber)
+	}
+
+	return types.NewLevelEntity(
+		levelNumber,
+		name,
+		file.maxActive,
+		file.time3StarTicks,
+		file.waves,
+		file.explicitBonuses,
+		mapEntity,
+	), nil
+}
+
+// HasLevel — существует ли файл уровня
+func (mdr *MapsDataRepository) HasLevel(levelNumber int) bool {
+	_, err := mdr.readFile(levelNumber)
+	return err == nil
 }
 
 func (mdr *MapsDataRepository) GetLevelsCount() (int, error) {

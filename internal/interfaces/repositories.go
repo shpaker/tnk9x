@@ -78,9 +78,31 @@ type IBonusesRepository interface {
 }
 
 type IMapsDataRepository interface {
-	GetLevel(num int, tileBaseSize int) (*types.MapEntity, error)
+	// GetLevel читает уровень; каждый вызов создаёт новую карту
+	GetLevel(num int, tileBaseSize int) (*types.LevelEntity, error)
+	// HasLevel — существует ли файл уровня
+	HasLevel(num int) bool
 
 	GetLevelsCount() (int, error)
+}
+
+// ICampaignRepository — кампании: пачки уровней и условия открытия
+type ICampaignRepository interface {
+	GetCampaign(name string) (*types.CampaignEntity, error)
+}
+
+// IStorageRepository — долговременное хранилище пользовательских
+// данных (сохранения) по ключу
+type IStorageRepository interface {
+	// Load возвращает nil без ошибки, если ключа ещё нет
+	Load(key string) ([]byte, error)
+	Save(key string, data []byte) error
+}
+
+// IProgressRepository — прогресс игрока в кампании
+type IProgressRepository interface {
+	GetProgress() (*types.ProgressEntity, error)
+	SaveProgress(progress *types.ProgressEntity) error
 }
 
 // ITilesetRepositoryRegistry — единая точка доступа к тайлсетам по типу

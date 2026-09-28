@@ -1,3 +1,18 @@
+# Stage 26. Format reference: README.md in this folder.
+
+[level]
+name = WETLANDS
+max_active = 6
+time_3star = 210
+
+[waves]
+# tanks        delay  start
+BBBbB            84   now
+FBFbF            74   now
+FFPAaP           64   now
+PAPAAa           54   now
+
+[map]
 ....~~~~..................
 ....~~~~..................
 ......~~%%..#.............

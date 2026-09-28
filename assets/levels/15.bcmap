@@ -1,3 +1,18 @@
+# Stage 15. Format reference: README.md in this folder.
+
+[level]
+name = DEEP WOODS
+max_active = 5
+time_3star = 200
+
+[waves]
+# tanks        delay  start
+BBBbB           113   now
+BBFbB           103   left<=2
+BBBFb            93   left<=2
+PPFAAA           83   clear
+
+[map]
 ........####....##........
 ........####....##........
 ..%%%%####......##........

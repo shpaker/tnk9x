@@ -13,7 +13,7 @@ import (
 // pauseMenuLabels — подписи пунктов меню паузы
 var pauseMenuLabels = map[types.PauseMenuItem]string{
 	types.PauseMenuItemContinue:     "CONTINUE",
-	types.PauseMenuItemExitToSelect: "EXIT TO MENU",
+	types.PauseMenuItemExitToLevels: "EXIT TO LEVELS",
 }
 
 // pauseMenuLabel — подпись пункта; у пункта графики она показывает

@@ -49,14 +49,9 @@ type recordingLifecycle struct {
 	exploded []*types.TankEntity
 }
 
-func (s *recordingLifecycle) OnStageSetUpEnemiesSpawn() ([3]*types.TankEntity, error) {
-	return [3]*types.TankEntity{}, nil
-}
-
-func (s *recordingLifecycle) SpawnEnemyWithLevel(
-	index *int,
-	ignoreRespawnDelay bool,
-	remainingEnemies uint,
+func (s *recordingLifecycle) SpawnEnemy(
+	spawnerIndex int,
+	level uint,
 ) (*types.TankEntity, error) {
 	return nil, nil
 }

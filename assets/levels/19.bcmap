@@ -1,3 +1,18 @@
+# Stage 19. Format reference: README.md in this folder.
+
+[level]
+name = TRENCHES
+max_active = 5
+time_3star = 200
+
+[waves]
+# tanks        delay  start
+BBBbB           102   now
+BFFfB            92   left<=2
+BPBBf            82   left<=2
+PPAAAA           72   left<=2
+
+[map]
 ..##..##..##..##..##..##..
 ..##..##..##..##..##..##..
 ..##..##..##..##..##..##..

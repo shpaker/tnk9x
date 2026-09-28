@@ -18,8 +18,13 @@ type StageRenderer interface {
 	DrawSidebar(screen *ebiten.Image, hud types.StageHUDData)
 	DrawPauseMenu(screen *ebiten.Image, view types.PauseMenuViewData)
 	PauseMenuHitTest(pos types.Position) (types.PauseMenuItem, bool)
-	DrawStageEndOverlay(screen *ebiten.Image, label string)
+	DrawStageResult(screen *ebiten.Image, view types.StageResultViewData)
+	StageResultHitTest(pos types.Position) (types.StageResultItem, bool)
 }
+
+// resultInputDelayTicks — пауза перед приёмом ввода на экране итогов,
+// чтобы очередь выстрела не пролистала результат
+const resultInputDelayTicks = 45
 
 // StageStateDependencies — готовый граф зависимостей уровня;
 // собирается composition root'ом, все поля обязательны
@@ -34,6 +39,7 @@ type StageStateDependencies struct {
 	LightingUseCases      interfaces.ILightingUseCases
 	VisionUseCases        interfaces.IVisionUseCases
 	VisualEffectsUseCases interfaces.IVisualEffectsUseCases
+	ProgressionUseCases   interfaces.IProgressionUseCases
 
 	// Adapters
 	InputAdapters      [2]interfaces.IInputAdapter
@@ -48,6 +54,8 @@ type StageStateDependencies struct {
 
 	// Включённость графических эффектов, общая для приложения
 	EffectsSettings *types.EffectsSettingsEntity
+	// Level — сценарий уровня для подсчёта звёзд
+	Level *types.LevelEntity
 }
 
 type StageState struct {
@@ -61,6 +69,7 @@ type StageState struct {
 	lightingUseCases      interfaces.ILightingUseCases
 	visionUseCases        interfaces.IVisionUseCases
 	visualEffectsUseCases interfaces.IVisualEffectsUseCases
+	progressionUseCases   interfaces.IProgressionUseCases
 
 	// Adapters
 	inputAdapters      [2]interfaces.IInputAdapter
@@ -85,6 +94,12 @@ type StageState struct {
 	pauseMenuItems   []types.PauseMenuItem
 	pauseMenuIndex   int
 	pauseMenuWasOpen bool
+
+	// Экран итогов: считается один раз при завершении уровня
+	level            *types.LevelEntity
+	result           *types.StageResultViewData
+	resultInputDelay uint
+	nextLevel        int
 }
 
 func NewStageState(deps StageStateDependencies) *StageState {
@@ -98,6 +113,7 @@ func NewStageState(deps StageStateDependencies) *StageState {
 		lightingUseCases:      deps.LightingUseCases,
 		visionUseCases:        deps.VisionUseCases,
 		visualEffectsUseCases: deps.VisualEffectsUseCases,
+		progressionUseCases:   deps.ProgressionUseCases,
 		inputAdapters:         deps.InputAdapters,
 		enemyInputAdapter:     deps.EnemyInputAdapter,
 		renderer:              deps.Renderer,
@@ -106,10 +122,11 @@ func NewStageState(deps StageStateDependencies) *StageState {
 		stageSession:          deps.StageSession,
 		bonusesRepository:     deps.BonusesRepository,
 		effectsSettings:       deps.EffectsSettings,
+		level:                 deps.Level,
 		pauseMenuItems: []types.PauseMenuItem{
 			types.PauseMenuItemContinue,
 			types.PauseMenuItemGraphics,
-			types.PauseMenuItemExitToSelect,
+			types.PauseMenuItemExitToLevels,
 		},
 	}
 }
@@ -122,6 +139,7 @@ func (state *StageState) SetDebugEnabled(enabled bool) {
 func (state *StageState) SetUp() {
 	// Сбрасываем флаг звуков завершения уровня для нового уровня
 	state.endSoundHandled = false
+	state.result = nil
 
 	// Глушим остатки прошлого уровня и запускаем стартовый звук
 	state.soundUseCases.RequestStopAll()
@@ -208,19 +226,11 @@ func (state *StageState) Update() types.StateTransition {
 			}
 			state.endSoundHandled = true
 		}
-		// Оверлей закрывается любой клавишей или тапом по экрану
-		if len(inpututil.AppendJustPressedKeys(nil)) > 0 ||
-			len(inpututil.AppendJustPressedTouchIDs(nil)) > 0 {
-			// Глушим звук завершения при выходе на экран выбора уровня
-			state.soundUseCases.RequestStopAll()
-			transition = types.StateTransition{
-				Target: types.TransitionToStageSelect,
-			}
-		}
+		transition = state.handleStageResult()
 	}
 
 	// Меню паузы работает только пока уровень не завершён:
-	// на финальном оверлее любая клавиша уже означает выход
+	// на экране итогов действует своё меню
 	if !stageFinished {
 		transition = state.handlePauseMenu()
 	}
@@ -350,13 +360,11 @@ func (state *StageState) applyPauseMenuSelection(
 	case types.PauseMenuItemGraphics:
 		// Меню остаётся открытым: смена видна сразу за оверлеем
 		state.effectsSettings.Toggle()
-	case types.PauseMenuItemExitToSelect:
+	case types.PauseMenuItemExitToLevels:
 		// Глушим звуки уровня при выходе на экран выбора
 		state.soundUseCases.RequestStopAll()
 
-		return types.StateTransition{
-			Target: types.TransitionToStageSelect,
-		}
+		return state.levelsTransition()
 	}
 
 	return types.StateTransition{}
@@ -420,12 +428,8 @@ func (state *StageState) Draw(screen *ebiten.Image) {
 		StageNumber: state.stageSession.GetStageNumber(),
 	})
 
-	if state.stageUseCases.IsStageFinished() {
-		label := "VICTORY"
-		if !state.stageUseCases.IsStageWon() {
-			label = "DEFEAT"
-		}
-		state.renderer.DrawStageEndOverlay(screen, label)
+	if state.result != nil {
+		state.renderer.DrawStageResult(screen, *state.result)
 		return
 	}
 
@@ -435,5 +439,117 @@ func (state *StageState) Draw(screen *ebiten.Image) {
 			ActiveIndex:    state.pauseMenuIndex,
 			EffectsEnabled: state.effectsSettings.IsEnabled(),
 		})
+	}
+}
+
+// handleStageResult считает итог уровня при первом кадре после
+// завершения и обрабатывает меню итогов
+func (state *StageState) handleStageResult() types.StateTransition {
+	if state.result == nil {
+		state.buildStageResult()
+		return types.StateTransition{}
+	}
+	if state.resultInputDelay > 0 {
+		state.resultInputDelay--
+		return types.StateTransition{}
+	}
+
+	result := state.result
+	moveUp := inpututil.IsKeyJustPressed(ebiten.KeyUp) ||
+		inpututil.IsKeyJustPressed(ebiten.KeyW)
+	moveDown := inpututil.IsKeyJustPressed(ebiten.KeyDown) ||
+		inpututil.IsKeyJustPressed(ebiten.KeyS)
+	if moveUp && result.ActiveIndex > 0 {
+		result.ActiveIndex--
+	}
+	if moveDown && result.ActiveIndex < len(result.Items)-1 {
+		result.ActiveIndex++
+	}
+
+	if inpututil.IsKeyJustPressed(ebiten.KeyEnter) ||
+		inpututil.IsKeyJustPressed(ebiten.KeySpace) {
+		return state.applyStageResultItem(result.Items[result.ActiveIndex])
+	}
+	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
+		return state.applyStageResultItem(types.StageResultItemLevels)
+	}
+
+	if pos, ok := state.touchControls.TapJustPressed(); ok {
+		if item, hit := state.renderer.StageResultHitTest(pos); hit {
+			return state.applyStageResultItem(item)
+		}
+	}
+
+	return types.StateTransition{}
+}
+
+// buildStageResult считает звёзды, сохраняет лучший результат
+// и собирает пункты меню итогов
+func (state *StageState) buildStageResult() {
+	result := state.stageUseCases.GetStageResult()
+	stars := state.progressionUseCases.CalcStars(result, state.level)
+	levelNumber := int(state.stageSession.GetStageNumber())
+	newBest := result.Won &&
+		stars > state.progressionUseCases.GetLevelStars(levelNumber)
+
+	if result.Won {
+		if err := state.progressionUseCases.RecordResult(
+			levelNumber, stars,
+		); err != nil {
+			log.Printf("save progress: %v", err)
+		}
+	}
+
+	items := []types.StageResultItem{
+		types.StageResultItemRetry,
+		types.StageResultItemLevels,
+	}
+	if next, unlocked := state.progressionUseCases.NextLevel(
+		levelNumber,
+	); result.Won && unlocked {
+		state.nextLevel = next
+		items = append([]types.StageResultItem{
+			types.StageResultItemNext,
+		}, items...)
+	}
+
+	state.result = &types.StageResultViewData{
+		Won:          result.Won,
+		Stars:        stars,
+		ElapsedTicks: result.ElapsedTicks,
+		LivesLost:    result.LivesLost,
+		NewBest:      newBest,
+		Items:        items,
+	}
+	state.resultInputDelay = resultInputDelayTicks
+}
+
+func (state *StageState) applyStageResultItem(
+	item types.StageResultItem,
+) types.StateTransition {
+	// Глушим звук завершения при уходе с экрана итогов
+	state.soundUseCases.RequestStopAll()
+
+	switch item {
+	case types.StageResultItemNext:
+		return types.StateTransition{
+			Target: types.TransitionToStage,
+			Level:  uint(state.nextLevel),
+		}
+	case types.StageResultItemRetry:
+		return types.StateTransition{
+			Target: types.TransitionToStage,
+			Level:  state.stageSession.GetStageNumber(),
+		}
+	default:
+		return state.levelsTransition()
+	}
+}
+
+// levelsTransition — выход на экран выбора с курсором на этом уровне
+func (state *StageState) levelsTransition() types.StateTransition {
+	return types.StateTransition{
+		Target: types.TransitionToLevelSelect,
+		Level:  state.stageSession.GetStageNumber(),
 	}
 }

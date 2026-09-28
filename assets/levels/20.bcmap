@@ -1,3 +1,18 @@
+# Stage 20. Format reference: README.md in this folder.
+
+[level]
+name = DELTA
+max_active = 5
+time_3star = 200
+
+[waves]
+# tanks        delay  start
+BBBbB           100   now
+BFBbB            90   now
+BFFPp            80   now
+FAPAAA           70   clear
+
+[map]
 ......~~..##....##..##....
 ......~~..##....##..##....
 ................##..@@....

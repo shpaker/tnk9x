@@ -1,3 +1,18 @@
+# Stage 27. Format reference: README.md in this folder.
+
+[level]
+name = STEEL CITY
+max_active = 6
+time_3star = 210
+
+[waves]
+# tanks        delay  start
+BBFbB            81   now
+PBBbF            71   now
+FFAFpP           61   now
+AAPAAa           51   now
+
+[map]
 ........@@................
 ........@@................
 @@@@....@@....@@@@........

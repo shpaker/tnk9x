@@ -161,6 +161,7 @@ func TestStageSessionEntity_Pause(t *testing.T) {
 // Каждый танк учитывается счётчиком уничтоженных ровно один раз
 func TestStageSessionEntity_TrackDestroyedEnemy(t *testing.T) {
 	session := NewStageSessionEntity()
+	session.totalEnemies = 20
 	tankValue := types.NewDefaultTankEntity(
 		types.TankRoleEnemy,
 		types.DirectionUp,
@@ -193,5 +194,59 @@ func TestStageSessionEntity_TrackDestroyedEnemy(t *testing.T) {
 	session.Reset()
 	if got := session.GetTotalEnemies() - session.GetRemainingEnemies(); got != 0 {
 		t.Errorf("после Reset уничтожено %d, ожидалось 0", got)
+	}
+}
+
+// The enemy total comes from the level waves
+func TestStageSessionEntity_SetUpLevel(t *testing.T) {
+	session := NewStageSessionEntity()
+	level := types.NewLevelEntity(1, "TEST", 4, 0, []types.WaveSpec{
+		{Tanks: make([]types.WaveTank, 3)},
+		{Tanks: make([]types.WaveTank, 2)},
+	}, false, nil)
+
+	session.SetUpLevel(level)
+
+	if got := session.GetTotalEnemies(); got != 5 {
+		t.Errorf("total enemies %d, want 5", got)
+	}
+	if got := session.GetMaxActiveEnemies(); got != 4 {
+		t.Errorf("max active %d, want 4", got)
+	}
+}
+
+// Deaths count toward lost lives; a failed respawn gives the life back
+func TestStageSessionEntity_PlayerDeaths(t *testing.T) {
+	session := NewStageSessionEntity()
+
+	session.DecrementPlayerLives(types.PlayerTankNumPlayer1)
+	session.DecrementPlayerLives(types.PlayerTankNumPlayer1)
+	session.RestorePlayerLife(types.PlayerTankNumPlayer1)
+
+	if got := session.GetPlayerDeaths(); got != 1 {
+		t.Errorf("deaths %d, want 1", got)
+	}
+	if got := session.GetPlayerLives(types.PlayerTankNumPlayer1); got != 2 {
+		t.Errorf("lives %d, want 2", got)
+	}
+
+	session.Reset()
+	if session.GetPlayerDeaths() != 0 || session.GetStageTicks() != 0 {
+		t.Error("Reset must clear deaths and stage time")
+	}
+}
+
+// The spawner history keeps the last two spawners, newest first
+func TestStageSessionEntity_RecentSpawners(t *testing.T) {
+	session := NewStageSessionEntity()
+
+	session.RegisterEnemySpawned(2, 90)
+	session.RegisterEnemySpawned(0, 90)
+
+	if got := session.GetRecentSpawners(); got != [2]int{0, 2} {
+		t.Errorf("recent spawners %v, want [0 2]", got)
+	}
+	if session.CanSpawnNextEnemy() {
+		t.Error("the spawn pause must block the next spawn")
 	}
 }

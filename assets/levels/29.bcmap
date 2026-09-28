@@ -1,3 +1,18 @@
+# Stage 29. Format reference: README.md in this folder.
+
+[level]
+name = FLOODPLAIN
+max_active = 6
+time_3star = 210
+
+[waves]
+# tanks        delay  start
+BBBfB            76   now
+BFBpP            66   now
+FFPFaP           56   now
+APAAAa           46   now
+
+[map]
 ....................##....
 ....................##....
 ..##~~~~..@@..##..........

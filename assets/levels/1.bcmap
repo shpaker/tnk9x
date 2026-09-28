@@ -1,3 +1,17 @@
+# Stage 1. Format reference: README.md in this folder.
+
+[level]
+name = FIRST BLOOD
+max_active = 4
+time_3star = 130
+
+[waves]
+# tanks        delay  start
+BBBb            150   now
+BFBBb           140   left<=1
+BBBBB           130   left<=1
+
+[map]
 ..........................
 ..........................
 ..##..##..##..##..##..##..

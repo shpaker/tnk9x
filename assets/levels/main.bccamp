@@ -1,0 +1,51 @@
+# Main campaign. Format reference: README.md in this folder.
+
+[campaign]
+name = MAIN
+
+[pack]
+name = BOOT CAMP
+levels = 1-5
+order = sequential
+
+[pack]
+name = FIRST CONTACT
+levels = 6-10
+order = sequential
+unlock_stars = 10
+unlock_after = 5
+
+[pack]
+name = HARD LINE
+levels = 11-15
+order = sequential
+unlock_stars = 20
+unlock_after = 10
+
+[pack]
+name = IRON STORM
+levels = 16-20
+order = sequential
+unlock_stars = 32
+unlock_after = 15
+
+[pack]
+name = COLD FRONT
+levels = 21-25
+order = sequential
+unlock_stars = 45
+unlock_after = 20
+
+[pack]
+name = DEEP STRIKE
+levels = 26-30
+order = sequential
+unlock_stars = 60
+unlock_after = 25
+
+[pack]
+name = LAST STAND
+levels = 31-35
+order = sequential
+unlock_stars = 75
+unlock_after = 30

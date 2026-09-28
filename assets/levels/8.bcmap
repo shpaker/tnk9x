@@ -1,3 +1,17 @@
+# Stage 8. Format reference: README.md in this folder.
+
+[level]
+name = RIVERSIDE
+max_active = 4
+time_3star = 180
+
+[waves]
+# tanks        delay  start
+BBBbBB          131   now
+FBfBFBB         121   left<=2
+BbBPBBA         111   left<=2
+
+[map]
 ....##....##......##......
 ....##....##..##..##......
 %%######..##......###.....

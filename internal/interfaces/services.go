@@ -88,3 +88,9 @@ type INavigationService interface {
 		targets []types.RayTarget,
 	) types.RayHit
 }
+
+// IRandomService — источник случайных чисел; подменяется в тестах
+type IRandomService interface {
+	// Float64 возвращает число из [0, 1)
+	Float64() float64
+}

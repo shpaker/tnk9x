@@ -1,23 +1,40 @@
 ---
 app:
-  screen_px: [768, 672]  # Размер экрана в пикселях [width, height], пропорции NES (256x224 логических)
+  screen_px: [768, 672]  # Window size in pixels [width, height], NES proportions (256x224 logical)
   title_font_size: 24
   subtitle_font_size: 8
   regular_font_size: 8
   game_title: "TNK9X"
-  volume: 0.5  # Уровень громкости от 0.0 до 1.0
-  effects: true  # RTX-графика при запуске; переключение — F2 или пункт GRAPHICS в меню
+  volume: 0.5  # Volume from 0.0 to 1.0
+  effects: true  # RTX graphics at startup; toggle with F2 or GRAPHICS in the pause menu
+  players: 1     # 1 or 2 (two players share one keyboard)
 
 game:
   enemy_spawners:
-    - [0, 0]   # Левый верхний угол
-    - [6, 0]   # Центр сверху
-    - [12, 0]  # Правый верхний угол
+    - [0, 0]   # Top left
+    - [6, 0]   # Top center
+    - [12, 0]  # Top right
   players_1_spawn_at: [4, 12]
   players_2_spawn_at: [8, 12]
   hq_position: [6, 12]
 
-  # Игровые константы
+  # Game constants
   base_size_px: 16
-  enemy_respawn_delay_ticks: 120  # Задержка между спавнами врагов в тиках (3 секунды при 60 FPS)
-  map_blocks_count: [26, 26]  # Размер карты в блоках [width, height]
+  enemy_respawn_delay_ticks: 120  # Default pause between enemy spawns in ticks (2 seconds at 60 TPS)
+  map_blocks_count: [26, 26]  # Map size in tiles [width, height]
+
+  # Enemy spawn point choice: players closer than this radius
+  # (in tank cells) make a spawner much less likely to be picked
+  spawn_player_safe_radius: 4
+
+  # Campaign file: assets/levels/<campaign>.bccamp
+  campaign: main
+
+  # Defaults for maps without sections and for missing keys,
+  # see assets/levels/README.md
+  default_level:
+    max_active: 4
+    time_3star: 180  # seconds
+    waves:
+      - "BBBBBBBBBB 120 now"
+      - "BBBBFFFFPA 120 now"

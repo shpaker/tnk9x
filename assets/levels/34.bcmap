@@ -1,3 +1,18 @@
+# Stage 34. Format reference: README.md in this folder.
+
+[level]
+name = LAST WALL
+max_active = 6
+time_3star = 230
+
+[waves]
+# tanks        delay  start
+BFFbF            63   now
+FFBpPP           53   now
+PPPaAF           45   now
+AAAAaA           45   now
+
+[map]
 ........#..#..............
 ........#..#..............
 #.#.#..#..#.....#.#.......

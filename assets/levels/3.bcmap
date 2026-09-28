@@ -1,3 +1,17 @@
+# Stage 3. Format reference: README.md in this folder.
+
+[level]
+name = GREENWOOD
+max_active = 4
+time_3star = 160
+
+[waves]
+# tanks        delay  start
+BBBbBB          145   now
+BBbBBB          135   left<=1
+FBbBBF          125   left<=1
+
+[map]
 ........##......##........
 ........##......##........
 ..%%%%%%##................

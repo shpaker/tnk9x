@@ -1,3 +1,18 @@
+# Stage 13. Format reference: README.md in this folder.
+
+[level]
+name = FORTRESS
+max_active = 5
+time_3star = 190
+
+[waves]
+# tanks        delay  start
+BBBbF           118   now
+BBBbF           108   left<=2
+BBFBb            98   left<=2
+BPPAA            88   left<=2
+
+[map]
 ..........................
 ........##......##........
 ..########......########..
