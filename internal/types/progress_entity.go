@@ -3,6 +3,10 @@ package types
 // MaxLevelStars — максимум звёзд за уровень
 const MaxLevelStars uint = 3
 
+// MaxCarryOverStars — максимум звёзд за уровень, начатый с переносом
+// жизней и прокачки танка
+const MaxCarryOverStars uint = 2
+
 // ProgressEntity — прогресс игрока: лучший результат по уровням;
 // уровень с ненулевыми звёздами считается пройденным
 type ProgressEntity struct {
@@ -74,4 +78,6 @@ type StageResult struct {
 	Won          bool
 	LivesLost    uint
 	ElapsedTicks uint
+	// CarriedOver — уровень начат с перенесёнными жизнями и прокачкой
+	CarriedOver bool
 }

@@ -23,6 +23,9 @@ type StageResultItem int
 
 const (
 	StageResultItemNext StageResultItem = iota
+	// StageResultItemContinue — следующий уровень с переносом жизней
+	// и прокачки танков
+	StageResultItemContinue
 	StageResultItemRetry
 	StageResultItemLevels
 )
@@ -33,6 +36,8 @@ type StageResultViewData struct {
 	Stars        uint
 	ElapsedTicks uint
 	LivesLost    uint
+	// CarriedOver — уровень начат с переносом: звёзд не больше двух
+	CarriedOver bool
 	// NewBest — результат лучше прежнего
 	NewBest     bool
 	Items       []StageResultItem

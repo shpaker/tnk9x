@@ -75,9 +75,17 @@ func (s *stubTankLifecycle) SpawnEnemy(
 	return nil, nil
 }
 
-func (s *stubTankLifecycle) SpawnPlayer1() (*types.TankEntity, error) { return nil, nil }
+func (s *stubTankLifecycle) SpawnPlayer1(
+	uint,
+) (*types.TankEntity, error) {
+	return nil, nil
+}
 
-func (s *stubTankLifecycle) SpawnPlayer2() (*types.TankEntity, error) { return nil, nil }
+func (s *stubTankLifecycle) SpawnPlayer2(
+	uint,
+) (*types.TankEntity, error) {
+	return nil, nil
+}
 
 func (s *stubTankLifecycle) CompleteSpawn(*types.TankEntity) {}
 

@@ -493,6 +493,8 @@ func (state *StageState) buildStageResult() {
 		stars > state.progressionUseCases.GetLevelStars(levelNumber)
 
 	if result.Won {
+		// Снимок жизней и прокачки — для пункта Continue
+		state.stageUseCases.SaveCarryOver()
 		if err := state.progressionUseCases.RecordResult(
 			levelNumber, stars,
 		); err != nil {
@@ -508,9 +510,11 @@ func (state *StageState) buildStageResult() {
 		levelNumber,
 	); result.Won && unlocked {
 		state.nextLevel = next
-		items = append([]types.StageResultItem{
-			types.StageResultItemNext,
-		}, items...)
+		head := []types.StageResultItem{types.StageResultItemNext}
+		if state.stageSession.HasCarryOverAdvantage() {
+			head = append(head, types.StageResultItemContinue)
+		}
+		items = append(head, items...)
 	}
 
 	state.result = &types.StageResultViewData{
@@ -518,6 +522,7 @@ func (state *StageState) buildStageResult() {
 		Stars:        stars,
 		ElapsedTicks: result.ElapsedTicks,
 		LivesLost:    result.LivesLost,
+		CarriedOver:  result.CarriedOver,
 		NewBest:      newBest,
 		Items:        items,
 	}
@@ -535,6 +540,12 @@ func (state *StageState) applyStageResultItem(
 		return types.StateTransition{
 			Target: types.TransitionToStage,
 			Level:  uint(state.nextLevel),
+		}
+	case types.StageResultItemContinue:
+		return types.StateTransition{
+			Target:    types.TransitionToStage,
+			Level:     uint(state.nextLevel),
+			CarryOver: true,
 		}
 	case types.StageResultItemRetry:
 		return types.StateTransition{

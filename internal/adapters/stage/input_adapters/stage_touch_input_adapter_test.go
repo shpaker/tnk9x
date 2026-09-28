@@ -125,6 +125,8 @@ func (s *stubStageUseCases) GetStageResult() types.StageResult {
 	return types.StageResult{}
 }
 
+func (s *stubStageUseCases) SaveCarryOver() {}
+
 func newTouchAdapterUnderTest() (
 	*StageTouchInputAdapter,
 	*stubTouchControls,
