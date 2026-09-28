@@ -7,20 +7,22 @@ import (
 var _ interfaces.IGameRepositoriesRegistry = (*GameRepositoriesRegistry)(nil)
 
 type GameRepositoriesRegistry struct {
-	bulletsRepository     interfaces.IBulletsRepository
-	animationsRepository  interfaces.IAnimationsRepository
-	tanksRepository       interfaces.ITanksRepository
-	bonusesRepository     interfaces.IBonusesRepository
-	soundEventsRepository interfaces.ISoundEventsRepository
+	bulletsRepository       interfaces.IBulletsRepository
+	animationsRepository    interfaces.IAnimationsRepository
+	tanksRepository         interfaces.ITanksRepository
+	bonusesRepository       interfaces.IBonusesRepository
+	soundEventsRepository   interfaces.ISoundEventsRepository
+	visualEffectsRepository interfaces.IVisualEffectsRepository
 }
 
 func NewGameRepositoriesRegistry() *GameRepositoriesRegistry {
 	return &GameRepositoriesRegistry{
-		bulletsRepository:     NewBulletsRepository(),
-		animationsRepository:  NewAnimationsRepository(),
-		tanksRepository:       NewTanksRepository(),
-		bonusesRepository:     NewBonusesRepository(),
-		soundEventsRepository: NewSoundEventsRepository(),
+		bulletsRepository:       NewBulletsRepository(),
+		animationsRepository:    NewAnimationsRepository(),
+		tanksRepository:         NewTanksRepository(),
+		bonusesRepository:       NewBonusesRepository(),
+		soundEventsRepository:   NewSoundEventsRepository(),
+		visualEffectsRepository: NewVisualEffectsRepository(),
 	}
 }
 
@@ -42,4 +44,8 @@ func (gr *GameRepositoriesRegistry) GetBonusesRepository() interfaces.IBonusesRe
 
 func (gr *GameRepositoriesRegistry) GetSoundEventsRepository() interfaces.ISoundEventsRepository {
 	return gr.soundEventsRepository
+}
+
+func (gr *GameRepositoriesRegistry) GetVisualEffectsRepository() interfaces.IVisualEffectsRepository {
+	return gr.visualEffectsRepository
 }

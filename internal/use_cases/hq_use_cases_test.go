@@ -15,6 +15,7 @@ type hqTestEnv struct {
 	tileService *testutil.FakeTileService
 	animations  *game.AnimationsRepository
 	hq          *types.HQEntity
+	effects     *testutil.FakeVisualEffectsUseCases
 	hqUC        *use_cases.HQUseCases
 }
 
@@ -38,12 +39,15 @@ func newHQTestEnv() *hqTestEnv {
 		State:    types.HQStateIntact,
 	}
 
+	effects := &testutil.FakeVisualEffectsUseCases{}
+
 	return &hqTestEnv{
 		registry:    registry,
 		tileService: tileService,
 		animations:  animations,
 		hq:          hq,
-		hqUC:        use_cases.NewHQUseCases(tilesUC, hq),
+		effects:     effects,
+		hqUC:        use_cases.NewHQUseCases(tilesUC, effects, hq),
 	}
 }
 
@@ -56,6 +60,10 @@ func TestHQUseCases_Explode(t *testing.T) {
 		t.Fatalf("взрыв штаба: %v", err)
 	}
 
+	if kinds := env.effects.Kinds(); len(kinds) != 1 ||
+		kinds[0] != types.VisualEventHQExplosion {
+		t.Errorf("события эффектов %v, ожидался взрыв штаба", kinds)
+	}
 	if env.hq.State != types.HQStateExploding {
 		t.Errorf("состояние %v, ожидалось Exploding", env.hq.State)
 	}
@@ -202,7 +210,7 @@ func TestHQUseCases_GetHQAndIsDestroyed(t *testing.T) {
 		t.Error("разрушенный штаб не распознан")
 	}
 
-	nilUC := use_cases.NewHQUseCases(nil, nil)
+	nilUC := use_cases.NewHQUseCases(nil, nil, nil)
 	if nilUC.IsDestroyed() {
 		t.Error("nil-штаб считается разрушенным")
 	}

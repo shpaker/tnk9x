@@ -2,6 +2,7 @@ package use_cases
 
 import (
 	"image/color"
+	"math"
 
 	"github.com/shpaker/tnk9x/internal/interfaces"
 	"github.com/shpaker/tnk9x/internal/types"
@@ -9,9 +10,12 @@ import (
 )
 
 // Приоритеты источников: при переполнении types.MaxLights отбрасываются
-// менее важные — сначала танки, в последнюю очередь взрывы
+// менее важные — сначала танки врагов, в последнюю очередь фары
+// и аура игроков, задающие обзор
 const (
-	lightPriorityExplosion = iota
+	lightPriorityPlayer = iota
+	lightPriorityExplosion
+	lightPriorityFlash
 	lightPriorityBullet
 	lightPriorityAccent
 	lightPriorityAmbient
@@ -38,8 +42,10 @@ type lightSpec struct {
 var (
 	explosionLightColor = color.NRGBA{R: 255, G: 170, B: 60, A: 255}
 
+	// Пуля — трассер, одинаковый у всех: светится сама и освещает
+	// коридор, по которому летит, открывая то, что дальше фары
 	bulletLight = lightSpec{
-		28,
+		40,
 		color.NRGBA{R: 255, G: 230, B: 150, A: 255},
 		1.3,
 	}
@@ -58,13 +64,29 @@ var (
 		color.NRGBA{R: 220, G: 230, B: 255, A: 255},
 		0.8,
 	}
-	playerLight = lightSpec{
-		48,
-		color.NRGBA{R: 255, G: 235, B: 200, A: 255},
-		0.8,
+	// Обзор игрока: дальний конус фары по стволу и мягкая аура рядом
+	headlight = lightSpec{
+		130,
+		color.NRGBA{R: 255, G: 238, B: 205, A: 255},
+		1.35,
 	}
-	enemyLight = lightSpec{24, color.NRGBA{R: 255, G: 90, B: 70, A: 255}, 0.6}
+	playerAura = lightSpec{
+		30,
+		color.NRGBA{R: 255, G: 235, B: 200, A: 255},
+		0.7,
+	}
+	// Враг вне обзора едва тлеет: выдаёт себя вспышкой выстрела,
+	// а не постоянным свечением
+	enemyLight = lightSpec{14, color.NRGBA{R: 255, G: 90, B: 70, A: 255}, 0.25}
 	hqLight    = lightSpec{36, color.NRGBA{R: 255, G: 210, B: 90, A: 255}, 0.6}
+)
+
+// Параметры фары: половина угла конуса, вынос источника к срезу
+// ствола и доля угла, доворачиваемая за тик (~6 тиков на поворот)
+const (
+	headlightHalfAngle = 36 * math.Pi / 180
+	headlightReach     = 6.0
+	headlightTurnRate  = 0.35
 )
 
 // surfaceMaterials — свойства поверхностей: кирпич и сталь бросают
@@ -83,10 +105,11 @@ var _ interfaces.ILightingUseCases = (*LightingUseCases)(nil)
 // света из сущностей уровня
 type LightingUseCases struct {
 	// Use Cases
-	tankCommonUseCases interfaces.ITankCommonUseCases
-	bulletUseCases     interfaces.IBulletUseCases
-	hqUseCases         interfaces.IHQUseCases
-	bonusUseCases      interfaces.IBonusUseCases
+	tankCommonUseCases    interfaces.ITankCommonUseCases
+	bulletUseCases        interfaces.IBulletUseCases
+	hqUseCases            interfaces.IHQUseCases
+	bonusUseCases         interfaces.IBonusUseCases
+	visualEffectsUseCases interfaces.IVisualEffectsUseCases
 }
 
 func NewLightingUseCases(
@@ -94,12 +117,14 @@ func NewLightingUseCases(
 	bulletUseCases interfaces.IBulletUseCases,
 	hqUseCases interfaces.IHQUseCases,
 	bonusUseCases interfaces.IBonusUseCases,
+	visualEffectsUseCases interfaces.IVisualEffectsUseCases,
 ) *LightingUseCases {
 	return &LightingUseCases{
-		tankCommonUseCases: tankCommonUseCases,
-		bulletUseCases:     bulletUseCases,
-		hqUseCases:         hqUseCases,
-		bonusUseCases:      bonusUseCases,
+		tankCommonUseCases:    tankCommonUseCases,
+		bulletUseCases:        bulletUseCases,
+		hqUseCases:            hqUseCases,
+		bonusUseCases:         bonusUseCases,
+		visualEffectsUseCases: visualEffectsUseCases,
 	}
 }
 
@@ -111,11 +136,22 @@ func (uc *LightingUseCases) GetLights() []types.LightEntity {
 		if tank == nil {
 			continue
 		}
+		if isPlayerViewer(tank) {
+			buckets[lightPriorityPlayer] = append(
+				buckets[lightPriorityPlayer],
+				headlightOf(tank),
+			)
+		}
 		light, priority, ok := tankLight(tank)
 		if ok {
 			buckets[priority] = append(buckets[priority], light)
 		}
 	}
+
+	buckets[lightPriorityFlash] = append(
+		buckets[lightPriorityFlash],
+		uc.visualEffectsUseCases.GetFlashLights()...,
+	)
 
 	for _, bullet := range uc.bulletUseCases.GetBullets() {
 		if bullet == nil {
@@ -150,6 +186,32 @@ func (uc *LightingUseCases) GetLights() []types.LightEntity {
 	return lights
 }
 
+// GetViewers реализует ILightingUseCases: зрители — активные танки
+// игроков, смотрят туда же, куда светит фара
+func (uc *LightingUseCases) GetViewers() []types.ViewerEntity {
+	viewers := make([]types.ViewerEntity, 0, types.MaxViewers)
+	for _, tank := range uc.tankCommonUseCases.GetAllTanks() {
+		if !isPlayerViewer(tank) || len(viewers) == types.MaxViewers {
+			continue
+		}
+		angle := tank.GetHeadlightAngle()
+		viewers = append(viewers, types.ViewerEntity{
+			Position:  tankCenter(tank),
+			Direction: types.Position{X: math.Cos(angle), Y: math.Sin(angle)},
+		})
+	}
+	return viewers
+}
+
+// UpdateHeadlights реализует ILightingUseCases
+func (uc *LightingUseCases) UpdateHeadlights() {
+	for _, tank := range uc.tankCommonUseCases.GetAllTanks() {
+		if isPlayerViewer(tank) {
+			tank.TurnHeadlight(headlightTurnRate)
+		}
+	}
+}
+
 // GetMaterial реализует ILightingUseCases; у неизвестного блока
 // нулевой материал — свет проходит без блика
 func (uc *LightingUseCases) GetMaterial(
@@ -158,8 +220,26 @@ func (uc *LightingUseCases) GetMaterial(
 	return surfaceMaterials[blockType]
 }
 
-// tankLight — свет танка по его состоянию; щит заменяет собственный
-// свет танка, уничтоженный танк не светит
+// isPlayerViewer сообщает, светит ли танк фарой: только активный
+// танк игрока
+func isPlayerViewer(tank *types.TankEntity) bool {
+	return tank != nil && !tank.IsEnemy() && tank.IsActive()
+}
+
+// headlightOf — конус фары у среза ствола по текущему углу фары
+func headlightOf(tank *types.TankEntity) types.LightEntity {
+	angle := tank.GetHeadlightAngle()
+	direction := types.Position{X: math.Cos(angle), Y: math.Sin(angle)}
+	light := newLight(tank.Position, tank.Size, headlight)
+	light.Position.X += direction.X * headlightReach
+	light.Position.Y += direction.Y * headlightReach
+	light.Direction = direction
+	light.ConeCos = math.Cos(headlightHalfAngle)
+	return light
+}
+
+// tankLight — собственный свет танка по его состоянию: у игрока аура
+// обзора, щит заменяет собственный свет, уничтоженный танк не светит
 func tankLight(tank *types.TankEntity) (types.LightEntity, int, bool) {
 	switch {
 	case tank.State == types.TankStateExploded:
@@ -177,8 +257,8 @@ func tankLight(tank *types.TankEntity) (types.LightEntity, int, bool) {
 		return newLight(tank.Position, tank.Size, enemyLight),
 			lightPriorityAmbient, true
 	default:
-		return newLight(tank.Position, tank.Size, playerLight),
-			lightPriorityAmbient, true
+		return newLight(tank.Position, tank.Size, playerAura),
+			lightPriorityPlayer, true
 	}
 }
 

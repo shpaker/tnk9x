@@ -1,6 +1,9 @@
 package types
 
-import "fmt"
+import (
+	"fmt"
+	"math"
+)
 
 type PlayerTankNum int
 
@@ -45,6 +48,17 @@ type TankEntity struct {
 	blinkFlag     bool // Флаг видимости
 	hitPoints     uint // Количество попаданий до уничтожения (для тяжёлых танков)
 	shieldTicks   uint // Оставшиеся тики неуязвимости от каски
+
+	// Графические эффекты: направление фары (радианы, плавно
+	// доворачивается за стволом) и оставшиеся тики отдачи выстрела
+	headlightAngle float64
+	headlightReady bool
+	recoilTicks    uint
+
+	// Видимость танка для игроков от 0 до 1: плавно следует за зоной
+	// зрения, в которой он находится; до первого расчёта — полная
+	visibility      float64
+	visibilityReady bool
 }
 
 func NewDefaultTankEntity(role TankRole, direction Direction) TankEntity {
@@ -280,3 +294,87 @@ func (t *TankEntity) DecrementHitPoints() {
 
 // Реализация интерфейса IBlink
 var _ IBlink = (*TankEntity)(nil)
+
+// Графические эффекты
+
+// GetHeadlightAngle возвращает направление фары в радианах
+// (atan2 в экранных координатах, ось Y вниз)
+func (t *TankEntity) GetHeadlightAngle() float64 {
+	if t == nil {
+		return 0
+	}
+	if !t.headlightReady {
+		return t.Direction.Angle()
+	}
+	return t.headlightAngle
+}
+
+// TurnHeadlight доворачивает фару к направлению ствола на долю factor
+// оставшегося угла по кратчайшему пути; первый вызов ставит фару сразу
+func (t *TankEntity) TurnHeadlight(factor float64) {
+	if t == nil {
+		return
+	}
+	target := t.Direction.Angle()
+	if !t.headlightReady {
+		t.headlightAngle = target
+		t.headlightReady = true
+		return
+	}
+	diff := math.Remainder(target-t.headlightAngle, 2*math.Pi)
+	if math.Abs(diff) < headlightSnapAngle {
+		t.headlightAngle = target
+		return
+	}
+	t.headlightAngle = math.Remainder(t.headlightAngle+diff*factor, 2*math.Pi)
+}
+
+// headlightSnapAngle — остаток доворота, при котором фара встаёт точно
+const headlightSnapAngle = 0.01
+
+// StartRecoil запускает отдачу выстрела на ticks тиков
+func (t *TankEntity) StartRecoil(ticks uint) {
+	if t == nil {
+		return
+	}
+	t.recoilTicks = ticks
+}
+
+// TickRecoil отсчитывает тик отдачи
+func (t *TankEntity) TickRecoil() {
+	if t == nil || t.recoilTicks == 0 {
+		return
+	}
+	t.recoilTicks--
+}
+
+// IsRecoiling сообщает, откатывается ли танк после выстрела
+func (t *TankEntity) IsRecoiling() bool {
+	return t != nil && t.recoilTicks > 0
+}
+
+// GetVisibility возвращает видимость танка для игроков от 0 до 1
+func (t *TankEntity) GetVisibility() float64 {
+	if t == nil || !t.visibilityReady {
+		return 1
+	}
+	return t.visibility
+}
+
+// FadeVisibility приближает видимость к target: появление — на долю
+// rise оставшегося, исчезновение — на долю fall; первый вызов ставит сразу
+func (t *TankEntity) FadeVisibility(target, rise, fall float64) {
+	if t == nil {
+		return
+	}
+	if !t.visibilityReady {
+		t.visibility = target
+		t.visibilityReady = true
+		return
+	}
+	rate := fall
+	if target > t.visibility {
+		rate = rise
+	}
+	t.visibility += (target - t.visibility) * rate
+}

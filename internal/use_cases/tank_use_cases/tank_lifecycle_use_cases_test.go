@@ -100,6 +100,7 @@ type lifecycleTestEnv struct {
 	render         *stubRenderUseCases
 	spawnCollision *stubSpawnCollisionService
 	specs          *forcedLevelSpecs
+	effects        *testutil.FakeVisualEffectsUseCases
 	lifecycle      *tank_use_cases.TankLifecycleUseCases
 }
 
@@ -136,6 +137,7 @@ func newLifecycleTestEnv() *lifecycleTestEnv {
 		session_entities.NewStageSessionEntity(),
 	)
 	spawnCollision := &stubSpawnCollisionService{}
+	effects := &testutil.FakeVisualEffectsUseCases{}
 	lifecycle := tank_use_cases.NewTankLifecycleUseCases(
 		tilesUC,
 		render,
@@ -143,6 +145,7 @@ func newLifecycleTestEnv() *lifecycleTestEnv {
 		tanksRepo,
 		spawnCollision,
 		specs,
+		effects,
 		types.SpawnLayout{
 			EnemySpawners:  testEnemySpawners,
 			Player1Spawner: testPlayer1Spawner,
@@ -158,6 +161,7 @@ func newLifecycleTestEnv() *lifecycleTestEnv {
 		render:         render,
 		spawnCollision: spawnCollision,
 		specs:          specs,
+		effects:        effects,
 		lifecycle:      lifecycle,
 	}
 }
@@ -402,6 +406,7 @@ func TestTankLifecycleUseCases_NoEnemySpawners(t *testing.T) {
 		env.tanksRepo,
 		env.spawnCollision,
 		env.specs,
+		env.effects,
 		types.SpawnLayout{BaseSize: types.Size{Width: 16, Height: 16}},
 	)
 
@@ -441,6 +446,11 @@ func TestTankLifecycleUseCases_Explode(t *testing.T) {
 		t.Error("изображение не заменено анимацией взрыва")
 	}
 	assertAnimatingImage(t, tank)
+	if kinds := env.effects.Kinds(); len(kinds) != 1 ||
+		kinds[0] != types.VisualEventTankExplosion ||
+		env.effects.Events[0].Tank != tank {
+		t.Errorf("события эффектов %v, ожидался взрыв танка", kinds)
+	}
 
 	// Создавалась и анимация спавна, и анимация взрыва
 	if len(env.tileService.Created) != 2 ||

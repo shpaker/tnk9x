@@ -2,7 +2,9 @@
 
 // Динамический свет игрового поля с трассировкой теней.
 // Images[0] — сцена, Images[1] — маска материалов:
-// R — непрозрачность, G — отражательная способность, B — волнистость
+// R — непрозрачность, G — отражательная способность, B — волнистость;
+// Images[2] — зрение из vision.kage: R — видно сейчас, G — недавно,
+// B — видано когда-либо
 package main
 
 // Источники: xy — центр в пикселях экрана, z — радиус, w — яркость
@@ -11,7 +13,12 @@ var Lights [16]vec4
 // Цвета источников: rgb
 var LightColors [16]vec4
 
+// Конусы источников: xy — ось, z — косинус внешнего края, w — внутреннего;
+// у всенаправленного z = -2, w = -1 — конус не ограничивает свет
+var LightCones [16]vec4
+
 var LightCount int
+
 
 // Базовая освещённость сцены без источников
 var Ambient float
@@ -25,20 +32,61 @@ var FieldRect vec4
 // Время в кадрах — для ряби бликов на воде
 var Time float
 
-const steps = 32
+// Шаг луча не длиннее stepLength пикселей: дальний луч фары
+// не проскакивает тонкие сколы кирпича, короткий трассируется дешевле
+const (
+	maxSteps   = 48
+	stepLength = 3.0
+)
 
 // Плотность частично прозрачной поверхности на пиксель пути луча
 const density = 0.12
+
+// Стены — здания, сверху видна крыша: свет ложится только на фасад
+// со стороны источника и гаснет на глубине rimWidth пикселей,
+// крыша остаётся в общем освещении
+const (
+	rimWidth = 4.0
+	rimSteps = 6
+	wallCore = 0.0
+)
+
+// Вне увиденного и освещённого сцена теряет цвет до доли
+// peripherySaturation; полный цвет — где свет достигает focusLevel
+const (
+	peripherySaturation = 0.85
+	focusLevel          = 0.35
+)
+
+// Свет и блики полностью видны там, куда игрок смотрит; вне взгляда
+// они приглушаются до доли unseenLight. Увиденное светлее остального:
+// недавно — на recentBoost, когда-либо на уровне — на exploredBoost
+const (
+	unseenLight   = 0.33
+	recentBoost   = 0.16
+	exploredBoost = 0.06
+)
+
+// Фара не слепит у самого танка: конус набирает силу на первых
+// coneNear пикселях, его свечение на полу приглушено до coneHaze
+const (
+	coneNear = 40.0
+	coneHaze = 0.45
+)
 
 // visibility — доля света, дошедшего от источника до точки: луч идёт
 // по маске материалов, непрозрачная стена обрывает его, лес ослабляет.
 // Стена не затеняет саму себя: пока луч не вышел из стены,
 // в которой начался, препятствия не учитываются
-func visibility(pos vec2, target vec2, origin vec2, stepLength float) float {
+func visibility(pos vec2, target vec2, origin vec2, steps float) float {
 	vis := 1.0
+	stepSize := distance(pos, target) / steps
 	inside := imageSrc1At(pos+origin).r > 0.99
-	for s := 1; s < steps; s++ {
-		p := mix(pos, target, float(s)/float(steps))
+	for s := 1; s < maxSteps; s++ {
+		if float(s) >= steps {
+			break
+		}
+		p := mix(pos, target, float(s)/steps)
 		opacity := imageSrc1At(p + origin).r
 		if inside {
 			if opacity < 0.99 {
@@ -49,9 +97,23 @@ func visibility(pos vec2, target vec2, origin vec2, stepLength float) float {
 		if opacity > 0.99 {
 			return 0
 		}
-		vis *= exp(-opacity * density * stepLength)
+		vis *= exp(-opacity * density * stepSize)
 	}
 	return vis
+}
+
+// rim — освещённость пикселя стены: глубина до края стены по пути
+// к источнику, пройденная с шагом в пиксель; на кромке 1, в толще wallCore
+func rim(pos vec2, target vec2, origin vec2) float {
+	toLight := normalize(target - pos)
+	depth := float(rimSteps + 1)
+	for i := 1; i <= rimSteps; i++ {
+		if imageSrc1At(pos+toLight*float(i)+origin).r < 0.99 {
+			depth = float(i)
+			break
+		}
+	}
+	return mix(wallCore, 1, 1-smoothstep(1, rimWidth, depth))
 }
 
 func Fragment(dstPos vec4, srcPos vec2, color vec4) vec4 {
@@ -64,12 +126,16 @@ func Fragment(dstPos vec4, srcPos vec2, color vec4) vec4 {
 	}
 
 	material := imageSrc1At(srcPos)
+	wall := material.r > 0.99
 	wave := 0.5 + 0.5*sin(Time*0.08+pos.x*0.9+2*sin(pos.y*0.5+Time*0.05))
 	ripple := mix(1.0, 1.6*wave*wave, material.b)
 
-	light := vec3(Ambient)
+	vision := imageSrc2At(srcPos)
+	seen := vision.r
+	light := vec3(0)
 	glow := vec3(0)
 	glint := vec3(0)
+	focus := 0.0
 	for i := 0; i < 16; i++ {
 		if i >= LightCount {
 			break
@@ -79,20 +145,52 @@ func Fragment(dstPos vec4, srcPos vec2, color vec4) vec4 {
 		if d >= source.z {
 			continue
 		}
-		vis := visibility(pos, source.xy, origin, d/float(steps))
+		cone := LightCones[i]
+		spot := 1.0
+		if d >= 1 {
+			spot = smoothstep(cone.z, cone.w, dot((pos-source.xy)/d, cone.xy))
+		}
+		if spot <= 0 {
+			continue
+		}
+		steps := clamp(ceil(d/stepLength), 1, maxSteps)
+		vis := visibility(pos, source.xy, origin, steps) * spot
 		if vis <= 0 {
 			continue
 		}
+		// Обзор не зависит от фасада: крыша в луче фары видна в цвете
+		sight := vis
+		if wall && d >= 1 {
+			vis *= rim(pos, source.xy, origin)
+		}
 		falloff := 1 - d/source.z
-		attenuation := falloff * falloff * source.w * vis
+		// Всенаправленный свет спадает квадратично, фара — линейно
+		// и дотягивается дальше; у танка фара набирает силу плавно
+		profile := falloff
+		haze := 1.0
+		if cone.z > -1.5 {
+			near := smoothstep(0, coneNear, d)
+			profile *= near
+			haze = coneHaze * near
+		} else {
+			profile *= falloff
+		}
+		attenuation := profile * source.w * vis
+		focus += profile * source.w * sight
 		rgb := LightColors[i].rgb
 		light += rgb * attenuation
 		// Свечение пола спадает линейно: пятно света шире блика,
 		// тени за стенами видны на чёрном полу
-		glow += rgb * (falloff * source.w * vis)
+		glow += rgb * (falloff * source.w * vis * haze)
 		glint += rgb * (falloff * attenuation * falloff)
 	}
 
-	lit := scene.rgb*light + glow*Haze + glint*material.g*ripple
-	return vec4(lit, 1)
+	shown := mix(unseenLight, 1, seen)
+	ambient := Ambient + recentBoost*vision.g + exploredBoost*vision.b
+	lit := scene.rgb*(ambient+light*shown) +
+		(glow*Haze+glint*material.g*ripple)*shown
+	gray := vec3(dot(lit, vec3(0.299, 0.587, 0.114)))
+	saturation := mix(peripherySaturation, 1,
+		clamp(max(focus*shown/focusLevel, vision.g), 0, 1))
+	return vec4(mix(gray, lit, saturation), 1)
 }

@@ -9,7 +9,9 @@ import (
 )
 
 type IBulletUseCases interface {
-	ShootBullet(tank *types.TankEntity) error
+	// ShootBullet выпускает пулю танка; fired — false, если танк
+	// неактивен или его пули ещё в полёте (лимит — не ошибка)
+	ShootBullet(tank *types.TankEntity) (fired bool, err error)
 	UpdateBullets(dt float64) error
 	GetBullets() []*types.BulletEntity
 	RemoveBullet(bullet *types.BulletEntity) error
@@ -153,6 +155,34 @@ type ILightingUseCases interface {
 	GetLights() []types.LightEntity
 	// GetMaterial возвращает свойства поверхности блока для освещения
 	GetMaterial(blockType types.BlockType) types.SurfaceMaterial
+	// GetViewers возвращает зрителей — танки игроков — в координатах поля
+	GetViewers() []types.ViewerEntity
+	// UpdateHeadlights доворачивает фары танков игроков за стволом;
+	// вызывается раз в тик
+	UpdateHeadlights()
+}
+
+// IVisionUseCases — зрение игроков: насколько видны враги и пули
+// в зависимости от фары, периферии, дистанции и зданий на линии взгляда
+type IVisionUseCases interface {
+	// UpdateVisibility пересчитывает видимость врагов и всех пуль;
+	// вызывается раз в тик
+	UpdateVisibility()
+}
+
+// IVisualEffectsUseCases — графические эффекты игровых событий:
+// частицы, вспышки, тряска экрана и отдача выстрела
+type IVisualEffectsUseCases interface {
+	// RequestEffect ставит событие в очередь кадра
+	RequestEffect(event types.VisualEventEntity)
+	// Update разбирает события кадра и продвигает эффекты на тик
+	Update()
+	// GetParticles возвращает живые частицы в координатах поля
+	GetParticles() []types.ParticleEntity
+	// GetFlashLights возвращает источники света вспышек в координатах поля
+	GetFlashLights() []types.LightEntity
+	// GetShakeOffset возвращает смещение экрана от тряски в целых пикселях
+	GetShakeOffset() types.Position
 }
 
 type IHUDUseCases interface {

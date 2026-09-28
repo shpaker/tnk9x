@@ -17,6 +17,7 @@ type TankLifecycleUseCases struct {
 	tanksRepository       interfaces.ITanksRepository
 	spawnCollisionService interfaces.ISpawnCollisionService
 	specsUseCases         interfaces.ISpecsUseCases
+	visualEffectsUseCases interfaces.IVisualEffectsUseCases
 	spawnLayout           types.SpawnLayout
 }
 
@@ -27,6 +28,7 @@ func NewTankLifecycleUseCases(
 	tanksRepository interfaces.ITanksRepository,
 	spawnCollisionService interfaces.ISpawnCollisionService,
 	specsUseCases interfaces.ISpecsUseCases,
+	visualEffectsUseCases interfaces.IVisualEffectsUseCases,
 	spawnLayout types.SpawnLayout,
 ) *TankLifecycleUseCases {
 	return &TankLifecycleUseCases{
@@ -36,6 +38,7 @@ func NewTankLifecycleUseCases(
 		tanksRepository:       tanksRepository,
 		spawnCollisionService: spawnCollisionService,
 		specsUseCases:         specsUseCases,
+		visualEffectsUseCases: visualEffectsUseCases,
 		spawnLayout:           spawnLayout,
 	}
 }
@@ -224,6 +227,10 @@ func (uc *TankLifecycleUseCases) Explode(tank *types.TankEntity) error {
 	tank.Altitude = types.AIR
 
 	uc.tilesUseCases.StartAnimation(explosionAnim)
+	uc.visualEffectsUseCases.RequestEffect(types.VisualEventEntity{
+		Kind: types.VisualEventTankExplosion,
+		Tank: tank,
+	})
 	return nil
 }
 

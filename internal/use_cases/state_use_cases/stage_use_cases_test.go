@@ -114,8 +114,8 @@ type stubBulletUseCases struct {
 	updateCalls int
 }
 
-func (s *stubBulletUseCases) ShootBullet(tank *types.TankEntity) error {
-	return nil
+func (s *stubBulletUseCases) ShootBullet(tank *types.TankEntity) (bool, error) {
+	return false, nil
 }
 
 func (s *stubBulletUseCases) UpdateBullets(dt float64) error {

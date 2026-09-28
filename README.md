@@ -26,6 +26,10 @@ A modern remake and tribute to the classic arcade game Battle City (NES, 1985), 
 - Sound effects and music
 - NES-style sidebar HUD (enemy reserve, player lives, stage flag) on an authentic 256x224 screen
 - RTX-style effects, on by default (`config.yml`): 2D ray-traced lighting and shadows from tanks, bullets, explosions and bonuses, bloom, water/ice/steel glints, CRT filter; switch to classic graphics with F2 or the GRAPHICS item of the level select and pause menus (keyboard and touch)
+  - Player field of view: a headlight cone along the barrel that turns smoothly with the tank and a soft aura around it; walls are buildings, so light falls on their facades and they block both light and sight
+  - Vision shared by all tanks and bullets: objects are fully visible when they are in the player's field of view, not hidden behind buildings and lit; bullets glow like tracers and light up what lies beyond the headlight; out-of-sight objects and lights are dimmed
+  - Memory of seen areas: what the player sees now is brighter, recently seen areas fade out over a few seconds, explored areas stay slightly lighter
+  - Muzzle flashes with recoil, wall debris in the colors of the destroyed cells, steel and shield sparks, explosion embers and smoke, track dust, screen shake on hits and explosions (stronger for the player)
 - Runs natively and [in the browser](https://shpaker.github.io/tnk9x/) (WebAssembly, deployed to GitHub Pages on release tags)
 
 **Under the hood:**
@@ -34,7 +38,9 @@ A modern remake and tribute to the classic arcade game Battle City (NES, 1985), 
 - Constructor-only DI from a composition root, repository pattern
 - Scripting behind a domain-typed engine interface
 - App-lifetime GPU sprite cache with startup preload, fail-fast sprite/animation validation on startup
-- Kage shader pipeline: lighting pass on the logical screen, bloom and CRT in the final-screen pass; shaders loaded via repository and compiled fail-fast on startup
+- Kage shader pipeline: vision pass with a seen-area memory, lighting pass with omni and cone lights on the logical screen, bloom and CRT in the final-screen pass; shaders loaded via repository and compiled fail-fast on startup
+- Visual effects driven by a per-frame event queue from gameplay use cases; particles, flashes and shake live in a per-stage repository
+- Vision use case with line of sight over a block grid; light and field-of-view formulas live in the domain and match the shaders
 - Unit tests with a >=70% use-cases coverage gate
 - CI/CD (fmt, lint, test, build, release)
 

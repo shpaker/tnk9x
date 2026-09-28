@@ -7,6 +7,7 @@ import (
 	"math"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/colorm"
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 
@@ -17,25 +18,26 @@ import (
 )
 
 type StageRendererAdapter struct {
-	mapUseCases        interfaces.IMapUseCases
-	tankCommonUseCases interfaces.ITankCommonUseCases
-	bulletUseCases     interfaces.IBulletUseCases
-	hqUseCases         interfaces.IHQUseCases
-	hudUseCases        interfaces.IHUDUseCases
-	renderUseCases     interfaces.IRenderUseCases
-	bonusUseCases      interfaces.IBonusUseCases
-	lightingUseCases   interfaces.ILightingUseCases
-	spriteCache        *SpriteCache
-	effects            *effects.EffectsRendererAdapter
-	effectsSettings    *types.EffectsSettingsEntity
-	fontFace           text.Face
-	hudFontFace        text.Face
-	titleFontSize      int
-	subtitleFontSize   int
-	regularFontSize    int
-	mapOffsetX         int
-	mapOffsetY         int
-	mapWidthHeight     int
+	mapUseCases           interfaces.IMapUseCases
+	tankCommonUseCases    interfaces.ITankCommonUseCases
+	bulletUseCases        interfaces.IBulletUseCases
+	hqUseCases            interfaces.IHQUseCases
+	hudUseCases           interfaces.IHUDUseCases
+	renderUseCases        interfaces.IRenderUseCases
+	bonusUseCases         interfaces.IBonusUseCases
+	lightingUseCases      interfaces.ILightingUseCases
+	visualEffectsUseCases interfaces.IVisualEffectsUseCases
+	spriteCache           *SpriteCache
+	effects               *effects.EffectsRendererAdapter
+	effectsSettings       *types.EffectsSettingsEntity
+	fontFace              text.Face
+	hudFontFace           text.Face
+	titleFontSize         int
+	subtitleFontSize      int
+	regularFontSize       int
+	mapOffsetX            int
+	mapOffsetY            int
+	mapWidthHeight        int
 
 	// Последняя отрисовка меню паузы — для хит-тестов тапов;
 	// до первого кадра меню зоны неизвестны
@@ -45,20 +47,25 @@ type StageRendererAdapter struct {
 
 	// Поверхности кадра для маски материалов; буфер переиспользуется
 	surfaces []effects.Surface
+
+	// Память увиденного общая для приложения: рендер уровня сбрасывает
+	// её при первой отрисовке — прошлый уровень не подсвечивает новый
+	visionMemoryReset bool
 }
 
 // StageRendererDependencies — готовый граф зависимостей рендера уровня;
 // собирается composition root'ом, все поля обязательны
 type StageRendererDependencies struct {
 	// Use Cases
-	MapUseCases        interfaces.IMapUseCases
-	TankCommonUseCases interfaces.ITankCommonUseCases
-	BulletUseCases     interfaces.IBulletUseCases
-	HQUseCases         interfaces.IHQUseCases
-	HUDUseCases        interfaces.IHUDUseCases
-	RenderUseCases     interfaces.IRenderUseCases
-	BonusUseCases      interfaces.IBonusUseCases
-	LightingUseCases   interfaces.ILightingUseCases
+	MapUseCases           interfaces.IMapUseCases
+	TankCommonUseCases    interfaces.ITankCommonUseCases
+	BulletUseCases        interfaces.IBulletUseCases
+	HQUseCases            interfaces.IHQUseCases
+	HUDUseCases           interfaces.IHUDUseCases
+	RenderUseCases        interfaces.IRenderUseCases
+	BonusUseCases         interfaces.IBonusUseCases
+	LightingUseCases      interfaces.ILightingUseCases
+	VisualEffectsUseCases interfaces.IVisualEffectsUseCases
 
 	// Кэш GPU-спрайтов, общий для всех уровней
 	SpriteCache *SpriteCache
@@ -82,25 +89,26 @@ func NewStageRendererAdapter(
 	deps StageRendererDependencies,
 ) *StageRendererAdapter {
 	return &StageRendererAdapter{
-		mapUseCases:        deps.MapUseCases,
-		tankCommonUseCases: deps.TankCommonUseCases,
-		bulletUseCases:     deps.BulletUseCases,
-		hqUseCases:         deps.HQUseCases,
-		hudUseCases:        deps.HUDUseCases,
-		renderUseCases:     deps.RenderUseCases,
-		bonusUseCases:      deps.BonusUseCases,
-		lightingUseCases:   deps.LightingUseCases,
-		spriteCache:        deps.SpriteCache,
-		effects:            deps.Effects,
-		effectsSettings:    deps.EffectsSettings,
-		fontFace:           deps.FontFace,
-		hudFontFace:        deps.HUDFontFace,
-		mapOffsetX:         deps.MapOffsetX,
-		mapOffsetY:         deps.MapOffsetY,
-		mapWidthHeight:     deps.MapWidthHeight,
-		titleFontSize:      deps.TitleFontSize,
-		subtitleFontSize:   deps.SubtitleFontSize,
-		regularFontSize:    deps.RegularFontSize,
+		mapUseCases:           deps.MapUseCases,
+		tankCommonUseCases:    deps.TankCommonUseCases,
+		bulletUseCases:        deps.BulletUseCases,
+		hqUseCases:            deps.HQUseCases,
+		hudUseCases:           deps.HUDUseCases,
+		renderUseCases:        deps.RenderUseCases,
+		bonusUseCases:         deps.BonusUseCases,
+		lightingUseCases:      deps.LightingUseCases,
+		visualEffectsUseCases: deps.VisualEffectsUseCases,
+		spriteCache:           deps.SpriteCache,
+		effects:               deps.Effects,
+		effectsSettings:       deps.EffectsSettings,
+		fontFace:              deps.FontFace,
+		hudFontFace:           deps.HUDFontFace,
+		mapOffsetX:            deps.MapOffsetX,
+		mapOffsetY:            deps.MapOffsetY,
+		mapWidthHeight:        deps.MapWidthHeight,
+		titleFontSize:         deps.TitleFontSize,
+		subtitleFontSize:      deps.SubtitleFontSize,
+		regularFontSize:       deps.RegularFontSize,
 	}
 }
 
@@ -167,32 +175,62 @@ func (r *StageRendererAdapter) drawTanks(screen *ebiten.Image) {
 			continue
 		}
 
-		r.drawEntitySprite(
-			screen,
+		position := r.recoiledPosition(tank)
+		visibility := r.seenVisibility(tank.GetVisibility())
+		img, err := r.spriteCache.Image(
 			types.TankTilesetType(tank.IsEnemy()),
 			imageID,
-			tank.Position,
+		)
+		if err != nil {
+			continue
+		}
+		r.drawSeenImage(
+			screen,
+			img,
+			float64(r.mapOffsetX)+position.X,
+			float64(r.mapOffsetY)+position.Y,
+			visibility,
 		)
 
 		if overlayColor, ok := r.renderUseCases.TankHealthOverlay(tank); ok {
-			r.drawTankHealthOverlay(screen, tank, overlayColor)
+			overlayColor.A = uint8(float64(overlayColor.A) * visibility)
+			r.drawTankHealthOverlay(screen, position, tank.Size, overlayColor)
 		}
 	}
 }
+
+// recoiledPosition — позиция спрайта танка: с эффектами после выстрела
+// танк откачен на пиксель назад
+func (r *StageRendererAdapter) recoiledPosition(
+	tank *types.TankEntity,
+) types.Position {
+	position := tank.Position
+	if !r.effectsSettings.IsEnabled() || !tank.IsRecoiling() {
+		return position
+	}
+	direction := tank.Direction.Vector()
+	position.X -= direction.X * recoilOffsetPx
+	position.Y -= direction.Y * recoilOffsetPx
+	return position
+}
+
+// recoilOffsetPx — откат спрайта танка при выстреле
+const recoilOffsetPx = 1
 
 // drawTankHealthOverlay отрисовывает полупрозрачный слой поверх танка
 // цветом, выбранным use case'ом по его здоровью
 func (r *StageRendererAdapter) drawTankHealthOverlay(
 	screen *ebiten.Image,
-	tank *types.TankEntity,
+	position types.Position,
+	size types.Size,
 	overlayColor color.NRGBA,
 ) {
 	vector.FillRect(
 		screen,
-		float32(r.mapOffsetX)+float32(tank.Position.X),
-		float32(r.mapOffsetY)+float32(tank.Position.Y),
-		float32(tank.Size.Width),
-		float32(tank.Size.Height),
+		float32(r.mapOffsetX)+float32(position.X),
+		float32(r.mapOffsetY)+float32(position.Y),
+		float32(size.Width),
+		float32(size.Height),
 		overlayColor,
 		false,
 	)
@@ -304,14 +342,54 @@ func (r *StageRendererAdapter) drawBullets(screen *ebiten.Image) {
 			continue
 		}
 
-		op := &ebiten.DrawImageOptions{}
-		op.GeoM.Translate(
+		r.drawSeenImage(
+			screen,
+			img,
 			float64(r.mapOffsetX)+bullet.Position.X,
 			float64(r.mapOffsetY)+bullet.Position.Y,
+			r.seenVisibility(bullet.GetVisibility()),
 		)
-
-		screen.DrawImage(img, op)
 	}
+}
+
+// seenVisibility — видимость объекта для отрисовки: зрение игрока
+// действует только с эффектами, в классике видно всё
+func (r *StageRendererAdapter) seenVisibility(visibility float64) float64 {
+	if !r.effectsSettings.IsEnabled() {
+		return 1
+	}
+	return visibility
+}
+
+// seenBrightnessFloor — яркость спрайта при нулевой видимости: спрайт
+// и так проходит общий полумрак сцены, полное затемнение делает
+// танк чёрной дырой
+const seenBrightnessFloor = 0.4
+
+// drawSeenImage рисует спрайт с учётом видимости: плохо видимый
+// объект темнеет и теряет цвет
+func (r *StageRendererAdapter) drawSeenImage(
+	screen *ebiten.Image,
+	img *ebiten.Image,
+	x float64,
+	y float64,
+	visibility float64,
+) {
+	if visibility >= 1 {
+		op := &ebiten.DrawImageOptions{}
+		op.GeoM.Translate(x, y)
+		screen.DrawImage(img, op)
+		return
+	}
+	var colorMatrix colorm.ColorM
+	colorMatrix.ChangeHSV(
+		0,
+		visibility,
+		seenBrightnessFloor+(1-seenBrightnessFloor)*visibility,
+	)
+	op := &colorm.DrawImageOptions{}
+	op.GeoM.Translate(x, y)
+	colorm.DrawImage(screen, img, colorMatrix, op)
 }
 
 func (r *StageRendererAdapter) drawBonuses(screen *ebiten.Image) {
@@ -343,7 +421,14 @@ func (r *StageRendererAdapter) DrawAll(screen *ebiten.Image) {
 	}
 
 	scene := r.effects.BeginScene(screen.Bounds().Size())
+	if !r.visionMemoryReset {
+		r.effects.ResetVisionMemory()
+		r.visionMemoryReset = true
+	}
 	r.drawField(scene)
+	// Рамка под сдвинутым тряской кадром: у края не открывается пустота
+	r.drawScreenBackground(screen)
+	shake := r.visualEffectsUseCases.GetShakeOffset()
 	r.effects.DrawLighting(
 		screen,
 		image.Rect(
@@ -354,6 +439,8 @@ func (r *StageRendererAdapter) DrawAll(screen *ebiten.Image) {
 		),
 		r.buildSurfaces(),
 		r.buildLights(),
+		r.buildViewers(),
+		image.Pt(int(shake.X), int(shake.Y)),
 	)
 }
 
@@ -374,6 +461,16 @@ func (r *StageRendererAdapter) buildSurfaces() []effects.Surface {
 		})
 	}
 	return r.surfaces
+}
+
+// buildViewers переводит зрителей из координат поля в экранные
+func (r *StageRendererAdapter) buildViewers() []types.ViewerEntity {
+	viewers := r.lightingUseCases.GetViewers()
+	for i := range viewers {
+		viewers[i].Position.X += float64(r.mapOffsetX)
+		viewers[i].Position.Y += float64(r.mapOffsetY)
+	}
+	return viewers
 }
 
 // buildLights переводит источники света из координат поля в экранные
@@ -407,7 +504,36 @@ func (r *StageRendererAdapter) drawField(screen *ebiten.Image) {
 
 	r.drawExplosions(screen)
 
+	if r.effectsSettings.IsEnabled() {
+		r.drawParticles(screen)
+	}
+
 	r.drawBlocksByAltitude(screen, types.AIR)
+}
+
+// drawParticles рисует частицы эффектов квадратами; частица
+// тает к концу жизни, вылетевшие за поле не рисуются
+func (r *StageRendererAdapter) drawParticles(screen *ebiten.Image) {
+	fieldSize := float64(r.mapWidthHeight)
+	for _, particle := range r.visualEffectsUseCases.GetParticles() {
+		if particle.Position.X < 0 || particle.Position.Y < 0 ||
+			particle.Position.X >= fieldSize ||
+			particle.Position.Y >= fieldSize {
+			continue
+		}
+		particleColor := particle.Color
+		particleColor.A = uint8(float64(particleColor.A) * particle.Fade())
+		half := particle.Size / 2
+		vector.FillRect(
+			screen,
+			float32(float64(r.mapOffsetX)+math.Round(particle.Position.X-half)),
+			float32(float64(r.mapOffsetY)+math.Round(particle.Position.Y-half)),
+			float32(particle.Size),
+			float32(particle.Size),
+			particleColor,
+			false,
+		)
+	}
 }
 
 // Раскладка боковой панели HUD (как в NES Battle City): колонка справа

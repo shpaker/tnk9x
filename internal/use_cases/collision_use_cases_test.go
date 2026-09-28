@@ -7,6 +7,7 @@ import (
 	game "github.com/shpaker/tnk9x/internal/repositories/game"
 	"github.com/shpaker/tnk9x/internal/services"
 	"github.com/shpaker/tnk9x/internal/services/collision_services"
+	"github.com/shpaker/tnk9x/internal/testutil"
 	"github.com/shpaker/tnk9x/internal/types"
 	"github.com/shpaker/tnk9x/internal/types/session_entities"
 	"github.com/shpaker/tnk9x/internal/use_cases"
@@ -133,6 +134,7 @@ type collisionTestEnv struct {
 	lifecycle   *stubTankLifecycle
 	specsUC     *use_cases.SpecsUseCases
 	soundUC     *use_cases.SoundUseCases
+	effects     *testutil.FakeVisualEffectsUseCases
 }
 
 func newCollisionTestEnv(blocks types.MapBlocks) *collisionTestEnv {
@@ -156,6 +158,7 @@ func newCollisionTestEnv(blocks types.MapBlocks) *collisionTestEnv {
 
 	render := &stubRenderUseCases{}
 	soundUC := use_cases.NewSoundUseCases(game.NewSoundEventsRepository())
+	effects := &testutil.FakeVisualEffectsUseCases{}
 
 	bulletUC := use_cases.NewBulletUseCases(bulletsRepo, nil, 16)
 	tankCommon := tank_use_cases.NewTankCommonUseCases(
@@ -173,6 +176,7 @@ func newCollisionTestEnv(blocks types.MapBlocks) *collisionTestEnv {
 		render,
 		mapUC,
 		soundUC,
+		effects,
 	)
 	lifecycle := &stubTankLifecycle{}
 
@@ -191,6 +195,7 @@ func newCollisionTestEnv(blocks types.MapBlocks) *collisionTestEnv {
 		nil,
 		game.NewBonusesRepository(),
 		soundUC,
+		effects,
 	)
 
 	return &collisionTestEnv{
@@ -205,6 +210,7 @@ func newCollisionTestEnv(blocks types.MapBlocks) *collisionTestEnv {
 		lifecycle:   lifecycle,
 		specsUC:     specsUC,
 		soundUC:     soundUC,
+		effects:     effects,
 	}
 }
 
@@ -669,6 +675,10 @@ func TestBulletTankCollision_ShieldAbsorbsHit(t *testing.T) {
 	if player.IsDestroyed() {
 		t.Error("игрок уничтожен под щитом")
 	}
+	if kinds := env.effects.Kinds(); len(kinds) != 1 ||
+		kinds[0] != types.VisualEventShieldHit {
+		t.Errorf("события эффектов %v, ожидался удар по щиту", kinds)
+	}
 }
 
 // Вода не останавливает пули: пуля над водой выживает, блок цел
@@ -813,11 +823,14 @@ func TestBulletWallCollision_BrickShavedByDirection(t *testing.T) {
 		wantY     float64
 		wantW     int
 		wantH     int
+		// Срезанный слой, из которого летят обломки
+		debrisX float64
+		debrisY float64
 	}{
-		{"вправо", types.DirectionRight, 117, 98, 124, 96, 4, 8},
-		{"влево", types.DirectionLeft, 127, 98, 120, 96, 4, 8},
-		{"вниз", types.DirectionDown, 122, 93, 120, 100, 8, 4},
-		{"вверх", types.DirectionUp, 122, 103, 120, 96, 8, 4},
+		{"вправо", types.DirectionRight, 117, 98, 124, 96, 4, 8, 120, 96},
+		{"влево", types.DirectionLeft, 127, 98, 120, 96, 4, 8, 124, 96},
+		{"вниз", types.DirectionDown, 122, 93, 120, 100, 8, 4, 120, 96},
+		{"вверх", types.DirectionUp, 122, 103, 120, 96, 8, 4, 120, 100},
 	}
 
 	for _, tt := range tests {
@@ -853,6 +866,14 @@ func TestBulletWallCollision_BrickShavedByDirection(t *testing.T) {
 			events := env.soundUC.GetEvents()
 			if got := countSounds(events, types.SoundIDBrick); got != 1 {
 				t.Errorf("звуков кирпича %d, ожидался 1", got)
+			}
+			debris := env.effects.Events[0]
+			want := types.Position{X: tt.debrisX, Y: tt.debrisY}
+			if debris.Kind != types.VisualEventBlockDebris ||
+				debris.Position != want ||
+				!isSlab(debris.Size, tt.wantW, tt.wantH) {
+				t.Errorf("обломки %v в %v размером %v", debris.Kind,
+					debris.Position, debris.Size)
 			}
 		})
 	}
@@ -1031,6 +1052,19 @@ func TestBulletWallCollision_BrickAndSteelSeam(t *testing.T) {
 	if got := countSounds(events, types.SoundIDSteel); got != 1 {
 		t.Errorf("звуков стали %d, ожидался 1", got)
 	}
+	// Обломки срезанного слоя и один эффект на материал в точке
+	// и по направлению пули
+	kinds := env.effects.Kinds()
+	if len(kinds) != 3 || kinds[0] != types.VisualEventBlockDebris ||
+		kinds[1] != types.VisualEventBrickHit ||
+		kinds[2] != types.VisualEventSteelHit {
+		t.Fatalf("события эффектов %v, ожидались обломки, кирпич и сталь", kinds)
+	}
+	hit := env.effects.Events[1]
+	if hit.Position != (types.Position{X: 119, Y: 104}) ||
+		hit.Direction != types.DirectionRight {
+		t.Errorf("эффект в %v по %v", hit.Position, hit.Direction)
+	}
 }
 
 // Сталь: обычная пуля отскакивает, усиленная сносит блок целиком
@@ -1104,4 +1138,13 @@ func TestBulletWallCollision_TwoBulletsSameTickFinishTile(t *testing.T) {
 	if got := len(env.bulletUC.GetBullets()); got != 0 {
 		t.Errorf("пули не удалены: %d", got)
 	}
+}
+
+// isSlab проверяет, что срезан слой толщиной в полтайла вдоль
+// сохранившегося размера остатка
+func isSlab(size types.Size, remainW, remainH int) bool {
+	if remainW < 8 {
+		return size == types.Size{Width: 8 - remainW, Height: remainH}
+	}
+	return size == types.Size{Width: remainW, Height: 8 - remainH}
 }

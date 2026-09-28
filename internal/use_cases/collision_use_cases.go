@@ -27,6 +27,7 @@ type CollisionUseCases struct {
 	bonusUseCases            interfaces.IBonusUseCases
 	bonusesRepository        interfaces.IBonusesRepository
 	soundUseCases            interfaces.ISoundUseCases
+	visualEffectsUseCases    interfaces.IVisualEffectsUseCases
 }
 
 func NewCollisionUseCases(
@@ -44,6 +45,7 @@ func NewCollisionUseCases(
 	bonusUseCases interfaces.IBonusUseCases,
 	bonusesRepository interfaces.IBonusesRepository,
 	soundUseCases interfaces.ISoundUseCases,
+	visualEffectsUseCases interfaces.IVisualEffectsUseCases,
 ) *CollisionUseCases {
 	return &CollisionUseCases{
 		bulletUseCases:           bulletUseCases,
@@ -60,6 +62,7 @@ func NewCollisionUseCases(
 		bonusUseCases:            bonusUseCases,
 		bonusesRepository:        bonusesRepository,
 		soundUseCases:            soundUseCases,
+		visualEffectsUseCases:    visualEffectsUseCases,
 	}
 }
 
@@ -152,6 +155,7 @@ func (uc *CollisionUseCases) checkTankBulletCollisions(
 			if tank.IsActive() {
 				// Щит от каски поглощает попадание без урона
 				if tank.HasShield() {
+					uc.requestBulletEffect(types.VisualEventShieldHit, bullet)
 					return
 				}
 				// Для игроков понижаем уровень вместо взрыва
@@ -164,6 +168,10 @@ func (uc *CollisionUseCases) checkTankBulletCollisions(
 					if currentLevel > 0 {
 						// Понижаем уровень
 						uc.tankCommonUseCases.LevelDown(tank)
+						uc.requestBulletEffect(
+							types.VisualEventPlayerHit,
+							bullet,
+						)
 						uc.soundUseCases.RequestSound(
 							types.SoundIDExplosion,
 							false,
@@ -192,6 +200,10 @@ func (uc *CollisionUseCases) checkTankBulletCollisions(
 					} else {
 						// Уменьшаем здоровье
 						tank.DecrementHitPoints()
+						uc.requestBulletEffect(
+							types.VisualEventEnemyHit,
+							bullet,
+						)
 						// Танк ещё жив - воспроизводим звук попадания
 						uc.soundUseCases.RequestSound(
 							types.SoundIDExplosion,
@@ -358,6 +370,7 @@ func (uc *CollisionUseCases) checkBulletWallCollision(
 			hitBrick = true
 			if bullet.IsReinforced() {
 				// Усиленные пули сносят кирпич целиком
+				uc.requestDebris(block, block.Position, block.GetSize(), bullet)
 				_ = uc.mapUseCases.RemoveBlock(block)
 			} else {
 				uc.shaveBrickBlock(bullet, block)
@@ -366,6 +379,7 @@ func (uc *CollisionUseCases) checkBulletWallCollision(
 			hitSteel = true
 			if bullet.IsReinforced() {
 				// Усиленные пули могут ломать стальные блоки
+				uc.requestDebris(block, block.Position, block.GetSize(), bullet)
 				_ = uc.mapUseCases.RemoveBlock(block)
 			}
 		}
@@ -374,9 +388,11 @@ func (uc *CollisionUseCases) checkBulletWallCollision(
 	// Один звук на попадание, а не на каждый задетый блок
 	if hitBrick {
 		uc.soundUseCases.RequestSound(types.SoundIDBrick, false)
+		uc.requestBulletEffect(types.VisualEventBrickHit, bullet)
 	}
 	if hitSteel {
 		uc.soundUseCases.RequestSound(types.SoundIDSteel, false)
+		uc.requestBulletEffect(types.VisualEventSteelHit, bullet)
 	}
 
 	return len(hitBlocks) > 0
@@ -399,9 +415,25 @@ func (uc *CollisionUseCases) shaveBrickBlock(
 		depth = size.Width
 	}
 	if depth <= brickHitDepthPx {
+		uc.requestDebris(block, block.Position, size, bullet)
 		_ = uc.mapUseCases.RemoveBlock(block)
 		return
 	}
+
+	// Срезанный слой — у грани, в которую вошла пуля: Up бьёт в нижнюю,
+	// Left — в правую, Right и Down — в левую и верхнюю
+	slab := block.Position
+	slabSize := types.Size{Width: size.Width, Height: brickHitDepthPx}
+	if horizontal {
+		slabSize = types.Size{Width: brickHitDepthPx, Height: size.Height}
+	}
+	switch bullet.Direction {
+	case types.DirectionUp:
+		slab.Y += float64(size.Height - brickHitDepthPx)
+	case types.DirectionLeft:
+		slab.X += float64(size.Width - brickHitDepthPx)
+	}
+	uc.requestDebris(block, slab, slabSize, bullet)
 
 	// Right бьёт в левую грань, Down — в верхнюю: у них вместе с
 	// размером смещается и позиция остатка
@@ -468,4 +500,38 @@ func (uc *CollisionUseCases) checkTankBonusCollisions(
 			return
 		}
 	}
+}
+
+// requestBulletEffect запрашивает эффект попадания в точке пули
+// с направлением её полёта
+func (uc *CollisionUseCases) requestBulletEffect(
+	kind types.VisualEventKind,
+	bullet *types.BulletEntity,
+) {
+	size := bullet.GetSize()
+	uc.visualEffectsUseCases.RequestEffect(types.VisualEventEntity{
+		Kind: kind,
+		Position: types.Position{
+			X: bullet.Position.X + float64(size.Width)/2,
+			Y: bullet.Position.Y + float64(size.Height)/2,
+		},
+		Direction: bullet.Direction,
+	})
+}
+
+// requestDebris запрашивает обломки разрушенной области стены:
+// они вылетают из самой области, а не из точки попадания
+func (uc *CollisionUseCases) requestDebris(
+	block *types.BlockEntity,
+	position types.Position,
+	size types.Size,
+	bullet *types.BulletEntity,
+) {
+	uc.visualEffectsUseCases.RequestEffect(types.VisualEventEntity{
+		Kind:      types.VisualEventBlockDebris,
+		Position:  position,
+		Size:      size,
+		Direction: bullet.Direction,
+		Block:     block,
+	})
 }

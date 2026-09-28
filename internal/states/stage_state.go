@@ -31,6 +31,9 @@ type StageStateDependencies struct {
 	TilesUseCases         interfaces.ITilesUseCases
 	StageUseCases         interfaces.IStageUseCases
 	SoundUseCases         interfaces.ISoundUseCases
+	LightingUseCases      interfaces.ILightingUseCases
+	VisionUseCases        interfaces.IVisionUseCases
+	VisualEffectsUseCases interfaces.IVisualEffectsUseCases
 
 	// Adapters
 	InputAdapters      [2]interfaces.IInputAdapter
@@ -55,6 +58,9 @@ type StageState struct {
 	tilesUseCases         interfaces.ITilesUseCases
 	stageUseCases         interfaces.IStageUseCases
 	soundUseCases         interfaces.ISoundUseCases
+	lightingUseCases      interfaces.ILightingUseCases
+	visionUseCases        interfaces.IVisionUseCases
+	visualEffectsUseCases interfaces.IVisualEffectsUseCases
 
 	// Adapters
 	inputAdapters      [2]interfaces.IInputAdapter
@@ -89,6 +95,9 @@ func NewStageState(deps StageStateDependencies) *StageState {
 		tilesUseCases:         deps.TilesUseCases,
 		stageUseCases:         deps.StageUseCases,
 		soundUseCases:         deps.SoundUseCases,
+		lightingUseCases:      deps.LightingUseCases,
+		visionUseCases:        deps.VisionUseCases,
+		visualEffectsUseCases: deps.VisualEffectsUseCases,
 		inputAdapters:         deps.InputAdapters,
 		enemyInputAdapter:     deps.EnemyInputAdapter,
 		renderer:              deps.Renderer,
@@ -260,6 +269,15 @@ func (state *StageState) Update() types.StateTransition {
 			// Останавливаем звук двигателя, когда все игроки остановлены
 			state.soundUseCases.RequestStop(types.SoundIDEngine)
 		}
+
+		state.lightingUseCases.UpdateHeadlights()
+		state.visionUseCases.UpdateVisibility()
+	}
+
+	// Эффекты продвигаются и на финальном оверлее: дым и тряска
+	// от взрыва штаба доигрывают, а не замирают; в меню паузы стоят
+	if !paused || stageFinished {
+		state.visualEffectsUseCases.Update()
 	}
 
 	// Единственная точка контакта с звуковым адаптером: применяем
