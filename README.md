@@ -6,7 +6,7 @@ A modern remake and tribute to the classic arcade game Battle City (NES, 1985), 
 
 [![tnk9x gameplay with normal graphics](.github/screenshot-desktop.png)](https://shpaker.github.io/tnk9x/)
 
-*Stage 1 with normal graphics: headlight vision, lit bricks and steel, CRT filter.*
+*Stage 1 with normal graphics: headlight vision, bullet tracers, lit bricks and steel, tube TV filter.*
 
 [![tnk9x running in a mobile browser](.github/screenshot-mobile.png)](https://shpaker.github.io/tnk9x/)
 
@@ -23,6 +23,7 @@ A modern remake and tribute to the classic arcade game Battle City (NES, 1985), 
 - Bullets and destructible terrain with incremental brick chipping: each hit shaves a half-tile slab, reinforced bullets break tiles whole
 - All five surface types (brick, steel, forest, water, ice) with ice sliding and water blocking
 - Lua-scripted enemies of four types; each map file sets its enemy waves (tank order, pause, start condition: now, left<=N, clear), bonus carriers and on-field limit, see [assets/levels/README.md](assets/levels/README.md)
+  - The armored tank flashes between its normal and a tinted sprite as in the NES original; the tint shows the armor left (red, yellow, green)
 - Weighted enemy spawn point choice: blocked points are skipped, the last used point and points near a player are picked less often
 - Enemy AI with per-type personalities and difficulty scaling by stage:
   - NES-style targeting: roam, then hunt the player, then head for the HQ
