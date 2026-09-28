@@ -83,6 +83,8 @@ type ITankLifecycleUseCases interface {
 	SetPlayerTank(num types.PlayerTankNum, tank *types.TankEntity)
 	SpawnPlayer2() (*types.TankEntity, error)
 	Explode(tank *types.TankEntity) error
+	// CompleteSpawn завершает появление танка сразу, без анимации
+	CompleteSpawn(tank *types.TankEntity)
 	UpdateAllTanksLifecycle() error
 }
 
@@ -114,6 +116,9 @@ type IHQUseCases interface {
 
 type IStageUseCases interface {
 	SpawnPlayerTank(role types.TankRole) *types.TankEntity
+	// PlacePlayerTank ставит танк игрока на карту сразу, без анимации
+	// появления: уровень начинается с игроком на поле
+	PlacePlayerTank(role types.TankRole) *types.TankEntity
 	SpawnInitialEnemyTanks() []*types.TankEntity
 	TrySpawnEnemy() *types.TankEntity
 	TryRespawnPlayersTanks() (*types.TankEntity, *types.TankEntity)

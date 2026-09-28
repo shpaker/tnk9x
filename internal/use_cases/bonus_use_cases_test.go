@@ -64,6 +64,8 @@ func (s *recordingLifecycle) SpawnPlayer2() (*types.TankEntity, error) {
 	return nil, nil
 }
 
+func (s *recordingLifecycle) CompleteSpawn(*types.TankEntity) {}
+
 func (s *recordingLifecycle) GetPlayerTank(
 	num types.PlayerTankNum,
 ) *types.TankEntity {

@@ -67,6 +67,10 @@ const (
 	exploredBoost = 0.06
 )
 
+// Металлический блеск освещённого фасада на единицу отражательной
+// способности: спадает как сам свет и при ярком свете уходит в bloom
+const metalSheen = 0.9
+
 // Фара не слепит у самого танка: конус набирает силу на первых
 // coneNear пикселях, его свечение на полу приглушено до coneHaze
 const (
@@ -135,6 +139,7 @@ func Fragment(dstPos vec4, srcPos vec2, color vec4) vec4 {
 	light := vec3(0)
 	glow := vec3(0)
 	glint := vec3(0)
+	sheen := vec3(0)
 	focus := 0.0
 	for i := 0; i < 16; i++ {
 		if i >= LightCount {
@@ -182,13 +187,18 @@ func Fragment(dstPos vec4, srcPos vec2, color vec4) vec4 {
 		// Свечение пола спадает линейно: пятно света шире блика,
 		// тени за стенами видны на чёрном полу
 		glow += rgb * (falloff * source.w * vis * haze)
-		glint += rgb * (falloff * attenuation * falloff)
+		if wall {
+			// Стена блестит только фасадом: rim уже в attenuation
+			sheen += rgb * attenuation
+		} else {
+			glint += rgb * (falloff * attenuation * falloff)
+		}
 	}
 
 	shown := mix(unseenLight, 1, seen)
 	ambient := Ambient + recentBoost*vision.g + exploredBoost*vision.b
 	lit := scene.rgb*(ambient+light*shown) +
-		(glow*Haze+glint*material.g*ripple)*shown
+		(glow*Haze+(glint*ripple+sheen*metalSheen)*material.g)*shown
 	gray := vec3(dot(lit, vec3(0.299, 0.587, 0.114)))
 	saturation := mix(peripherySaturation, 1,
 		clamp(max(focus*shown/focusLevel, vision.g), 0, 1))

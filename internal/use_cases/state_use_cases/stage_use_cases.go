@@ -107,6 +107,20 @@ func (uc *StageUseCases) SpawnPlayerTank(
 	return playerTank
 }
 
+// PlacePlayerTank реализует IStageUseCases: на старте уровня танк
+// игрока сразу стоит на карте — со светом и зрением с первого кадра;
+// возрождение после гибели по-прежнему идёт через анимацию появления
+func (uc *StageUseCases) PlacePlayerTank(
+	role types.TankRole,
+) *types.TankEntity {
+	tank := uc.SpawnPlayerTank(role)
+	if tank == nil {
+		return nil
+	}
+	uc.tankLifecycleUseCases.CompleteSpawn(tank)
+	return tank
+}
+
 // SpawnInitialEnemyTanks выводит первых врагов сценария сразу
 // на разные спаунеры по порядку, как в NES
 func (uc *StageUseCases) SpawnInitialEnemyTanks() []*types.TankEntity {

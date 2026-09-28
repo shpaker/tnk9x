@@ -79,6 +79,8 @@ func (s *stubTankLifecycle) SpawnPlayer1() (*types.TankEntity, error) { return n
 
 func (s *stubTankLifecycle) SpawnPlayer2() (*types.TankEntity, error) { return nil, nil }
 
+func (s *stubTankLifecycle) CompleteSpawn(*types.TankEntity) {}
+
 func (s *stubTankLifecycle) GetPlayerTank(
 	num types.PlayerTankNum,
 ) *types.TankEntity {

@@ -279,6 +279,8 @@ func TestRenderUseCases_IsTankVisible(t *testing.T) {
 		}
 		return tank
 	}
+	shielded := newTank(types.TankRolePlayer1, false, false)
+	shielded.ActivateShield(60)
 
 	tests := []struct {
 		name string
@@ -304,6 +306,11 @@ func TestRenderUseCases_IsTankVisible(t *testing.T) {
 		{
 			"игрок с флагом бонуса",
 			newTank(types.TankRolePlayer1, true, false),
+			true,
+		},
+		{
+			"игрок под щитом не мигает — поверх мерцает поле",
+			shielded,
 			true,
 		},
 	}

@@ -265,6 +265,23 @@ func (t *TankEntity) ActivateShield(ticks uint) {
 	t.shieldTicks = ticks
 }
 
+// GetShieldTicks возвращает оставшиеся тики неуязвимости
+func (t *TankEntity) GetShieldTicks() uint {
+	if t == nil {
+		return 0
+	}
+	return t.shieldTicks
+}
+
+// ShieldFlickerTicks — сколько тиков держится одна фаза мерцания щита
+const ShieldFlickerTicks = 4
+
+// GetShieldPhase возвращает фазу мерцания силового поля, 0 или 1:
+// по ней чередуются кадры поля и яркость его свечения
+func (t *TankEntity) GetShieldPhase() int {
+	return int(t.GetShieldTicks()/ShieldFlickerTicks) % 2
+}
+
 func (t *TankEntity) HasShield() bool {
 	if t == nil {
 		return false

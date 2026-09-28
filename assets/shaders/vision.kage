@@ -2,8 +2,9 @@
 
 // Зрение игроков с памятью увиденного. Images[0] — память прошлого
 // кадра, Images[1] — маска материалов (как у lighting.kage).
-// Результат: R — видно сейчас, G — видно недавно (гаснет на Fade
-// за кадр), B — видано когда-либо на этом уровне
+// Результат: R — видно сейчас (у стены — только фасад, обращённый
+// к игроку), G — видно недавно (гаснет на Fade за кадр), B — видано
+// когда-либо на этом уровне
 package main
 
 // Зрители — танки игроков: xy — глаза в пикселях экрана, zw — взгляд
@@ -23,6 +24,13 @@ const (
 	maxSteps   = 48
 	stepLength = 3.0
 	density    = 0.12
+)
+
+// Фасад — кромка стены шириной facadeWidth со стороны взгляда,
+// как rim в lighting.kage: дальний фасад здания игроку не виден
+const (
+	facadeWidth = 4.0
+	facadeSteps = 6
 )
 
 // Поле зрения, как types.ViewerEntity: вплотную — со всех сторон,
@@ -60,9 +68,24 @@ func visibility(pos vec2, target vec2, origin vec2, steps float) float {
 	return vis
 }
 
+// facing — обращена ли точка стены к глазам: глубина до края стены
+// по пути к ним с шагом в пиксель; на кромке 1, в толще и за ней 0
+func facing(pos vec2, eye vec2, origin vec2) float {
+	toEye := normalize(eye - pos)
+	depth := float(facadeSteps + 1)
+	for i := 1; i <= facadeSteps; i++ {
+		if imageSrc1At(pos+toEye*float(i)+origin).r < 0.99 {
+			depth = float(i)
+			break
+		}
+	}
+	return 1 - smoothstep(1, facadeWidth, depth)
+}
+
 // seenBy — насколько пиксель виден хотя бы одному игроку: поле зрения
-// и взгляд до него мимо зданий
-func seenBy(pos vec2, origin vec2) float {
+// и взгляд до него мимо зданий. facade — учитывать ли, что у стены
+// видна только кромка со стороны игрока
+func seenBy(pos vec2, origin vec2, facade bool) float {
 	seen := 0.0
 	for v := 0; v < 2; v++ {
 		if v >= ViewerCount {
@@ -78,6 +101,12 @@ func seenBy(pos vec2, origin vec2) float {
 		if field <= seen {
 			continue
 		}
+		if facade && d >= 1 {
+			field *= facing(pos, viewer.xy, origin)
+			if field <= seen {
+				continue
+			}
+		}
 		steps := clamp(ceil(d/stepLength), 1, maxSteps)
 		seen = max(seen, field*visibility(pos, viewer.xy, origin, steps))
 	}
@@ -92,6 +121,11 @@ func Fragment(dstPos vec4, srcPos vec2, color vec4) vec4 {
 		return vec4(0, 0, 0, 1)
 	}
 	previous := imageSrc0At(srcPos)
-	seen := seenBy(pos, origin)
-	return vec4(seen, max(previous.g-Fade, seen), max(previous.b, seen), 1)
+	// Память — по всему видимому, с крышами: увиденное здание светлеет
+	seen := seenBy(pos, origin, false)
+	now := seen
+	if imageSrc1At(srcPos).r > 0.99 {
+		now = seenBy(pos, origin, true)
+	}
+	return vec4(now, max(previous.g-Fade, seen), max(previous.b, seen), 1)
 }

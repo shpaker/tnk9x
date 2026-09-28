@@ -120,3 +120,16 @@ func TestLightEntity_IlluminationAt(t *testing.T) {
 		t.Error("всенаправленный свет вне радиуса или не светит внутри")
 	}
 }
+
+// Фаза силового поля чередуется каждые ShieldFlickerTicks тиков
+func TestTankEntity_ShieldPhase(t *testing.T) {
+	tank := types.NewDefaultTankEntity(types.TankRolePlayer1, types.DirectionUp)
+	tank.ActivateShield(4)
+	first := tank.GetShieldPhase()
+	for range types.ShieldFlickerTicks {
+		tank.UpdateShieldCountdown()
+	}
+	if tank.GetShieldPhase() == first {
+		t.Error("фаза поля не сменилась")
+	}
+}

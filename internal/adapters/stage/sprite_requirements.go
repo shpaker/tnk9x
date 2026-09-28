@@ -20,6 +20,7 @@ func RequiredSprites() types.SpriteManifest {
 				"flag_bl",
 				"flag_br",
 			},
+			types.TilesetTypeShield: shieldFrames[:],
 		},
 	}
 }

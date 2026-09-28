@@ -189,11 +189,26 @@ func (uc *TankLifecycleUseCases) Explode(tank *types.TankEntity) error {
 	return nil
 }
 
+// CompleteSpawn реализует ITankLifecycleUseCases
+func (uc *TankLifecycleUseCases) CompleteSpawn(tank *types.TankEntity) {
+	if tank == nil || tank.State != types.TankStateSpawning {
+		return
+	}
+	uc.finishSpawnAnimation(tank)
+}
+
+// spawnShieldDurationTicks — неуязвимость танка игрока после появления,
+// как в оригинале: и на старте уровня, и после гибели
+const spawnShieldDurationTicks = 3 * 60
+
 func (uc *TankLifecycleUseCases) finishSpawnAnimation(
 	tank *types.TankEntity,
 ) {
 	uc.renderUseCases.UpdateTankAnimation(tank)
 	tank.State = types.TankStateStopped
+	if !tank.IsEnemy() {
+		tank.ActivateShield(spawnShieldDurationTicks)
+	}
 }
 
 func (uc *TankLifecycleUseCases) UpdateAllTanksLifecycle() error {
