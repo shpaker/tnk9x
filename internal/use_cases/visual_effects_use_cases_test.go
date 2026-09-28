@@ -53,7 +53,8 @@ func TestVisualEffectsUseCases_SteelHitSparksAndFlash(t *testing.T) {
 		t.Error("удар по стали без искр")
 	}
 	flashes := env.effects.GetFlashLights()
-	if len(flashes) != 1 || flashes[0].Position != (types.Position{X: 50, Y: 50}) {
+	if len(flashes) != 1 ||
+		flashes[0].Position != (types.Position{X: 50, Y: 50}) {
 		t.Errorf("вспышки %v, ожидалась одна в точке удара", flashes)
 	}
 }
@@ -206,7 +207,10 @@ func TestVisualEffectsUseCases_BlockDebrisFromWallCells(t *testing.T) {
 			t.Errorf("цвет обломка %v, ожидался цвет спрайта", particle.Color)
 		}
 		if particle.Position.Y < 44 || particle.Position.Y > 48 {
-			t.Errorf("обломок в %v, ожидался в срезанном слое", particle.Position)
+			t.Errorf(
+				"обломок в %v, ожидался в срезанном слое",
+				particle.Position,
+			)
 		}
 	}
 

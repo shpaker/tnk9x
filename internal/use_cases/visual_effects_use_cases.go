@@ -407,7 +407,9 @@ func (uc *VisualEffectsUseCases) emitDebris(
 			}
 			heading := angle + (rand.Float64()*2-1)*debrisSpread
 			speed := randomBetween(debrisSpeedMin, debrisSpeedMax)
-			life := uint(debrisLifeMin + rand.IntN(debrisLifeMax-debrisLifeMin+1))
+			life := uint(
+				debrisLifeMin + rand.IntN(debrisLifeMax-debrisLifeMin+1),
+			)
 			uc.visualEffectsRepository.AddParticle(types.ParticleEntity{
 				// Центр куска: частица рисуется квадратом вокруг позиции
 				Position: types.Position{

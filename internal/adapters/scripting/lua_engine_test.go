@@ -52,7 +52,11 @@ end
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	want := types.EnemyAIDecision{Direction: types.DirectionLeft, Move: true, Shoot: true}
+	want := types.EnemyAIDecision{
+		Direction: types.DirectionLeft,
+		Move:      true,
+		Shoot:     true,
+	}
 	if decision != want {
 		t.Fatalf("expected %+v, got %+v", want, decision)
 	}
@@ -113,8 +117,15 @@ end
 	engine.SetGlobalNumber("MAP_WIDTH_PX", 64)
 
 	context := testContext()
-	context.Players = []types.AITankInfo{{Position: types.Position{X: 32, Y: 0}, Size: types.Size{Width: 16, Height: 16}}}
-	context.Enemies = []types.AITankInfo{{ID: 4, Size: types.Size{Width: 16, Height: 16}}}
+	context.Players = []types.AITankInfo{
+		{
+			Position: types.Position{X: 32, Y: 0},
+			Size:     types.Size{Width: 16, Height: 16},
+		},
+	}
+	context.Enemies = []types.AITankInfo{
+		{ID: 4, Size: types.Size{Width: 16, Height: 16}},
+	}
 	context.Bullets = []types.AIBulletInfo{{FromEnemy: true}}
 
 	decision, err := engine.UpdateEnemyAI(context)
@@ -140,7 +151,9 @@ end
 
 	// Кирпич в стороне от пути по верхней кромке не перекрывает проезд,
 	// но стоит на линии огня из центра танка
-	context := testContext(types.NewBlockEntity(string(types.Brick), 24, 8, 8, nil))
+	context := testContext(
+		types.NewBlockEntity(string(types.Brick), 24, 8, 8, nil),
+	)
 	context.Self.Position = types.Position{X: 0, Y: 0}
 
 	decision, err := engine.UpdateEnemyAI(context)

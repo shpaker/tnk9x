@@ -54,7 +54,9 @@ func (g *NavGridEntity) fill(block *BlockEntity) {
 	fromCol := int(math.Floor(block.Position.X / cellSize))
 	fromRow := int(math.Floor(block.Position.Y / cellSize))
 	toCol := int(math.Ceil((block.Position.X+float64(size.Width))/cellSize)) - 1
-	toRow := int(math.Ceil((block.Position.Y+float64(size.Height))/cellSize)) - 1
+	toRow := int(
+		math.Ceil((block.Position.Y+float64(size.Height))/cellSize),
+	) - 1
 
 	for row := fromRow; row <= toRow; row++ {
 		for col := fromCol; col <= toCol; col++ {

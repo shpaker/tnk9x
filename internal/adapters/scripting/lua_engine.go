@@ -176,17 +176,30 @@ func (e *luaEngine) findPath(L *lua.LState) int {
 		return 1
 	}
 
-	from := types.Position{X: float64(L.CheckNumber(1)), Y: float64(L.CheckNumber(2))}
-	to := types.Position{X: float64(L.CheckNumber(3)), Y: float64(L.CheckNumber(4))}
+	from := types.Position{
+		X: float64(L.CheckNumber(1)),
+		Y: float64(L.CheckNumber(2)),
+	}
+	to := types.Position{
+		X: float64(L.CheckNumber(3)),
+		Y: float64(L.CheckNumber(4)),
+	}
 	options := types.NavOptions{TankSize: e.context.Self.Size.Width}
 	if table, ok := L.Get(5).(*lua.LTable); ok {
 		if n, ok := table.RawGetString("brickCost").(lua.LNumber); ok {
 			options.BrickCost = int(n)
 		}
-		options.SteelPassable = lua.LVAsBool(table.RawGetString("steelPassable"))
+		options.SteelPassable = lua.LVAsBool(
+			table.RawGetString("steelPassable"),
+		)
 	}
 
-	step, found := e.navigationService.FindPath(e.context.Grid, from, to, options)
+	step, found := e.navigationService.FindPath(
+		e.context.Grid,
+		from,
+		to,
+		options,
+	)
 	if !found {
 		L.Push(lua.LNil)
 		return 1
@@ -205,7 +218,10 @@ func (e *luaEngine) castRay(L *lua.LState) int {
 		return 1
 	}
 
-	origin := types.Position{X: float64(L.CheckNumber(1)), Y: float64(L.CheckNumber(2))}
+	origin := types.Position{
+		X: float64(L.CheckNumber(1)),
+		Y: float64(L.CheckNumber(2)),
+	}
 	direction := types.Direction(L.CheckInt(3))
 
 	hit := e.navigationService.CastRay(
@@ -222,7 +238,11 @@ func (e *luaEngine) castRay(L *lua.LState) int {
 
 func (e *luaEngine) rayTargets() []types.RayTarget {
 	context := e.context
-	targets := make([]types.RayTarget, 0, len(context.Players)+len(context.Enemies)+1)
+	targets := make(
+		[]types.RayTarget,
+		0,
+		len(context.Players)+len(context.Enemies)+1,
+	)
 	for _, player := range context.Players {
 		targets = append(targets, types.RayTarget{
 			Kind:     types.RayHitPlayer,
