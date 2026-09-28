@@ -159,11 +159,15 @@ func TestVisualEffectsUseCases_DustOnlyWhenMoving(t *testing.T) {
 		t.Fatalf("стоящий танк пылит: %d частиц", got)
 	}
 
+	// Пыль случайна и недолговечна: считаем, появлялась ли она
+	// хоть раз за время движения, а не только в последнем кадре
 	tank.State = types.TankStateMoving
-	for range 60 {
+	dusted := false
+	for range 120 {
 		env.effects.Update()
+		dusted = dusted || len(env.effects.GetParticles()) > 0
 	}
-	if len(env.effects.GetParticles()) == 0 {
+	if !dusted {
 		t.Error("движущийся танк не пылит")
 	}
 }

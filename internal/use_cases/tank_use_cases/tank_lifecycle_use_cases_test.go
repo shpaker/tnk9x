@@ -450,3 +450,51 @@ func TestTankLifecycleUseCases_GetSetPlayerTank(t *testing.T) {
 		t.Errorf("танк не сохранён: %v", got)
 	}
 }
+
+// CompleteSpawn ставит появляющийся танк на карту сразу;
+// активный танк не трогает
+func TestTankLifecycleUseCases_CompleteSpawn(t *testing.T) {
+	env := newLifecycleTestEnv()
+	tank, err := env.lifecycle.SpawnPlayer1()
+	if err != nil || tank == nil {
+		t.Fatalf("спавн: tank=%v err=%v", tank, err)
+	}
+
+	env.lifecycle.CompleteSpawn(tank)
+
+	if tank.State != types.TankStateStopped {
+		t.Errorf("состояние %v, ожидалось Stopped", tank.State)
+	}
+	if got := len(env.render.updatedAnimations); got != 1 {
+		t.Errorf("анимация танка обновлена %d раз, ожидался 1", got)
+	}
+	if !tank.HasShield() {
+		t.Error("появившийся игрок без неуязвимости")
+	}
+
+	tank.State = types.TankStateMoving
+	env.lifecycle.CompleteSpawn(tank)
+	if tank.State != types.TankStateMoving {
+		t.Error("активный танк не должен меняться")
+	}
+}
+
+// После появления неуязвим только игрок, как в оригинале
+func TestTankLifecycleUseCases_SpawnShieldOnlyForPlayer(t *testing.T) {
+	env := newLifecycleTestEnv()
+	env.render.spawnFinished = true
+	player, _ := env.lifecycle.SpawnPlayer1()
+	enemy, err := env.lifecycle.SpawnEnemy(0, types.EnemyLevelBasic)
+	if err != nil || player == nil || enemy == nil {
+		t.Fatalf("спавн: player=%v enemy=%v err=%v", player, enemy, err)
+	}
+
+	_ = env.lifecycle.UpdateAllTanksLifecycle()
+
+	if !player.IsActive() || !player.HasShield() {
+		t.Error("возродившийся игрок должен быть неуязвим")
+	}
+	if !enemy.IsActive() || enemy.HasShield() {
+		t.Error("враг после появления не должен быть неуязвим")
+	}
+}

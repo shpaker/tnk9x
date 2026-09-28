@@ -114,12 +114,10 @@ func (uc *RenderUseCases) SyncTankAnimationWithState(
 }
 
 // IsTankVisible — false в выключенной фазе мигания вражеского танка
-// с бонусом или танка под щитом; такой танк в этом кадре не отрисовывается
+// с бонусом; такой танк в этом кадре не отрисовывается. Танк под щитом
+// не мигает — поверх него мерцает силовое поле
 func (uc *RenderUseCases) IsTankVisible(tank *types.TankEntity) bool {
 	if tank == nil {
-		return false
-	}
-	if tank.HasShield() && !tank.GetBlinkFlag() {
 		return false
 	}
 	return !(tank.IsEnemy() && tank.GetWithBonus() && !tank.GetBlinkFlag())

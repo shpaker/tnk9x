@@ -305,6 +305,11 @@ func TestLightingUseCases_GetMaterial(t *testing.T) {
 		}
 	}
 
+	// Сталь — металл: блестит сильнее матового кирпича
+	if lighting.GetMaterial(types.Steel).Reflectivity <=
+		lighting.GetMaterial(types.Brick).Reflectivity {
+		t.Error("сталь должна отражать свет сильнее кирпича")
+	}
 	if forest := lighting.GetMaterial(types.Forest); forest.Opacity <= 0 {
 		t.Error("лес должен частично затенять")
 	}
@@ -359,5 +364,26 @@ func TestLightingUseCases_GetViewers(t *testing.T) {
 	}
 	if math.Abs(viewers[0].Direction.X-1) > 1e-9 {
 		t.Errorf("взгляд %v, ожидался вправо", viewers[0].Direction)
+	}
+}
+
+// Свечение щита мерцает: соседние фазы отличаются яркостью
+func TestLightingUseCases_GetLights_ShieldFlickers(t *testing.T) {
+	env := newLightingTestEnv()
+	tank := newPlayerTank(types.TankRolePlayer1)
+	env.tankCommon.tanks = []*types.TankEntity{tank}
+
+	shieldIntensity := func(ticks uint) float64 {
+		tank.ActivateShield(ticks)
+		for _, light := range env.lighting.GetLights() {
+			if !light.IsCone() {
+				return light.Intensity
+			}
+		}
+		return 0
+	}
+
+	if shieldIntensity(10) == shieldIntensity(12) {
+		t.Error("свечение щита не мерцает")
 	}
 }

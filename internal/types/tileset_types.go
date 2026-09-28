@@ -14,6 +14,7 @@ const (
 	TilesetTypeHQ              TilesetType = "hq"
 	TilesetTypeBonuses         TilesetType = "bonuses"
 	TilesetTypeHUD             TilesetType = "hud"
+	TilesetTypeShield          TilesetType = "shield"
 )
 
 // AllTilesetTypes перечисляет все известные типы тайлсетов
@@ -29,6 +30,7 @@ func AllTilesetTypes() []TilesetType {
 		TilesetTypeHQ,
 		TilesetTypeBonuses,
 		TilesetTypeHUD,
+		TilesetTypeShield,
 	}
 }
 

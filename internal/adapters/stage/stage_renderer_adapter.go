@@ -197,7 +197,38 @@ func (r *StageRendererAdapter) drawTanks(screen *ebiten.Image) {
 			overlayColor.A = uint8(float64(overlayColor.A) * visibility)
 			r.drawTankHealthOverlay(screen, position, tank.Size, overlayColor)
 		}
+
+		if tank.HasShield() {
+			r.drawShield(screen, tank, position, visibility)
+		}
 	}
+}
+
+// shieldFrames — кадры силового поля по фазе мерцания щита
+var shieldFrames = [2]string{"shield_1", "shield_2"}
+
+// drawShield рисует мерцающее силовое поле поверх неуязвимого танка:
+// кадры чередуются в такт свечению щита
+func (r *StageRendererAdapter) drawShield(
+	screen *ebiten.Image,
+	tank *types.TankEntity,
+	position types.Position,
+	visibility float64,
+) {
+	img, err := r.spriteCache.Image(
+		types.TilesetTypeShield,
+		shieldFrames[tank.GetShieldPhase()],
+	)
+	if err != nil {
+		return
+	}
+	r.drawSeenImage(
+		screen,
+		img,
+		float64(r.mapOffsetX)+position.X,
+		float64(r.mapOffsetY)+position.Y,
+		visibility,
+	)
 }
 
 // recoiledPosition — позиция спрайта танка: с эффектами после выстрела

@@ -45,14 +45,15 @@ var (
 	// Пуля — трассер, одинаковый у всех: светится сама и освещает
 	// коридор, по которому летит, открывая то, что дальше фары
 	bulletLight = lightSpec{
-		40,
+		44,
 		color.NRGBA{R: 255, G: 230, B: 150, A: 255},
-		1.3,
+		1.6,
 	}
+	// Силовое поле вспыхивает ярко, с пересветом для bloom
 	shieldLight = lightSpec{
-		32,
+		36,
 		color.NRGBA{R: 120, G: 220, B: 255, A: 255},
-		1.0,
+		1.5,
 	}
 	bonusLight = lightSpec{
 		28,
@@ -68,7 +69,7 @@ var (
 	headlight = lightSpec{
 		130,
 		color.NRGBA{R: 255, G: 238, B: 205, A: 255},
-		1.35,
+		1.6,
 	}
 	playerAura = lightSpec{
 		30,
@@ -90,10 +91,11 @@ const (
 )
 
 // surfaceMaterials — свойства поверхностей: кирпич и сталь бросают
-// тень, лес затеняет частично, вода и лёд дают блики
+// тень, лес затеняет частично, вода и лёд дают блики. Сталь — металл,
+// её освещённый фасад блестит; кирпич матовый
 var surfaceMaterials = map[types.BlockType]types.SurfaceMaterial{
 	types.Brick:  {Opacity: 1},
-	types.Steel:  {Opacity: 1, Reflectivity: 0.3},
+	types.Steel:  {Opacity: 1, Reflectivity: 1},
 	types.Forest: {Opacity: 0.35},
 	types.Water:  {Reflectivity: 1, Ripple: 1},
 	types.Ice:    {Reflectivity: 0.6},
@@ -251,8 +253,7 @@ func tankLight(tank *types.TankEntity) (types.LightEntity, int, bool) {
 		return newLight(tank.Position, tank.Size, spawnLight),
 			lightPriorityAccent, true
 	case tank.HasShield():
-		return newLight(tank.Position, tank.Size, shieldLight),
-			lightPriorityAccent, true
+		return shieldLightOf(tank), lightPriorityAccent, true
 	case tank.IsEnemy():
 		return newLight(tank.Position, tank.Size, enemyLight),
 			lightPriorityAmbient, true
@@ -260,6 +261,24 @@ func tankLight(tank *types.TankEntity) (types.LightEntity, int, bool) {
 		return newLight(tank.Position, tank.Size, playerAura),
 			lightPriorityPlayer, true
 	}
+}
+
+// Тусклая фаза мерцания щита: свечение почти гаснет и сжимается —
+// поле заметно пульсирует
+const (
+	shieldFlickerDim    = 0.35
+	shieldFlickerShrink = 0.8
+)
+
+// shieldLightOf — свечение неуязвимого танка мерцает в такт кадрам
+// силового поля
+func shieldLightOf(tank *types.TankEntity) types.LightEntity {
+	light := newLight(tank.Position, tank.Size, shieldLight)
+	if tank.GetShieldPhase() == 1 {
+		light.Intensity *= shieldFlickerDim
+		light.Radius *= shieldFlickerShrink
+	}
+	return light
 }
 
 // hqLightOf — свет штаба: целый слабо светится, взрывающийся даёт

@@ -159,7 +159,7 @@ func (state *StageState) SetUp() {
 	for i := 0; i < playerCount; i++ {
 		num := types.PlayerTankNum(i)
 		role := types.PlayerTankNumToRole(num)
-		playerTank := state.stageUseCases.SpawnPlayerTank(role)
+		playerTank := state.stageUseCases.PlacePlayerTank(role)
 
 		if playerTank != nil && state.inputAdapters[i] != nil {
 			if keyboardAdapter, ok := state.inputAdapters[i].(interfaces.IInputAdapterWithTank); ok {
@@ -403,7 +403,7 @@ func (state *StageState) updateBlinkObjects() {
 		if tank == nil {
 			continue
 		}
-		if (tank.IsEnemy() && tank.GetWithBonus()) || tank.HasShield() {
+		if tank.IsEnemy() && tank.GetWithBonus() {
 			blinkObjects = append(blinkObjects, tank)
 		}
 	}

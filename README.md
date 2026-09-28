@@ -38,6 +38,9 @@ A modern remake and tribute to the classic arcade game Battle City (NES, 1985), 
   - Player field of view: a headlight cone along the barrel that turns smoothly with the tank and a soft aura around it; walls are buildings, so light falls on their facades and they block both light and sight
   - Vision shared by all tanks and bullets: objects are fully visible when they are in the player's field of view, not hidden behind buildings and lit; bullets glow like tracers and light up what lies beyond the headlight; out-of-sight objects and lights are dimmed
   - Memory of seen areas: what the player sees now is brighter, recently seen areas fade out over a few seconds, explored areas stay slightly lighter
+  - Materials: steel facades have a metallic sheen that blooms under bright light, brick is matte; a building's far facade is not visible to the player
+  - The stage starts with the player tank already on the map; respawns after death keep the spawn animation
+  - Invulnerability after spawning, as in the original: an animated force field over the tank in both graphics modes, pulsing with a flickering glow in RTX (also for the helmet bonus)
   - Muzzle flashes with recoil, wall debris in the colors of the destroyed cells, steel and shield sparks, explosion embers and smoke, track dust, screen shake on hits and explosions (stronger for the player)
 - Runs natively and [in the browser](https://shpaker.github.io/tnk9x/) (WebAssembly, deployed to GitHub Pages on release tags)
 

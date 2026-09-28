@@ -88,6 +88,12 @@ func (s *stubStageUseCases) SpawnPlayerTank(
 	return nil
 }
 
+func (s *stubStageUseCases) PlacePlayerTank(
+	types.TankRole,
+) *types.TankEntity {
+	return nil
+}
+
 func (s *stubStageUseCases) SpawnInitialEnemyTanks() []*types.TankEntity {
 	return nil
 }

@@ -53,6 +53,13 @@ func (s *stubLifecycle) SpawnPlayer1() (*types.TankEntity, error) {
 	return tank, nil
 }
 
+// CompleteSpawn завершает появление, как настоящий жизненный цикл
+func (s *stubLifecycle) CompleteSpawn(tank *types.TankEntity) {
+	if tank != nil && tank.State == types.TankStateSpawning {
+		tank.State = types.TankStateStopped
+	}
+}
+
 func (s *stubLifecycle) SpawnPlayer2() (*types.TankEntity, error) {
 	s.player2Calls++
 	if s.nextPlayer2 == nil {
@@ -457,6 +464,9 @@ func TestStageUseCases_NilDependenciesAreSafe(t *testing.T) {
 	if got := stage.SpawnPlayerTank(types.TankRolePlayer1); got != nil {
 		t.Errorf("SpawnPlayerTank: %v", got)
 	}
+	if got := stage.PlacePlayerTank(types.TankRolePlayer1); got != nil {
+		t.Errorf("PlacePlayerTank: %v", got)
+	}
 	if got := stage.SpawnInitialEnemyTanks(); got != nil {
 		t.Errorf("SpawnInitialEnemyTanks: %v", got)
 	}
@@ -763,6 +773,29 @@ func TestStageUseCases_SpawnPlayerTank(t *testing.T) {
 			"lifecycle вызван для побеждённого игрока: %d",
 			env.lifecycle.player1Calls,
 		)
+	}
+}
+
+// На старте уровня танк игрока сразу на карте, без анимации появления
+func TestStageUseCases_PlacePlayerTank(t *testing.T) {
+	env := newStageTestEnv(1)
+	playerTank := newTankInState(
+		types.TankRolePlayer1,
+		types.TankStateSpawning,
+	)
+	env.lifecycle.nextPlayer1 = func() *types.TankEntity { return playerTank }
+
+	if got := env.stage.PlacePlayerTank(types.TankRolePlayer1); got != playerTank {
+		t.Fatalf("игрок 1: %v", got)
+	}
+	if !playerTank.IsActive() {
+		t.Errorf("состояние %v, ожидался активный танк", playerTank.State)
+	}
+
+	// Побеждённый игрок на карту не ставится
+	env.session.SetPlayerLives(types.PlayerTankNumPlayer1, 0)
+	if got := env.stage.PlacePlayerTank(types.TankRolePlayer1); got != nil {
+		t.Errorf("побеждённый игрок: %v", got)
 	}
 }
 
