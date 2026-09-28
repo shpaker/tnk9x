@@ -18,7 +18,11 @@ const enemiesMapSize = 64
 
 // stubRandom делает math.random детерминированным: без аргументов
 // возвращает value, с диапазоном — верхнюю границу
-func stubRandom(t *testing.T, engine interfaces.IAIScriptEngine, value float64) {
+func stubRandom(
+	t *testing.T,
+	engine interfaces.IAIScriptEngine,
+	value float64,
+) {
 	t.Helper()
 	script := fmt.Sprintf(`
 math.random = function(a, b)
@@ -75,12 +79,22 @@ func enemiesContext(
 			Intact:   true,
 		},
 		Grid: types.NewNavGridEntity(
-			types.Size{Width: enemiesMapSize, Height: enemiesMapSize}, 4, blocks,
+			types.Size{
+				Width:  enemiesMapSize,
+				Height: enemiesMapSize,
+			},
+			4,
+			blocks,
 		),
 	}
 }
 
-func decide(t *testing.T, engine interfaces.IAIScriptEngine, context types.EnemyAIContext, tick int) types.EnemyAIDecision {
+func decide(
+	t *testing.T,
+	engine interfaces.IAIScriptEngine,
+	context types.EnemyAIContext,
+	tick int,
+) types.EnemyAIDecision {
 	t.Helper()
 	context.Tick = tick
 	decision, err := engine.UpdateEnemyAI(context)
@@ -108,7 +122,10 @@ func TestEnemiesShootsPlayerAfterReaction(t *testing.T) {
 
 	first := decide(t, engine, context, 100)
 	if first.Shoot || first.Move || first.Direction != types.DirectionDown {
-		t.Fatalf("armor must hold aim without shooting at first sight: %+v", first)
+		t.Fatalf(
+			"armor must hold aim without shooting at first sight: %+v",
+			first,
+		)
 	}
 
 	later := decide(t, engine, context, 160)
@@ -182,7 +199,8 @@ func TestEnemiesPowerHeadsToHQ(t *testing.T) {
 	if !decision.Move {
 		t.Fatalf("power tank must move towards hq: %+v", decision)
 	}
-	if decision.Direction != types.DirectionDown && decision.Direction != types.DirectionRight {
+	if decision.Direction != types.DirectionDown &&
+		decision.Direction != types.DirectionRight {
 		t.Fatalf("power tank must head to hq: %+v", decision)
 	}
 }
@@ -230,7 +248,8 @@ func TestEnemiesFastDodgesBullet(t *testing.T) {
 	}}
 
 	decision := decide(t, engine, context, 100)
-	if !decision.Move || (decision.Direction != types.DirectionLeft && decision.Direction != types.DirectionRight) {
+	if !decision.Move ||
+		(decision.Direction != types.DirectionLeft && decision.Direction != types.DirectionRight) {
 		t.Fatalf("fast tank must sidestep the bullet: %+v", decision)
 	}
 }
@@ -261,12 +280,19 @@ func TestEnemiesIgnoresDistantPlayerOnEarlyStages(t *testing.T) {
 	self := tankAt(0, 0)
 	self.Direction = types.DirectionDown
 	context := enemiesContext(3, 1, self)
-	context.Grid = types.NewNavGridEntity(types.Size{Width: 208, Height: 208}, 4, nil)
+	context.Grid = types.NewNavGridEntity(
+		types.Size{Width: 208, Height: 208},
+		4,
+		nil,
+	)
 	context.Players = []types.AITankInfo{tankAt(0, 192)}
 
 	for tick := 100; tick <= 300; tick += 100 {
 		if decision := decide(t, engine, context, tick); decision.Shoot {
-			t.Fatalf("distant player must not be noticed on stage 1: %+v", decision)
+			t.Fatalf(
+				"distant player must not be noticed on stage 1: %+v",
+				decision,
+			)
 		}
 	}
 
@@ -286,8 +312,12 @@ func TestEnemiesShootsWallAhead(t *testing.T) {
 	context := enemiesContext(2, 20, self, brick(4, 48))
 
 	decision := decide(t, engine, context, 100)
-	if !decision.Move || !decision.Shoot || decision.Direction != types.DirectionDown {
-		t.Fatalf("power tank must fire at the wall ahead on the move: %+v", decision)
+	if !decision.Move || !decision.Shoot ||
+		decision.Direction != types.DirectionDown {
+		t.Fatalf(
+			"power tank must fire at the wall ahead on the move: %+v",
+			decision,
+		)
 	}
 }
 
@@ -300,7 +330,8 @@ func TestEnemiesBreachesSideWall(t *testing.T) {
 	context := enemiesContext(0, 1, self, brick(32, 20))
 
 	decision := decide(t, engine, context, 100)
-	if decision.Move || !decision.Shoot || decision.Direction != types.DirectionRight {
+	if decision.Move || !decision.Shoot ||
+		decision.Direction != types.DirectionRight {
 		t.Fatalf("tank must turn and breach the side wall: %+v", decision)
 	}
 

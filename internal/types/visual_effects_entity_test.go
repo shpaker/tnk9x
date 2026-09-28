@@ -9,7 +9,10 @@ import (
 
 // Фара встаёт по стволу сразу, затем доворачивается по кратчайшему пути
 func TestTankEntity_TurnHeadlight(t *testing.T) {
-	tank := types.NewDefaultTankEntity(types.TankRolePlayer1, types.DirectionLeft)
+	tank := types.NewDefaultTankEntity(
+		types.TankRolePlayer1,
+		types.DirectionLeft,
+	)
 	tank.TurnHeadlight(0.5)
 	if got := tank.GetHeadlightAngle(); got != types.DirectionLeft.Angle() {
 		t.Fatalf("угол %v, ожидался %v", got, types.DirectionLeft.Angle())

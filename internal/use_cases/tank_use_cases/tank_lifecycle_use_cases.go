@@ -67,7 +67,9 @@ func (uc *TankLifecycleUseCases) SpawnEnemy(
 	return &tank, nil
 }
 
-func (uc *TankLifecycleUseCases) SpawnPlayer1() (*types.TankEntity, error) {
+func (uc *TankLifecycleUseCases) SpawnPlayer1(
+	level uint,
+) (*types.TankEntity, error) {
 	if uc.isSpawnerBlocked(uc.spawnLayout.Player1Spawner) {
 		return nil, nil
 	}
@@ -75,7 +77,7 @@ func (uc *TankLifecycleUseCases) SpawnPlayer1() (*types.TankEntity, error) {
 		types.DirectionUp,
 		uc.spawnLayout.Player1Spawner,
 		types.TankRolePlayer1,
-		0, // Игроки всегда начинают с уровня 0
+		level,
 	)
 	if err != nil {
 		return nil, err
@@ -87,7 +89,9 @@ func (uc *TankLifecycleUseCases) SpawnPlayer1() (*types.TankEntity, error) {
 	return tankPtr, nil
 }
 
-func (uc *TankLifecycleUseCases) SpawnPlayer2() (*types.TankEntity, error) {
+func (uc *TankLifecycleUseCases) SpawnPlayer2(
+	level uint,
+) (*types.TankEntity, error) {
 	if uc.isSpawnerBlocked(uc.spawnLayout.Player2Spawner) {
 		return nil, nil
 	}
@@ -95,7 +99,7 @@ func (uc *TankLifecycleUseCases) SpawnPlayer2() (*types.TankEntity, error) {
 		types.DirectionUp,
 		uc.spawnLayout.Player2Spawner,
 		types.TankRolePlayer2,
-		0, // Игроки всегда начинают с уровня 0
+		level,
 	)
 	if err != nil {
 		return nil, err

@@ -6,7 +6,11 @@ func TestNavGridEntityFillsCellsFromBlocks(t *testing.T) {
 	blocks := MapBlocks{
 		NewBlockEntity(string(Brick), 8, 0, 8, nil),
 		// Обломок кирпича 8x4 занимает одну строку клеток
-		{Position: Position{X: 0, Y: 12}, Size: Size{Width: 8, Height: 4}, Data: &BlockData{Name: Brick}},
+		{
+			Position: Position{X: 0, Y: 12},
+			Size:     Size{Width: 8, Height: 4},
+			Data:     &BlockData{Name: Brick},
+		},
 		NewBlockEntity(string(Forest), 16, 16, 8, nil),
 		// Бетон поверх леса важнее
 		NewBlockEntity(string(Steel), 16, 16, 8, nil),

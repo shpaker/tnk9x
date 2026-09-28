@@ -72,8 +72,17 @@ func (uc *StageUseCases) ResumeStageState() {
 	}
 }
 
+// SpawnPlayerTank реализует IStageUseCases: возрождение танка игрока
+// всегда с нулевой прокачкой
 func (uc *StageUseCases) SpawnPlayerTank(
 	role types.TankRole,
+) *types.TankEntity {
+	return uc.spawnPlayerTank(role, 0)
+}
+
+func (uc *StageUseCases) spawnPlayerTank(
+	role types.TankRole,
+	level uint,
 ) *types.TankEntity {
 	if uc.stageSession == nil {
 		return nil
@@ -93,9 +102,9 @@ func (uc *StageUseCases) SpawnPlayerTank(
 
 	switch role {
 	case types.TankRolePlayer1:
-		playerTank, err = uc.tankLifecycleUseCases.SpawnPlayer1()
+		playerTank, err = uc.tankLifecycleUseCases.SpawnPlayer1(level)
 	case types.TankRolePlayer2:
-		playerTank, err = uc.tankLifecycleUseCases.SpawnPlayer2()
+		playerTank, err = uc.tankLifecycleUseCases.SpawnPlayer2(level)
 	default:
 		return nil
 	}
@@ -109,11 +118,16 @@ func (uc *StageUseCases) SpawnPlayerTank(
 
 // PlacePlayerTank реализует IStageUseCases: на старте уровня танк
 // игрока сразу стоит на карте — со светом и зрением с первого кадра;
-// возрождение после гибели по-прежнему идёт через анимацию появления
+// возрождение после гибели по-прежнему идёт через анимацию появления.
+// Прокачка — из снимка прошлого уровня при переносе
 func (uc *StageUseCases) PlacePlayerTank(
 	role types.TankRole,
 ) *types.TankEntity {
-	tank := uc.SpawnPlayerTank(role)
+	if uc.stageSession == nil {
+		return nil
+	}
+	num := types.RoleToPlayerTankNum(role)
+	tank := uc.spawnPlayerTank(role, uc.stageSession.GetStartTier(num))
 	if tank == nil {
 		return nil
 	}
@@ -358,6 +372,33 @@ func (uc *StageUseCases) GetStageResult() types.StageResult {
 		Won:          uc.IsStageWon(),
 		LivesLost:    uc.stageSession.GetPlayerDeaths(),
 		ElapsedTicks: uc.stageSession.GetStageTicks(),
+		CarriedOver:  uc.stageSession.IsCarryOver(),
+	}
+}
+
+// SaveCarryOver реализует IStageUseCases: жизни и прокачка танков
+// игроков на момент победы
+func (uc *StageUseCases) SaveCarryOver() {
+	if uc.stageSession == nil {
+		return
+	}
+	playersTanks := uc.GetPlayersTanks()
+	for i := 0; i < int(uc.stageSession.GetPlayerCount()) && i < len(playersTanks); i++ {
+		num := types.PlayerTankNum(i)
+		lives := uc.stageSession.GetPlayerLives(num)
+		var tier uint
+		tank := playersTanks[i]
+		switch {
+		case tank == nil:
+		case tank.IsDestroyed():
+			// Жизнь списывается при возрождении, которого уже не будет
+			if lives > 0 {
+				lives--
+			}
+		case tank.GetSpecs() != nil:
+			tier = tank.GetSpecs().GetLevel()
+		}
+		uc.stageSession.SaveCarryOver(num, lives, tier)
 	}
 }
 

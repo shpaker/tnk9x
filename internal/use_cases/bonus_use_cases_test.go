@@ -56,11 +56,11 @@ func (s *recordingLifecycle) SpawnEnemy(
 	return nil, nil
 }
 
-func (s *recordingLifecycle) SpawnPlayer1() (*types.TankEntity, error) {
+func (s *recordingLifecycle) SpawnPlayer1(uint) (*types.TankEntity, error) {
 	return nil, nil
 }
 
-func (s *recordingLifecycle) SpawnPlayer2() (*types.TankEntity, error) {
+func (s *recordingLifecycle) SpawnPlayer2(uint) (*types.TankEntity, error) {
 	return nil, nil
 }
 

@@ -118,6 +118,7 @@ func (uc *CollisionUseCases) checkBulletsCollisions(
 		for j := index + 1; j < len(bullets); j++ {
 			other := bullets[j]
 			if uc.checkBulletBulletCollision(bullet, other) {
+				uc.requestBulletClash(bullet, other)
 				_ = uc.bulletUseCases.RemoveBullet(other)
 				_ = uc.bulletUseCases.RemoveBullet(bullet)
 				bullets = uc.bulletUseCases.GetBullets()
@@ -516,6 +517,25 @@ func (uc *CollisionUseCases) requestBulletEffect(
 			Y: bullet.Position.Y + float64(size.Height)/2,
 		},
 		Direction: bullet.Direction,
+	})
+}
+
+// requestBulletClash запрашивает эффект столкновения пуль
+// в точке между их центрами
+func (uc *CollisionUseCases) requestBulletClash(
+	first *types.BulletEntity,
+	second *types.BulletEntity,
+) {
+	firstSize, secondSize := first.GetSize(), second.GetSize()
+	uc.visualEffectsUseCases.RequestEffect(types.VisualEventEntity{
+		Kind: types.VisualEventBulletClash,
+		Position: types.Position{
+			X: (first.Position.X + float64(firstSize.Width)/2 +
+				second.Position.X + float64(secondSize.Width)/2) / 2,
+			Y: (first.Position.Y + float64(firstSize.Height)/2 +
+				second.Position.Y + float64(secondSize.Height)/2) / 2,
+		},
+		Direction: first.Direction,
 	})
 }
 

@@ -169,7 +169,7 @@ func assertAnimatingImage(t *testing.T, tank *types.TankEntity) {
 func TestTankLifecycleUseCases_SpawnPlayer1(t *testing.T) {
 	env := newLifecycleTestEnv()
 
-	tank, err := env.lifecycle.SpawnPlayer1()
+	tank, err := env.lifecycle.SpawnPlayer1(0)
 	if err != nil || tank == nil {
 		t.Fatalf("спавн игрока 1: tank=%v err=%v", tank, err)
 	}
@@ -208,7 +208,7 @@ func TestTankLifecycleUseCases_SpawnPlayer1(t *testing.T) {
 func TestTankLifecycleUseCases_SpawnPlayer2(t *testing.T) {
 	env := newLifecycleTestEnv()
 
-	tank, err := env.lifecycle.SpawnPlayer2()
+	tank, err := env.lifecycle.SpawnPlayer2(0)
 	if err != nil || tank == nil {
 		t.Fatalf("спавн игрока 2: tank=%v err=%v", tank, err)
 	}
@@ -230,7 +230,7 @@ func TestTankLifecycleUseCases_SpawnPlayerBlockedSpawner(t *testing.T) {
 	env := newLifecycleTestEnv()
 	env.spawnCollision.blocked = true
 
-	tank, err := env.lifecycle.SpawnPlayer1()
+	tank, err := env.lifecycle.SpawnPlayer1(0)
 	if tank != nil || err != nil {
 		t.Fatalf("ожидалось nil, nil; получено tank=%v err=%v", tank, err)
 	}
@@ -316,7 +316,7 @@ func TestTankLifecycleUseCases_SpawnEnemyIndexOutOfRange(t *testing.T) {
 
 func TestTankLifecycleUseCases_Explode(t *testing.T) {
 	env := newLifecycleTestEnv()
-	tank, err := env.lifecycle.SpawnPlayer1()
+	tank, err := env.lifecycle.SpawnPlayer1(0)
 	if err != nil || tank == nil {
 		t.Fatalf("спавн: tank=%v err=%v", tank, err)
 	}
@@ -354,7 +354,7 @@ func TestTankLifecycleUseCases_TileServiceError(t *testing.T) {
 	env := newLifecycleTestEnv()
 	env.tileService.Err = errors.New("tileset missing")
 
-	if tank, err := env.lifecycle.SpawnPlayer1(); err == nil || tank != nil {
+	if tank, err := env.lifecycle.SpawnPlayer1(0); err == nil || tank != nil {
 		t.Errorf("ожидалась ошибка спавна, tank=%v err=%v", tank, err)
 	}
 
@@ -375,7 +375,7 @@ func TestTankLifecycleUseCases_TileServiceError(t *testing.T) {
 // Завершение анимации спавна переводит танк в Stopped
 func TestTankLifecycleUseCases_UpdateLifecycle_SpawnToStopped(t *testing.T) {
 	env := newLifecycleTestEnv()
-	tank, err := env.lifecycle.SpawnPlayer1()
+	tank, err := env.lifecycle.SpawnPlayer1(0)
 	if err != nil || tank == nil {
 		t.Fatalf("спавн: tank=%v err=%v", tank, err)
 	}
@@ -455,7 +455,7 @@ func TestTankLifecycleUseCases_GetSetPlayerTank(t *testing.T) {
 // активный танк не трогает
 func TestTankLifecycleUseCases_CompleteSpawn(t *testing.T) {
 	env := newLifecycleTestEnv()
-	tank, err := env.lifecycle.SpawnPlayer1()
+	tank, err := env.lifecycle.SpawnPlayer1(0)
 	if err != nil || tank == nil {
 		t.Fatalf("спавн: tank=%v err=%v", tank, err)
 	}
@@ -483,7 +483,7 @@ func TestTankLifecycleUseCases_CompleteSpawn(t *testing.T) {
 func TestTankLifecycleUseCases_SpawnShieldOnlyForPlayer(t *testing.T) {
 	env := newLifecycleTestEnv()
 	env.render.spawnFinished = true
-	player, _ := env.lifecycle.SpawnPlayer1()
+	player, _ := env.lifecycle.SpawnPlayer1(0)
 	enemy, err := env.lifecycle.SpawnEnemy(0, types.EnemyLevelBasic)
 	if err != nil || player == nil || enemy == nil {
 		t.Fatalf("спавн: player=%v enemy=%v err=%v", player, enemy, err)

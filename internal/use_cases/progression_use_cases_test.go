@@ -65,6 +65,16 @@ func TestProgression_CalcStars(t *testing.T) {
 		{"lives lost", types.StageResult{Won: true, LivesLost: 1}, 1},
 		{"too slow", types.StageResult{Won: true, ElapsedTicks: 601}, 2},
 		{"perfect", types.StageResult{Won: true, ElapsedTicks: 600}, 3},
+		{
+			"carried over",
+			types.StageResult{Won: true, ElapsedTicks: 600, CarriedOver: true},
+			2,
+		},
+		{
+			"carried over lives lost",
+			types.StageResult{Won: true, LivesLost: 1, CarriedOver: true},
+			1,
+		},
 	}
 	for _, tt := range tests {
 		if got := progression.CalcStars(tt.result, level); got != tt.want {

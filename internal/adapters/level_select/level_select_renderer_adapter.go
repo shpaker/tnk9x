@@ -14,21 +14,19 @@ import (
 
 // Раскладка экрана выбора уровня в логических координатах 256x224
 const (
-	headerY      = 8
-	packStarsY   = 22
-	cellsTop     = 36
-	cellWidth    = 40
-	cellHeight   = 30
-	cellGap      = 6
-	previewTop   = 76
-	previewLeft  = 16
-	previewScale = 0.5 // миникарта: тайл 8px -> 4px
-	// previewBorderPx — толщина рамки миникарты
-	previewBorderPx = 3
-	infoLeft        = 132
-	hintBottomGap   = 22
-	startBottom     = 10
-	arrowZone       = 40 // ширина тап-зон стрелок пачки по краям
+	headerY       = 8
+	packStarsY    = 22
+	cellsTop      = 36
+	cellWidth     = 40
+	cellHeight    = 30
+	cellGap       = 6
+	previewTop    = 76
+	previewLeft   = 16
+	previewScale  = 0.5 // миникарта: тайл 8px -> 4px
+	infoLeft      = 132
+	hintBottomGap = 22
+	startBottom   = 10
+	arrowZone     = 40 // ширина тап-зон стрелок пачки по краям
 )
 
 // Цвета экрана выбора уровня
@@ -40,10 +38,8 @@ var (
 	cellColor       = color.NRGBA{R: 40, G: 40, B: 40, A: 255}
 	cellActiveColor = color.NRGBA{R: 255, G: 255, B: 255, A: 255}
 	previewBack     = color.NRGBA{R: 16, G: 16, B: 16, A: 255}
-	// previewBorder — рамка миникарты, серый рамки поля NES
-	previewBorder = color.NRGBA{R: 109, G: 109, B: 109, A: 255}
-	hqColor       = color.NRGBA{R: 252, G: 196, B: 36, A: 255}
-	spawnerColor  = color.NRGBA{R: 200, G: 70, B: 50, A: 255}
+	hqColor         = color.NRGBA{R: 252, G: 196, B: 36, A: 255}
+	spawnerColor    = color.NRGBA{R: 200, G: 70, B: 50, A: 255}
 )
 
 // blockColors — цвета блоков миникарты
@@ -232,12 +228,12 @@ func (r *LevelSelectRendererAdapter) drawPreview(
 	previewWidth := float32(float64(size.Width) * previewScale)
 	previewHeight := float32(float64(size.Height) * previewScale)
 
-	// Рамка вокруг поля, как у игрового экрана
-	vector.FillRect(
+	// Рамка вокруг поля — тонкая, как у ячеек уровней
+	vector.StrokeRect(
 		screen,
-		previewLeft-previewBorderPx, previewTop-previewBorderPx,
-		previewWidth+2*previewBorderPx, previewHeight+2*previewBorderPx,
-		previewBorder, false,
+		previewLeft-1.5, previewTop-1.5,
+		previewWidth+3, previewHeight+3,
+		1, cellColor, false,
 	)
 	vector.FillRect(
 		screen,

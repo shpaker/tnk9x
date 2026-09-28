@@ -201,7 +201,10 @@ func newVisionGrid(blocks types.MapBlocks, size types.Size) visionGrid {
 		for y := max(top, 0); y < min(bottom, grid.rows); y++ {
 			for x := max(left, 0); x < min(right, grid.columns); x++ {
 				// Здание важнее леса в той же клетке
-				grid.cells[y*grid.columns+x] = max(grid.cells[y*grid.columns+x], cell)
+				grid.cells[y*grid.columns+x] = max(
+					grid.cells[y*grid.columns+x],
+					cell,
+				)
 			}
 		}
 	}

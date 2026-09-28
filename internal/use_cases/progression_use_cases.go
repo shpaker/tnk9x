@@ -34,8 +34,20 @@ func (uc *ProgressionUseCases) GetCampaign() *types.CampaignEntity {
 }
 
 // CalcStars: 1 — победа, 2 — без потери жизней,
-// 3 — без потерь и не дольше контрольного времени уровня
+// 3 — без потерь и не дольше контрольного времени уровня;
+// с перенесёнными жизнями и прокачкой — не больше MaxCarryOverStars
 func (uc *ProgressionUseCases) CalcStars(
+	result types.StageResult,
+	level *types.LevelEntity,
+) uint {
+	stars := uc.calcRawStars(result, level)
+	if result.CarriedOver {
+		return min(stars, types.MaxCarryOverStars)
+	}
+	return stars
+}
+
+func (uc *ProgressionUseCases) calcRawStars(
 	result types.StageResult,
 	level *types.LevelEntity,
 ) uint {

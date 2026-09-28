@@ -16,7 +16,13 @@ func newStoppedTank() *types.TankEntity {
 
 func TestApplyDecisionRotatesAndMoves(t *testing.T) {
 	actions := tank_use_cases.NewTankActionsUseCases(
-		nil, nil, nil, &stubRenderUseCases{}, nil, nil, &testutil.FakeVisualEffectsUseCases{},
+		nil,
+		nil,
+		nil,
+		&stubRenderUseCases{},
+		nil,
+		nil,
+		&testutil.FakeVisualEffectsUseCases{},
 	)
 	tank := newStoppedTank()
 
@@ -25,21 +31,40 @@ func TestApplyDecisionRotatesAndMoves(t *testing.T) {
 		Move:      true,
 	})
 
-	if tank.Direction != types.DirectionLeft || tank.State != types.TankStateMoving {
-		t.Fatalf("tank must turn left and move: dir=%v state=%v", tank.Direction, tank.State)
+	if tank.Direction != types.DirectionLeft ||
+		tank.State != types.TankStateMoving {
+		t.Fatalf(
+			"tank must turn left and move: dir=%v state=%v",
+			tank.Direction,
+			tank.State,
+		)
 	}
 }
 
 // Решение без движения только поворачивает танк: он стоит и целится
 func TestApplyDecisionWithoutMoveKeepsTankStopped(t *testing.T) {
 	actions := tank_use_cases.NewTankActionsUseCases(
-		nil, nil, nil, &stubRenderUseCases{}, nil, nil, &testutil.FakeVisualEffectsUseCases{},
+		nil,
+		nil,
+		nil,
+		&stubRenderUseCases{},
+		nil,
+		nil,
+		&testutil.FakeVisualEffectsUseCases{},
 	)
 	tank := newStoppedTank()
 
-	actions.ApplyDecision(tank, types.EnemyAIDecision{Direction: types.DirectionUp})
+	actions.ApplyDecision(
+		tank,
+		types.EnemyAIDecision{Direction: types.DirectionUp},
+	)
 
-	if tank.Direction != types.DirectionUp || tank.State != types.TankStateStopped {
-		t.Fatalf("tank must turn up and stay: dir=%v state=%v", tank.Direction, tank.State)
+	if tank.Direction != types.DirectionUp ||
+		tank.State != types.TankStateStopped {
+		t.Fatalf(
+			"tank must turn up and stay: dir=%v state=%v",
+			tank.Direction,
+			tank.State,
+		)
 	}
 }

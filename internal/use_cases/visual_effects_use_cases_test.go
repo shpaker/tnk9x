@@ -53,7 +53,8 @@ func TestVisualEffectsUseCases_SteelHitSparksAndFlash(t *testing.T) {
 		t.Error("удар по стали без искр")
 	}
 	flashes := env.effects.GetFlashLights()
-	if len(flashes) != 1 || flashes[0].Position != (types.Position{X: 50, Y: 50}) {
+	if len(flashes) != 1 ||
+		flashes[0].Position != (types.Position{X: 50, Y: 50}) {
 		t.Errorf("вспышки %v, ожидалась одна в точке удара", flashes)
 	}
 }
@@ -206,7 +207,10 @@ func TestVisualEffectsUseCases_BlockDebrisFromWallCells(t *testing.T) {
 			t.Errorf("цвет обломка %v, ожидался цвет спрайта", particle.Color)
 		}
 		if particle.Position.Y < 44 || particle.Position.Y > 48 {
-			t.Errorf("обломок в %v, ожидался в срезанном слое", particle.Position)
+			t.Errorf(
+				"обломок в %v, ожидался в срезанном слое",
+				particle.Position,
+			)
 		}
 	}
 
@@ -246,5 +250,32 @@ func TestVisualEffectsUseCases_ShakeStrongerForPlayer(t *testing.T) {
 	}
 	if player <= enemy {
 		t.Errorf("тряска от попадания в игрока %v, во врага %v", player, enemy)
+	}
+}
+
+// Столкновение пуль: вспышка, искры во все стороны и тряска
+func TestVisualEffectsUseCases_BulletClash(t *testing.T) {
+	env := newVisualEffectsTestEnv()
+	env.effects.RequestEffect(types.VisualEventEntity{
+		Kind:     types.VisualEventBulletClash,
+		Position: types.Position{X: 60, Y: 60},
+	})
+	env.effects.Update()
+
+	if len(env.effects.GetParticles()) == 0 {
+		t.Error("bullet clash without sparks")
+	}
+	if len(env.effects.GetFlashLights()) != 1 {
+		t.Error("bullet clash without a flash")
+	}
+	shaken := false
+	for range 5 {
+		if env.effects.GetShakeOffset() != (types.Position{}) {
+			shaken = true
+		}
+		env.effects.Update()
+	}
+	if !shaken {
+		t.Error("bullet clash does not shake the screen")
 	}
 }

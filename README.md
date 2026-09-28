@@ -30,6 +30,7 @@ A modern remake and tribute to the classic arcade game Battle City (NES, 1985), 
 - All six bonuses: grenade, tank, star, helmet shield, enemy-freezing timer, HQ-fortifying shovel
 - Campaign of 35 stages in 7 packs (`assets/levels/main.bccamp`): stage select screen with a minimap preview, enemy composition and 3-star time; stages open one after another, packs open for collected stars
 - Stars per stage: win, no lives lost, within the time limit; best results are saved (OS config folder on desktop, localStorage in the browser)
+- Continue after a win: carry lives (at least 3) and tank level to the next stage, capped at 2 stars; offered only when it gives an edge
 - Two-player mode and RTX graphics set in `config.yml` (`app.players`, `app.effects`)
 - Pause menu on Esc/P/touch (continue, graphics, exit to stage select)
 - Sound effects and music
@@ -41,7 +42,7 @@ A modern remake and tribute to the classic arcade game Battle City (NES, 1985), 
   - Materials: steel facades have a metallic sheen that blooms under bright light, brick is matte; a building's far facade is not visible to the player
   - The stage starts with the player tank already on the map; respawns after death keep the spawn animation
   - Invulnerability after spawning, as in the original: an animated force field over the tank in both graphics modes, pulsing with a flickering glow in RTX (also for the helmet bonus)
-  - Muzzle flashes with recoil, wall debris in the colors of the destroyed cells, steel and shield sparks, explosion embers and smoke, track dust, screen shake on hits and explosions (stronger for the player)
+  - Muzzle flashes with recoil, wall debris in the colors of the destroyed cells, steel and shield sparks, sparks and a flash when bullets collide, explosion embers and smoke, track dust, screen shake on hits and explosions (stronger for the player)
 - Runs natively and [in the browser](https://shpaker.github.io/tnk9x/) (WebAssembly, deployed to GitHub Pages on release tags)
 
 **Under the hood:**

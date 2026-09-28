@@ -42,7 +42,11 @@ func TestAiInputAdapterShootsOnlyByDecision(t *testing.T) {
 	ai.decision.Shoot = true
 	adapter.Update(0)
 	if actions.shoots != 1 || ai.gotTick != 2 {
-		t.Fatalf("expected one shot on tick 2, got %d shots, tick %d", actions.shoots, ai.gotTick)
+		t.Fatalf(
+			"expected one shot on tick 2, got %d shots, tick %d",
+			actions.shoots,
+			ai.gotTick,
+		)
 	}
 }
 

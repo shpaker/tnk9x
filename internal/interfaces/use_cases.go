@@ -78,10 +78,12 @@ type ITankLifecycleUseCases interface {
 	// SpawnEnemy создаёт врага заданного уровня на спаунере с индексом
 	// spawnerIndex; занятость спаунера проверяет вызывающий
 	SpawnEnemy(spawnerIndex int, level uint) (*types.TankEntity, error)
-	SpawnPlayer1() (*types.TankEntity, error)
+	// SpawnPlayer1 создаёт танк первого игрока с уровнем прокачки level
+	SpawnPlayer1(level uint) (*types.TankEntity, error)
 	GetPlayerTank(num types.PlayerTankNum) *types.TankEntity
 	SetPlayerTank(num types.PlayerTankNum, tank *types.TankEntity)
-	SpawnPlayer2() (*types.TankEntity, error)
+	// SpawnPlayer2 создаёт танк второго игрока с уровнем прокачки level
+	SpawnPlayer2(level uint) (*types.TankEntity, error)
 	Explode(tank *types.TankEntity) error
 	// CompleteSpawn завершает появление танка сразу, без анимации
 	CompleteSpawn(tank *types.TankEntity)
@@ -133,6 +135,9 @@ type IStageUseCases interface {
 	IsStageFinished() bool
 	// GetStageResult — итог уровня для подсчёта звёзд
 	GetStageResult() types.StageResult
+	// SaveCarryOver запоминает жизни и прокачку танков игроков
+	// для переноса на следующий уровень
+	SaveCarryOver()
 }
 
 // IWaveUseCases — выдача врагов по волнам сценария уровня

@@ -33,7 +33,11 @@ type visionTestEnv struct {
 func newVisionTestEnv() *visionTestEnv {
 	tankCommon := &recordingTankCommon{}
 	bullets := &stubBulletList{}
-	mapEntity := types.NewMapEntity(types.Size{Width: 208, Height: 208}, nil, nil)
+	mapEntity := types.NewMapEntity(
+		types.Size{Width: 208, Height: 208},
+		nil,
+		nil,
+	)
 	lighting := &stubLighting{
 		viewers: []types.ViewerEntity{{
 			Position:  types.Position{X: 104, Y: 150},
