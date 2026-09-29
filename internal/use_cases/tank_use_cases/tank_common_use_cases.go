@@ -42,6 +42,8 @@ func (uc *TankCommonUseCases) Update(tank *types.TankEntity, dt float64) error {
 		return errors.New("tank is not active")
 	}
 
+	tank.UpdateReload(dt)
+
 	// Замороженный бонусом-таймером враг замирает на месте
 	if tank.IsEnemy() && uc.stageSession != nil &&
 		uc.stageSession.AreEnemiesFrozen() {

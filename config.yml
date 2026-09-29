@@ -31,6 +31,10 @@ game:
   # Campaign file: assets/levels/<campaign>.bccamp
   campaign: main
 
+  # Reload pause between shots (0.2-0.5 s depending on the tank):
+  # no point-blank fire every frame; false: only the bullets-in-flight limit
+  shot_cooldown: true
+
   # Defaults for maps without sections and for missing keys,
   # see assets/levels/README.md
   default_level:

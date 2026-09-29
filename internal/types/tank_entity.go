@@ -55,6 +55,9 @@ type TankEntity struct {
 	headlightAngle float64
 	headlightReady bool
 	recoilTicks    uint
+
+	// Оставшаяся перезарядка до следующего выстрела, секунды
+	reload float64
 }
 
 func NewDefaultTankEntity(role TankRole, direction Direction) TankEntity {
@@ -378,4 +381,25 @@ func (t *TankEntity) TickRecoil() {
 // IsRecoiling сообщает, откатывается ли танк после выстрела
 func (t *TankEntity) IsRecoiling() bool {
 	return t != nil && t.recoilTicks > 0
+}
+
+// IsReloading сообщает, перезаряжается ли танк после выстрела
+func (t *TankEntity) IsReloading() bool {
+	return t != nil && t.reload > 0
+}
+
+// StartReload запускает перезарядку на seconds секунд
+func (t *TankEntity) StartReload(seconds float64) {
+	if t == nil {
+		return
+	}
+	t.reload = seconds
+}
+
+// UpdateReload продвигает перезарядку на dt секунд
+func (t *TankEntity) UpdateReload(dt float64) {
+	if t == nil || t.reload <= 0 {
+		return
+	}
+	t.reload = max(0, t.reload-dt)
 }

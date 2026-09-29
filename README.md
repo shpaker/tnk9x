@@ -32,6 +32,7 @@ A modern remake and tribute to the classic arcade game Battle City (NES, 1985), 
   - Active demolition: fire at walls ahead on the move and carve passages through side walls
   - Bullet dodging and counter-fire for fast tanks on later stages
 - Player lives, levels and damage
+- Reload pause between shots on top of the bullets-in-flight limit: 0.33-0.2 s for the player by level, 0.3-0.5 s for enemies by type, so point-blank fire is not every frame (`game.shot_cooldown`)
 - All six bonuses: grenade, tank, star, helmet shield, enemy-freezing timer, HQ-fortifying shovel
 - Campaign of 35 stages in 7 packs (`assets/levels/main.bccamp`): stage select screen with a minimap preview, enemy composition and 3-star time; stages open one after another, packs open for collected stars
 - Stars per stage: win, no lives lost, within the time limit; best results are saved (OS config folder on desktop, localStorage in the browser)

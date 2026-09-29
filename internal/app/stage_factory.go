@@ -77,6 +77,7 @@ func (app *App) newStageState() (*states.StageState, error) {
 			services.NewAnimationService(),
 		),
 		baseSizePx,
+		app.config.ShotCooldown,
 	)
 
 	renderUseCases := use_cases.NewRenderUseCases(tankTilesUseCases)
