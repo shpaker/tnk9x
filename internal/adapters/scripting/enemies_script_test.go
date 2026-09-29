@@ -341,3 +341,54 @@ func TestEnemiesBreachesSideWall(t *testing.T) {
 		t.Fatalf("tank must keep breaching: %+v", next)
 	}
 }
+
+func bonusAt(x, y float64) types.AIBonusInfo {
+	return types.AIBonusInfo{
+		Position: types.Position{X: x, Y: y},
+		Size:     types.Size{Width: 16, Height: 16},
+		Type:     types.BonusTypeStar,
+	}
+}
+
+// Ближайший к бонусу враг едет за ним; если другой ближе — не едет
+func TestEnemiesNearestRacesForBonus(t *testing.T) {
+	engine := newEnemiesEngine(t)
+	context := enemiesContext(0, 1, tankAt(24, 0))
+	context.Self.Direction = types.DirectionDown
+	context.Bonuses = []types.AIBonusInfo{bonusAt(0, 0)}
+
+	decision := decide(t, engine, context, 1000)
+	if decision.Direction != types.DirectionLeft || !decision.Move {
+		t.Fatalf("ожидался путь влево к бонусу, получено %+v", decision)
+	}
+
+	other := tankAt(0, 16)
+	other.ID = 2
+	context.Enemies = []types.AITankInfo{other}
+	decision = decide(t, engine, context, 1001)
+	if decision.Direction == types.DirectionLeft {
+		t.Errorf("к бонусу должен ехать ближайший союзник: %+v", decision)
+	}
+}
+
+// Враг с лодкой прокладывает путь к бонусу через воду
+func TestEnemiesBoatPathsOverWater(t *testing.T) {
+	var blocks []*types.BlockEntity
+	for y := 0.0; y < enemiesMapSize; y += 8 {
+		blocks = append(blocks,
+			types.NewBlockEntity(string(types.Water), 16, y, 8, nil),
+			types.NewBlockEntity(string(types.Water), 24, y, 8, nil),
+		)
+	}
+	engine := newEnemiesEngine(t)
+	self := tankAt(0, 0)
+	self.Boat = true
+	context := enemiesContext(0, 1, self, blocks...)
+	context.Self.Direction = types.DirectionRight
+	context.Bonuses = []types.AIBonusInfo{bonusAt(48, 0)}
+
+	decision := decide(t, engine, context, 1000)
+	if decision.Direction != types.DirectionRight || !decision.Move {
+		t.Errorf("ожидался путь вправо через воду, получено %+v", decision)
+	}
+}

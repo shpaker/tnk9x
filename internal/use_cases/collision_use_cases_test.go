@@ -138,7 +138,33 @@ func (s *stubMapUseCases) IsWaterUnder(
 	return use_cases.NewMapUseCases(s.mapEntity).IsWaterUnder(position, size)
 }
 
+// recordingBonusUseCases записывает танки, подобравшие бонус
+type recordingBonusUseCases struct {
+	takenBy []*types.TankEntity
+}
+
+func (r *recordingBonusUseCases) Apply(
+	_ *types.BonusEntity,
+	tank *types.TankEntity,
+) {
+	r.takenBy = append(r.takenBy, tank)
+}
+
+func (r *recordingBonusUseCases) UpdateEffects() {}
+
+func (r *recordingBonusUseCases) SpawnRandomBonusEntity(
+	types.Position,
+) *types.BonusEntity {
+	return nil
+}
+
+func (r *recordingBonusUseCases) VisibleBonuses() []*types.BonusEntity {
+	return nil
+}
+
 type collisionTestEnv struct {
+	bonuses     *recordingBonusUseCases
+	bonusesRepo *game.BonusesRepository
 	tanksRepo   *game.TanksRepository
 	bulletsRepo *game.BulletsRepository
 	mapEntity   *types.MapEntity
@@ -154,6 +180,15 @@ type collisionTestEnv struct {
 }
 
 func newCollisionTestEnv(blocks types.MapBlocks) *collisionTestEnv {
+	return newCollisionTestEnvWith(blocks, false)
+}
+
+// newCollisionTestEnvWith — окружение коллизий; enemyBonusPickup
+// разрешает врагам подбирать бонусы
+func newCollisionTestEnvWith(
+	blocks types.MapBlocks,
+	enemyBonusPickup bool,
+) *collisionTestEnv {
 	tanksRepo := game.NewTanksRepository()
 	bulletsRepo := game.NewBulletsRepository()
 	mapEntity := types.NewMapEntity(
@@ -196,6 +231,8 @@ func newCollisionTestEnv(blocks types.MapBlocks) *collisionTestEnv {
 	)
 	lifecycle := &stubTankLifecycle{}
 
+	bonuses := &recordingBonusUseCases{}
+	bonusesRepo := game.NewBonusesRepository()
 	collision := use_cases.NewCollisionUseCases(
 		bulletUC,
 		tankActions,
@@ -208,13 +245,16 @@ func newCollisionTestEnv(blocks types.MapBlocks) *collisionTestEnv {
 		entities,
 		collision_services.NewSpawnCollisionService(entities),
 		&stubHQUseCases{},
-		nil,
-		game.NewBonusesRepository(),
+		bonuses,
+		bonusesRepo,
 		soundUC,
 		effects,
+		enemyBonusPickup,
 	)
 
 	return &collisionTestEnv{
+		bonuses:     bonuses,
+		bonusesRepo: bonusesRepo,
 		tanksRepo:   tanksRepo,
 		bulletsRepo: bulletsRepo,
 		mapEntity:   mapEntity,
@@ -1276,5 +1316,32 @@ func TestTankWallCollision_SunkBoatReachesShore(t *testing.T) {
 	}
 	if tank.Position.X < 120 {
 		t.Errorf("танк без лодки заехал в воду: X=%v", tank.Position.X)
+	}
+}
+
+// Враг подбирает бонус, только если это включено в конфиге
+func TestTankBonusCollision_EnemyPickupFlag(t *testing.T) {
+	for _, enabled := range []bool{true, false} {
+		env := newCollisionTestEnvWith(nil, enabled)
+		enemy := env.newTank(
+			types.TankRoleEnemy,
+			types.DirectionDown,
+			64,
+			64,
+			0,
+		)
+		env.tanksRepo.AddEnemy(enemy)
+		env.bonusesRepo.AddBonus(types.NewBonusEntity(
+			types.BonusTypeStar,
+			types.Position{X: 64, Y: 64},
+			types.Size{Width: 16, Height: 16},
+			nil,
+		))
+
+		env.collision.UpdateCollisions()
+
+		if picked := len(env.bonuses.takenBy) == 1; picked != enabled {
+			t.Errorf("подбор включён=%v, враг подобрал=%v", enabled, picked)
+		}
 	}
 }

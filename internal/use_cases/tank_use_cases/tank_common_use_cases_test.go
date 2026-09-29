@@ -531,3 +531,28 @@ func TestTankEntity_AnimationName_Fallbacks(t *testing.T) {
 		t.Errorf("уровень 7 и направление 99: %q", got)
 	}
 }
+
+// Таймер врага морозит игрока: танк стоит, враги едут
+func TestTankCommonUseCases_Update_PlayersFrozen(t *testing.T) {
+	env := newCommonTestEnv()
+	env.session.FreezePlayers(60)
+	player := env.newTank(
+		types.TankRolePlayer1, types.DirectionRight, types.TankStateMoving, 0,
+	)
+	enemy := env.newTank(
+		types.TankRoleEnemy, types.DirectionRight, types.TankStateMoving, 0,
+	)
+
+	_ = env.common.Update(player, 0.25)
+	_ = env.common.Update(enemy, 0.25)
+
+	if player.Position.X != 100 || player.State != types.TankStateStopped {
+		t.Errorf("замороженный игрок сдвинулся: X=%v", player.Position.X)
+	}
+	if enemy.Position.X == 100 {
+		t.Error("враг не должен замерзать от таймера врага")
+	}
+	if !env.common.IsFrozen(player) || env.common.IsFrozen(enemy) {
+		t.Error("IsFrozen должен отвечать по стороне танка")
+	}
+}

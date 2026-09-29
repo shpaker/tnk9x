@@ -207,3 +207,37 @@ func (f *FakeVisualEffectsUseCases) Kinds() []types.VisualEventKind {
 	}
 	return kinds
 }
+
+// FakeTankCommonUseCases — общие use cases танков без логики;
+// Frozen задаёт ответ IsFrozen
+type FakeTankCommonUseCases struct {
+	Frozen bool
+}
+
+var _ interfaces.ITankCommonUseCases = (*FakeTankCommonUseCases)(nil)
+
+func (f *FakeTankCommonUseCases) Update(*types.TankEntity, float64) error {
+	return nil
+}
+
+func (f *FakeTankCommonUseCases) UpdateAllTanks(float64) error { return nil }
+
+func (f *FakeTankCommonUseCases) GetAllTanks() []*types.TankEntity {
+	return nil
+}
+
+func (f *FakeTankCommonUseCases) GetAllPlayerTanks() []*types.TankEntity {
+	return nil
+}
+
+func (f *FakeTankCommonUseCases) IsAnyPlayerTankMoving() bool { return false }
+
+func (f *FakeTankCommonUseCases) LevelUp(*types.TankEntity) {}
+
+func (f *FakeTankCommonUseCases) LevelDown(*types.TankEntity) {}
+
+func (f *FakeTankCommonUseCases) SetMaxLevel(*types.TankEntity) {}
+
+func (f *FakeTankCommonUseCases) IsFrozen(*types.TankEntity) bool {
+	return f.Frozen
+}

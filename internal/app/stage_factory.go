@@ -152,6 +152,8 @@ func (app *App) newStageState() (*states.StageState, error) {
 		hq,
 		gameRepositories.GetTanksRepository(),
 		gameRepositories.GetBulletsRepository(),
+		gameRepositories.GetBonusesRepository(),
+		app.config.EnemyBonusPickup,
 		app.scriptEngine,
 	)
 	enemyInputAdapter := input_adapters.NewAiInputAdapter(
@@ -193,6 +195,7 @@ func (app *App) newStageState() (*states.StageState, error) {
 		bonusesRepository,
 		soundUseCases,
 		visualEffectsUseCases,
+		app.config.EnemyBonusPickup,
 	)
 
 	enemySpawnSelectionUseCases := use_cases.NewEnemySpawnSelectionUseCases(

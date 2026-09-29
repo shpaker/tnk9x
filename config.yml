@@ -35,6 +35,12 @@ game:
   # no point-blank fire every frame; false: only the bullets-in-flight limit
   shot_cooldown: true
 
+  # Enemies pick up bonuses too, as in Tank 1990, and the nearest one
+  # races for a dropped bonus; effects turn against the players (grenade
+  # blows up players, timer freezes them, shovel strips the HQ walls,
+  # tank adds an enemy); false: bonuses are for players only
+  enemy_bonus_pickup: true
+
   # Defaults for maps without sections and for missing keys,
   # see assets/levels/README.md
   default_level:

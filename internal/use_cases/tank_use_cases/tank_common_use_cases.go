@@ -44,10 +44,14 @@ func (uc *TankCommonUseCases) Update(tank *types.TankEntity, dt float64) error {
 
 	tank.UpdateReload(dt)
 
-	// Замороженный бонусом-таймером враг замирает на месте
-	if tank.IsEnemy() && uc.stageSession != nil &&
-		uc.stageSession.AreEnemiesFrozen() {
+	// Замороженный бонусом-таймером танк замирает на месте; игрок
+	// останавливается совсем — отпущенная за заморозку клавиша
+	// не должна оставить его едущим
+	if uc.IsFrozen(tank) {
 		tank.PrevPosition = tank.Position
+		if !tank.IsEnemy() {
+			tank.State = types.TankStateStopped
+		}
 		return nil
 	}
 
@@ -158,6 +162,18 @@ func (uc *TankCommonUseCases) LevelUp(tank *types.TankEntity) {
 			uc.renderUseCases.UpdateTankAnimation(tank)
 		}
 	}
+}
+
+// IsFrozen реализует ITankCommonUseCases: таймер игрока морозит
+// врагов, таймер врага — игроков
+func (uc *TankCommonUseCases) IsFrozen(tank *types.TankEntity) bool {
+	if tank == nil || uc.stageSession == nil {
+		return false
+	}
+	if tank.IsEnemy() {
+		return uc.stageSession.AreEnemiesFrozen()
+	}
+	return uc.stageSession.ArePlayersFrozen()
 }
 
 // SetMaxLevel реализует ITankCommonUseCases

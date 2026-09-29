@@ -57,7 +57,7 @@ func (uc *TankActionsUseCases) Rotate(
 	if !tank.IsActive() {
 		return errors.New("tank is not active")
 	}
-	if direction == tank.Direction {
+	if direction == tank.Direction || uc.commonUseCases.IsFrozen(tank) {
 		return nil
 	}
 
@@ -85,6 +85,9 @@ func (uc *TankActionsUseCases) Rotate(
 func (uc *TankActionsUseCases) Move(tank *types.TankEntity) error {
 	if !tank.IsActive() {
 		return errors.New("tank is not active")
+	}
+	if uc.commonUseCases.IsFrozen(tank) {
+		return nil
 	}
 
 	if tank.State == types.TankStateBraking {
@@ -115,6 +118,9 @@ func (uc *TankActionsUseCases) Stop(tank *types.TankEntity, byCollision bool) {
 func (uc *TankActionsUseCases) Shoot(tank *types.TankEntity) error {
 	if !tank.IsActive() {
 		return errors.New("tank is not active")
+	}
+	if uc.commonUseCases.IsFrozen(tank) {
+		return nil
 	}
 	fired, err := uc.bulletUseCases.ShootBullet(tank)
 	if err != nil || !fired {

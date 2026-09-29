@@ -22,6 +22,9 @@ func (uc *WaveUseCases) NextTank(
 ) (types.WaveTank, bool) {
 	waves, waveIndex, tankIndex, ok := uc.resolveCursor(session)
 	if !ok {
+		if uc.wavesExhausted(session) {
+			return session.PeekExtraEnemy()
+		}
 		return types.WaveTank{}, false
 	}
 
@@ -40,6 +43,11 @@ func (uc *WaveUseCases) CommitSpawn(
 ) {
 	waves, waveIndex, tankIndex, ok := uc.resolveCursor(session)
 	if !ok {
+		if _, extra := session.PeekExtraEnemy(); extra &&
+			uc.wavesExhausted(session) {
+			session.PopExtraEnemy()
+			session.RegisterEnemySpawned(spawnerIndex, lastWaveDelay(session))
+		}
 		return
 	}
 
@@ -71,6 +79,31 @@ func (uc *WaveUseCases) resolveCursor(
 	}
 
 	return waves, waveIndex, tankIndex, true
+}
+
+// wavesExhausted — все танки сценария уже вышли на поле:
+// дальше идут только дополнительные враги
+func (uc *WaveUseCases) wavesExhausted(
+	session *session_entities.StageSessionEntity,
+) bool {
+	level := session.GetLevel()
+	if level == nil {
+		return false
+	}
+	waves := level.GetWaves()
+	waveIndex, tankIndex := session.GetWaveCursor()
+	return waveIndex >= len(waves) ||
+		(waveIndex == len(waves)-1 && tankIndex >= len(waves[waveIndex].Tanks))
+}
+
+// lastWaveDelay — пауза между спаунами последней волны: с ней выходят
+// дополнительные враги
+func lastWaveDelay(session *session_entities.StageSessionEntity) uint {
+	waves := session.GetLevel().GetWaves()
+	if len(waves) == 0 {
+		return 0
+	}
+	return waves[len(waves)-1].DelayTicks
 }
 
 // isWaveStarted проверяет условие старта волны по живым врагам

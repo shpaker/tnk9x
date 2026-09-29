@@ -42,7 +42,8 @@ type gameConfigSchema struct {
 	Campaign              string                   `yaml:"campaign"`
 	DefaultLevel          defaultLevelConfigSchema `yaml:"default_level"`
 
-	ShotCooldown *bool `yaml:"shot_cooldown"` // Перезарядка между выстрелами
+	ShotCooldown     *bool `yaml:"shot_cooldown"`      // Перезарядка между выстрелами
+	EnemyBonusPickup *bool `yaml:"enemy_bonus_pickup"` // Враги подбирают бонусы
 }
 
 // defaultLevelConfigSchema — дефолты уровня для карт без секций
@@ -78,7 +79,8 @@ type Config struct {
 	Campaign              string
 	LevelDefaults         types.LevelDefaults
 
-	ShotCooldown bool
+	ShotCooldown     bool
+	EnemyBonusPickup bool
 }
 
 func LoadConfig() (*Config, error) {
@@ -110,6 +112,7 @@ func LoadConfig() (*Config, error) {
 		EffectsEnabled:   true, // Значение по умолчанию
 		Fullscreen:       true, // Значение по умолчанию
 		ShotCooldown:     true, // Значение по умолчанию
+		EnemyBonusPickup: true, // Значение по умолчанию
 		EnemySpawners: convertCoordsToPositions(
 			schema.Game.EnemySpawners,
 		),
@@ -194,6 +197,10 @@ func LoadConfig() (*Config, error) {
 
 	if schema.Game.ShotCooldown != nil {
 		cfg.ShotCooldown = *schema.Game.ShotCooldown
+	}
+
+	if schema.Game.EnemyBonusPickup != nil {
+		cfg.EnemyBonusPickup = *schema.Game.EnemyBonusPickup
 	}
 
 	return cfg, nil

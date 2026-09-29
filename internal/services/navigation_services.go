@@ -179,7 +179,9 @@ func (s *NavigationService) stepCost(
 		for col := fromCol; col <= toCol; col++ {
 			switch grid.GetCell(col, row) {
 			case types.Water:
-				return 0, false
+				if !options.WaterPassable {
+					return 0, false
+				}
 			case types.Steel:
 				if !options.SteelPassable {
 					return 0, false

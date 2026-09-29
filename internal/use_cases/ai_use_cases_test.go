@@ -4,6 +4,7 @@ import (
 	"errors"
 	"testing"
 
+	game "github.com/shpaker/tnk9x/internal/repositories/game"
 	"github.com/shpaker/tnk9x/internal/types"
 	"github.com/shpaker/tnk9x/internal/types/session_entities"
 	"github.com/shpaker/tnk9x/internal/use_cases"
@@ -113,6 +114,8 @@ func newAIUseCases(
 		hq,
 		tanks,
 		bullets,
+		game.NewBonusesRepository(),
+		true,
 		engine,
 	)
 }

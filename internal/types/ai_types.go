@@ -17,6 +17,14 @@ type AITankInfo struct {
 	HitPoints  uint
 	WithBonus  bool
 	Reinforced bool // Пули танка ломают бетон
+	Boat       bool // У танка лодка: он ходит по воде
+}
+
+// AIBonusInfo — сведения о бонусе на поле
+type AIBonusInfo struct {
+	Position Position
+	Size     Size
+	Type     BonusType
 }
 
 // AIBulletInfo — сведения о летящей пуле
@@ -40,6 +48,7 @@ type EnemyAIContext struct {
 	Players     []AITankInfo // Активные танки игроков
 	Enemies     []AITankInfo // Активные союзники без самого танка
 	Bullets     []AIBulletInfo
+	Bonuses     []AIBonusInfo // Бонусы, за которыми может ехать враг
 	HQ          AIHQInfo
 	StageNumber uint
 	Tick        int
@@ -51,6 +60,7 @@ type NavOptions struct {
 	TankSize      int  // Размер танка в пикселях; шаг сетки пути — половина
 	BrickCost     int  // Дополнительная стоимость шага сквозь кирпич
 	SteelPassable bool // Бетон считается кирпичом (танк его пробивает)
+	WaterPassable bool // Вода проходима (у танка лодка)
 }
 
 // PathStep — первый шаг найденного пути

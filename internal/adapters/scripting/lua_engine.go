@@ -132,6 +132,17 @@ func (e *luaEngine) contextTable(context types.EnemyAIContext) *lua.LTable {
 	}
 	table.RawSetString("bullets", bullets)
 
+	bonuses := e.L.NewTable()
+	for _, bonus := range context.Bonuses {
+		item := e.L.NewTable()
+		item.RawSetString("x", lua.LNumber(bonus.Position.X))
+		item.RawSetString("y", lua.LNumber(bonus.Position.Y))
+		item.RawSetString("size", lua.LNumber(bonus.Size.Width))
+		item.RawSetString("type", lua.LString(bonus.Type))
+		bonuses.Append(item)
+	}
+	table.RawSetString("bonuses", bonuses)
+
 	hq := e.L.NewTable()
 	hq.RawSetString("x", lua.LNumber(context.HQ.Position.X))
 	hq.RawSetString("y", lua.LNumber(context.HQ.Position.Y))
@@ -153,6 +164,7 @@ func (e *luaEngine) tankTable(tank types.AITankInfo) *lua.LTable {
 	table.RawSetString("hp", lua.LNumber(tank.HitPoints))
 	table.RawSetString("bonus", lua.LBool(tank.WithBonus))
 	table.RawSetString("reinforced", lua.LBool(tank.Reinforced))
+	table.RawSetString("boat", lua.LBool(tank.Boat))
 	return table
 }
 
@@ -168,7 +180,8 @@ func (e *luaEngine) registerAPI() {
 	e.L.SetGlobal("ai", api)
 }
 
-// findPath(fromX, fromY, toX, toY [, {brickCost=, steelPassable=}])
+// findPath(fromX, fromY, toX, toY
+// [, {brickCost=, steelPassable=, waterPassable=}])
 // возвращает направление первого шага и длину пути либо nil
 func (e *luaEngine) findPath(L *lua.LState) int {
 	if e.context == nil {
@@ -191,6 +204,9 @@ func (e *luaEngine) findPath(L *lua.LState) int {
 		}
 		options.SteelPassable = lua.LVAsBool(
 			table.RawGetString("steelPassable"),
+		)
+		options.WaterPassable = lua.LVAsBool(
+			table.RawGetString("waterPassable"),
 		)
 	}
 
