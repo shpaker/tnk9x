@@ -10,13 +10,14 @@ import (
 )
 
 // Приоритеты источников: при переполнении types.MaxLights отбрасываются
-// менее важные — сначала танки врагов, в последнюю очередь фары
-// и аура игроков, задающие обзор
+// менее важные — сначала свечение врагов, в последнюю очередь фары
+// и аура игроков
 const (
 	lightPriorityPlayer = iota
 	lightPriorityExplosion
 	lightPriorityFlash
 	lightPriorityBullet
+	lightPriorityEnemy
 	lightPriorityAccent
 	lightPriorityAmbient
 	lightPriorityCount
@@ -71,29 +72,37 @@ var (
 		color.NRGBA{R: 220, G: 230, B: 255, A: 255},
 		0.8,
 	}
-	// Обзор игрока: дальний конус фары по стволу и мягкая аура рядом
+	// Свет игрока: дальний конус фары по стволу и мягкая аура рядом
 	headlight = lightSpec{
-		130,
+		145,
 		color.NRGBA{R: 255, G: 238, B: 205, A: 255},
-		1.6,
+		1.9,
 	}
 	playerAura = lightSpec{
 		30,
 		color.NRGBA{R: 255, G: 235, B: 200, A: 255},
 		0.7,
 	}
-	// Враг вне обзора едва тлеет: выдаёт себя вспышкой выстрела,
-	// а не постоянным свечением
+	// Фара врага короче и тусклее, тёплого красноватого света:
+	// враг отличим от игрока издалека
+	enemyHeadlight = lightSpec{
+		120,
+		color.NRGBA{R: 255, G: 150, B: 100, A: 255},
+		1.4,
+	}
+	// Корпус врага слабо тлеет красным
 	enemyLight = lightSpec{14, color.NRGBA{R: 255, G: 90, B: 70, A: 255}, 0.25}
 	hqLight    = lightSpec{36, color.NRGBA{R: 255, G: 210, B: 90, A: 255}, 0.6}
 )
 
-// Параметры фары: половина угла конуса, вынос источника к срезу
-// ствола и доля угла, доворачиваемая за тик (~6 тиков на поворот)
+// Параметры фары: половина угла конуса у игрока и врага, вынос
+// источника к срезу ствола и доля угла, доворачиваемая за тик
+// (~6 тиков на поворот)
 const (
-	headlightHalfAngle = 36 * math.Pi / 180
-	headlightReach     = 6.0
-	headlightTurnRate  = 0.35
+	headlightHalfAngle      = 36 * math.Pi / 180
+	enemyHeadlightHalfAngle = 30 * math.Pi / 180
+	headlightReach          = 6.0
+	headlightTurnRate       = 0.35
 )
 
 // surfaceMaterials — свойства поверхностей: кирпич и сталь бросают
@@ -144,11 +153,8 @@ func (uc *LightingUseCases) GetLights() []types.LightEntity {
 		if tank == nil {
 			continue
 		}
-		if isPlayerViewer(tank) {
-			buckets[lightPriorityPlayer] = append(
-				buckets[lightPriorityPlayer],
-				headlightOf(tank),
-			)
+		if light, priority, ok := headlightOf(tank); ok {
+			buckets[priority] = append(buckets[priority], light)
 		}
 		light, priority, ok := tankLight(tank)
 		if ok {
@@ -194,27 +200,10 @@ func (uc *LightingUseCases) GetLights() []types.LightEntity {
 	return lights
 }
 
-// GetViewers реализует ILightingUseCases: зрители — активные танки
-// игроков, смотрят туда же, куда светит фара
-func (uc *LightingUseCases) GetViewers() []types.ViewerEntity {
-	viewers := make([]types.ViewerEntity, 0, types.MaxViewers)
-	for _, tank := range uc.tankCommonUseCases.GetAllTanks() {
-		if !isPlayerViewer(tank) || len(viewers) == types.MaxViewers {
-			continue
-		}
-		angle := tank.GetHeadlightAngle()
-		viewers = append(viewers, types.ViewerEntity{
-			Position:  tankCenter(tank),
-			Direction: types.Position{X: math.Cos(angle), Y: math.Sin(angle)},
-		})
-	}
-	return viewers
-}
-
 // UpdateHeadlights реализует ILightingUseCases
 func (uc *LightingUseCases) UpdateHeadlights() {
 	for _, tank := range uc.tankCommonUseCases.GetAllTanks() {
-		if isPlayerViewer(tank) {
+		if hasHeadlight(tank) {
 			tank.TurnHeadlight(headlightTurnRate)
 		}
 	}
@@ -228,22 +217,30 @@ func (uc *LightingUseCases) GetMaterial(
 	return surfaceMaterials[blockType]
 }
 
-// isPlayerViewer сообщает, светит ли танк фарой: только активный
-// танк игрока
-func isPlayerViewer(tank *types.TankEntity) bool {
-	return tank != nil && !tank.IsEnemy() && tank.IsActive()
+// hasHeadlight сообщает, светит ли танк фарой: любой активный танк
+func hasHeadlight(tank *types.TankEntity) bool {
+	return tank != nil && tank.IsActive()
 }
 
-// headlightOf — конус фары у среза ствола по текущему углу фары
-func headlightOf(tank *types.TankEntity) types.LightEntity {
+// headlightOf — конус фары у среза ствола по текущему углу фары:
+// у игрока длинный и яркий, у врага короче и красноватый
+func headlightOf(tank *types.TankEntity) (types.LightEntity, int, bool) {
+	if !hasHeadlight(tank) {
+		return types.LightEntity{}, 0, false
+	}
+	spec, halfAngle, priority := headlight, headlightHalfAngle, lightPriorityPlayer
+	if tank.IsEnemy() {
+		spec, halfAngle, priority =
+			enemyHeadlight, enemyHeadlightHalfAngle, lightPriorityEnemy
+	}
 	angle := tank.GetHeadlightAngle()
 	direction := types.Position{X: math.Cos(angle), Y: math.Sin(angle)}
-	light := newLight(tank.Position, tank.Size, headlight)
+	light := newLight(tank.Position, tank.Size, spec)
 	light.Position.X += direction.X * headlightReach
 	light.Position.Y += direction.Y * headlightReach
 	light.Direction = direction
-	light.ConeCos = math.Cos(headlightHalfAngle)
-	return light
+	light.ConeCos = math.Cos(halfAngle)
+	return light, priority, true
 }
 
 // tankLight — собственный свет танка по его состоянию: у игрока аура

@@ -48,10 +48,6 @@ type StageRendererAdapter struct {
 
 	// Поверхности кадра для маски материалов; буфер переиспользуется
 	surfaces []effects.Surface
-
-	// Память увиденного общая для приложения: рендер уровня сбрасывает
-	// её при первой отрисовке — прошлый уровень не подсвечивает новый
-	visionMemoryReset bool
 }
 
 // StageRendererDependencies — готовый граф зависимостей рендера уровня;
@@ -177,7 +173,6 @@ func (r *StageRendererAdapter) drawTanks(screen *ebiten.Image) {
 		}
 
 		position := r.recoiledPosition(tank)
-		visibility := r.seenVisibility(tank.GetVisibility())
 		img, err := r.spriteCache.Image(
 			types.TankTilesetType(tank.IsEnemy()),
 			imageID,
@@ -188,13 +183,13 @@ func (r *StageRendererAdapter) drawTanks(screen *ebiten.Image) {
 		x := float64(r.mapOffsetX) + position.X
 		y := float64(r.mapOffsetY) + position.Y
 		if tint, ok := r.renderUseCases.TankHealthTint(tank); ok {
-			r.drawTintedSeenImage(screen, img, x, y, visibility, tint)
+			drawTintedImage(screen, img, x, y, tint)
 		} else {
-			r.drawSeenImage(screen, img, x, y, visibility)
+			drawImage(screen, img, x, y)
 		}
 
 		if tank.HasShield() {
-			r.drawShield(screen, tank, position, visibility)
+			r.drawShield(screen, tank, position)
 		}
 	}
 }
@@ -208,7 +203,6 @@ func (r *StageRendererAdapter) drawShield(
 	screen *ebiten.Image,
 	tank *types.TankEntity,
 	position types.Position,
-	visibility float64,
 ) {
 	img, err := r.spriteCache.Image(
 		types.TilesetTypeShield,
@@ -217,12 +211,11 @@ func (r *StageRendererAdapter) drawShield(
 	if err != nil {
 		return
 	}
-	r.drawSeenImage(
+	drawImage(
 		screen,
 		img,
 		float64(r.mapOffsetX)+position.X,
 		float64(r.mapOffsetY)+position.Y,
-		visibility,
 	)
 }
 
@@ -350,74 +343,32 @@ func (r *StageRendererAdapter) drawBullets(screen *ebiten.Image) {
 			continue
 		}
 
-		r.drawSeenImage(
+		drawImage(
 			screen,
 			img,
 			float64(r.mapOffsetX)+bullet.Position.X,
 			float64(r.mapOffsetY)+bullet.Position.Y,
-			r.seenVisibility(bullet.GetVisibility()),
 		)
 	}
 }
 
-// seenVisibility — видимость объекта для отрисовки: зрение игрока
-// действует только с эффектами, в классике видно всё
-func (r *StageRendererAdapter) seenVisibility(visibility float64) float64 {
-	if !r.effectsSettings.IsEnabled() {
-		return 1
-	}
-	return visibility
-}
-
-// seenBrightnessFloor — яркость спрайта при нулевой видимости: спрайт
-// и так проходит общий полумрак сцены, полное затемнение делает
-// танк чёрной дырой
-const seenBrightnessFloor = 0.4
-
-// drawSeenImage рисует спрайт с учётом видимости: плохо видимый
-// объект темнеет и теряет цвет
-func (r *StageRendererAdapter) drawSeenImage(
-	screen *ebiten.Image,
-	img *ebiten.Image,
-	x float64,
-	y float64,
-	visibility float64,
-) {
-	if visibility >= 1 {
-		op := &ebiten.DrawImageOptions{}
-		op.GeoM.Translate(x, y)
-		screen.DrawImage(img, op)
-		return
-	}
-	op := &colorm.DrawImageOptions{}
+// drawImage рисует спрайт в точке (x, y) без изменений цвета
+func drawImage(screen *ebiten.Image, img *ebiten.Image, x float64, y float64) {
+	op := &ebiten.DrawImageOptions{}
 	op.GeoM.Translate(x, y)
-	colorm.DrawImage(screen, img, seenColorMatrix(visibility), op)
+	screen.DrawImage(img, op)
 }
 
-// seenColorMatrix — приглушение цвета спрайта по его видимости
-func seenColorMatrix(visibility float64) colorm.ColorM {
-	var colorMatrix colorm.ColorM
-	if visibility < 1 {
-		colorMatrix.ChangeHSV(
-			0,
-			visibility,
-			seenBrightnessFloor+(1-seenBrightnessFloor)*visibility,
-		)
-	}
-	return colorMatrix
-}
-
-// drawTintedSeenImage рисует спрайт с учётом видимости, умножая его
-// цвета на тон: цвет ложится только на непрозрачные пиксели спрайта
-func (r *StageRendererAdapter) drawTintedSeenImage(
+// drawTintedImage рисует спрайт, умножая его цвета на тон:
+// цвет ложится только на непрозрачные пиксели спрайта
+func drawTintedImage(
 	screen *ebiten.Image,
 	img *ebiten.Image,
 	x float64,
 	y float64,
-	visibility float64,
 	tint color.NRGBA,
 ) {
-	colorMatrix := seenColorMatrix(visibility)
+	var colorMatrix colorm.ColorM
 	colorMatrix.Scale(
 		float64(tint.R)/255,
 		float64(tint.G)/255,
@@ -458,10 +409,6 @@ func (r *StageRendererAdapter) DrawAll(screen *ebiten.Image) {
 	}
 
 	scene := r.effects.BeginScene(screen.Bounds().Size())
-	if !r.visionMemoryReset {
-		r.effects.ResetVisionMemory()
-		r.visionMemoryReset = true
-	}
 	r.drawField(scene)
 	// Рамка под сдвинутым тряской кадром: у края не открывается пустота
 	r.drawScreenBackground(screen)
@@ -476,7 +423,6 @@ func (r *StageRendererAdapter) DrawAll(screen *ebiten.Image) {
 		),
 		r.buildSurfaces(),
 		r.buildLights(),
-		r.buildViewers(),
 		image.Pt(int(shake.X), int(shake.Y)),
 	)
 }
@@ -498,16 +444,6 @@ func (r *StageRendererAdapter) buildSurfaces() []effects.Surface {
 		})
 	}
 	return r.surfaces
-}
-
-// buildViewers переводит зрителей из координат поля в экранные
-func (r *StageRendererAdapter) buildViewers() []types.ViewerEntity {
-	viewers := r.lightingUseCases.GetViewers()
-	for i := range viewers {
-		viewers[i].Position.X += float64(r.mapOffsetX)
-		viewers[i].Position.Y += float64(r.mapOffsetY)
-	}
-	return viewers
 }
 
 // buildLights переводит источники света из координат поля в экранные

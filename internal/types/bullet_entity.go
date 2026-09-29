@@ -10,23 +10,6 @@ type BulletEntity struct {
 	Direction Direction
 	specs     *SpecsEntity // Спецификации танка, из которого выпущена пуля
 	owner     *TankEntity
-
-	// Видимость пули для игроков от 0 до 1; до первого расчёта — полная
-	visibility      float64
-	visibilityReady bool
-}
-
-// GetVisibility возвращает видимость пули для игроков от 0 до 1
-func (b *BulletEntity) GetVisibility() float64 {
-	if !b.visibilityReady {
-		return 1
-	}
-	return b.visibility
-}
-
-func (b *BulletEntity) SetVisibility(visibility float64) {
-	b.visibility = visibility
-	b.visibilityReady = true
 }
 
 func (b *BulletEntity) GetImageID() (string, error) {

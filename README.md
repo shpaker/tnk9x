@@ -6,7 +6,7 @@ A modern remake and tribute to the classic arcade game Battle City (NES, 1985), 
 
 [![tnk9x gameplay with normal graphics](.github/screenshot-desktop.png)](https://shpaker.github.io/tnk9x/)
 
-*Stage 1 with normal graphics: headlight vision, bullet tracers, lit bricks and steel, tube TV filter.*
+*Stage 1 with normal graphics: headlights, bullet tracers, lit bricks and steel, tube TV filter.*
 
 [![tnk9x running in a mobile browser](.github/screenshot-mobile.png)](https://shpaker.github.io/tnk9x/)
 
@@ -42,13 +42,13 @@ A modern remake and tribute to the classic arcade game Battle City (NES, 1985), 
 - Sound effects and music
 - NES-style sidebar HUD (enemy reserve, player lives, stage flag) on an authentic 256x224 screen
 - Normal graphics with effects, on by default (`config.yml`): 2D ray-traced lighting and shadows from tanks, bullets, explosions and bonuses, bloom, water/ice/steel glints, tube TV filter; switch to classic graphics without effects with F2 or the GRAPHICS item of the pause menu (keyboard and touch)
-  - Player field of view: a headlight cone along the barrel that turns smoothly with the tank and a soft aura around it; walls are buildings, so light falls on their facades and they block both light and sight
-  - Vision shared by all tanks and bullets: objects are fully visible when they are in the player's field of view, not hidden behind buildings and lit; bullets glow like tracers and light up what lies beyond the headlight; out-of-sight objects and lights are dimmed
-  - Memory of seen areas: what the player sees now is brighter, recently seen areas fade out over a few seconds, explored areas stay slightly lighter
-  - Materials: steel facades have a metallic sheen that blooms under bright light, brick is matte; a building's far facade is not visible to the player
+  - No fog of war: the whole field is visible, lights only brighten it
+  - Headlights on every tank: a cone along the barrel that turns smoothly with the tank; the player's is long and bright with a soft aura around the tank, enemies' is shorter and reddish; walls are buildings, so light falls on their facades and they cast shadows
+  - Bullets glow like tracers and light up the corridor they fly through
+  - Materials: steel facades have a metallic sheen that blooms under bright light, brick is matte
   - The stage starts with the player tank already on the map; respawns after death keep the spawn animation
   - Invulnerability after spawning, as in the original: an animated force field over the tank in both graphics modes, pulsing with a flickering glow in normal graphics (also for the helmet bonus)
-  - Tube TV look: a curved screen with rounded corners, aperture grille, scanlines that widen on bright pixels, phosphor afterglow, R/B convergence drift towards the edges, film grain visible even on black, flicker, a rolling bar, and line tearing on strong hits
+  - Tube TV look on every screen, menus included: a curved screen with rounded corners and faintly glowing glass that stays visible on dark menus, aperture grille, scanlines that widen on bright pixels, phosphor afterglow, R/B convergence drift towards the edges, light film grain, flicker, a rolling bar, and line tearing on strong hits
   - Bullet tracers: sparks trail behind a flying bullet, denser for fast bullets, blue-white for steel-piercing ones, which also glow blue-white
   - Muzzle flashes: a short light cone along the barrel with a smoke puff
   - Muzzle flashes with recoil, wall debris in the colors of the destroyed cells, steel and shield sparks, sparks and a flash when bullets collide, explosion embers and smoke, track dust, screen shake on hits and explosions (stronger for the player)
@@ -61,9 +61,8 @@ A modern remake and tribute to the classic arcade game Battle City (NES, 1985), 
 - Scripting behind a domain-typed engine interface: the Lua script owns all enemy behavior, Go passes a world snapshot and executes decisions
 - Navigation service (Dijkstra pathfinding, line-of-fire ray casting) exposed to scripts as query functions
 - App-lifetime GPU sprite cache with startup preload, fail-fast sprite/animation validation on startup
-- Kage shader pipeline: vision pass with a seen-area memory, lighting pass with omni and cone lights on the logical screen, bloom, phosphor afterglow and CRT in the final-screen pass; shaders loaded via repository and compiled fail-fast on startup
+- Kage shader pipeline: lighting pass with omni and cone lights on the logical screen, bloom, phosphor afterglow and CRT in the final-screen pass; shaders loaded via repository and compiled fail-fast on startup
 - Visual effects driven by a per-frame event queue from gameplay use cases; particles, flashes and shake live in a per-stage repository
-- Vision use case with line of sight over a block grid; light and field-of-view formulas live in the domain and match the shaders
 - Section-based text formats for maps and campaigns, parsed and validated fail-fast on startup
 - User storage behind a repository interface (file on desktop, localStorage in WASM), ready for a platform save backend
 - Unit tests with a >=70% use-cases coverage gate

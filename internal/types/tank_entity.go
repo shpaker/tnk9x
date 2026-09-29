@@ -55,11 +55,6 @@ type TankEntity struct {
 	headlightAngle float64
 	headlightReady bool
 	recoilTicks    uint
-
-	// Видимость танка для игроков от 0 до 1: плавно следует за зоной
-	// зрения, в которой он находится; до первого расчёта — полная
-	visibility      float64
-	visibilityReady bool
 }
 
 func NewDefaultTankEntity(role TankRole, direction Direction) TankEntity {
@@ -383,30 +378,4 @@ func (t *TankEntity) TickRecoil() {
 // IsRecoiling сообщает, откатывается ли танк после выстрела
 func (t *TankEntity) IsRecoiling() bool {
 	return t != nil && t.recoilTicks > 0
-}
-
-// GetVisibility возвращает видимость танка для игроков от 0 до 1
-func (t *TankEntity) GetVisibility() float64 {
-	if t == nil || !t.visibilityReady {
-		return 1
-	}
-	return t.visibility
-}
-
-// FadeVisibility приближает видимость к target: появление — на долю
-// rise оставшегося, исчезновение — на долю fall; первый вызов ставит сразу
-func (t *TankEntity) FadeVisibility(target, rise, fall float64) {
-	if t == nil {
-		return
-	}
-	if !t.visibilityReady {
-		t.visibility = target
-		t.visibilityReady = true
-		return
-	}
-	rate := fall
-	if target > t.visibility {
-		rate = rise
-	}
-	t.visibility += (target - t.visibility) * rate
 }

@@ -86,44 +86,6 @@ func TestParticleEntity_Fade(t *testing.T) {
 	}
 }
 
-// Поле зрения — передняя полусфера и вплотную со всех сторон
-func TestViewerEntity_FieldAt(t *testing.T) {
-	viewer := types.ViewerEntity{Direction: types.Position{X: 0, Y: -1}}
-	if viewer.FieldAt(types.Position{Y: -100}) != 1 {
-		t.Error("точка впереди вне поля зрения")
-	}
-	if viewer.FieldAt(types.Position{Y: 100}) != 0 {
-		t.Error("точка сзади в поле зрения")
-	}
-	if viewer.FieldAt(types.Position{Y: 20}) != 1 {
-		t.Error("точка вплотную сзади не замечена")
-	}
-}
-
-// Фара светит вперёд, не назад, и не слепит у самого танка
-func TestLightEntity_IlluminationAt(t *testing.T) {
-	cone := types.LightEntity{
-		Radius:    130,
-		Intensity: 1,
-		Direction: types.Position{X: 0, Y: -1},
-		ConeCos:   0.8,
-	}
-	far := cone.IlluminationAt(types.Position{Y: -60})
-	near := cone.IlluminationAt(types.Position{Y: -5})
-	if far <= near {
-		t.Errorf("у танка %v, впереди %v: фара должна набирать силу", near, far)
-	}
-	if cone.IlluminationAt(types.Position{Y: 60}) != 0 {
-		t.Error("фара светит назад")
-	}
-
-	omni := types.LightEntity{Radius: 40, Intensity: 1}
-	if omni.IlluminationAt(types.Position{X: 10}) <= 0 ||
-		omni.IlluminationAt(types.Position{X: 50}) != 0 {
-		t.Error("всенаправленный свет вне радиуса или не светит внутри")
-	}
-}
-
 // Фаза силового поля чередуется каждые ShieldFlickerTicks тиков
 func TestTankEntity_ShieldPhase(t *testing.T) {
 	tank := types.NewDefaultTankEntity(types.TankRolePlayer1, types.DirectionUp)

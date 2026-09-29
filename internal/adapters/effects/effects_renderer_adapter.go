@@ -14,9 +14,9 @@ import (
 
 // Параметры освещения и постобработки
 const (
-	// lightingAmbient — освещённость поля без источников: периферия
-	// заметно темнее обзора фары, но не пропадает
-	lightingAmbient = 0.33
+	// lightingAmbient — освещённость поля без источников: всё поле
+	// видно, но свет фар и выстрелов заметно ярче
+	lightingAmbient = 0.4
 	lightingHaze    = 0.16 // видимость света на чёрном полу
 	bloomThreshold  = 0.65 // яркость, с которой начинается свечение
 	bloomStrength   = 0.9
@@ -30,14 +30,14 @@ const (
 	phosphorDecay = 0.6
 	maskStrength  = 0.3
 	convergence   = 0.45
-	grainStrength = 0.08
+	grainStrength = 0.05
+	// glassLevel — свечение стекла кинескопа на чёрном: экран
+	// отличим от полей и в тёмных меню
+	glassLevel    = 0.045
 	noiseStrength = 0.025
 	// distortionPerPixel — срыв строк на пиксель тряски кадра: полный
 	// срыв при тряске в 4 пикселя
 	distortionPerPixel = 0.25
-	// visionFadeSteps — на сколько единиц 8-битного канала за кадр
-	// гаснет память недавно увиденного: 1 — за 255 кадров, ~4 с
-	visionFadeSteps = 1
 )
 
 // Surface — прямоугольник поверхности на экране и её материал
@@ -51,7 +51,6 @@ type Surface struct {
 // живёт всё время работы приложения
 type EffectsRendererAdapter struct {
 	// Шейдеры
-	visionShader   *ebiten.Shader
 	lightingShader *ebiten.Shader
 	bloomShader    *ebiten.Shader
 	phosphorShader *ebiten.Shader
@@ -62,11 +61,6 @@ type EffectsRendererAdapter struct {
 	mask        *ebiten.Image
 	bloomBuffer *ebiten.Image
 	bloom       *ebiten.Image
-
-	// Зрение с памятью увиденного: прошлый и текущий кадр, меняются
-	// местами каждый кадр; сбрасываются на новом уровне
-	visionPrevious *ebiten.Image
-	visionCurrent  *ebiten.Image
 
 	// Послесвечение люминофора: прошлый и текущий итоговый кадр,
 	// меняются местами каждый кадр; сбрасываются при включении эффектов
@@ -86,7 +80,6 @@ type EffectsRendererAdapter struct {
 	lightsUniform      []float32
 	lightColorsUniform []float32
 	lightConesUniform  []float32
-	viewersUniform     []float32
 
 	frames int
 	// finalFrames — счётчик итоговых кадров для помех: CRT работает
@@ -97,10 +90,6 @@ type EffectsRendererAdapter struct {
 func NewEffectsRendererAdapter(
 	shadersRepository interfaces.IShadersRepository,
 ) (*EffectsRendererAdapter, error) {
-	visionShader, err := loadShader(shadersRepository, "vision")
-	if err != nil {
-		return nil, err
-	}
 	lightingShader, err := loadShader(shadersRepository, "lighting")
 	if err != nil {
 		return nil, err
@@ -122,7 +111,6 @@ func NewEffectsRendererAdapter(
 	pixel.Fill(color.White)
 
 	return &EffectsRendererAdapter{
-		visionShader:       visionShader,
 		lightingShader:     lightingShader,
 		bloomShader:        bloomShader,
 		phosphorShader:     phosphorShader,
@@ -131,7 +119,6 @@ func NewEffectsRendererAdapter(
 		lightsUniform:      make([]float32, types.MaxLights*4),
 		lightColorsUniform: make([]float32, types.MaxLights*4),
 		lightConesUniform:  make([]float32, types.MaxLights*4),
-		viewersUniform:     make([]float32, types.MaxViewers*4),
 	}, nil
 }
 
@@ -159,33 +146,18 @@ func loadShader(
 func (a *EffectsRendererAdapter) BeginScene(size image.Point) *ebiten.Image {
 	a.scene = ensureImage(a.scene, size)
 	a.mask = ensureImage(a.mask, size)
-	a.visionPrevious = ensureImage(a.visionPrevious, size)
-	a.visionCurrent = ensureImage(a.visionCurrent, size)
 	a.scene.Clear()
 	return a.scene
 }
 
-// ResetVisionMemory забывает увиденное — на новом уровне игрок
-// начинает с нетронутой картой
-func (a *EffectsRendererAdapter) ResetVisionMemory() {
-	if a.visionPrevious != nil {
-		a.visionPrevious.Clear()
-	}
-	if a.visionCurrent != nil {
-		a.visionCurrent.Clear()
-	}
-}
-
 // DrawLighting переносит сцену на экран с освещением: поверхности
 // задают маску материалов, источники — свет и тени внутри field;
-// viewers — танки игроков: свет виден только там, куда они смотрят;
 // shake сдвигает весь кадр при тряске
 func (a *EffectsRendererAdapter) DrawLighting(
 	screen *ebiten.Image,
 	field image.Rectangle,
 	surfaces []Surface,
 	lights []types.LightEntity,
-	viewers []types.ViewerEntity,
 	shake image.Point,
 ) {
 	a.frames++
@@ -215,14 +187,12 @@ func (a *EffectsRendererAdapter) DrawLighting(
 		float32(field.Max.X),
 		float32(field.Max.Y),
 	}
-	a.drawVision(fieldRect, viewers)
 
 	size := a.scene.Bounds().Size()
 	op := &ebiten.DrawRectShaderOptions{}
 	op.GeoM.Translate(float64(shake.X), float64(shake.Y))
 	op.Images[0] = a.scene
 	op.Images[1] = a.mask
-	op.Images[2] = a.visionCurrent
 	op.Uniforms = map[string]any{
 		"Lights":      a.lightsUniform,
 		"LightColors": a.lightColorsUniform,
@@ -234,34 +204,6 @@ func (a *EffectsRendererAdapter) DrawLighting(
 		"Time":        float32(a.frames),
 	}
 	screen.DrawRectShader(size.X, size.Y, a.lightingShader, op)
-}
-
-// drawVision считает, что игроки видят сейчас, и обновляет память
-// увиденного: прошлый кадр — вход, текущий — результат
-func (a *EffectsRendererAdapter) drawVision(
-	fieldRect []float32,
-	viewers []types.ViewerEntity,
-) {
-	viewerCount := min(len(viewers), types.MaxViewers)
-	for i := range viewerCount {
-		a.viewersUniform[i*4] = float32(viewers[i].Position.X)
-		a.viewersUniform[i*4+1] = float32(viewers[i].Position.Y)
-		a.viewersUniform[i*4+2] = float32(viewers[i].Direction.X)
-		a.viewersUniform[i*4+3] = float32(viewers[i].Direction.Y)
-	}
-
-	a.visionPrevious, a.visionCurrent = a.visionCurrent, a.visionPrevious
-	size := a.mask.Bounds().Size()
-	op := &ebiten.DrawRectShaderOptions{Blend: ebiten.BlendCopy}
-	op.Images[0] = a.visionPrevious
-	op.Images[1] = a.mask
-	op.Uniforms = map[string]any{
-		"Viewers":     a.viewersUniform,
-		"ViewerCount": viewerCount,
-		"FieldRect":   fieldRect,
-		"Fade":        float32(visionFadeSteps) / 0xff,
-	}
-	a.visionCurrent.DrawRectShader(size.X, size.Y, a.visionShader, op)
 }
 
 // fillCone заполняет конус источника i: ось и косинусы внешнего
@@ -349,6 +291,7 @@ func (a *EffectsRendererAdapter) DrawFinal(
 		"MaskStrength":  mask,
 		"Convergence":   float32(convergence),
 		"Grain":         float32(grainStrength),
+		"Glass":         float32(glassLevel),
 		"Noise":         float32(noiseStrength),
 		"Distortion":    float32(a.distortion),
 		"Time":          float32(a.finalFrames),

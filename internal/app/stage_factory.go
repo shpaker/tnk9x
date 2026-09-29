@@ -261,13 +261,6 @@ func (app *App) newStageState() (*states.StageState, error) {
 		visualEffectsUseCases,
 	)
 
-	visionUseCases := use_cases.NewVisionUseCases(
-		tankCommonUseCases,
-		bulletUseCases,
-		mapUseCases,
-		lightingUseCases,
-	)
-
 	rendererAdapter := app.buildStageRenderer(
 		mapUseCases,
 		tankCommonUseCases,
@@ -287,7 +280,6 @@ func (app *App) newStageState() (*states.StageState, error) {
 		StageUseCases:         stageUseCases,
 		SoundUseCases:         soundUseCases,
 		LightingUseCases:      lightingUseCases,
-		VisionUseCases:        visionUseCases,
 		VisualEffectsUseCases: visualEffectsUseCases,
 		ProgressionUseCases:   app.progressionUseCases,
 		InputAdapters: [2]interfaces.IInputAdapter{
