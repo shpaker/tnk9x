@@ -550,7 +550,7 @@ func newAcceleratingCommon(
 }
 
 // С разгоном танк трогается медленно и выходит на полную скорость
-// примерно за 0.6 с
+// примерно за секунду
 func TestTankCommonUseCases_Update_Acceleration(t *testing.T) {
 	env := newCommonTestEnv()
 	common := newAcceleratingCommon(env)

@@ -31,7 +31,7 @@ game:
   # Campaign file: assets/levels/<campaign>.bccamp
   campaign: main
 
-  # Tanks pull away slowly and reach full speed in about half a second;
+  # Tanks pull away almost from a standstill and reach full speed in about a second;
   # false: full speed at once, as in the NES original
   tank_acceleration: true
 

@@ -14,8 +14,8 @@ var _ interfaces.ITankCommonUseCases = (*TankCommonUseCases)(nil)
 // и набирает её за accelerationTime секунд; на льду гусеницы
 // буксуют — разгон медленнее в iceAccelerationFactor раз
 const (
-	startSpeedFraction    = 0.15
-	accelerationTime      = 0.6
+	startSpeedFraction    = 0.05
+	accelerationTime      = 1.0
 	iceAccelerationFactor = 0.5
 )
 
