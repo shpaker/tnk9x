@@ -160,6 +160,19 @@ func (uc *TankCommonUseCases) LevelUp(tank *types.TankEntity) {
 	}
 }
 
+// SetMaxLevel реализует ITankCommonUseCases
+func (uc *TankCommonUseCases) SetMaxLevel(tank *types.TankEntity) {
+	if tank == nil || tank.GetSpecs() == nil {
+		return
+	}
+	newSpecs := uc.specsUseCases.GetTankSpecs(tank.IsEnemy(), 3)
+	if newSpecs == nil {
+		return
+	}
+	tank.SetSpecs(newSpecs)
+	uc.renderUseCases.UpdateTankAnimation(tank)
+}
+
 // LevelDown понижает уровень танка на единицу (минимум 0)
 func (uc *TankCommonUseCases) LevelDown(tank *types.TankEntity) {
 	if tank == nil || tank.GetSpecs() == nil {

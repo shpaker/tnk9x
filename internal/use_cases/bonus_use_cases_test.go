@@ -14,6 +14,7 @@ import (
 type recordingTankCommon struct {
 	tanks     []*types.TankEntity
 	leveledUp []*types.TankEntity
+	maxed     []*types.TankEntity
 }
 
 func (s *recordingTankCommon) Update(
@@ -37,6 +38,10 @@ func (s *recordingTankCommon) LevelUp(tank *types.TankEntity) {
 	s.leveledUp = append(s.leveledUp, tank)
 }
 func (s *recordingTankCommon) LevelDown(tank *types.TankEntity) {}
+
+func (s *recordingTankCommon) SetMaxLevel(tank *types.TankEntity) {
+	s.maxed = append(s.maxed, tank)
+}
 
 func (s *recordingTankCommon) GetTankAnimationName(
 	tank *types.TankEntity,
@@ -518,10 +523,12 @@ func TestBonusUseCases_GetRandomBonusType(t *testing.T) {
 		types.BonusTypeGrenade: true,
 		types.BonusTypeTank:    true,
 		types.BonusTypeStar:    true,
+		types.BonusTypeBoat:    true,
+		types.BonusTypePistol:  true,
 	}
 
 	seen := map[types.BonusType]bool{}
-	for i := 0; i < 600; i++ {
+	for i := 0; i < 800; i++ {
 		got := env.bonusUC.GetRandomBonusType()
 		if !allowed[got] {
 			t.Fatalf("недопустимый тип бонуса: %q", got)
@@ -543,6 +550,8 @@ func TestBonusUseCases_SpawnRandomBonusEntity(t *testing.T) {
 		types.BonusTypeGrenade: true,
 		types.BonusTypeTank:    true,
 		types.BonusTypeStar:    true,
+		types.BonusTypeBoat:    true,
+		types.BonusTypePistol:  true,
 	}
 
 	bonus := env.bonusUC.SpawnRandomBonusEntity(position)
@@ -611,5 +620,34 @@ func TestBonusUseCases_VisibleBonuses_Empty(t *testing.T) {
 
 	if visible := env.bonusUC.VisibleBonuses(); len(visible) != 0 {
 		t.Errorf("ожидался пустой список, получено: %v", visible)
+	}
+}
+
+// Лодка: танк получает лодку, бонус удаляется
+func TestBonusUseCases_Apply_Boat(t *testing.T) {
+	env := newBonusTestEnv()
+	bonus := env.newBonus(types.BonusTypeBoat)
+	tank := newPlayerTank(types.TankRolePlayer1)
+
+	env.bonusUC.Apply(bonus, tank)
+
+	if !tank.HasBoat() || !tank.CanSail() {
+		t.Error("танк не получил лодку")
+	}
+	if got := len(env.bonusesRepo.GetAllBonuses()); got != 0 {
+		t.Errorf("бонус не удалён: %d", got)
+	}
+}
+
+// Пистолет: танк сразу получает максимальный уровень
+func TestBonusUseCases_Apply_Pistol(t *testing.T) {
+	env := newBonusTestEnv()
+	bonus := env.newBonus(types.BonusTypePistol)
+	tank := newPlayerTank(types.TankRolePlayer1)
+
+	env.bonusUC.Apply(bonus, tank)
+
+	if len(env.tankCommon.maxed) != 1 || env.tankCommon.maxed[0] != tank {
+		t.Errorf("SetMaxLevel не вызван для танка: %v", env.tankCommon.maxed)
 	}
 }

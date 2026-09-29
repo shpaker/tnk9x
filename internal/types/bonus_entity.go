@@ -13,7 +13,21 @@ const (
 	BonusTypeStar    BonusType = "star"    // Улучшение танка
 	BonusTypeGrenade BonusType = "grenade" // Уничтожение всех врагов
 	BonusTypeTank    BonusType = "tank"    // Дополнительная жизнь
+	BonusTypeBoat    BonusType = "boat"    // Лодка: проезд по воде
+	BonusTypePistol  BonusType = "pistol"  // Пистолет: максимальный уровень
 )
+
+// BonusTypes — все бонусы, которые могут выпасть на поле
+var BonusTypes = []BonusType{
+	BonusTypeHelmet,
+	BonusTypeTimer,
+	BonusTypeShovel,
+	BonusTypeStar,
+	BonusTypeGrenade,
+	BonusTypeTank,
+	BonusTypeBoat,
+	BonusTypePistol,
+}
 
 type BonusEntity struct {
 	position     Position

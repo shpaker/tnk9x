@@ -49,6 +49,27 @@ func (uc *MapUseCases) GetRandomBonusSpawnPosition() types.Position {
 
 // IsIceAt проверяет, лежит ли точка на блоке льда;
 // CheckColliders не подходит — лёд на GROUND, танки на SURFACE
+// IsWaterUnder реализует IMapUseCases
+func (uc *MapUseCases) IsWaterUnder(
+	position types.Position,
+	size types.Size,
+) bool {
+	for _, block := range uc.GetBlocks() {
+		if block == nil || block.Data == nil || block.Data.Name != types.Water {
+			continue
+		}
+		blockPos := block.GetPosition()
+		blockSize := block.GetSize()
+		if position.X < blockPos.X+float64(blockSize.Width) &&
+			blockPos.X < position.X+float64(size.Width) &&
+			position.Y < blockPos.Y+float64(blockSize.Height) &&
+			blockPos.Y < position.Y+float64(size.Height) {
+			return true
+		}
+	}
+	return false
+}
+
 func (uc *MapUseCases) IsIceAt(position types.Position) bool {
 	for _, block := range uc.GetBlocks() {
 		if block == nil || block.Data == nil || block.Data.Name != types.Ice {

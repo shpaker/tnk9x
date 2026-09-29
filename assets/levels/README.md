@@ -93,7 +93,7 @@ is 2×2 tiles.
 | `.`  | empty                                     |
 | `#`  | brick (destructible)                      |
 | `@`  | steel (only a fully upgraded tank breaks it) |
-| `~`  | water (blocks tanks, not bullets)         |
+| `~`  | water (blocks tanks without a boat, not bullets) |
 | `%`  | forest (hides tanks)                      |
 | `-`  | ice (tanks slide)                         |
 

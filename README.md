@@ -21,7 +21,7 @@ A modern remake and tribute to the classic arcade game Battle City (NES, 1985), 
 - Touch controls for mobile browsers: auto-detected virtual D-pad, fire and pause in the letterbox area on every screen; menus are driven by the same controls (D-pad to move, fire to select, pause to go back)
 - Tank movement with braking and grid snap
 - Bullets and destructible terrain with incremental brick chipping: each hit shaves a half-tile slab, reinforced bullets break tiles whole
-- All five surface types (brick, steel, forest, water, ice) with ice sliding and water blocking
+- All five surface types (brick, steel, forest, water, ice) with ice sliding and water blocking (a tank with a boat sails over it)
 - Lua-scripted enemies of four types; each map file sets its enemy waves (tank order, pause, start condition: now, left<=N, clear), bonus carriers and on-field limit, see [assets/levels/README.md](assets/levels/README.md)
   - The armored tank flashes between its normal and a tinted sprite as in the NES original; the tint shows the armor left (red, yellow, green)
 - Weighted enemy spawn point choice: blocked points are skipped, the last used point and points near a player are picked less often
@@ -33,7 +33,9 @@ A modern remake and tribute to the classic arcade game Battle City (NES, 1985), 
   - Bullet dodging and counter-fire for fast tanks on later stages
 - Player lives, levels and damage
 - Reload pause between shots on top of the bullets-in-flight limit: 0.33-0.2 s for the player by level, 0.3-0.5 s for enemies by type, so point-blank fire is not every frame (`game.shot_cooldown`)
-- All six bonuses: grenade, tank, star, helmet shield, enemy-freezing timer, HQ-fortifying shovel
+- All eight bonuses: grenade, tank, star, helmet shield, enemy-freezing timer, HQ-fortifying shovel, and two from Tank 1990:
+  - Boat: the tank sails over water and the boat takes one hit instead of the tank; a tank that loses its boat on water can still reach the shore
+  - Pistol: the tank gets the top level at once, so it survives three hits
 - Campaign of 35 stages in 7 packs (`assets/levels/main.bccamp`): stage select screen with a minimap preview, enemy composition and 3-star time; stages open one after another, packs open for collected stars
 - Stars per stage: win, no lives lost, within the time limit; best results are saved (OS config folder on desktop, localStorage in the browser)
 - Continue after a win: carry lives (at least 3) and tank level to the next stage, capped at 2 stars; offered only when it gives an edge
