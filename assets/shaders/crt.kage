@@ -23,6 +23,10 @@ var Convergence float
 // Сила зерна: шум виден и на чёрном фоне
 var Grain float
 
+// Свечение стекла кинескопа: чёрный на экране чуть светлее полей,
+// выпуклый экран со скруглёнными углами виден и на тёмных меню
+var Glass float
+
 // Сила мерцания и бегущей полосы
 var Noise float
 
@@ -117,6 +121,13 @@ func Fragment(dstPos vec4, srcPos vec2, color vec4) vec4 {
 		imageSrc0At(pos-shift+origin).b,
 	)
 	c += bloomAt(pos, origin) * BloomStrength
+
+	// Стекло: холодный отсвет по всему экрану и мягкий блик
+	// в верхнем левом углу; яркая картинка его перекрывает
+	reflection := e - vec2(-0.45, -0.55)
+	glass := Glass * (vec3(0.9, 1, 1) +
+		1.5*exp(-dot(reflection, reflection)*6))
+	c += glass * (1 - clamp(c, 0, 1))
 
 	// Сканлайны: центр логической строки ярче её границ; яркий луч
 	// шире, и тёмная щель между строками на нём уже

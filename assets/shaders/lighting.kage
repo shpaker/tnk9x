@@ -2,20 +2,18 @@
 
 // Динамический свет игрового поля с трассировкой теней.
 // Images[0] — сцена, Images[1] — маска материалов:
-// R — непрозрачность, G — отражательная способность, B — волнистость;
-// Images[2] — зрение из vision.kage: R — видно сейчас, G — недавно,
-// B — видано когда-либо
+// R — непрозрачность, G — отражательная способность, B — волнистость
 package main
 
 // Источники: xy — центр в пикселях экрана, z — радиус, w — яркость
-var Lights [16]vec4
+var Lights [24]vec4
 
 // Цвета источников: rgb
-var LightColors [16]vec4
+var LightColors [24]vec4
 
 // Конусы источников: xy — ось, z — косинус внешнего края, w — внутреннего;
 // у всенаправленного z = -2, w = -1 — конус не ограничивает свет
-var LightCones [16]vec4
+var LightCones [24]vec4
 
 var LightCount int
 
@@ -46,25 +44,9 @@ const density = 0.12
 // со стороны источника и гаснет на глубине rimWidth пикселей,
 // крыша остаётся в общем освещении
 const (
-	rimWidth = 4.0
-	rimSteps = 6
+	rimWidth = 6.0
+	rimSteps = 8
 	wallCore = 0.0
-)
-
-// Вне увиденного и освещённого сцена теряет цвет до доли
-// peripherySaturation; полный цвет — где свет достигает focusLevel
-const (
-	peripherySaturation = 0.85
-	focusLevel          = 0.35
-)
-
-// Свет и блики полностью видны там, куда игрок смотрит; вне взгляда
-// они приглушаются до доли unseenLight. Увиденное светлее остального:
-// недавно — на recentBoost, когда-либо на уровне — на exploredBoost
-const (
-	unseenLight   = 0.33
-	recentBoost   = 0.16
-	exploredBoost = 0.06
 )
 
 // Металлический блеск освещённого фасада на единицу отражательной
@@ -134,14 +116,11 @@ func Fragment(dstPos vec4, srcPos vec2, color vec4) vec4 {
 	wave := 0.5 + 0.5*sin(Time*0.08+pos.x*0.9+2*sin(pos.y*0.5+Time*0.05))
 	ripple := mix(1.0, 1.6*wave*wave, material.b)
 
-	vision := imageSrc2At(srcPos)
-	seen := vision.r
 	light := vec3(0)
 	glow := vec3(0)
 	glint := vec3(0)
 	sheen := vec3(0)
-	focus := 0.0
-	for i := 0; i < 16; i++ {
+	for i := 0; i < 24; i++ {
 		if i >= LightCount {
 			break
 		}
@@ -163,8 +142,6 @@ func Fragment(dstPos vec4, srcPos vec2, color vec4) vec4 {
 		if vis <= 0 {
 			continue
 		}
-		// Обзор не зависит от фасада: крыша в луче фары видна в цвете
-		sight := vis
 		if wall && d >= 1 {
 			vis *= rim(pos, source.xy, origin)
 		}
@@ -181,7 +158,6 @@ func Fragment(dstPos vec4, srcPos vec2, color vec4) vec4 {
 			profile *= falloff
 		}
 		attenuation := profile * source.w * vis
-		focus += profile * source.w * sight
 		rgb := LightColors[i].rgb
 		light += rgb * attenuation
 		// Свечение пола спадает линейно: пятно света шире блика,
@@ -195,12 +171,7 @@ func Fragment(dstPos vec4, srcPos vec2, color vec4) vec4 {
 		}
 	}
 
-	shown := mix(unseenLight, 1, seen)
-	ambient := Ambient + recentBoost*vision.g + exploredBoost*vision.b
-	lit := scene.rgb*(ambient+light*shown) +
-		(glow*Haze+(glint*ripple+sheen*metalSheen)*material.g)*shown
-	gray := vec3(dot(lit, vec3(0.299, 0.587, 0.114)))
-	saturation := mix(peripherySaturation, 1,
-		clamp(max(focus*shown/focusLevel, vision.g), 0, 1))
-	return vec4(mix(gray, lit, saturation), 1)
+	lit := scene.rgb*(Ambient+light) +
+		glow*Haze + (glint*ripple+sheen*metalSheen)*material.g
+	return vec4(lit, 1)
 }

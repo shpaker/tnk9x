@@ -207,19 +207,9 @@ type ILightingUseCases interface {
 	GetLights() []types.LightEntity
 	// GetMaterial возвращает свойства поверхности блока для освещения
 	GetMaterial(blockType types.BlockType) types.SurfaceMaterial
-	// GetViewers возвращает зрителей — танки игроков — в координатах поля
-	GetViewers() []types.ViewerEntity
-	// UpdateHeadlights доворачивает фары танков игроков за стволом;
+	// UpdateHeadlights доворачивает фары танков за стволом;
 	// вызывается раз в тик
 	UpdateHeadlights()
-}
-
-// IVisionUseCases — зрение игроков: насколько видны враги и пули
-// в зависимости от фары, периферии, дистанции и зданий на линии взгляда
-type IVisionUseCases interface {
-	// UpdateVisibility пересчитывает видимость врагов и всех пуль;
-	// вызывается раз в тик
-	UpdateVisibility()
 }
 
 // IVisualEffectsUseCases — графические эффекты игровых событий:

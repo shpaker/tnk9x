@@ -37,7 +37,6 @@ type StageStateDependencies struct {
 	StageUseCases         interfaces.IStageUseCases
 	SoundUseCases         interfaces.ISoundUseCases
 	LightingUseCases      interfaces.ILightingUseCases
-	VisionUseCases        interfaces.IVisionUseCases
 	VisualEffectsUseCases interfaces.IVisualEffectsUseCases
 	ProgressionUseCases   interfaces.IProgressionUseCases
 
@@ -67,7 +66,6 @@ type StageState struct {
 	stageUseCases         interfaces.IStageUseCases
 	soundUseCases         interfaces.ISoundUseCases
 	lightingUseCases      interfaces.ILightingUseCases
-	visionUseCases        interfaces.IVisionUseCases
 	visualEffectsUseCases interfaces.IVisualEffectsUseCases
 	progressionUseCases   interfaces.IProgressionUseCases
 
@@ -111,7 +109,6 @@ func NewStageState(deps StageStateDependencies) *StageState {
 		stageUseCases:         deps.StageUseCases,
 		soundUseCases:         deps.SoundUseCases,
 		lightingUseCases:      deps.LightingUseCases,
-		visionUseCases:        deps.VisionUseCases,
 		visualEffectsUseCases: deps.VisualEffectsUseCases,
 		progressionUseCases:   deps.ProgressionUseCases,
 		inputAdapters:         deps.InputAdapters,
@@ -281,7 +278,6 @@ func (state *StageState) Update() types.StateTransition {
 		}
 
 		state.lightingUseCases.UpdateHeadlights()
-		state.visionUseCases.UpdateVisibility()
 	}
 
 	// Эффекты продвигаются и на финальном оверлее: дым и тряска

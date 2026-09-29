@@ -342,28 +342,46 @@ func TestLightingUseCases_GetLights_PlayerFirst(t *testing.T) {
 	}
 }
 
-// Зрители — только активные танки игроков, взгляд — по фаре
-func TestLightingUseCases_GetViewers(t *testing.T) {
+// Враг светит фарой короче и тусклее игрока; фара врага уступает пулям
+func TestLightingUseCases_GetLights_EnemyHeadlight(t *testing.T) {
 	env := newLightingTestEnv()
-	player := newPlayerTank(types.TankRolePlayer1)
-	player.Direction = types.DirectionRight
 	env.tankCommon.tanks = []*types.TankEntity{
-		player,
 		newEnemyTankInState(types.TankStateMoving),
-		newPlayerTank(types.TankRolePlayer2),
+		newPlayerTank(types.TankRolePlayer1),
 	}
-	env.tankCommon.tanks[2].State = types.TankStateExploding
+	env.bullets.bullets = []*types.BulletEntity{newBullet(0, 0)}
 
-	viewers := env.lighting.GetViewers()
+	lights := env.lighting.GetLights()
 
-	if len(viewers) != 1 {
-		t.Fatalf("зрителей %d, ожидался 1", len(viewers))
+	if len(lights) != 5 {
+		t.Fatalf("источников %d, ожидалось 5", len(lights))
 	}
-	if viewers[0].Position != (types.Position{X: 8, Y: 8}) {
-		t.Errorf("глаза в %v, ожидался центр танка", viewers[0].Position)
+	playerHeadlight, bullet, enemyHeadlight := lights[0], lights[2], lights[3]
+	if !enemyHeadlight.IsCone() {
+		t.Fatal("после пули ожидалась фара врага")
 	}
-	if math.Abs(viewers[0].Direction.X-1) > 1e-9 {
-		t.Errorf("взгляд %v, ожидался вправо", viewers[0].Direction)
+	if bullet.IsCone() {
+		t.Error("пуля должна идти раньше фары врага")
+	}
+	if enemyHeadlight.Radius >= playerHeadlight.Radius ||
+		enemyHeadlight.Intensity >= playerHeadlight.Intensity {
+		t.Error("фара врага должна быть короче и тусклее фары игрока")
+	}
+}
+
+// Фара врага доворачивается за стволом так же, как у игрока
+func TestLightingUseCases_UpdateHeadlights_TurnsEnemy(t *testing.T) {
+	env := newLightingTestEnv()
+	enemy := newEnemyTankInState(types.TankStateMoving)
+	env.tankCommon.tanks = []*types.TankEntity{enemy}
+	env.lighting.UpdateHeadlights()
+	start := enemy.GetHeadlightAngle()
+
+	enemy.Direction = types.DirectionRight
+	env.lighting.UpdateHeadlights()
+
+	if enemy.GetHeadlightAngle() == start {
+		t.Error("фара врага не повернулась")
 	}
 }
 
