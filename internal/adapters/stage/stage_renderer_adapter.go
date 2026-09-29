@@ -39,13 +39,6 @@ type StageRendererAdapter struct {
 	mapOffsetY            int
 	mapWidthHeight        int
 
-	// Последняя отрисовка меню паузы — для хит-тестов тапов;
-	// до первого кадра меню зоны неизвестны
-	lastWidth      float64
-	lastHeight     float64
-	pauseMenuItems []types.PauseMenuItem
-	resultItems    []types.StageResultItem
-
 	// Поверхности кадра для маски материалов; буфер переиспользуется
 	surfaces []effects.Surface
 }

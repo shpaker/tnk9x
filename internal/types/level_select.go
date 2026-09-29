@@ -40,20 +40,3 @@ type LevelSelectViewData struct {
 	// QuitAvailable — выход по ESC есть только на десктопе
 	QuitAvailable bool
 }
-
-// LevelSelectHitKind — зона экрана выбора уровня под тапом
-type LevelSelectHitKind int
-
-const (
-	LevelSelectHitNone LevelSelectHitKind = iota
-	LevelSelectHitPrevPack
-	LevelSelectHitNextPack
-	LevelSelectHitLevel
-	LevelSelectHitStart
-)
-
-// LevelSelectHit — результат хит-теста тапа; Position — ячейка уровня
-type LevelSelectHit struct {
-	Kind     LevelSelectHitKind
-	Position int
-}

@@ -77,8 +77,8 @@ func TestTouchControlsAdapter_LatchAndInertBeforeScreen(t *testing.T) {
 	if !adapter.IsTouchActive() {
 		t.Error("касание должно взводить защёлку")
 	}
-	if _, ok := adapter.TapJustPressed(); ok {
-		t.Error("без геометрии экрана тапы должны игнорироваться")
+	if adapter.FireJustPressed() || adapter.PauseJustPressed() {
+		t.Error("без геометрии экрана касания должны игнорироваться")
 	}
 
 	// Защёлка не сбрасывается после отпускания
@@ -158,33 +158,44 @@ func TestTouchControlsAdapter_MultiTouchIndependence(t *testing.T) {
 	}
 }
 
-func TestTouchControlsAdapter_TapOnGameScreen(t *testing.T) {
+// Нажатие крестовины — шаг меню одного кадра; смена направления
+// без отпускания — новый шаг
+func TestTouchControlsAdapter_DPadJustPressed(t *testing.T) {
 	touches := &fakeTouches{positions: map[ebiten.TouchID][2]int{}}
 	adapter := newTestAdapter(touches)
+	dpad := adapter.layout.DPad
+	centerX := float64(dpad.Min.X+dpad.Max.X) / 2
+	centerY := float64(dpad.Min.Y+dpad.Max.Y) / 2
 
-	// Тап в центр нарисованного игрового экрана
-	gx, gy, scale := adapter.GameRect()
-	touches.positions[1] = logicalAt(
-		float64(gx+128*scale), float64(gy+112*scale),
-	)
+	touches.positions[1] = logicalAt(centerX, centerY-float64(dpad.Dy())/3)
 	touches.active = []ebiten.TouchID{1}
 	touches.justPressed = []ebiten.TouchID{1}
 	adapter.Update()
-
-	pos, ok := adapter.TapJustPressed()
-	if !ok {
-		t.Fatal("тап по игровому экрану должен регистрироваться")
-	}
-	// Погрешность из-за усечения логических координат до int
-	if pos.X < 126 || pos.X > 130 || pos.Y < 110 || pos.Y > 114 {
-		t.Errorf("ожидался тап около (128,112), получен (%v)", pos)
+	if direction, ok := adapter.DPadJustPressed(); !ok ||
+		direction != types.DirectionUp {
+		t.Fatalf("ожидался шаг вверх, получено %v %v", direction, ok)
 	}
 
-	// Тап — событие одного кадра
 	touches.justPressed = nil
 	adapter.Update()
-	if _, ok := adapter.TapJustPressed(); ok {
-		t.Error("тап не должен переживать кадр")
+	if _, ok := adapter.DPadJustPressed(); ok {
+		t.Error("удержание не должно давать новых шагов")
+	}
+
+	touches.positions[1] = logicalAt(centerX, centerY+float64(dpad.Dy())/3)
+	adapter.Update()
+	if direction, ok := adapter.DPadJustPressed(); !ok ||
+		direction != types.DirectionDown {
+		t.Errorf("смена направления — новый шаг, получено %v %v", direction, ok)
+	}
+
+	// Касание мимо контролов ничего не делает
+	touches.positions[2] = logicalAt(centerX+float64(dpad.Dx())*3, centerY)
+	touches.active = []ebiten.TouchID{2}
+	touches.justPressed = []ebiten.TouchID{2}
+	adapter.Update()
+	if _, ok := adapter.DPadJustPressed(); ok || adapter.FireJustPressed() {
+		t.Error("касание вне контролов не должно давать событий")
 	}
 }
 
@@ -203,8 +214,5 @@ func TestTouchControlsAdapter_PauseZone(t *testing.T) {
 
 	if !adapter.PauseJustPressed() {
 		t.Error("тап по зоне паузы должен дать событие паузы")
-	}
-	if _, ok := adapter.TapJustPressed(); ok {
-		t.Error("тап по паузе не должен считаться тапом по экрану")
 	}
 }

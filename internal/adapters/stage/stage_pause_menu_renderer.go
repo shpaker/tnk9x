@@ -28,17 +28,14 @@ func pauseMenuLabel(
 	return pauseMenuLabels[item]
 }
 
-// pauseMenuLayout — вертикальная раскладка строк меню паузы и границы
-// полос тап-зон в логических координатах экрана
+// pauseMenuLayout — вертикальная раскладка строк меню паузы
+// в логических координатах экрана
 type pauseMenuLayout struct {
-	rowHeight  float64
-	rowTops    []float64
-	menuTop    float64
-	menuBottom float64
+	rowHeight float64
+	rowTops   []float64
 }
 
-// pauseMenuLayout — единый источник вертикальных позиций меню паузы
-// для отрисовки и хит-тестов
+// pauseMenuLayout — вертикальные позиции строк меню паузы
 func (r *StageRendererAdapter) pauseMenuLayout(
 	height float64,
 	rows int,
@@ -57,16 +54,9 @@ func (r *StageRendererAdapter) pauseMenuLayout(
 		rowTops[i] = firstTop + float64(i)*(rowHeight+gap)
 	}
 
-	menuBottom := firstTop + rowHeight + gap
-	if rows > 0 {
-		menuBottom = rowTops[rows-1] + rowHeight + gap
-	}
-
 	return pauseMenuLayout{
-		rowHeight:  rowHeight,
-		rowTops:    rowTops,
-		menuTop:    firstTop - gap,
-		menuBottom: menuBottom,
+		rowHeight: rowHeight,
+		rowTops:   rowTops,
 	}
 }
 
@@ -79,9 +69,6 @@ func (r *StageRendererAdapter) DrawPauseMenu(
 	bounds := screen.Bounds()
 	width := float64(bounds.Dx())
 	height := float64(bounds.Dy())
-	r.lastWidth = width
-	r.lastHeight = height
-	r.pauseMenuItems = view.Items
 
 	vector.FillRect(
 		screen,
@@ -124,28 +111,4 @@ func (r *StageRendererAdapter) DrawPauseMenu(
 		op.ColorScale.ScaleWithColor(rowColor)
 		text.Draw(screen, label, r.fontFace, op)
 	}
-}
-
-// PauseMenuHitTest определяет пункт меню паузы по тапу в логических
-// координатах экрана; полосы строк занимают всю ширину
-func (r *StageRendererAdapter) PauseMenuHitTest(
-	pos types.Position,
-) (types.PauseMenuItem, bool) {
-	if r.lastWidth <= 0 || r.lastHeight <= 0 ||
-		len(r.pauseMenuItems) == 0 {
-		return 0, false
-	}
-	layout := r.pauseMenuLayout(r.lastHeight, len(r.pauseMenuItems))
-	if pos.Y < layout.menuTop || pos.Y >= layout.menuBottom {
-		return 0, false
-	}
-	for i := len(layout.rowTops) - 1; i > 0; i-- {
-		boundary := (layout.rowTops[i-1] + layout.rowHeight +
-			layout.rowTops[i]) / 2
-		if pos.Y >= boundary {
-			return r.pauseMenuItems[i], true
-		}
-	}
-
-	return r.pauseMenuItems[0], true
 }

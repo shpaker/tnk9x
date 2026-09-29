@@ -41,7 +41,10 @@ func NewStageTouchInputAdapter(
 }
 
 func (a *StageTouchInputAdapter) Update(dt float64) {
-	if a.touchControls.PauseJustPressed() {
+	// На экране итогов кнопка паузы ведёт к выбору уровней, а не
+	// снимает паузу
+	if a.touchControls.PauseJustPressed() &&
+		!a.stageUseCases.IsStageFinished() {
 		a.stageUseCases.TogglePause()
 	}
 

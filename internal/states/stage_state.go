@@ -17,9 +17,7 @@ type StageRenderer interface {
 	DrawAll(screen *ebiten.Image)
 	DrawSidebar(screen *ebiten.Image, hud types.StageHUDData)
 	DrawPauseMenu(screen *ebiten.Image, view types.PauseMenuViewData)
-	PauseMenuHitTest(pos types.Position) (types.PauseMenuItem, bool)
 	DrawStageResult(screen *ebiten.Image, view types.StageResultViewData)
-	StageResultHitTest(pos types.Position) (types.StageResultItem, bool)
 }
 
 // resultInputDelayTicks — пауза перед приёмом ввода на экране итогов,
@@ -297,7 +295,7 @@ func (state *StageState) Update() types.StateTransition {
 }
 
 // handlePauseMenu — переключение паузы по ESC и управление меню:
-// клавиатурная навигация, выбор Enter/Space и тап по пункту
+// стрелки или крестовина, выбор Enter/Space или огнём
 func (state *StageState) handlePauseMenu() types.StateTransition {
 	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
 		state.stageUseCases.TogglePause()
@@ -313,37 +311,41 @@ func (state *StageState) handlePauseMenu() types.StateTransition {
 		return types.StateTransition{}
 	}
 
-	state.handlePauseMenuNavigation()
-
-	if inpututil.IsKeyJustPressed(ebiten.KeyEnter) ||
-		inpututil.IsKeyJustPressed(ebiten.KeySpace) {
-		return state.applyPauseMenuSelection(
-			state.pauseMenuItems[state.pauseMenuIndex],
-		)
-	}
-
-	// Тап сразу активирует пункт: это командное меню без степперов
-	if pos, ok := state.touchControls.TapJustPressed(); ok {
-		if item, hit := state.renderer.PauseMenuHitTest(pos); hit {
-			return state.applyPauseMenuSelection(item)
-		}
-	}
-
-	return types.StateTransition{}
-}
-
-func (state *StageState) handlePauseMenuNavigation() {
-	moveUp := inpututil.IsKeyJustPressed(ebiten.KeyUp) ||
-		inpututil.IsKeyJustPressed(ebiten.KeyW)
-	moveDown := inpututil.IsKeyJustPressed(ebiten.KeyDown) ||
-		inpututil.IsKeyJustPressed(ebiten.KeyS)
-
+	moveUp, moveDown := state.menuSteps()
 	if moveUp && state.pauseMenuIndex > 0 {
 		state.pauseMenuIndex--
 	}
 	if moveDown && state.pauseMenuIndex < len(state.pauseMenuItems)-1 {
 		state.pauseMenuIndex++
 	}
+
+	if state.menuConfirmed() {
+		return state.applyPauseMenuSelection(
+			state.pauseMenuItems[state.pauseMenuIndex],
+		)
+	}
+
+	return types.StateTransition{}
+}
+
+// menuSteps — шаг вверх или вниз по пунктам меню: стрелки, WASD
+// или нажатие крестовины
+func (state *StageState) menuSteps() (bool, bool) {
+	dpad, pressed := state.touchControls.DPadJustPressed()
+	moveUp := inpututil.IsKeyJustPressed(ebiten.KeyUp) ||
+		inpututil.IsKeyJustPressed(ebiten.KeyW) ||
+		(pressed && dpad == types.DirectionUp)
+	moveDown := inpututil.IsKeyJustPressed(ebiten.KeyDown) ||
+		inpututil.IsKeyJustPressed(ebiten.KeyS) ||
+		(pressed && dpad == types.DirectionDown)
+	return moveUp, moveDown
+}
+
+// menuConfirmed — выбор пункта меню: Enter, пробел или огонь
+func (state *StageState) menuConfirmed() bool {
+	return inpututil.IsKeyJustPressed(ebiten.KeyEnter) ||
+		inpututil.IsKeyJustPressed(ebiten.KeySpace) ||
+		state.touchControls.FireJustPressed()
 }
 
 // applyPauseMenuSelection применяет выбранный пункт меню паузы
@@ -451,10 +453,7 @@ func (state *StageState) handleStageResult() types.StateTransition {
 	}
 
 	result := state.result
-	moveUp := inpututil.IsKeyJustPressed(ebiten.KeyUp) ||
-		inpututil.IsKeyJustPressed(ebiten.KeyW)
-	moveDown := inpututil.IsKeyJustPressed(ebiten.KeyDown) ||
-		inpututil.IsKeyJustPressed(ebiten.KeyS)
+	moveUp, moveDown := state.menuSteps()
 	if moveUp && result.ActiveIndex > 0 {
 		result.ActiveIndex--
 	}
@@ -462,18 +461,13 @@ func (state *StageState) handleStageResult() types.StateTransition {
 		result.ActiveIndex++
 	}
 
-	if inpututil.IsKeyJustPressed(ebiten.KeyEnter) ||
-		inpututil.IsKeyJustPressed(ebiten.KeySpace) {
+	if state.menuConfirmed() {
 		return state.applyStageResultItem(result.Items[result.ActiveIndex])
 	}
-	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
+	// ESC и кнопка паузы — выход к выбору уровней
+	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) ||
+		state.touchControls.PauseJustPressed() {
 		return state.applyStageResultItem(types.StageResultItemLevels)
-	}
-
-	if pos, ok := state.touchControls.TapJustPressed(); ok {
-		if item, hit := state.renderer.StageResultHitTest(pos); hit {
-			return state.applyStageResultItem(item)
-		}
 	}
 
 	return types.StateTransition{}
