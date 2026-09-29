@@ -128,6 +128,7 @@ func newLifecycleTestEnv() *lifecycleTestEnv {
 		specs,
 		use_cases.NewMapUseCases(nil),
 		session_entities.NewStageSessionEntity(),
+		false,
 	)
 	spawnCollision := &stubSpawnCollisionService{}
 	effects := &testutil.FakeVisualEffectsUseCases{}

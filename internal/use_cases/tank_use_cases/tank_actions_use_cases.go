@@ -181,11 +181,14 @@ func (uc *TankActionsUseCases) stopSlideAtBoundary(tank *types.TankEntity) {
 	}
 	tank.SlideTarget = nil
 	tank.State = types.TankStateStopped
+	tank.SetSpeed(0)
 }
 
 func (uc *TankActionsUseCases) handleStopByCollision(tank *types.TankEntity) {
 	// Позиция уже разрешена коллизией (вплотную/откат) — округление
-	// сдвигало бы танк с места контакта и порождало дрожание
+	// сдвигало бы танк с места контакта и порождало дрожание.
+	// Упёршийся танк теряет скорость: после препятствия — снова разгон
 	tank.SlideTarget = nil
 	tank.State = types.TankStateStopped
+	tank.SetSpeed(0)
 }

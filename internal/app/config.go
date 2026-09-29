@@ -41,6 +41,9 @@ type gameConfigSchema struct {
 	SpawnPlayerSafeRadius float64                  `yaml:"spawn_player_safe_radius"`
 	Campaign              string                   `yaml:"campaign"`
 	DefaultLevel          defaultLevelConfigSchema `yaml:"default_level"`
+
+	TankAcceleration *bool `yaml:"tank_acceleration"` // Разгон танков с места
+	ShotCooldown     *bool `yaml:"shot_cooldown"`     // Перезарядка между выстрелами
 }
 
 // defaultLevelConfigSchema — дефолты уровня для карт без секций
@@ -75,6 +78,9 @@ type Config struct {
 	SpawnPlayerSafeRadius float64
 	Campaign              string
 	LevelDefaults         types.LevelDefaults
+
+	TankAcceleration bool
+	ShotCooldown     bool
 }
 
 func LoadConfig() (*Config, error) {
@@ -105,6 +111,8 @@ func LoadConfig() (*Config, error) {
 		Volume:           1.0,  // Значение по умолчанию
 		EffectsEnabled:   true, // Значение по умолчанию
 		Fullscreen:       true, // Значение по умолчанию
+		TankAcceleration: true, // Значение по умолчанию
+		ShotCooldown:     true, // Значение по умолчанию
 		EnemySpawners: convertCoordsToPositions(
 			schema.Game.EnemySpawners,
 		),
@@ -185,6 +193,14 @@ func LoadConfig() (*Config, error) {
 
 	if schema.App.Fullscreen != nil {
 		cfg.Fullscreen = *schema.App.Fullscreen
+	}
+
+	if schema.Game.TankAcceleration != nil {
+		cfg.TankAcceleration = *schema.Game.TankAcceleration
+	}
+
+	if schema.Game.ShotCooldown != nil {
+		cfg.ShotCooldown = *schema.Game.ShotCooldown
 	}
 
 	return cfg, nil

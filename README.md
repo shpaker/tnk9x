@@ -19,7 +19,7 @@ A modern remake and tribute to the classic arcade game Battle City (NES, 1985), 
 - Full game loop with HQ and a results screen: stars, time, lives lost; next stage, retry or back to stage select
 - Two-player keyboard controls
 - Touch controls for mobile browsers: auto-detected virtual D-pad, fire and pause in the letterbox area on every screen; menus are driven by the same controls (D-pad to move, fire to select, pause to go back)
-- Tank movement with braking and grid snap
+- Tank movement with braking and grid snap; tanks pull away slowly and reach full speed in about 0.6 s, slower on ice (`game.tank_acceleration`)
 - Bullets and destructible terrain with incremental brick chipping: each hit shaves a half-tile slab, reinforced bullets break tiles whole
 - All five surface types (brick, steel, forest, water, ice) with ice sliding and water blocking
 - Lua-scripted enemies of four types; each map file sets its enemy waves (tank order, pause, start condition: now, left<=N, clear), bonus carriers and on-field limit, see [assets/levels/README.md](assets/levels/README.md)
@@ -32,6 +32,7 @@ A modern remake and tribute to the classic arcade game Battle City (NES, 1985), 
   - Active demolition: fire at walls ahead on the move and carve passages through side walls
   - Bullet dodging and counter-fire for fast tanks on later stages
 - Player lives, levels and damage
+- Reload pause between shots on top of the bullets-in-flight limit: 0.33-0.2 s for the player by level, 0.3-0.5 s for enemies by type, so point-blank fire is not every frame (`game.shot_cooldown`)
 - All six bonuses: grenade, tank, star, helmet shield, enemy-freezing timer, HQ-fortifying shovel
 - Campaign of 35 stages in 7 packs (`assets/levels/main.bccamp`): stage select screen with a minimap preview, enemy composition and 3-star time; stages open one after another, packs open for collected stars
 - Stars per stage: win, no lives lost, within the time limit; best results are saved (OS config folder on desktop, localStorage in the browser)

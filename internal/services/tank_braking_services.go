@@ -111,10 +111,14 @@ func (s *TankBrakingService) moveTowardsTarget(
 	ctx brakingMovementContext,
 	dt float64,
 ) {
-	// Получаем скорость танка из спецификаций
-	speed := float64(32.0) // Значение по умолчанию
-	if tank.GetSpecs() != nil {
-		speed = tank.GetSpecs().GetSpeed()
+	// Танк доезжает до точки снапа с набранной скоростью; без
+	// набранной — со скоростью из спецификаций
+	speed := tank.GetSpeed()
+	if speed <= 0 {
+		speed = float64(32.0) // Значение по умолчанию
+		if tank.GetSpecs() != nil {
+			speed = tank.GetSpecs().GetSpeed()
+		}
 	}
 	delta := speed * dt
 

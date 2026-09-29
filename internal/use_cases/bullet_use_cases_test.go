@@ -34,7 +34,12 @@ func newBulletTestEnv() *bulletTestEnv {
 		registry:    registry,
 		bulletsRepo: bulletsRepo,
 		specsUC:     use_cases.NewSpecsUseCases(),
-		bulletUC:    use_cases.NewBulletUseCases(bulletsRepo, tilesUC, 16),
+		bulletUC: use_cases.NewBulletUseCases(
+			bulletsRepo,
+			tilesUC,
+			16,
+			false,
+		),
 	}
 }
 
@@ -263,5 +268,35 @@ func TestTankActionsUseCases_Shoot_NoEffectsWhileBulletFlies(t *testing.T) {
 	}
 	if got := countSounds(soundUC.GetEvents(), types.SoundIDFire); got != 1 {
 		t.Errorf("звуков выстрела %d, ожидался 1", got)
+	}
+}
+
+// С перезарядкой повторный выстрел возможен только после паузы,
+// даже если прошлая пуля уже исчезла
+func TestBulletUseCases_ShootBullet_Reload(t *testing.T) {
+	env := newBulletTestEnv()
+	tilesUC := use_cases.NewTilesUseCases(
+		env.registry,
+		types.TilesetTypeBullet,
+		nil,
+		nil,
+	)
+	bulletUC := use_cases.NewBulletUseCases(env.bulletsRepo, tilesUC, 16, true)
+	tank := env.newShooter(types.DirectionUp, 100, 60, 0)
+
+	if fired, _ := bulletUC.ShootBullet(tank); !fired {
+		t.Fatal("первый выстрел должен пройти")
+	}
+	// Пуля попала в стену вплотную и исчезла
+	for _, bullet := range bulletUC.GetBullets() {
+		_ = bulletUC.RemoveBullet(bullet)
+	}
+	if fired, _ := bulletUC.ShootBullet(tank); fired {
+		t.Fatal("во время перезарядки выстрела быть не должно")
+	}
+
+	tank.UpdateReload(tank.GetSpecs().GetReloadTime())
+	if fired, _ := bulletUC.ShootBullet(tank); !fired {
+		t.Error("после перезарядки выстрел должен пройти")
 	}
 }

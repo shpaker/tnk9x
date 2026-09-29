@@ -7,6 +7,7 @@ type SpecsEntity struct {
 	bulletsReinforced bool    // Могут ли пули ломать сталь
 	bulletsSpeed      float64 // Скорость пуль
 	bulletsLimit      uint    // Лимит одновременно выпущенных пуль
+	reloadTime        float64 // Перезарядка между выстрелами, секунды
 }
 
 func NewSpecsEntity(
@@ -68,4 +69,19 @@ func (t *SpecsEntity) GetBulletsLimit() uint {
 		return 0
 	}
 	return t.bulletsLimit
+}
+
+// WithReloadTime задаёт перезарядку между выстрелами в секундах
+// и возвращает те же спецификации — для цепочки после конструктора
+func (t *SpecsEntity) WithReloadTime(seconds float64) *SpecsEntity {
+	t.reloadTime = seconds
+	return t
+}
+
+// GetReloadTime возвращает перезарядку между выстрелами в секундах
+func (t *SpecsEntity) GetReloadTime() float64 {
+	if t == nil {
+		return 0
+	}
+	return t.reloadTime
 }

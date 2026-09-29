@@ -11,22 +11,30 @@ type BulletUseCases struct {
 	bulletsRepository interfaces.IBulletsRepository
 	tilesUseCases     interfaces.ITilesUseCases
 	tankSpriteSize    uint
+	// shotCooldownEnabled — между выстрелами танк перезаряжается
+	// (game.shot_cooldown): в упор нельзя стрелять каждый кадр
+	shotCooldownEnabled bool
 }
 
 func NewBulletUseCases(
 	bulletsRepository interfaces.IBulletsRepository,
 	tilesUseCases interfaces.ITilesUseCases,
 	tankSpriteSize uint,
+	shotCooldownEnabled bool,
 ) *BulletUseCases {
 	return &BulletUseCases{
-		bulletsRepository: bulletsRepository,
-		tilesUseCases:     tilesUseCases,
-		tankSpriteSize:    tankSpriteSize,
+		bulletsRepository:   bulletsRepository,
+		tilesUseCases:       tilesUseCases,
+		tankSpriteSize:      tankSpriteSize,
+		shotCooldownEnabled: shotCooldownEnabled,
 	}
 }
 
 func (uc *BulletUseCases) ShootBullet(tank *types.TankEntity) (bool, error) {
 	if !tank.IsActive() {
+		return false, nil
+	}
+	if uc.shotCooldownEnabled && tank.IsReloading() {
 		return false, nil
 	}
 
@@ -68,6 +76,9 @@ func (uc *BulletUseCases) ShootBullet(tank *types.TankEntity) (bool, error) {
 	// Отказ репозитория — исчерпанный лимит пуль: выстрела просто нет
 	if err := uc.bulletsRepository.AddBullet(bullet); err != nil {
 		return false, nil
+	}
+	if uc.shotCooldownEnabled {
+		tank.StartReload(specs.GetReloadTime())
 	}
 	return true, nil
 }
