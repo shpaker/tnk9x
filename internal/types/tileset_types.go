@@ -15,6 +15,7 @@ const (
 	TilesetTypeBonuses         TilesetType = "bonuses"
 	TilesetTypeHUD             TilesetType = "hud"
 	TilesetTypeShield          TilesetType = "shield"
+	TilesetTypeBoat            TilesetType = "boat"
 )
 
 // AllTilesetTypes перечисляет все известные типы тайлсетов
@@ -31,6 +32,7 @@ func AllTilesetTypes() []TilesetType {
 		TilesetTypeBonuses,
 		TilesetTypeHUD,
 		TilesetTypeShield,
+		TilesetTypeBoat,
 	}
 }
 

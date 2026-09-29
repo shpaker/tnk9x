@@ -175,6 +175,9 @@ func (r *StageRendererAdapter) drawTanks(screen *ebiten.Image) {
 		}
 		x := float64(r.mapOffsetX) + position.X
 		y := float64(r.mapOffsetY) + position.Y
+		if tank.HasBoat() {
+			r.drawBoat(screen, tank, x, y)
+		}
 		if tint, ok := r.renderUseCases.TankHealthTint(tank); ok {
 			drawTintedImage(screen, img, x, y, tint)
 		} else {
@@ -185,6 +188,26 @@ func (r *StageRendererAdapter) drawTanks(screen *ebiten.Image) {
 			r.drawShield(screen, tank, position)
 		}
 	}
+}
+
+// boatFrames — кадры корпуса лодки: пена перебегает по борту
+var boatFrames = [2]string{"boat_1", "boat_2"}
+
+// boatFoamStep — через сколько пикселей пути сменяется кадр пены
+const boatFoamStep = 4
+
+// drawBoat рисует корпус лодки под танком; пена бежит при движении
+func (r *StageRendererAdapter) drawBoat(
+	screen *ebiten.Image,
+	tank *types.TankEntity,
+	x, y float64,
+) {
+	frame := int(tank.Position.X+tank.Position.Y) / boatFoamStep % 2
+	img, err := r.spriteCache.Image(types.TilesetTypeBoat, boatFrames[frame])
+	if err != nil {
+		return
+	}
+	drawImage(screen, img, x, y)
 }
 
 // shieldFrames — кадры силового поля по фазе мерцания щита

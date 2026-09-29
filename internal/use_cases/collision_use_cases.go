@@ -159,6 +159,14 @@ func (uc *CollisionUseCases) checkTankBulletCollisions(
 					uc.requestBulletEffect(types.VisualEventShieldHit, bullet)
 					return
 				}
+				// Лодка поглощает попадание, как в Tank 1990: танк
+				// теряет лодку, но не уровень и не жизнь
+				if tank.HasBoat() {
+					tank.LoseBoat()
+					uc.requestBulletEffect(types.VisualEventShieldHit, bullet)
+					uc.soundUseCases.RequestSound(types.SoundIDSteel, false)
+					return
+				}
 				// Для игроков понижаем уровень вместо взрыва
 				if !tank.IsEnemy() {
 					currentLevel := uint(0)
@@ -233,8 +241,19 @@ func (uc *CollisionUseCases) IsSpawnerBlocked(
 func (uc *CollisionUseCases) checkTankBlockCollisions(
 	tank *types.TankEntity,
 ) {
+	// Танк без лодки выплыл на берег: в воду больше не заехать
+	if tank.IsBoatSinking() &&
+		!uc.mapUseCases.IsWaterUnder(tank.Position, tank.Size) {
+		tank.RemoveBoat()
+	}
+
 	mapBlocks := uc.mapUseCases.GetBlocks()
 	for _, block := range mapBlocks {
+		// Танк с лодкой проходит по воде
+		if tank.CanSail() && block.Data != nil &&
+			block.Data.Name == types.Water {
+			continue
+		}
 		if uc.wallCollisionService.CheckTankWallCollision(tank, block) {
 
 			correctedPos, err := uc.entitiesCollisionService.ResolveCollisionPosition(

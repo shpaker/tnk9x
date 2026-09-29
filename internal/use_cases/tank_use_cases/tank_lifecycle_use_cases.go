@@ -184,6 +184,7 @@ func (uc *TankLifecycleUseCases) Explode(tank *types.TankEntity) error {
 	tank.Image = explosionAnim
 	tank.State = types.TankStateExploding
 	tank.Altitude = types.AIR
+	tank.RemoveBoat()
 
 	uc.tilesUseCases.StartAnimation(explosionAnim)
 	uc.visualEffectsUseCases.RequestEffect(types.VisualEventEntity{

@@ -24,6 +24,8 @@ type IMapUseCases interface {
 	GetSizePx() types.Size
 	GetRandomBonusSpawnPosition() types.Position
 	IsIceAt(position types.Position) bool
+	// IsWaterUnder сообщает, перекрывает ли прямоугольник блок воды
+	IsWaterUnder(position types.Position, size types.Size) bool
 }
 
 type ICollisionUseCases interface {
@@ -62,6 +64,8 @@ type ITankCommonUseCases interface {
 	IsAnyPlayerTankMoving() bool
 	LevelUp(tank *types.TankEntity)
 	LevelDown(tank *types.TankEntity)
+	// SetMaxLevel сразу даёт танку максимальный уровень (пистолет)
+	SetMaxLevel(tank *types.TankEntity)
 }
 
 type IRenderUseCases interface {

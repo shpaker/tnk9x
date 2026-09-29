@@ -58,6 +58,12 @@ type TankEntity struct {
 
 	// Оставшаяся перезарядка до следующего выстрела, секунды
 	reload float64
+
+	// Лодка: танк ходит по воде, лодка поглощает одно попадание.
+	// boatSinking — лодку сбили на воде: танк ещё может доплыть до
+	// берега, но снова в воду уже не заедет
+	boat        bool
+	boatSinking bool
 }
 
 func NewDefaultTankEntity(role TankRole, direction Direction) TankEntity {
@@ -402,4 +408,46 @@ func (t *TankEntity) UpdateReload(dt float64) {
 		return
 	}
 	t.reload = max(0, t.reload-dt)
+}
+
+// HasBoat сообщает, есть ли у танка целая лодка
+func (t *TankEntity) HasBoat() bool {
+	return t != nil && t.boat
+}
+
+// SetBoat даёт танку лодку
+func (t *TankEntity) SetBoat() {
+	if t == nil {
+		return
+	}
+	t.boat = true
+	t.boatSinking = false
+}
+
+// LoseBoat — лодку сбили: плыть можно только до берега
+func (t *TankEntity) LoseBoat() {
+	if t == nil || !t.boat {
+		return
+	}
+	t.boat = false
+	t.boatSinking = true
+}
+
+// RemoveBoat убирает лодку совсем — танк уничтожен или вышел на берег
+func (t *TankEntity) RemoveBoat() {
+	if t == nil {
+		return
+	}
+	t.boat = false
+	t.boatSinking = false
+}
+
+// IsBoatSinking сообщает, доплывает ли танк без лодки до берега
+func (t *TankEntity) IsBoatSinking() bool {
+	return t != nil && t.boatSinking
+}
+
+// CanSail сообщает, может ли танк двигаться по воде
+func (t *TankEntity) CanSail() bool {
+	return t != nil && (t.boat || t.boatSinking)
 }

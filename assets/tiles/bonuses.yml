@@ -9,5 +9,6 @@ images:
   grenade: [4, 0]
   tank: [5, 0]
   pistol: [6, 0]
+  boat: [7, 0]
 
 animations:

@@ -24,6 +24,7 @@ var tilesetSources = map[types.TilesetType]string{
 	types.TilesetTypeBonuses:         "tiles/bonuses",
 	types.TilesetTypeHUD:             "tiles/hud",
 	types.TilesetTypeShield:          "tiles/shield",
+	types.TilesetTypeBoat:            "tiles/boat",
 }
 
 type TilesetRepositoryRegistry struct {

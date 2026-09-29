@@ -27,17 +27,8 @@ func RequiredSprites() types.SpriteManifest {
 
 // bonusSpriteIDs — все типы бонусов рисуются одноимёнными спрайтами
 func bonusSpriteIDs() []string {
-	bonusTypes := []types.BonusType{
-		types.BonusTypeHelmet,
-		types.BonusTypeTimer,
-		types.BonusTypeShovel,
-		types.BonusTypeStar,
-		types.BonusTypeGrenade,
-		types.BonusTypeTank,
-	}
-
-	ids := make([]string, 0, len(bonusTypes))
-	for _, bonusType := range bonusTypes {
+	ids := make([]string, 0, len(types.BonusTypes))
+	for _, bonusType := range types.BonusTypes {
 		ids = append(ids, string(bonusType))
 	}
 	return ids

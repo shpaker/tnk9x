@@ -131,6 +131,13 @@ func (s *stubMapUseCases) GetRandomBonusSpawnPosition() types.Position {
 
 func (s *stubMapUseCases) IsIceAt(_ types.Position) bool { return false }
 
+func (s *stubMapUseCases) IsWaterUnder(
+	position types.Position,
+	size types.Size,
+) bool {
+	return use_cases.NewMapUseCases(s.mapEntity).IsWaterUnder(position, size)
+}
+
 type collisionTestEnv struct {
 	tanksRepo   *game.TanksRepository
 	bulletsRepo *game.BulletsRepository
@@ -1180,5 +1187,94 @@ func TestBulletBulletCollision_Effect(t *testing.T) {
 	}
 	if got := env.effects.Events[0].Position; got != (types.Position{X: 102, Y: 101}) {
 		t.Errorf("clash at %v, want the midpoint (102, 101)", got)
+	}
+}
+
+// Танк с лодкой проходит по воде
+func TestTankWallCollision_BoatSailsOverWater(t *testing.T) {
+	blocks := types.MapBlocks{water(120, 96), water(120, 104)}
+	env := newCollisionTestEnv(blocks)
+
+	tank := env.newTank(types.TankRolePlayer1, types.DirectionRight, 96, 96, 0)
+	tank.SetBoat()
+	env.tanksRepo.SetPlayer(types.PlayerTankNumPlayer1, tank)
+
+	for i := 0; i < 40; i++ {
+		_ = env.tankActions.Move(tank)
+		env.tick()
+	}
+
+	// Без лодки танк упирается в воду на X=104
+	if tank.Position.X <= 104 {
+		t.Errorf("танк с лодкой не заехал в воду: X=%v", tank.Position.X)
+	}
+}
+
+// Лодка поглощает попадание: уровень цел, лодка сбита
+func TestBulletTankCollision_BoatAbsorbsHit(t *testing.T) {
+	env := newCollisionTestEnv(nil)
+
+	player := env.newTank(types.TankRolePlayer1, types.DirectionUp, 64, 64, 1)
+	player.SetBoat()
+	env.tanksRepo.SetPlayer(types.PlayerTankNumPlayer1, player)
+
+	enemy := env.newTank(types.TankRoleEnemy, types.DirectionDown, 64, 160, 0)
+	env.tanksRepo.AddEnemy(enemy)
+
+	bullet := types.NewBulletEntity(
+		types.Position{X: 70, Y: 70},
+		types.Size{Width: 4, Height: 4},
+		types.SURFACE,
+		&stubImageProvider{},
+		types.DirectionUp,
+		env.specsUC.GetTankSpecs(true, 0),
+		enemy,
+	)
+	if err := env.bulletsRepo.AddBullet(bullet); err != nil {
+		t.Fatalf("не удалось добавить пулю: %v", err)
+	}
+
+	env.collision.UpdateCollisions()
+
+	if player.HasBoat() {
+		t.Error("лодка не сбита попаданием")
+	}
+	if player.GetSpecs().GetLevel() != 1 {
+		t.Errorf("уровень игрока изменился: %d", player.GetSpecs().GetLevel())
+	}
+}
+
+// Лодку сбили на воде: танк доплывает до берега, но снова в воду
+// уже не заедет
+func TestTankWallCollision_SunkBoatReachesShore(t *testing.T) {
+	blocks := types.MapBlocks{
+		water(104, 96), water(104, 104), water(112, 96), water(112, 104),
+	}
+	env := newCollisionTestEnv(blocks)
+
+	tank := env.newTank(types.TankRolePlayer1, types.DirectionRight, 104, 96, 0)
+	tank.SetBoat()
+	tank.LoseBoat()
+	env.tanksRepo.SetPlayer(types.PlayerTankNumPlayer1, tank)
+
+	for i := 0; i < 60; i++ {
+		_ = env.tankActions.Move(tank)
+		env.tick()
+	}
+	if tank.Position.X < 120 {
+		t.Fatalf("танк не доплыл до берега: X=%v", tank.Position.X)
+	}
+	if tank.CanSail() {
+		t.Fatal("на берегу танк не должен больше плавать")
+	}
+
+	_ = env.tankActions.Rotate(tank, types.DirectionLeft)
+	for i := 0; i < 60; i++ {
+		_ = env.tankActions.Rotate(tank, types.DirectionLeft)
+		_ = env.tankActions.Move(tank)
+		env.tick()
+	}
+	if tank.Position.X < 120 {
+		t.Errorf("танк без лодки заехал в воду: X=%v", tank.Position.X)
 	}
 }

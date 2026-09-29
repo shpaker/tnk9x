@@ -80,6 +80,13 @@ func (uc *BonusUseCases) Apply(
 		uc.applyGrenade()
 	case types.BonusTypeTank:
 		uc.applyTank(tank)
+	case types.BonusTypeBoat:
+		// Лодка: проезд по воде и одно поглощённое попадание
+		tank.SetBoat()
+	case types.BonusTypePistol:
+		// Пистолет, как в Tank 1990: сразу максимальный уровень —
+		// игрок переживает три попадания, теряя по уровню
+		uc.tankCommonUseCases.SetMaxLevel(tank)
 	}
 
 	uc.removeBonus(bonus)
@@ -285,15 +292,7 @@ func (uc *BonusUseCases) VisibleBonuses() []*types.BonusEntity {
 
 // GetRandomBonusType возвращает случайный тип бонуса
 func (uc *BonusUseCases) GetRandomBonusType() types.BonusType {
-	bonusTypes := []types.BonusType{
-		types.BonusTypeHelmet,
-		types.BonusTypeTimer,
-		types.BonusTypeShovel,
-		types.BonusTypeGrenade,
-		types.BonusTypeTank,
-		types.BonusTypeStar,
-	}
-	return bonusTypes[rand.Intn(len(bonusTypes))]
+	return types.BonusTypes[rand.Intn(len(types.BonusTypes))]
 }
 
 // SpawnRandomBonusEntity создает новый бонус со случайным типом

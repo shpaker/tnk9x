@@ -105,6 +105,7 @@ func (s *stubTankCommon) GetAllPlayerTanks() []*types.TankEntity { return nil }
 func (s *stubTankCommon) IsAnyPlayerTankMoving() bool      { return false }
 func (s *stubTankCommon) LevelUp(tank *types.TankEntity)   {}
 func (s *stubTankCommon) LevelDown(tank *types.TankEntity) {}
+func (s *stubTankCommon) SetMaxLevel(*types.TankEntity)    {}
 
 func (s *stubTankCommon) GetTankAnimationName(
 	tank *types.TankEntity,
