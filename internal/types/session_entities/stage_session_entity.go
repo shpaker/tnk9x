@@ -47,7 +47,12 @@ type StageSessionEntity struct {
 
 	enemySpawnTicks uint
 
-	enemyFreezeTicks uint // Оставшиеся тики заморозки врагов бонусом-таймером
+	enemyFreezeTicks  uint // Оставшиеся тики заморозки врагов бонусом-таймером
+	playerFreezeTicks uint // Оставшиеся тики заморозки игроков таймером врага
+
+	// Дополнительные враги из бонуса-танка, подобранного врагом:
+	// выходят на поле после всех волн сценария
+	extraEnemies []types.WaveTank
 
 	// Длительность уровня в тиках без пауз
 	stageTicks uint
@@ -80,8 +85,30 @@ func NewStageSessionEntity() *StageSessionEntity {
 func (s *StageSessionEntity) SetUpLevel(level *types.LevelEntity) {
 	s.level = level
 	s.totalEnemies = 0
+	s.extraEnemies = nil
 	if level != nil {
 		s.totalEnemies = level.GetTotalEnemies()
+	}
+}
+
+// AddExtraEnemy добавляет врага в резерв сверх сценария уровня
+func (s *StageSessionEntity) AddExtraEnemy(tank types.WaveTank) {
+	s.extraEnemies = append(s.extraEnemies, tank)
+	s.totalEnemies++
+}
+
+// PeekExtraEnemy — следующий дополнительный враг, если он есть
+func (s *StageSessionEntity) PeekExtraEnemy() (types.WaveTank, bool) {
+	if len(s.extraEnemies) == 0 {
+		return types.WaveTank{}, false
+	}
+	return s.extraEnemies[0], true
+}
+
+// PopExtraEnemy убирает вышедшего на поле дополнительного врага
+func (s *StageSessionEntity) PopExtraEnemy() {
+	if len(s.extraEnemies) > 0 {
+		s.extraEnemies = s.extraEnemies[1:]
 	}
 }
 
@@ -373,6 +400,18 @@ func (s *StageSessionEntity) UpdateEnemyFreezeCountdown() {
 	if s.enemyFreezeTicks > 0 {
 		s.enemyFreezeTicks--
 	}
+	if s.playerFreezeTicks > 0 {
+		s.playerFreezeTicks--
+	}
+}
+
+// FreezePlayers запускает заморозку игроков — таймер, подобранный врагом
+func (s *StageSessionEntity) FreezePlayers(ticks uint) {
+	s.playerFreezeTicks = ticks
+}
+
+func (s *StageSessionEntity) ArePlayersFrozen() bool {
+	return s.playerFreezeTicks > 0
 }
 
 // GetMaxActiveEnemies — лимит одновременно активных врагов уровня

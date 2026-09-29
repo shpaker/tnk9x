@@ -39,6 +39,8 @@ func (s *recordingTankCommon) LevelUp(tank *types.TankEntity) {
 }
 func (s *recordingTankCommon) LevelDown(tank *types.TankEntity) {}
 
+func (s *recordingTankCommon) IsFrozen(*types.TankEntity) bool { return false }
+
 func (s *recordingTankCommon) SetMaxLevel(tank *types.TankEntity) {
 	s.maxed = append(s.maxed, tank)
 }
@@ -649,5 +651,106 @@ func TestBonusUseCases_Apply_Pistol(t *testing.T) {
 
 	if len(env.tankCommon.maxed) != 1 || env.tankCommon.maxed[0] != tank {
 		t.Errorf("SetMaxLevel не вызван для танка: %v", env.tankCommon.maxed)
+	}
+}
+
+// Граната врага взрывает игроков без щита, врагов не трогает
+func TestBonusUseCases_EnemyGrenade(t *testing.T) {
+	env := newBonusTestEnv()
+	enemy := newEnemyTankInState(types.TankStateMoving)
+	player := newPlayerTank(types.TankRolePlayer1)
+	shielded := newPlayerTank(types.TankRolePlayer2)
+	shielded.ActivateShield(600)
+	env.tankCommon.tanks = []*types.TankEntity{enemy, player, shielded}
+
+	env.bonusUC.Apply(env.newBonus(types.BonusTypeGrenade), enemy)
+
+	if len(env.lifecycle.exploded) != 1 || env.lifecycle.exploded[0] != player {
+		t.Errorf("взорваны %v, ожидался только игрок без щита",
+			env.lifecycle.exploded)
+	}
+}
+
+// Часы врага морозят игроков, а не врагов
+func TestBonusUseCases_EnemyTimer(t *testing.T) {
+	env := newBonusTestEnv()
+	enemy := newEnemyTankInState(types.TankStateMoving)
+
+	env.bonusUC.Apply(env.newBonus(types.BonusTypeTimer), enemy)
+
+	if !env.session.ArePlayersFrozen() || env.session.AreEnemiesFrozen() {
+		t.Error("таймер врага должен заморозить игроков")
+	}
+}
+
+// Танк врага добавляет врага в резерв, жизни игроков не меняются
+func TestBonusUseCases_EnemyTank(t *testing.T) {
+	env := newBonusTestEnv()
+	enemy := newEnemyTankInState(types.TankStateMoving)
+	total := env.session.GetTotalEnemies()
+
+	env.bonusUC.Apply(env.newBonus(types.BonusTypeTank), enemy)
+
+	if env.session.GetTotalEnemies() != total+1 {
+		t.Errorf("врагов %d, ожидалось %d",
+			env.session.GetTotalEnemies(), total+1)
+	}
+	if got := env.session.GetPlayerLives(types.PlayerTankNumPlayer1); got != 3 {
+		t.Errorf("жизни игрока изменились: %d", got)
+	}
+}
+
+// Звезда усиливает врага и даёт лишнее попадание в запас,
+// пистолет делает его тяжёлым танком
+func TestBonusUseCases_EnemyStarAndPistol(t *testing.T) {
+	env := newBonusTestEnv()
+	enemy := newEnemyTankInState(types.TankStateMoving)
+	enemy.SetHitPoints(1)
+
+	env.bonusUC.Apply(env.newBonus(types.BonusTypeStar), enemy)
+	if len(env.tankCommon.leveledUp) != 1 || enemy.GetHitPoints() != 2 {
+		t.Errorf("звезда: повышений %d, прочность %d",
+			len(env.tankCommon.leveledUp), enemy.GetHitPoints())
+	}
+
+	env.bonusUC.Apply(env.newBonus(types.BonusTypePistol), enemy)
+	if len(env.tankCommon.maxed) != 1 || enemy.GetHitPoints() != 4 {
+		t.Errorf("пистолет: максимум %d, прочность %d",
+			len(env.tankCommon.maxed), enemy.GetHitPoints())
+	}
+}
+
+// Лопата врага снимает стены штаба, даже укреплённые бетоном
+func TestBonusUseCases_EnemyShovel(t *testing.T) {
+	env := newBonusTestEnv()
+	wallBrick := types.NewBlockEntity(string(types.Brick), 88, 184, 8, nil)
+	farBrick := types.NewBlockEntity(string(types.Brick), 0, 0, 8, nil)
+	env.mapEntity.AddBlock(wallBrick)
+	env.mapEntity.AddBlock(farBrick)
+	env.bonusUC.Apply(
+		env.newBonus(types.BonusTypeShovel),
+		newPlayerTank(types.TankRolePlayer1),
+	)
+
+	env.bonusUC.Apply(
+		env.newBonus(types.BonusTypeShovel),
+		newEnemyTankInState(types.TankStateMoving),
+	)
+
+	if env.mapEntity.IsHQFortified() {
+		t.Error("укрепление должно быть снято")
+	}
+	blocks := env.mapEntity.GetBlocks()
+	if len(blocks) != 1 || blocks[0] != farBrick {
+		t.Errorf("на карте %d блоков, ожидался только дальний кирпич",
+			len(blocks))
+	}
+
+	// Отсчёт укрепления не вернёт стены
+	for i := 0; i < 30*60; i++ {
+		env.bonusUC.UpdateEffects()
+	}
+	if len(env.mapEntity.GetBlocks()) != 1 {
+		t.Error("стены штаба вернулись после отсчёта")
 	}
 }

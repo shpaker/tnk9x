@@ -249,7 +249,7 @@ func TestTankActionsUseCases_Shoot_NoEffectsWhileBulletFlies(t *testing.T) {
 	tankActions := tank_use_cases.NewTankActionsUseCases(
 		nil,
 		env.bulletUC,
-		nil,
+		&testutil.FakeTankCommonUseCases{},
 		nil,
 		nil,
 		soundUC,

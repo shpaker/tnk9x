@@ -192,3 +192,30 @@ func TestCastRayHitsBrickAndEdge(t *testing.T) {
 		t.Fatalf("expected edge, got %+v", hit)
 	}
 }
+
+// Вода непроходима, пока у танка нет лодки
+func TestNavigationService_FindPath_WaterPassable(t *testing.T) {
+	var blocks []*types.BlockEntity
+	for y := 0.0; y < 64; y += 8 {
+		blocks = append(blocks,
+			types.NewBlockEntity(string(types.Water), 24, y, 8, nil),
+			types.NewBlockEntity(string(types.Water), 32, y, 8, nil),
+		)
+	}
+	grid := types.NewNavGridEntity(types.Size{Width: 64, Height: 64}, 4, blocks)
+	service := NewNavigationService()
+	from := types.Position{X: 0, Y: 0}
+	to := types.Position{X: 48, Y: 0}
+
+	if _, found := service.FindPath(
+		grid, from, to, types.NavOptions{TankSize: 16},
+	); found {
+		t.Error("без лодки путь через воду найден")
+	}
+	step, found := service.FindPath(
+		grid, from, to, types.NavOptions{TankSize: 16, WaterPassable: true},
+	)
+	if !found || step.Direction != types.DirectionRight {
+		t.Errorf("с лодкой ожидался путь вправо, получено %+v %v", step, found)
+	}
+}

@@ -28,6 +28,8 @@ type CollisionUseCases struct {
 	bonusesRepository        interfaces.IBonusesRepository
 	soundUseCases            interfaces.ISoundUseCases
 	visualEffectsUseCases    interfaces.IVisualEffectsUseCases
+	// enemyBonusPickup — враги подбирают бонусы (game.enemy_bonus_pickup)
+	enemyBonusPickup bool
 }
 
 func NewCollisionUseCases(
@@ -46,6 +48,7 @@ func NewCollisionUseCases(
 	bonusesRepository interfaces.IBonusesRepository,
 	soundUseCases interfaces.ISoundUseCases,
 	visualEffectsUseCases interfaces.IVisualEffectsUseCases,
+	enemyBonusPickup bool,
 ) *CollisionUseCases {
 	return &CollisionUseCases{
 		bulletUseCases:           bulletUseCases,
@@ -63,6 +66,7 @@ func NewCollisionUseCases(
 		bonusesRepository:        bonusesRepository,
 		soundUseCases:            soundUseCases,
 		visualEffectsUseCases:    visualEffectsUseCases,
+		enemyBonusPickup:         enemyBonusPickup,
 	}
 }
 
@@ -503,8 +507,8 @@ func (uc *CollisionUseCases) checkTankBonusCollisions(
 		return
 	}
 
-	// Вражеские танки не могут подбирать бонусы
-	if tank.IsEnemy() {
+	// Враги подбирают бонусы, только если это включено в конфиге
+	if tank.IsEnemy() && !uc.enemyBonusPickup {
 		return
 	}
 

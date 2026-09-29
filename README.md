@@ -28,7 +28,7 @@ A modern remake and tribute to the classic arcade game Battle City (NES, 1985), 
 - Enemy AI with per-type personalities and difficulty scaling by stage:
   - NES-style targeting: roam, then hunt the player, then head for the HQ
   - Aimed fire with reaction delay: turns to a player on the line of fire, breaches walls towards the HQ, never wastes shots on allies or steel
-  - Pathfinding around steel and water, shooting through bricks, recovery when stuck
+  - Pathfinding around steel and water (across water with a boat), shooting through bricks, recovery when stuck
   - Active demolition: fire at walls ahead on the move and carve passages through side walls
   - Bullet dodging and counter-fire for fast tanks on later stages
 - Player lives, levels and damage
@@ -36,6 +36,7 @@ A modern remake and tribute to the classic arcade game Battle City (NES, 1985), 
 - All eight bonuses: grenade, tank, star, helmet shield, enemy-freezing timer, HQ-fortifying shovel, and two from Tank 1990:
   - Boat: the tank sails over water and the boat takes one hit instead of the tank; a tank that loses its boat on water can still reach the shore
   - Pistol: the tank gets the top level at once, so it survives three hits
+- Enemies pick up bonuses too, as in Tank 1990 (`game.enemy_bonus_pickup`, on by default): the enemy nearest to a dropped bonus races for it; helmet and boat go to the enemy itself, star and pistol make it stronger, grenade blows up the players, timer freezes them, shovel strips the HQ walls, tank adds an enemy to the reserve
 - Campaign of 35 stages in 7 packs (`assets/levels/main.bccamp`): stage select screen with a minimap preview, enemy composition and 3-star time; stages open one after another, packs open for collected stars
 - Stars per stage: win, no lives lost, within the time limit; best results are saved (OS config folder on desktop, localStorage in the browser)
 - Continue after a win: carry lives (at least 3) and tank level to the next stage, capped at 2 stars; offered only when it gives an edge

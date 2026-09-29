@@ -10,15 +10,17 @@
 -- ctx:
 --   tick     — номер тика AI
 --   stage    — номер уровня
---   self     — {id, x, y, size, dir, level, hp, bonus, reinforced}
---              level: 0 Basic, 1 Fast, 2 Power, 3 Armor
+--   self     — {id, x, y, size, dir, level, hp, bonus, reinforced, boat}
+--              level: 0 Basic, 1 Fast, 2 Power, 3 Armor; boat — ходит по воде
 --   players  — активные игроки: {x, y, size, dir, ...}
 --   enemies  — союзники без самого танка
 --   bullets  — {x, y, w, h, dir, enemy}
+--   bonuses  — бонусы на поле, за которыми можно ехать: {x, y, size, type}
 --   hq       — {x, y, size, intact}
 --
 -- ai (запросы к движку, решений не принимают):
---   ai.findPath(fromX, fromY, toX, toY [, {brickCost=, steelPassable=}])
+--   ai.findPath(fromX, fromY, toX, toY
+--               [, {brickCost=, steelPassable=, waterPassable=}])
 --     -> направление первого шага и длина пути в шагах, либо nil
 --   ai.castRay(x, y, dir) -> "edge"|"brick"|"steel"|"player"|"enemy"|"hq", расстояние
 --   ai.tileAt(x, y) -> "brick"|"steel"|"water"|"forest"|"ice" или nil
@@ -202,7 +204,8 @@ local function aheadBlock(ctx, tank, dir)
             return "edge"
         end
         local tile = ai.tileAt(x, y)
-        if tile == "steel" or tile == "water" then
+        -- Танк с лодкой проходит по воде
+        if tile == "steel" or (tile == "water" and not tank.boat) then
             return tile
         end
         if tile == "brick" then
@@ -298,8 +301,27 @@ local function nearestPlayer(ctx, tank)
     return best, bestDistance
 end
 
--- Текущая фаза танка: "roam", "player" или "hq"
+-- Бонус, за которым едет этот танк: ближайший к бонусу враг
+-- бросает всё и мчится к нему, остальные продолжают своё
+local function bonusTarget(ctx, tank)
+    local bonus = ctx.bonuses[1]
+    if not bonus then
+        return nil
+    end
+    local distance = manhattan(tank.x, tank.y, bonus.x, bonus.y)
+    for _, other in ipairs(ctx.enemies) do
+        if manhattan(other.x, other.y, bonus.x, bonus.y) < distance then
+            return nil
+        end
+    end
+    return bonus
+end
+
+-- Текущая фаза танка: "bonus", "roam", "player" или "hq"
 local function currentMode(ctx, m, profile)
+    if bonusTarget(ctx, ctx.self) then
+        return "bonus"
+    end
     if ctx.tick < m.roamUntil then
         return "roam"
     end
@@ -538,11 +560,14 @@ local function navigate(ctx, tank, m, profile, diff, mode)
     local target = ctx.hq
     if mode == "player" then
         target = nearestPlayer(ctx, tank)
+    elseif mode == "bonus" then
+        target = bonusTarget(ctx, tank)
     end
 
     local dir, length = ai.findPath(tank.x, tank.y, target.x, target.y, {
         brickCost = profile.brickCost,
         steelPassable = tank.reinforced,
+        waterPassable = tank.boat,
     })
     if not dir or length == 0 then
         return roam(ctx, tank, m, profile)

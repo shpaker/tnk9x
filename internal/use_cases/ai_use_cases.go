@@ -24,6 +24,11 @@ type AIUseCases struct {
 	// Repositories
 	tanksRepository   interfaces.ITanksRepository
 	bulletsRepository interfaces.IBulletsRepository
+	bonusesRepository interfaces.IBonusesRepository
+
+	// bonusHunting — враги видят бонусы и едут за ними
+	// (game.enemy_bonus_pickup)
+	bonusHunting bool
 
 	// Adapters
 	scriptEngine interfaces.IAIScriptEngine
@@ -35,6 +40,8 @@ func NewAIUseCases(
 	hq *types.HQEntity,
 	tanksRepository interfaces.ITanksRepository,
 	bulletsRepository interfaces.IBulletsRepository,
+	bonusesRepository interfaces.IBonusesRepository,
+	bonusHunting bool,
 	scriptEngine interfaces.IAIScriptEngine,
 ) *AIUseCases {
 	return &AIUseCases{
@@ -43,6 +50,8 @@ func NewAIUseCases(
 		hq:                hq,
 		tanksRepository:   tanksRepository,
 		bulletsRepository: bulletsRepository,
+		bonusesRepository: bonusesRepository,
+		bonusHunting:      bonusHunting,
 		scriptEngine:      scriptEngine,
 	}
 }
@@ -103,6 +112,19 @@ func (uc *AIUseCases) buildContext(
 		})
 	}
 
+	if uc.bonusHunting {
+		for _, bonus := range uc.bonusesRepository.GetAllBonuses() {
+			if bonus == nil {
+				continue
+			}
+			context.Bonuses = append(context.Bonuses, types.AIBonusInfo{
+				Position: bonus.GetPosition(),
+				Size:     bonus.GetSize(),
+				Type:     bonus.GetType(),
+			})
+		}
+	}
+
 	return context
 }
 
@@ -117,5 +139,6 @@ func (uc *AIUseCases) tankInfo(tank *types.TankEntity) types.AITankInfo {
 		HitPoints:  tank.GetHitPoints(),
 		WithBonus:  tank.GetWithBonus(),
 		Reinforced: specs.GetBulletsReinforced(),
+		Boat:       tank.CanSail(),
 	}
 }

@@ -67,6 +67,12 @@ func (uc *BonusUseCases) Apply(
 
 	uc.soundUseCases.RequestSound(types.SoundIDBonus, false)
 
+	if tank.IsEnemy() {
+		uc.applyForEnemy(bonus.GetType(), tank)
+		uc.removeBonus(bonus)
+		return
+	}
+
 	switch bonus.GetType() {
 	case types.BonusTypeHelmet:
 		uc.applyHelmet(tank)
@@ -105,6 +111,80 @@ func (uc *BonusUseCases) UpdateEffects() {
 
 	if uc.mapEntity != nil && uc.mapEntity.UpdateHQFortifyCountdown() {
 		uc.unfortifyHQ()
+	}
+}
+
+// armorHitPoints — прочность тяжёлого танка: столько попаданий
+// выдерживает враг, получивший пистолет
+const armorHitPoints = 4
+
+// applyForEnemy — бонус, подобранный врагом, как в Tank 1990: каска
+// и лодка достаются ему самому, звезда и пистолет усиливают его,
+// остальные бонусы бьют по игрокам
+func (uc *BonusUseCases) applyForEnemy(
+	bonusType types.BonusType,
+	tank *types.TankEntity,
+) {
+	switch bonusType {
+	case types.BonusTypeHelmet:
+		uc.applyHelmet(tank)
+	case types.BonusTypeBoat:
+		tank.SetBoat()
+	case types.BonusTypeStar:
+		// Следующий тип танка и лишнее попадание в запас
+		hitPoints := tank.GetHitPoints()
+		uc.tankCommonUseCases.LevelUp(tank)
+		tank.SetHitPoints(hitPoints + 1)
+	case types.BonusTypePistol:
+		uc.tankCommonUseCases.SetMaxLevel(tank)
+		tank.SetHitPoints(armorHitPoints)
+	case types.BonusTypeGrenade:
+		uc.explodePlayers()
+	case types.BonusTypeTimer:
+		if uc.stageSession != nil {
+			uc.stageSession.FreezePlayers(enemyFreezeDurationTicks)
+		}
+	case types.BonusTypeShovel:
+		uc.stripHQWalls()
+	case types.BonusTypeTank:
+		if uc.stageSession != nil {
+			uc.stageSession.AddExtraEnemy(types.WaveTank{
+				Level: tank.GetSpecs().GetLevel(),
+			})
+		}
+	}
+}
+
+// explodePlayers взрывает активных игроков без щита — граната врага
+func (uc *BonusUseCases) explodePlayers() {
+	for _, player := range uc.tankCommonUseCases.GetAllTanks() {
+		if player == nil || player.IsEnemy() || !player.IsActive() ||
+			player.HasShield() {
+			continue
+		}
+		_ = uc.tankLifecycleUseCases.Explode(player)
+	}
+}
+
+// stripHQWalls снимает стены вокруг штаба — лопата врага: укрепление
+// отменяется без возврата прежних стен, кольцо остаётся пустым
+func (uc *BonusUseCases) stripHQWalls() {
+	if uc.mapEntity == nil {
+		return
+	}
+	_, steelBlocks := uc.mapEntity.TakeHQFortification()
+	for _, block := range steelBlocks {
+		_ = uc.mapEntity.RemoveBlock(block)
+	}
+
+	blockSize := float64(uc.configProvider.GetTileBaseSize())
+	if blockSize <= 0 {
+		return
+	}
+	for _, position := range uc.hqWallPositions(blockSize) {
+		for _, block := range uc.blocksAt(position, blockSize) {
+			_ = uc.mapEntity.RemoveBlock(block)
+		}
 	}
 }
 

@@ -18,7 +18,7 @@ func TestApplyDecisionRotatesAndMoves(t *testing.T) {
 	actions := tank_use_cases.NewTankActionsUseCases(
 		nil,
 		nil,
-		nil,
+		&testutil.FakeTankCommonUseCases{},
 		&stubRenderUseCases{},
 		nil,
 		nil,
@@ -46,7 +46,7 @@ func TestApplyDecisionWithoutMoveKeepsTankStopped(t *testing.T) {
 	actions := tank_use_cases.NewTankActionsUseCases(
 		nil,
 		nil,
-		nil,
+		&testutil.FakeTankCommonUseCases{},
 		&stubRenderUseCases{},
 		nil,
 		nil,

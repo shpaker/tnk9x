@@ -66,6 +66,8 @@ type ITankCommonUseCases interface {
 	LevelDown(tank *types.TankEntity)
 	// SetMaxLevel сразу даёт танку максимальный уровень (пистолет)
 	SetMaxLevel(tank *types.TankEntity)
+	// IsFrozen сообщает, заморожена ли сторона танка бонусом-таймером
+	IsFrozen(tank *types.TankEntity) bool
 }
 
 type IRenderUseCases interface {
