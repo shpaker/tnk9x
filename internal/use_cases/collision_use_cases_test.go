@@ -177,7 +177,6 @@ func newCollisionTestEnv(blocks types.MapBlocks) *collisionTestEnv {
 		specsUC,
 		mapUC,
 		session_entities.NewStageSessionEntity(),
-		false,
 	)
 	tankActions := tank_use_cases.NewTankActionsUseCases(
 		braking,

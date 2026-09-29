@@ -31,10 +31,6 @@ game:
   # Campaign file: assets/levels/<campaign>.bccamp
   campaign: main
 
-  # Tanks pull away almost from a standstill and reach full speed in about a second;
-  # false: full speed at once, as in the NES original
-  tank_acceleration: true
-
   # Reload pause between shots (0.2-0.5 s depending on the tank):
   # no point-blank fire every frame; false: only the bullets-in-flight limit
   shot_cooldown: true

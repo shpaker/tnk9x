@@ -91,7 +91,6 @@ func (app *App) newStageState() (*states.StageState, error) {
 		app.specsUseCases,
 		mapUseCases,
 		stageSession,
-		app.config.TankAcceleration,
 	)
 
 	visualEffectsUseCases := use_cases.NewVisualEffectsUseCases(

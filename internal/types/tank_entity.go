@@ -56,9 +56,7 @@ type TankEntity struct {
 	headlightReady bool
 	recoilTicks    uint
 
-	// Движение и стрельба: текущая скорость с учётом разгона (px/с)
-	// и оставшаяся перезарядка до следующего выстрела (с)
-	speed  float64
+	// Оставшаяся перезарядка до следующего выстрела, секунды
 	reload float64
 }
 
@@ -383,23 +381,6 @@ func (t *TankEntity) TickRecoil() {
 // IsRecoiling сообщает, откатывается ли танк после выстрела
 func (t *TankEntity) IsRecoiling() bool {
 	return t != nil && t.recoilTicks > 0
-}
-
-// GetSpeed возвращает текущую скорость танка с учётом разгона, px/с
-func (t *TankEntity) GetSpeed() float64 {
-	if t == nil {
-		return 0
-	}
-	return t.speed
-}
-
-// SetSpeed задаёт текущую скорость танка; 0 — танк стоит
-// и следующее движение начнётся с разгона
-func (t *TankEntity) SetSpeed(speed float64) {
-	if t == nil {
-		return
-	}
-	t.speed = speed
 }
 
 // IsReloading сообщает, перезаряжается ли танк после выстрела

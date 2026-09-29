@@ -30,7 +30,6 @@ func newCommonTestEnv() *commonTestEnv {
 		specsUC,
 		use_cases.NewMapUseCases(nil),
 		session,
-		false,
 	)
 
 	return &commonTestEnv{
@@ -231,7 +230,6 @@ func TestTankCommonUseCases_Update_BrakingSlidesOnIce(t *testing.T) {
 		specsUC,
 		use_cases.NewMapUseCases(mapEntity),
 		session_entities.NewStageSessionEntity(),
-		false,
 	)
 
 	tankValue := types.NewDefaultTankEntity(
@@ -531,82 +529,5 @@ func TestTankEntity_AnimationName_Fallbacks(t *testing.T) {
 	weird.SetSpecs(types.NewSpecsEntity(7, 32, false, 120, 1))
 	if got := weird.AnimationName(); got != "player1_level4_tank_up" {
 		t.Errorf("уровень 7 и направление 99: %q", got)
-	}
-}
-
-// newAcceleratingCommon — общие use cases танков с включённым разгоном
-func newAcceleratingCommon(
-	env *commonTestEnv,
-) *tank_use_cases.TankCommonUseCases {
-	return tank_use_cases.NewTankCommonUseCases(
-		services.NewTankBrakingService(),
-		&stubRenderUseCases{},
-		env.tanksRepo,
-		env.specsUC,
-		use_cases.NewMapUseCases(nil),
-		env.session,
-		true,
-	)
-}
-
-// С разгоном танк трогается медленно и выходит на полную скорость
-// примерно за секунду
-func TestTankCommonUseCases_Update_Acceleration(t *testing.T) {
-	env := newCommonTestEnv()
-	common := newAcceleratingCommon(env)
-	tank := env.newTank(
-		types.TankRolePlayer1, types.DirectionRight, types.TankStateMoving, 0,
-	)
-	maxSpeed := tank.GetSpecs().GetSpeed()
-	dt := 1.0 / 60
-
-	_ = common.Update(tank, dt)
-	first := tank.GetSpeed()
-	if first <= 0 || first > maxSpeed*0.3 {
-		t.Fatalf("скорость первого тика %v, ожидался медленный старт", first)
-	}
-
-	for range 60 {
-		_ = common.Update(tank, dt)
-	}
-	if tank.GetSpeed() != maxSpeed {
-		t.Errorf("за секунду скорость %v, ожидалась полная %v",
-			tank.GetSpeed(), maxSpeed)
-	}
-}
-
-// Остановившийся танк теряет скорость и снова разгоняется
-func TestTankCommonUseCases_Update_StopResetsSpeed(t *testing.T) {
-	env := newCommonTestEnv()
-	common := newAcceleratingCommon(env)
-	tank := env.newTank(
-		types.TankRolePlayer1, types.DirectionRight, types.TankStateMoving, 0,
-	)
-	for range 60 {
-		_ = common.Update(tank, 1.0/60)
-	}
-
-	tank.State = types.TankStateStopped
-	_ = common.Update(tank, 1.0/60)
-
-	if tank.GetSpeed() != 0 {
-		t.Errorf(
-			"скорость остановленного танка %v, ожидался 0",
-			tank.GetSpeed(),
-		)
-	}
-}
-
-// Без разгона танк сразу едет с полной скоростью
-func TestTankCommonUseCases_Update_NoAcceleration(t *testing.T) {
-	env := newCommonTestEnv()
-	tank := env.newTank(
-		types.TankRolePlayer1, types.DirectionRight, types.TankStateMoving, 0,
-	)
-
-	_ = env.common.Update(tank, 1.0/60)
-
-	if tank.GetSpeed() != tank.GetSpecs().GetSpeed() {
-		t.Errorf("скорость %v, ожидалась полная", tank.GetSpeed())
 	}
 }

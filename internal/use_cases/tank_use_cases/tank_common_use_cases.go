@@ -10,15 +10,6 @@ import (
 
 var _ interfaces.ITankCommonUseCases = (*TankCommonUseCases)(nil)
 
-// Разгон: танк трогается с доли startSpeedFraction полной скорости
-// и набирает её за accelerationTime секунд; на льду гусеницы
-// буксуют — разгон медленнее в iceAccelerationFactor раз
-const (
-	startSpeedFraction    = 0.05
-	accelerationTime      = 1.0
-	iceAccelerationFactor = 0.5
-)
-
 type TankCommonUseCases struct {
 	brakingService  interfaces.ITankBrakingService
 	renderUseCases  interfaces.IRenderUseCases
@@ -26,9 +17,6 @@ type TankCommonUseCases struct {
 	specsUseCases   interfaces.ISpecsUseCases
 	mapUseCases     interfaces.IMapUseCases
 	stageSession    *session_entities.StageSessionEntity
-	// accelerationEnabled — танки разгоняются с места, а не сразу
-	// едут с полной скоростью (game.tank_acceleration)
-	accelerationEnabled bool
 }
 
 func NewTankCommonUseCases(
@@ -38,16 +26,14 @@ func NewTankCommonUseCases(
 	specsUseCases interfaces.ISpecsUseCases,
 	mapUseCases interfaces.IMapUseCases,
 	stageSession *session_entities.StageSessionEntity,
-	accelerationEnabled bool,
 ) *TankCommonUseCases {
 	return &TankCommonUseCases{
-		brakingService:      brakingService,
-		renderUseCases:      renderUseCases,
-		tanksRepository:     tanksRepository,
-		specsUseCases:       specsUseCases,
-		mapUseCases:         mapUseCases,
-		stageSession:        stageSession,
-		accelerationEnabled: accelerationEnabled,
+		brakingService:  brakingService,
+		renderUseCases:  renderUseCases,
+		tanksRepository: tanksRepository,
+		specsUseCases:   specsUseCases,
+		mapUseCases:     mapUseCases,
+		stageSession:    stageSession,
 	}
 }
 
@@ -62,13 +48,7 @@ func (uc *TankCommonUseCases) Update(tank *types.TankEntity, dt float64) error {
 	if tank.IsEnemy() && uc.stageSession != nil &&
 		uc.stageSession.AreEnemiesFrozen() {
 		tank.PrevPosition = tank.Position
-		tank.SetSpeed(0)
 		return nil
-	}
-
-	// Остановившийся танк теряет набранную скорость
-	if tank.State == types.TankStateStopped {
-		tank.SetSpeed(0)
 	}
 
 	uc.renderUseCases.SyncTankAnimationWithState(tank)
@@ -92,7 +72,12 @@ func (uc *TankCommonUseCases) Update(tank *types.TankEntity, dt float64) error {
 	}
 
 	if tank.State == types.TankStateMoving {
-		delta := uc.accelerate(tank, dt) * dt
+		// Получаем скорость танка из спецификаций
+		speed := float64(32.0) // Значение по умолчанию
+		if tank.GetSpecs() != nil {
+			speed = tank.GetSpecs().GetSpeed()
+		}
+		delta := speed * dt
 
 		switch tank.Direction {
 		case types.DirectionUp:
@@ -109,31 +94,6 @@ func (uc *TankCommonUseCases) Update(tank *types.TankEntity, dt float64) error {
 	uc.renderUseCases.SyncTankAnimationWithState(tank)
 
 	return nil
-}
-
-// accelerate возвращает скорость танка на этот тик: с разгоном
-// она растёт от доли полной до полной, без разгона сразу полная
-func (uc *TankCommonUseCases) accelerate(
-	tank *types.TankEntity,
-	dt float64,
-) float64 {
-	maxSpeed := float64(32.0) // Значение по умолчанию
-	if tank.GetSpecs() != nil {
-		maxSpeed = tank.GetSpecs().GetSpeed()
-	}
-	if !uc.accelerationEnabled {
-		tank.SetSpeed(maxSpeed)
-		return maxSpeed
-	}
-
-	acceleration := maxSpeed * (1 - startSpeedFraction) / accelerationTime
-	if uc.isOnIce(tank) {
-		acceleration *= iceAccelerationFactor
-	}
-	speed := max(tank.GetSpeed(), maxSpeed*startSpeedFraction)
-	speed = min(maxSpeed, speed+acceleration*dt)
-	tank.SetSpeed(speed)
-	return speed
 }
 
 // isOnIce — центр танка находится на блоке льда
