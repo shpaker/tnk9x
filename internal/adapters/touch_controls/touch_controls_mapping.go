@@ -18,17 +18,6 @@ func logicalToScreen(
 	return float64(lx)*scale + offsetX, float64(ly)*scale + offsetY
 }
 
-// screenToDrawnLogical переводит пиксели финального экрана в
-// координаты логического экрана, каким он реально нарисован:
-// целый масштаб gameScale со смещением gameX/gameY
-func screenToDrawnLogical(
-	sx, sy float64,
-	gameX, gameY, gameScale int,
-) (float64, float64) {
-	return (sx - float64(gameX)) / float64(gameScale),
-		(sy - float64(gameY)) / float64(gameScale)
-}
-
 // gameRect повторяет integer-floor масштабирование DrawFinalScreen:
 // чёткие пиксели NES, центрирование, чёрные поля; shrink уменьшает
 // масштаб на шаг, освобождая поля под экранные контроллы

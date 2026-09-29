@@ -59,14 +59,6 @@ func TestLogicalToScreen_ExactMultiple(t *testing.T) {
 	}
 }
 
-func TestScreenToDrawnLogical(t *testing.T) {
-	// Игра нарисована с целым масштабом 2 и смещением (194,126)
-	lx, ly := screenToDrawnLogical(194+2*10, 126+2*20, 194, 126, 2)
-	if lx != 10 || ly != 20 {
-		t.Errorf("ожидалось (10,20), получено (%f,%f)", lx, ly)
-	}
-}
-
 func TestGameRect(t *testing.T) {
 	cases := []struct {
 		name             string

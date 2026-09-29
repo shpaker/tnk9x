@@ -40,10 +40,11 @@ type TouchControlsAdapter struct {
 	// Состояние кадра
 	direction    types.Direction
 	hasDirection bool
-	fireJust     bool
-	pauseJust    bool
-	tap          types.Position
-	hasTap       bool
+	// directionJust — крестовину нажали в этом кадре или сменили
+	// направление: шаг по пунктам меню
+	directionJust bool
+	fireJust      bool
+	pauseJust     bool
 
 	// Ebiten-функции инжектируются для headless-тестов
 	appendTouchIDs            func([]ebiten.TouchID) []ebiten.TouchID
@@ -81,7 +82,7 @@ func NewTouchControlsAdapter(
 func (a *TouchControlsAdapter) Update() {
 	a.fireJust = false
 	a.pauseJust = false
-	a.hasTap = false
+	a.directionJust = false
 
 	a.touchIDs = a.appendTouchIDs(a.touchIDs[:0])
 	a.justPressedIDs = a.appendJustPressedTouchIDs(a.justPressedIDs[:0])
@@ -106,16 +107,16 @@ func (a *TouchControlsAdapter) DPadDirection() (types.Direction, bool) {
 	return a.direction, a.hasDirection
 }
 
+func (a *TouchControlsAdapter) DPadJustPressed() (types.Direction, bool) {
+	return a.direction, a.directionJust
+}
+
 func (a *TouchControlsAdapter) FireJustPressed() bool {
 	return a.fireJust
 }
 
 func (a *TouchControlsAdapter) PauseJustPressed() bool {
 	return a.pauseJust
-}
-
-func (a *TouchControlsAdapter) TapJustPressed() (types.Position, bool) {
-	return a.tap, a.hasTap
 }
 
 // SetScreenSize фиксирует размер финального экрана (вызывается из
@@ -170,7 +171,7 @@ func (a *TouchControlsAdapter) computeLayout() ControlsLayout {
 }
 
 // handleJustPressed раздаёт новые касания по зонам: контроллы
-// забирают тач во владение, остальное — кандидат в тап по экрану
+// забирают тач во владение, касания вне контролов не действуют
 func (a *TouchControlsAdapter) handleJustPressed() {
 	for _, id := range a.justPressedIDs {
 		sx, sy := a.screenTouchPosition(id)
@@ -183,8 +184,6 @@ func (a *TouchControlsAdapter) handleJustPressed() {
 			a.fireJust = true
 		case point.In(a.layout.Pause):
 			a.pauseJust = true
-		default:
-			a.registerTap(sx, sy)
 		}
 	}
 }
@@ -197,23 +196,6 @@ func (a *TouchControlsAdapter) screenTouchPosition(
 	return logicalToScreen(
 		lx, ly, a.logicalW, a.logicalH, a.screenW, a.screenH,
 	)
-}
-
-// registerTap запоминает тап по нарисованному игровому экрану в его
-// логических координатах (для меню и оверлеев)
-func (a *TouchControlsAdapter) registerTap(sx, sy float64) {
-	drawn := image.Rect(
-		a.gameX,
-		a.gameY,
-		a.gameX+a.logicalW*a.gameScale,
-		a.gameY+a.logicalH*a.gameScale,
-	)
-	if !image.Pt(int(sx), int(sy)).In(drawn) {
-		return
-	}
-	lx, ly := screenToDrawnLogical(sx, sy, a.gameX, a.gameY, a.gameScale)
-	a.tap = types.Position{X: lx, Y: ly}
-	a.hasTap = true
 }
 
 func (a *TouchControlsAdapter) pruneReleased() {
@@ -237,8 +219,14 @@ func filterActive(owned, active []ebiten.TouchID) []ebiten.TouchID {
 // updateDirection вычисляет направление крестовины по последнему из
 // удерживаемых на ней тачей: вне мёртвой зоны выбирается
 // доминирующая ось, внутри — сохраняется прежнее направление; палец
-// может уехать за пределы крестовины и продолжать рулить
+// может уехать за пределы крестовины и продолжать рулить. Нажатие
+// или смена направления отмечаются как шаг для меню
 func (a *TouchControlsAdapter) updateDirection() {
+	wasDirection, previous := a.hasDirection, a.direction
+	defer func() {
+		a.directionJust = a.hasDirection &&
+			(!wasDirection || a.direction != previous)
+	}()
 	if len(a.dpadTouchIDs) == 0 {
 		a.hasDirection = false
 		return

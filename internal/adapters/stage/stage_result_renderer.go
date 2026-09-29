@@ -43,9 +43,6 @@ func (r *StageRendererAdapter) DrawStageResult(
 	bounds := screen.Bounds()
 	width := float64(bounds.Dx())
 	height := float64(bounds.Dy())
-	r.lastWidth = width
-	r.lastHeight = height
-	r.resultItems = view.Items
 
 	vector.FillRect(
 		screen, 0, 0, float32(width), float32(height),
@@ -103,27 +100,6 @@ func (r *StageRendererAdapter) DrawStageResult(
 	}
 }
 
-// StageResultHitTest определяет пункт меню итогов по тапу
-func (r *StageRendererAdapter) StageResultHitTest(
-	pos types.Position,
-) (types.StageResultItem, bool) {
-	if r.lastHeight <= 0 || len(r.resultItems) == 0 {
-		return 0, false
-	}
-	layout := r.resultMenuLayout(r.lastHeight, len(r.resultItems))
-	if pos.Y < layout.menuTop || pos.Y >= layout.menuBottom {
-		return 0, false
-	}
-	for i := len(layout.rowTops) - 1; i > 0; i-- {
-		boundary := (layout.rowTops[i-1] + layout.rowHeight +
-			layout.rowTops[i]) / 2
-		if pos.Y >= boundary {
-			return r.resultItems[i], true
-		}
-	}
-	return r.resultItems[0], true
-}
-
 // resultMenuLayout — строки меню итогов в нижней части экрана
 func (r *StageRendererAdapter) resultMenuLayout(
 	height float64,
@@ -137,8 +113,6 @@ func (r *StageRendererAdapter) resultMenuLayout(
 	for i := range layout.rowTops {
 		layout.rowTops[i] += shift
 	}
-	layout.menuTop += shift
-	layout.menuBottom += shift
 	return layout
 }
 

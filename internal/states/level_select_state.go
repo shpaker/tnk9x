@@ -12,7 +12,6 @@ import (
 // определён у потребителя
 type LevelSelectRenderer interface {
 	Draw(screen *ebiten.Image, view types.LevelSelectViewData)
-	HitTest(pos types.Position) types.LevelSelectHit
 }
 
 // LevelSelectState — экран выбора уровня кампании: пачки по строкам,
@@ -58,11 +57,12 @@ func (s *LevelSelectState) Update() types.StateTransition {
 	s.handleNavigation()
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyEnter) ||
-		inpututil.IsKeyJustPressed(ebiten.KeySpace) {
+		inpututil.IsKeyJustPressed(ebiten.KeySpace) ||
+		s.touchControls.FireJustPressed() {
 		return s.startTransition()
 	}
 
-	return s.handleTap()
+	return types.StateTransition{}
 }
 
 func (s *LevelSelectState) Draw(screen *ebiten.Image) {
@@ -72,50 +72,27 @@ func (s *LevelSelectState) Draw(screen *ebiten.Image) {
 	s.renderer.Draw(screen, view)
 }
 
+// handleNavigation — стрелки клавиатуры и крестовина: влево-вправо
+// листают уровни, вверх-вниз — пачки
 func (s *LevelSelectState) handleNavigation() {
-	if inpututil.IsKeyJustPressed(ebiten.KeyLeft) ||
-		inpututil.IsKeyJustPressed(ebiten.KeyA) {
+	dpad, pressed := s.touchControls.DPadJustPressed()
+	step := func(keys [2]ebiten.Key, direction types.Direction) bool {
+		return inpututil.IsKeyJustPressed(keys[0]) ||
+			inpututil.IsKeyJustPressed(keys[1]) ||
+			(pressed && dpad == direction)
+	}
+	if step([2]ebiten.Key{ebiten.KeyLeft, ebiten.KeyA}, types.DirectionLeft) {
 		s.levelSelectUseCases.MoveLevel(s.selector, -1)
 	}
-	if inpututil.IsKeyJustPressed(ebiten.KeyRight) ||
-		inpututil.IsKeyJustPressed(ebiten.KeyD) {
+	if step([2]ebiten.Key{ebiten.KeyRight, ebiten.KeyD}, types.DirectionRight) {
 		s.levelSelectUseCases.MoveLevel(s.selector, 1)
 	}
-	if inpututil.IsKeyJustPressed(ebiten.KeyUp) ||
-		inpututil.IsKeyJustPressed(ebiten.KeyW) {
+	if step([2]ebiten.Key{ebiten.KeyUp, ebiten.KeyW}, types.DirectionUp) {
 		s.levelSelectUseCases.MovePack(s.selector, -1)
 	}
-	if inpututil.IsKeyJustPressed(ebiten.KeyDown) ||
-		inpututil.IsKeyJustPressed(ebiten.KeyS) {
+	if step([2]ebiten.Key{ebiten.KeyDown, ebiten.KeyS}, types.DirectionDown) {
 		s.levelSelectUseCases.MovePack(s.selector, 1)
 	}
-}
-
-// handleTap — тап по ячейке выбирает уровень, повторный тап по
-// выбранной запускает его; стрелки листают пачки, нижняя полоса —
-// запуск
-func (s *LevelSelectState) handleTap() types.StateTransition {
-	pos, ok := s.touchControls.TapJustPressed()
-	if !ok {
-		return types.StateTransition{}
-	}
-
-	hit := s.renderer.HitTest(pos)
-	switch hit.Kind {
-	case types.LevelSelectHitPrevPack:
-		s.levelSelectUseCases.MovePack(s.selector, -1)
-	case types.LevelSelectHitNextPack:
-		s.levelSelectUseCases.MovePack(s.selector, 1)
-	case types.LevelSelectHitLevel:
-		if hit.Position == s.selector.Position {
-			return s.startTransition()
-		}
-		s.levelSelectUseCases.SetPosition(s.selector, hit.Position)
-	case types.LevelSelectHitStart:
-		return s.startTransition()
-	}
-
-	return types.StateTransition{}
 }
 
 // startTransition запускает выбранный уровень, если он открыт

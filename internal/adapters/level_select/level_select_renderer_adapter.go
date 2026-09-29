@@ -26,7 +26,6 @@ const (
 	infoLeft      = 132
 	hintBottomGap = 22
 	startBottom   = 10
-	arrowZone     = 40 // ширина тап-зон стрелок пачки по краям
 )
 
 // Цвета экрана выбора уровня
@@ -64,11 +63,6 @@ type LevelSelectRendererAdapter struct {
 	hqPosition      types.Position
 	spawnerPosition []types.Position
 	cellSizePx      float64
-
-	// Последняя отрисовка — для хит-тестов тапов
-	lastWidth   float64
-	lastHeight  float64
-	lastEntries int
 }
 
 // LevelSelectRendererDependencies — зависимости рендера экрана выбора
@@ -104,9 +98,6 @@ func (r *LevelSelectRendererAdapter) Draw(
 ) {
 	width := float64(screen.Bounds().Dx())
 	height := float64(screen.Bounds().Dy())
-	r.lastWidth = width
-	r.lastHeight = height
-	r.lastEntries = len(view.Entries)
 
 	screen.Fill(color.Black)
 
@@ -374,7 +365,7 @@ func (r *LevelSelectRendererAdapter) drawInfo(
 const (
 	keyboardHint       = "ARROWS SELECT  ESC QUIT"
 	keyboardHintNoQuit = "ARROWS SELECT STAGE"
-	touchHint          = "TAP STAGE TO SELECT"
+	touchHint          = "D-PAD SELECT STAGE"
 )
 
 func (r *LevelSelectRendererAdapter) drawFooter(
@@ -389,7 +380,7 @@ func (r *LevelSelectRendererAdapter) drawFooter(
 	start := "PRESS ENTER TO START"
 	if view.TouchActive {
 		hint = touchHint
-		start = "TAP HERE TO START"
+		start = "PRESS FIRE TO START"
 	}
 	r.drawCentered(screen, hint, height-hintBottomGap, width, hintColor)
 
@@ -398,44 +389,6 @@ func (r *LevelSelectRendererAdapter) drawFooter(
 		startColor = dimTextColor
 	}
 	r.drawCentered(screen, start, height-startBottom, width, startColor)
-}
-
-// HitTest определяет зону экрана под тапом по последней отрисовке
-func (r *LevelSelectRendererAdapter) HitTest(
-	pos types.Position,
-) types.LevelSelectHit {
-	if r.lastWidth <= 0 || r.lastHeight <= 0 {
-		return types.LevelSelectHit{}
-	}
-
-	if pos.Y >= r.lastHeight-hintBottomGap-2 {
-		return types.LevelSelectHit{Kind: types.LevelSelectHitStart}
-	}
-
-	if pos.Y < cellsTop-4 {
-		if pos.X < arrowZone {
-			return types.LevelSelectHit{Kind: types.LevelSelectHitPrevPack}
-		}
-		if pos.X >= r.lastWidth-arrowZone {
-			return types.LevelSelectHit{Kind: types.LevelSelectHitNextPack}
-		}
-		return types.LevelSelectHit{}
-	}
-
-	if pos.Y < cellsTop+cellHeight+4 {
-		left := cellsLeft(r.lastWidth, r.lastEntries)
-		for position := 0; position < r.lastEntries; position++ {
-			x := left + float64(position)*(cellWidth+cellGap)
-			if pos.X >= x-cellGap/2 && pos.X < x+cellWidth+cellGap/2 {
-				return types.LevelSelectHit{
-					Kind:     types.LevelSelectHitLevel,
-					Position: position,
-				}
-			}
-		}
-	}
-
-	return types.LevelSelectHit{}
 }
 
 // textScale — масштаб основного шрифта относительно шрифта заголовка

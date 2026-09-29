@@ -44,11 +44,11 @@ type ITouchControlsAdapter interface {
 	IsTouchActive() bool
 	// DPadDirection — текущее направление виртуальной крестовины
 	DPadDirection() (types.Direction, bool)
+	// DPadJustPressed — крестовину нажали или сменили направление
+	// в этом кадре: шаг по пунктам меню
+	DPadJustPressed() (types.Direction, bool)
 	FireJustPressed() bool
 	PauseJustPressed() bool
-	// TapJustPressed — тап по игровому экрану в его логических
-	// координатах, каким он реально нарисован (для меню и оверлеев)
-	TapJustPressed() (types.Position, bool)
 }
 
 // IAIScriptEngine — контракт движка AI-скриптов; реализация инкапсулирует

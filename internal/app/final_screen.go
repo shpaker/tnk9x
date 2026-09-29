@@ -9,7 +9,7 @@ var _ ebiten.FinalScreenDrawer = (*App)(nil)
 // поля; с включёнными эффектами кадр проходит bloom и CRT. Геометрию
 // считает адаптер тач-контролов — единый источник правды для
 // отрисовки и хит-тестов касаний. Экранные контроллы рисуются
-// в полях только во время уровня
+// в полях на всех экранах: меню тоже управляются крестовиной
 func (app *App) DrawFinalScreen(
 	screen ebiten.FinalScreen,
 	offscreen *ebiten.Image,
@@ -29,7 +29,5 @@ func (app *App) DrawFinalScreen(
 		app.effectsSettings.IsEnabled(),
 	)
 
-	if app.stageState != nil {
-		app.touchControls.DrawControls(screen)
-	}
+	app.touchControls.DrawControls(screen)
 }

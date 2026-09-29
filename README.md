@@ -18,7 +18,7 @@ A modern remake and tribute to the classic arcade game Battle City (NES, 1985), 
 
 - Full game loop with HQ and a results screen: stars, time, lives lost; next stage, retry or back to stage select
 - Two-player keyboard controls
-- Touch controls for mobile browsers: auto-detected virtual D-pad, fire and pause in the letterbox area, tappable menu
+- Touch controls for mobile browsers: auto-detected virtual D-pad, fire and pause in the letterbox area on every screen; menus are driven by the same controls (D-pad to move, fire to select, pause to go back)
 - Tank movement with braking and grid snap
 - Bullets and destructible terrain with incremental brick chipping: each hit shaves a half-tile slab, reinforced bullets break tiles whole
 - All five surface types (brick, steel, forest, water, ice) with ice sliding and water blocking

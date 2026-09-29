@@ -24,8 +24,8 @@ func (s *stubTouchControls) DPadDirection() (types.Direction, bool) {
 func (s *stubTouchControls) FireJustPressed() bool  { return s.fireJust }
 func (s *stubTouchControls) PauseJustPressed() bool { return s.pauseJust }
 
-func (s *stubTouchControls) TapJustPressed() (types.Position, bool) {
-	return types.Position{}, false
+func (s *stubTouchControls) DPadJustPressed() (types.Direction, bool) {
+	return s.direction, false
 }
 
 // recordingTankActions записывает вызовы команд танка
