@@ -430,3 +430,31 @@ func TestLightingUseCases_GetLights_ReinforcedBullet(t *testing.T) {
 		t.Error("reinforced bullet light matches the regular one")
 	}
 }
+
+// Враг с бонусом вспыхивает красным только в видимой фазе мигания
+func TestLightingUseCases_GetLights_BonusEnemyFlashes(t *testing.T) {
+	env := newLightingTestEnv()
+	enemy := newEnemyTankInState(types.TankStateMoving)
+	enemy.SetWithBonus(true)
+	env.tankCommon.tanks = []*types.TankEntity{enemy}
+
+	glow := func() types.LightEntity {
+		for _, light := range env.lighting.GetLights() {
+			if !light.IsCone() {
+				return light
+			}
+		}
+		t.Fatal("нет собственного света танка")
+		return types.LightEntity{}
+	}
+
+	if glow().Intensity > 1 {
+		t.Error("в скрытой фазе танк не должен вспыхивать")
+	}
+	for !enemy.GetBlinkFlag() {
+		enemy.UpdateBlink()
+	}
+	if light := glow(); light.Intensity <= 1 || light.Color.R <= light.Color.G {
+		t.Error("в видимой фазе ожидалась яркая красная вспышка")
+	}
+}

@@ -92,7 +92,14 @@ var (
 	}
 	// Корпус врага слабо тлеет красным
 	enemyLight = lightSpec{14, color.NRGBA{R: 255, G: 90, B: 70, A: 255}, 0.25}
-	hqLight    = lightSpec{36, color.NRGBA{R: 255, G: 210, B: 90, A: 255}, 0.6}
+	// Враг с бонусом в видимой фазе мигания вспыхивает красным
+	// с пересветом для bloom: добычу видно издалека
+	bonusEnemyLight = lightSpec{
+		34,
+		color.NRGBA{R: 255, G: 60, B: 50, A: 255},
+		1.5,
+	}
+	hqLight = lightSpec{36, color.NRGBA{R: 255, G: 210, B: 90, A: 255}, 0.6}
 )
 
 // Параметры фары: половина угла конуса у игрока и врага, вынос
@@ -244,7 +251,8 @@ func headlightOf(tank *types.TankEntity) (types.LightEntity, int, bool) {
 }
 
 // tankLight — собственный свет танка по его состоянию: у игрока аура
-// обзора, щит заменяет собственный свет, уничтоженный танк не светит
+// обзора, щит заменяет собственный свет, враг с бонусом вспыхивает
+// в такт миганию, уничтоженный танк не светит
 func tankLight(tank *types.TankEntity) (types.LightEntity, int, bool) {
 	switch {
 	case tank.State == types.TankStateExploded:
@@ -257,6 +265,9 @@ func tankLight(tank *types.TankEntity) (types.LightEntity, int, bool) {
 			lightPriorityAccent, true
 	case tank.HasShield():
 		return shieldLightOf(tank), lightPriorityAccent, true
+	case tank.IsEnemy() && tank.GetWithBonus() && tank.GetBlinkFlag():
+		return newLight(tank.Position, tank.Size, bonusEnemyLight),
+			lightPriorityAccent, true
 	case tank.IsEnemy():
 		return newLight(tank.Position, tank.Size, enemyLight),
 			lightPriorityAmbient, true
