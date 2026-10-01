@@ -99,10 +99,11 @@ func (uc *BonusUseCases) Apply(
 }
 
 // UpdateEffects продвигает отсчёты действующих эффектов бонусов:
-// щиты танков, заморозку врагов и укрепление штаба
+// щиты и заморозку танков, заморозку врагов и укрепление штаба
 func (uc *BonusUseCases) UpdateEffects() {
 	for _, tank := range uc.tankCommonUseCases.GetAllTanks() {
 		tank.UpdateShieldCountdown()
+		tank.UpdateFreezeCountdown()
 	}
 
 	if uc.stageSession != nil {
@@ -141,9 +142,7 @@ func (uc *BonusUseCases) applyForEnemy(
 	case types.BonusTypeGrenade:
 		uc.explodePlayers()
 	case types.BonusTypeTimer:
-		if uc.stageSession != nil {
-			uc.stageSession.FreezePlayers(enemyFreezeDurationTicks)
-		}
+		uc.freezePlayers()
 	case types.BonusTypeShovel:
 		uc.stripHQWalls()
 	case types.BonusTypeTank:
@@ -155,14 +154,33 @@ func (uc *BonusUseCases) applyForEnemy(
 	}
 }
 
+// activePlayers возвращает танки игроков, находящиеся в игре
+func (uc *BonusUseCases) activePlayers() []*types.TankEntity {
+	var players []*types.TankEntity
+	for _, tank := range uc.tankCommonUseCases.GetAllTanks() {
+		if tank == nil || tank.IsEnemy() || !tank.IsActive() {
+			continue
+		}
+		players = append(players, tank)
+	}
+	return players
+}
+
 // explodePlayers взрывает активных игроков без щита — граната врага
 func (uc *BonusUseCases) explodePlayers() {
-	for _, player := range uc.tankCommonUseCases.GetAllTanks() {
-		if player == nil || player.IsEnemy() || !player.IsActive() ||
-			player.HasShield() {
+	for _, player := range uc.activePlayers() {
+		if player.HasShield() {
 			continue
 		}
 		_ = uc.tankLifecycleUseCases.Explode(player)
+	}
+}
+
+// freezePlayers замораживает активных игроков — таймер врага. Заморозка
+// живёт на танке и снимается вместе с ним при гибели
+func (uc *BonusUseCases) freezePlayers() {
+	for _, player := range uc.activePlayers() {
+		player.Freeze(enemyFreezeDurationTicks)
 	}
 }
 

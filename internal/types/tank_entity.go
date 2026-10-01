@@ -49,6 +49,7 @@ type TankEntity struct {
 	blinkFlag     bool // Флаг видимости
 	hitPoints     uint // Количество попаданий до уничтожения (для тяжёлых танков)
 	shieldTicks   uint // Оставшиеся тики неуязвимости от каски
+	freezeTicks   uint // Оставшиеся тики заморозки игрока таймером врага
 
 	// Графические эффекты: направление фары (радианы, плавно
 	// доворачивается за стволом) и оставшиеся тики отдачи выстрела
@@ -299,6 +300,31 @@ func (t *TankEntity) UpdateShieldCountdown() {
 	}
 	if t.shieldTicks > 0 {
 		t.shieldTicks--
+	}
+}
+
+// Freeze замораживает танк на заданное число тиков — таймер, подобранный
+// врагом. Заморозка живёт на танке: погибший игрок возрождается без неё
+func (t *TankEntity) Freeze(ticks uint) {
+	if t == nil {
+		return
+	}
+	t.freezeTicks = ticks
+}
+
+func (t *TankEntity) IsFrozen() bool {
+	if t == nil {
+		return false
+	}
+	return t.freezeTicks > 0
+}
+
+func (t *TankEntity) UpdateFreezeCountdown() {
+	if t == nil {
+		return
+	}
+	if t.freezeTicks > 0 {
+		t.freezeTicks--
 	}
 }
 

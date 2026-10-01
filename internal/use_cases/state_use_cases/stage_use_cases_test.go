@@ -147,11 +147,12 @@ func (s *stubCollisionUseCases) IsSpawnerBlocked(
 }
 
 type stubHQUseCases struct {
+	hq              *types.HQEntity
 	destroyed       bool
 	explosionChecks int
 }
 
-func (s *stubHQUseCases) GetHQ() *types.HQEntity           { return nil }
+func (s *stubHQUseCases) GetHQ() *types.HQEntity           { return s.hq }
 func (s *stubHQUseCases) Explode(hq *types.HQEntity) error { return nil }
 
 func (s *stubHQUseCases) IsExplosionFinished(hq *types.HQEntity) {
@@ -1038,6 +1039,87 @@ func TestStageUseCases_TrackDestroyedEnemies_BonusEnemyClearsBonuses(
 	remaining := env.bonuses.GetAllBonuses()
 	if len(remaining) != 1 || remaining[0] != owned {
 		t.Errorf("бонусы после уничтожения: %v", remaining)
+	}
+}
+
+// stubBonusMap — пустая карта, всегда предлагающая одну позицию бонуса
+type stubBonusMap struct {
+	position types.Position
+}
+
+func (s *stubBonusMap) GetBlocks() types.MapBlocks           { return nil }
+func (s *stubBonusMap) RemoveBlock(*types.BlockEntity) error { return nil }
+
+func (s *stubBonusMap) GetSizePx() types.Size       { return types.Size{} }
+func (s *stubBonusMap) IsIceAt(types.Position) bool { return false }
+func (s *stubBonusMap) IsWaterUnder(types.Position, types.Size) bool {
+	return false
+}
+
+func (s *stubBonusMap) GetRandomBonusSpawnPosition() types.Position {
+	return s.position
+}
+
+// stubBonusSpawner создаёт бонус в предложенной позиции
+type stubBonusSpawner struct{}
+
+func (s *stubBonusSpawner) Apply(*types.BonusEntity, *types.TankEntity) {}
+func (s *stubBonusSpawner) UpdateEffects()                              {}
+
+func (s *stubBonusSpawner) VisibleBonuses() []*types.BonusEntity { return nil }
+
+func (s *stubBonusSpawner) SpawnRandomBonusEntity(
+	position types.Position,
+) *types.BonusEntity {
+	return types.NewBonusEntity(
+		types.BonusTypeStar,
+		position,
+		types.Size{Width: 16, Height: 16},
+		nil,
+	)
+}
+
+// spawnBonusAt уничтожает бонусного врага на карте, предлагающей
+// для бонуса единственную позицию, и возвращает бонусы на поле
+func spawnBonusAt(
+	hq *types.HQEntity,
+	position types.Position,
+) []*types.BonusEntity {
+	session := session_entities.NewStageSessionEntity()
+	session.SetUpLevel(newTestLevel(
+		5, basicWave(20, 1, types.WaveStart{}),
+	))
+	bonusEnemy := newTankInState(types.TankRoleEnemy, types.TankStateExploded)
+	bonusEnemy.SetWithBonus(true)
+	bonuses := game.NewBonusesRepository()
+
+	stage := state_use_cases.NewStageUseCases(
+		&stubLifecycle{},
+		use_cases.NewWaveUseCases(),
+		&stubSpawnSelection{spawners: 3},
+		&stubTankCommon{tanks: []*types.TankEntity{bonusEnemy}},
+		&stubBulletUseCases{},
+		&stubCollisionUseCases{},
+		&stubHQUseCases{hq: hq},
+		session,
+		bonuses,
+		&stubBonusMap{position: position},
+		&stubBonusSpawner{},
+	)
+	stage.UpdateGameObjects(testDT)
+
+	return bonuses.GetAllBonuses()
+}
+
+// Бонус не появляется на штабе, а на свободном месте — появляется
+func TestStageUseCases_BonusNotSpawnedOnHQ(t *testing.T) {
+	hq := &types.HQEntity{Position: types.Position{X: 96, Y: 192}}
+
+	if got := spawnBonusAt(hq, hq.Position); len(got) != 0 {
+		t.Errorf("бонус появился на штабе: %v", got)
+	}
+	if got := spawnBonusAt(hq, types.Position{X: 32, Y: 32}); len(got) != 1 {
+		t.Errorf("бонусов на свободном месте %d, ожидался 1", len(got))
 	}
 }
 

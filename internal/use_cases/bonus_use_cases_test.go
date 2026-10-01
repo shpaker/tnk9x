@@ -671,15 +671,39 @@ func TestBonusUseCases_EnemyGrenade(t *testing.T) {
 	}
 }
 
-// Часы врага морозят игроков, а не врагов
+// Часы врага морозят танки игроков, а не врагов; возрождённый
+// игрок — новый танк, без заморозки
 func TestBonusUseCases_EnemyTimer(t *testing.T) {
 	env := newBonusTestEnv()
 	enemy := newEnemyTankInState(types.TankStateMoving)
+	player := newPlayerTank(types.TankRolePlayer1)
+	env.tankCommon.tanks = []*types.TankEntity{enemy, player}
 
 	env.bonusUC.Apply(env.newBonus(types.BonusTypeTimer), enemy)
 
-	if !env.session.ArePlayersFrozen() || env.session.AreEnemiesFrozen() {
-		t.Error("таймер врага должен заморозить игроков")
+	if !player.IsFrozen() || enemy.IsFrozen() ||
+		env.session.AreEnemiesFrozen() {
+		t.Error("таймер врага должен заморозить только игроков")
+	}
+	if newPlayerTank(types.TankRolePlayer1).IsFrozen() {
+		t.Error("возрождённый игрок не должен быть заморожен")
+	}
+}
+
+// Заморозка игрока оттаивает по отсчёту эффектов
+func TestBonusUseCases_UpdateEffects_PlayerFreezeCountdown(t *testing.T) {
+	env := newBonusTestEnv()
+	player := newPlayerTank(types.TankRolePlayer1)
+	player.Freeze(2)
+	env.tankCommon.tanks = []*types.TankEntity{player}
+
+	env.bonusUC.UpdateEffects()
+	if !player.IsFrozen() {
+		t.Fatal("игрок оттаял раньше времени")
+	}
+	env.bonusUC.UpdateEffects()
+	if player.IsFrozen() {
+		t.Error("игрок должен оттаять по окончании отсчёта")
 	}
 }
 

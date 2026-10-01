@@ -477,17 +477,20 @@ func (uc *StageUseCases) handleEnemyWithBonusDestroyed() {
 			continue
 		}
 
+		// Бонус не должен лечь на штаб
+		if hq := uc.hqUseCases.GetHQ(); hq != nil &&
+			overlaps(bonusCandidate, hq) {
+			continue
+		}
+
 		// Проверяем коллизии с блоками
 		blocks := uc.mapUseCases.GetBlocks()
 		hasBlockCollision := false
-		// Используем collisionUseCases для проверки коллизий с блоками
-		// Для этого нужно проверить каждый блок
 		for _, block := range blocks {
 			if block == nil {
 				continue
 			}
-			// Используем простую проверку пересечения прямоугольников
-			if uc.checkBonusBlockCollision(bonusCandidate, block) {
+			if overlaps(bonusCandidate, block) {
 				hasBlockCollision = true
 				break
 			}
@@ -504,25 +507,17 @@ func (uc *StageUseCases) handleEnemyWithBonusDestroyed() {
 	}
 }
 
-// checkBonusBlockCollision проверяет коллизию бонуса с блоком
-func (uc *StageUseCases) checkBonusBlockCollision(
-	bonus *types.BonusEntity,
-	block *types.BlockEntity,
-) bool {
-	if bonus == nil || block == nil {
-		return false
-	}
-
+// overlaps проверяет пересечение прямоугольников бонуса и препятствия
+func overlaps(bonus *types.BonusEntity, obstacle types.IEntityCollider) bool {
 	bonusPos := bonus.GetPosition()
 	bonusSize := bonus.GetSize()
-	blockPos := block.GetPosition()
-	blockSize := block.GetSize()
+	obstaclePos := obstacle.GetPosition()
+	obstacleSize := obstacle.GetSize()
 
-	// Простая проверка пересечения прямоугольников
-	return bonusPos.X < blockPos.X+float64(blockSize.Width) &&
-		bonusPos.X+float64(bonusSize.Width) > blockPos.X &&
-		bonusPos.Y < blockPos.Y+float64(blockSize.Height) &&
-		bonusPos.Y+float64(bonusSize.Height) > blockPos.Y
+	return bonusPos.X < obstaclePos.X+float64(obstacleSize.Width) &&
+		bonusPos.X+float64(bonusSize.Width) > obstaclePos.X &&
+		bonusPos.Y < obstaclePos.Y+float64(obstacleSize.Height) &&
+		bonusPos.Y+float64(bonusSize.Height) > obstaclePos.Y
 }
 
 func (uc *StageUseCases) GetPlayersTanks() []*types.TankEntity {
