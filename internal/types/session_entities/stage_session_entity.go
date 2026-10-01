@@ -47,8 +47,9 @@ type StageSessionEntity struct {
 
 	enemySpawnTicks uint
 
-	enemyFreezeTicks  uint // Оставшиеся тики заморозки врагов бонусом-таймером
-	playerFreezeTicks uint // Оставшиеся тики заморозки игроков таймером врага
+	// Оставшиеся тики заморозки врагов бонусом-таймером: общая на всех,
+	// чтобы морозить и врагов, вышедших во время заморозки
+	enemyFreezeTicks uint
 
 	// Дополнительные враги из бонуса-танка, подобранного врагом:
 	// выходят на поле после всех волн сценария
@@ -400,18 +401,6 @@ func (s *StageSessionEntity) UpdateEnemyFreezeCountdown() {
 	if s.enemyFreezeTicks > 0 {
 		s.enemyFreezeTicks--
 	}
-	if s.playerFreezeTicks > 0 {
-		s.playerFreezeTicks--
-	}
-}
-
-// FreezePlayers запускает заморозку игроков — таймер, подобранный врагом
-func (s *StageSessionEntity) FreezePlayers(ticks uint) {
-	s.playerFreezeTicks = ticks
-}
-
-func (s *StageSessionEntity) ArePlayersFrozen() bool {
-	return s.playerFreezeTicks > 0
 }
 
 // GetMaxActiveEnemies — лимит одновременно активных врагов уровня

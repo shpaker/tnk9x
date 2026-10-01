@@ -165,15 +165,16 @@ func (uc *TankCommonUseCases) LevelUp(tank *types.TankEntity) {
 }
 
 // IsFrozen реализует ITankCommonUseCases: таймер игрока морозит
-// врагов, таймер врага — игроков
+// всех врагов уровня (заморозка общая, в сессии), таймер врага —
+// конкретные танки игроков (заморозка уходит вместе с танком)
 func (uc *TankCommonUseCases) IsFrozen(tank *types.TankEntity) bool {
-	if tank == nil || uc.stageSession == nil {
+	if tank == nil {
 		return false
 	}
-	if tank.IsEnemy() {
-		return uc.stageSession.AreEnemiesFrozen()
+	if !tank.IsEnemy() {
+		return tank.IsFrozen()
 	}
-	return uc.stageSession.ArePlayersFrozen()
+	return uc.stageSession != nil && uc.stageSession.AreEnemiesFrozen()
 }
 
 // SetMaxLevel реализует ITankCommonUseCases

@@ -535,10 +535,10 @@ func TestTankEntity_AnimationName_Fallbacks(t *testing.T) {
 // Таймер врага морозит игрока: танк стоит, враги едут
 func TestTankCommonUseCases_Update_PlayersFrozen(t *testing.T) {
 	env := newCommonTestEnv()
-	env.session.FreezePlayers(60)
 	player := env.newTank(
 		types.TankRolePlayer1, types.DirectionRight, types.TankStateMoving, 0,
 	)
+	player.Freeze(60)
 	enemy := env.newTank(
 		types.TankRoleEnemy, types.DirectionRight, types.TankStateMoving, 0,
 	)

@@ -41,6 +41,10 @@ func (h *HQEntity) GetAltitude() Altitude {
 	return h.Altitude
 }
 
+func (h *HQEntity) IsIntact() bool {
+	return h.State == HQStateIntact
+}
+
 func (h *HQEntity) IsDestroyed() bool {
 	return h.State == HQStateDestroyed
 }

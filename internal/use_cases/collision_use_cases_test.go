@@ -177,6 +177,7 @@ type collisionTestEnv struct {
 	specsUC     *use_cases.SpecsUseCases
 	soundUC     *use_cases.SoundUseCases
 	effects     *testutil.FakeVisualEffectsUseCases
+	hqUseCases  *stubHQUseCases
 }
 
 func newCollisionTestEnv(blocks types.MapBlocks) *collisionTestEnv {
@@ -233,6 +234,7 @@ func newCollisionTestEnvWith(
 
 	bonuses := &recordingBonusUseCases{}
 	bonusesRepo := game.NewBonusesRepository()
+	hqUseCases := &stubHQUseCases{}
 	collision := use_cases.NewCollisionUseCases(
 		bulletUC,
 		tankActions,
@@ -244,7 +246,7 @@ func newCollisionTestEnvWith(
 		bulletSvc,
 		entities,
 		collision_services.NewSpawnCollisionService(entities),
-		&stubHQUseCases{},
+		hqUseCases,
 		bonuses,
 		bonusesRepo,
 		soundUC,
@@ -267,6 +269,7 @@ func newCollisionTestEnvWith(
 		specsUC:     specsUC,
 		soundUC:     soundUC,
 		effects:     effects,
+		hqUseCases:  hqUseCases,
 	}
 }
 
@@ -553,6 +556,48 @@ func TestTankBlockCollision_FlushAgainstWall(t *testing.T) {
 			"танк разрушил блоки: осталось %d",
 			len(env.mapEntity.GetBlocks()),
 		)
+	}
+}
+
+// Целый орёл — препятствие: танк упирается в штаб и стоит вплотную
+func TestTankHQCollision_IntactHQBlocksTank(t *testing.T) {
+	env := newCollisionTestEnv(nil)
+	env.hqUseCases.hq = &types.HQEntity{
+		Position: types.Position{X: 120, Y: 100},
+	}
+
+	tank := env.newTank(types.TankRolePlayer1, types.DirectionRight, 64, 100, 0)
+	env.tanksRepo.SetPlayer(types.PlayerTankNumPlayer1, tank)
+
+	for i := 0; i < 160; i++ {
+		_ = env.tankActions.Move(tank)
+		env.tick()
+	}
+
+	if tank.Position.X != 104 {
+		t.Errorf("танк не стоит вплотную к штабу: X=%v (ожидалось 104)",
+			tank.Position.X)
+	}
+}
+
+// Разрушенный орёл проходим
+func TestTankHQCollision_DestroyedHQPassable(t *testing.T) {
+	env := newCollisionTestEnv(nil)
+	env.hqUseCases.hq = &types.HQEntity{
+		Position: types.Position{X: 120, Y: 100},
+		State:    types.HQStateDestroyed,
+	}
+
+	tank := env.newTank(types.TankRolePlayer1, types.DirectionRight, 64, 100, 0)
+	env.tanksRepo.SetPlayer(types.PlayerTankNumPlayer1, tank)
+
+	for i := 0; i < 160; i++ {
+		_ = env.tankActions.Move(tank)
+		env.tick()
+	}
+
+	if tank.Position.X <= 120 {
+		t.Errorf("танк не проехал разрушенный штаб: X=%v", tank.Position.X)
 	}
 }
 
