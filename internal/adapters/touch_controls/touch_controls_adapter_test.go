@@ -18,7 +18,7 @@ type fakeTouches struct {
 // newTestAdapter — адаптер на экране 1170x2532 (iPhone портрет,
 // dsf=1 для простых координат) с подменёнными ebiten-функциями
 func newTestAdapter(touches *fakeTouches) *TouchControlsAdapter {
-	adapter := NewTouchControlsAdapter(256, 224)
+	adapter := NewTouchControlsAdapter(256, 224, types.NewSettingsEntity())
 	adapter.appendTouchIDs = func(
 		ids []ebiten.TouchID,
 	) []ebiten.TouchID {
@@ -50,7 +50,7 @@ func logicalAt(sx, sy float64) [2]int {
 
 func TestTouchControlsAdapter_LatchAndInertBeforeScreen(t *testing.T) {
 	touches := &fakeTouches{}
-	adapter := NewTouchControlsAdapter(256, 224)
+	adapter := NewTouchControlsAdapter(256, 224, types.NewSettingsEntity())
 	adapter.appendTouchIDs = func(
 		ids []ebiten.TouchID,
 	) []ebiten.TouchID {
@@ -77,7 +77,8 @@ func TestTouchControlsAdapter_LatchAndInertBeforeScreen(t *testing.T) {
 	if !adapter.IsTouchActive() {
 		t.Error("касание должно взводить защёлку")
 	}
-	if adapter.FireJustPressed() || adapter.PauseJustPressed() {
+	if adapter.FireJustPressed(types.PlayerTankNumPlayer1) ||
+		adapter.PauseJustPressed() {
 		t.Error("без геометрии экрана касания должны игнорироваться")
 	}
 
@@ -93,8 +94,8 @@ func TestTouchControlsAdapter_LatchAndInertBeforeScreen(t *testing.T) {
 func TestTouchControlsAdapter_MultiTouchIndependence(t *testing.T) {
 	touches := &fakeTouches{positions: map[ebiten.TouchID][2]int{}}
 	adapter := newTestAdapter(touches)
-	dpad := adapter.layout.DPad
-	fire := adapter.layout.Fire
+	dpad := adapter.layout.Players[0].DPad
+	fire := adapter.layout.Players[0].Fire
 
 	// Палец 1 держит правое плечо крестовины
 	dpadCenterX := float64(dpad.Min.X+dpad.Max.X) / 2
@@ -106,14 +107,14 @@ func TestTouchControlsAdapter_MultiTouchIndependence(t *testing.T) {
 	touches.justPressed = []ebiten.TouchID{1}
 	adapter.Update()
 
-	direction, ok := adapter.DPadDirection()
+	direction, ok := adapter.DPadDirection(types.PlayerTankNumPlayer1)
 	if !ok || direction != types.DirectionRight {
 		t.Fatalf(
 			"ожидалось направление вправо, получено (%v,%v)",
 			direction, ok,
 		)
 	}
-	if adapter.FireJustPressed() {
+	if adapter.FireJustPressed(types.PlayerTankNumPlayer1) {
 		t.Error("огонь не нажимался")
 	}
 
@@ -126,10 +127,10 @@ func TestTouchControlsAdapter_MultiTouchIndependence(t *testing.T) {
 	touches.justPressed = []ebiten.TouchID{2}
 	adapter.Update()
 
-	if !adapter.FireJustPressed() {
+	if !adapter.FireJustPressed(types.PlayerTankNumPlayer1) {
 		t.Error("тап по кнопке огня должен дать выстрел")
 	}
-	direction, ok = adapter.DPadDirection()
+	direction, ok = adapter.DPadDirection(types.PlayerTankNumPlayer1)
 	if !ok || direction != types.DirectionRight {
 		t.Error("крестовина должна продолжать держать направление")
 	}
@@ -137,14 +138,14 @@ func TestTouchControlsAdapter_MultiTouchIndependence(t *testing.T) {
 	// FireJustPressed — событие одного кадра
 	touches.justPressed = nil
 	adapter.Update()
-	if adapter.FireJustPressed() {
+	if adapter.FireJustPressed(types.PlayerTankNumPlayer1) {
 		t.Error("выстрел не должен повторяться при удержании")
 	}
 
 	// Отпускание пальца 1 останавливает крестовину
 	touches.active = []ebiten.TouchID{2}
 	adapter.Update()
-	if _, ok := adapter.DPadDirection(); ok {
+	if _, ok := adapter.DPadDirection(types.PlayerTankNumPlayer1); ok {
 		t.Error("после отпускания направление должно сброситься")
 	}
 
@@ -153,7 +154,7 @@ func TestTouchControlsAdapter_MultiTouchIndependence(t *testing.T) {
 	touches.active = []ebiten.TouchID{2, 3}
 	touches.justPressed = []ebiten.TouchID{3}
 	adapter.Update()
-	if _, ok := adapter.DPadDirection(); ok {
+	if _, ok := adapter.DPadDirection(types.PlayerTankNumPlayer1); ok {
 		t.Error("в мёртвой зоне направления быть не должно")
 	}
 }
@@ -163,7 +164,7 @@ func TestTouchControlsAdapter_MultiTouchIndependence(t *testing.T) {
 func TestTouchControlsAdapter_DPadJustPressed(t *testing.T) {
 	touches := &fakeTouches{positions: map[ebiten.TouchID][2]int{}}
 	adapter := newTestAdapter(touches)
-	dpad := adapter.layout.DPad
+	dpad := adapter.layout.Players[0].DPad
 	centerX := float64(dpad.Min.X+dpad.Max.X) / 2
 	centerY := float64(dpad.Min.Y+dpad.Max.Y) / 2
 
@@ -171,20 +172,20 @@ func TestTouchControlsAdapter_DPadJustPressed(t *testing.T) {
 	touches.active = []ebiten.TouchID{1}
 	touches.justPressed = []ebiten.TouchID{1}
 	adapter.Update()
-	if direction, ok := adapter.DPadJustPressed(); !ok ||
+	if direction, ok := adapter.DPadJustPressed(types.PlayerTankNumPlayer1); !ok ||
 		direction != types.DirectionUp {
 		t.Fatalf("ожидался шаг вверх, получено %v %v", direction, ok)
 	}
 
 	touches.justPressed = nil
 	adapter.Update()
-	if _, ok := adapter.DPadJustPressed(); ok {
+	if _, ok := adapter.DPadJustPressed(types.PlayerTankNumPlayer1); ok {
 		t.Error("удержание не должно давать новых шагов")
 	}
 
 	touches.positions[1] = logicalAt(centerX, centerY+float64(dpad.Dy())/3)
 	adapter.Update()
-	if direction, ok := adapter.DPadJustPressed(); !ok ||
+	if direction, ok := adapter.DPadJustPressed(types.PlayerTankNumPlayer1); !ok ||
 		direction != types.DirectionDown {
 		t.Errorf("смена направления — новый шаг, получено %v %v", direction, ok)
 	}
@@ -194,7 +195,8 @@ func TestTouchControlsAdapter_DPadJustPressed(t *testing.T) {
 	touches.active = []ebiten.TouchID{2}
 	touches.justPressed = []ebiten.TouchID{2}
 	adapter.Update()
-	if _, ok := adapter.DPadJustPressed(); ok || adapter.FireJustPressed() {
+	if _, ok := adapter.DPadJustPressed(types.PlayerTankNumPlayer1); ok ||
+		adapter.FireJustPressed(types.PlayerTankNumPlayer1) {
 		t.Error("касание вне контролов не должно давать событий")
 	}
 }
@@ -214,5 +216,65 @@ func TestTouchControlsAdapter_PauseZone(t *testing.T) {
 
 	if !adapter.PauseJustPressed() {
 		t.Error("тап по зоне паузы должен дать событие паузы")
+	}
+}
+
+// В режиме на двоих касания правой полосы управляют P2, левой — P1
+func TestTouchControlsAdapter_TwoPlayers(t *testing.T) {
+	touches := &fakeTouches{positions: map[ebiten.TouchID][2]int{}}
+	settings := types.NewSettingsEntity()
+	settings.SetPlayers(2)
+	adapter := NewTouchControlsAdapter(256, 224, settings)
+	adapter.appendTouchIDs = func(ids []ebiten.TouchID) []ebiten.TouchID {
+		return append(ids, touches.active...)
+	}
+	adapter.appendJustPressedTouchIDs = func(
+		ids []ebiten.TouchID,
+	) []ebiten.TouchID {
+		return append(ids, touches.justPressed...)
+	}
+	adapter.touchPosition = func(id ebiten.TouchID) (int, int) {
+		pos := touches.positions[id]
+		return pos[0], pos[1]
+	}
+	adapter.deviceScaleFactor = func() float64 { return 1 }
+	adapter.SetScreenSize(2532, 1170)
+
+	at := func(x, y float64) [2]int {
+		lx, ly := ebitenScreenToLogical(x, y, 256, 224, 2532, 1170)
+		return [2]int{int(lx), int(ly)}
+	}
+	second := adapter.layout.Players[1]
+	touches.positions[1] = at(
+		float64(second.DPad.Min.X)+float64(second.DPad.Dx())/6,
+		float64(second.DPad.Min.Y+second.DPad.Max.Y)/2,
+	)
+	touches.positions[2] = at(
+		float64(second.Fire.Min.X+second.Fire.Max.X)/2,
+		float64(second.Fire.Min.Y+second.Fire.Max.Y)/2,
+	)
+	touches.active = []ebiten.TouchID{1, 2}
+	touches.justPressed = []ebiten.TouchID{1, 2}
+	adapter.Update()
+
+	direction, ok := adapter.DPadDirection(types.PlayerTankNumPlayer2)
+	if !ok || direction != types.DirectionLeft {
+		t.Errorf("P2 должен ехать влево, получено %v %v", direction, ok)
+	}
+	if !adapter.FireJustPressed(types.PlayerTankNumPlayer2) {
+		t.Error("огонь P2 должен сработать")
+	}
+	if _, ok := adapter.DPadDirection(types.PlayerTankNumPlayer1); ok ||
+		adapter.FireJustPressed(types.PlayerTankNumPlayer1) {
+		t.Error("касания P2 не должны управлять P1")
+	}
+
+	// Переход в одиночный режим отпускает контроллы P2
+	settings.SetPlayers(1)
+	adapter.SetScreenSize(2532, 1170)
+	touches.justPressed = nil
+	adapter.Update()
+	if _, ok := adapter.DPadDirection(types.PlayerTankNumPlayer2); ok {
+		t.Error("без второго игрока направления P2 нет")
 	}
 }

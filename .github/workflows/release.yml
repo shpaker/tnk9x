@@ -7,14 +7,13 @@ on:
 
 jobs:
   build:
-    name: Build ${{ matrix.os }} ${{ matrix.build_type }}
+    name: Build ${{ matrix.os }}
     runs-on: ${{ matrix.runner }}
     env:
       APP_VERSION: ${{ github.ref_name }}
     strategy:
       matrix:
         os: [windows, linux, macos]
-        build_type: [debug, prod]
         include:
           - os: windows
             runner: windows-latest
@@ -61,27 +60,17 @@ jobs:
             pkg-config
 
       - name: Build executable (Windows)
-        if: |
-          matrix.os == 'windows' &&
-          ((contains(github.ref_name, 'a') && matrix.build_type == 'debug') ||
-           (!contains(github.ref_name, 'a') && matrix.build_type == 'prod'))
+        if: matrix.os == 'windows'
         shell: pwsh
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
         run: |
-          if ("${{ matrix.build_type }}" -eq "debug") {
-            go build -ldflags "-X github.com/shpaker/tnk9x/internal/app.Version=$env:APP_VERSION -X github.com/shpaker/tnk9x/internal/app.DebugFlag=true" -o dist/tnk9x.exe ./cmd
-          } else {
-            $env:CGO_ENABLED = "0"
-            go build -trimpath -ldflags "-s -w -X github.com/shpaker/tnk9x/internal/app.Version=$env:APP_VERSION" -o dist/tnk9x.exe ./cmd
-          }
+          $env:CGO_ENABLED = "0"
+          go build -trimpath -ldflags "-s -w -X github.com/shpaker/tnk9x/internal/app.Version=$env:APP_VERSION" -o dist/tnk9x.exe ./cmd
 
       - name: Build executable (Linux)
-        if: |
-          matrix.os == 'linux' &&
-          ((contains(github.ref_name, 'a') && matrix.build_type == 'debug') ||
-           (!contains(github.ref_name, 'a') && matrix.build_type == 'prod'))
+        if: matrix.os == 'linux'
         shell: bash
         env:
           GOOS: ${{ matrix.goos }}
@@ -89,17 +78,10 @@ jobs:
           APP_VERSION: ${{ github.ref_name }}
         run: |
           export CGO_ENABLED=1
-          if [ "${{ matrix.build_type }}" = "debug" ]; then
-            go build -ldflags "-X github.com/shpaker/tnk9x/internal/app.Version=$APP_VERSION -X github.com/shpaker/tnk9x/internal/app.DebugFlag=true" -o dist/tnk9x ./cmd
-          else
-            go build -trimpath -ldflags "-s -w -X github.com/shpaker/tnk9x/internal/app.Version=$APP_VERSION" -o dist/tnk9x ./cmd
-          fi
+          go build -trimpath -ldflags "-s -w -X github.com/shpaker/tnk9x/internal/app.Version=$APP_VERSION" -o dist/tnk9x ./cmd
 
       - name: Build executable (macOS)
-        if: |
-          matrix.os == 'macos' &&
-          ((contains(github.ref_name, 'a') && matrix.build_type == 'debug') ||
-           (!contains(github.ref_name, 'a') && matrix.build_type == 'prod'))
+        if: matrix.os == 'macos'
         shell: bash
         env:
           GOOS: ${{ matrix.goos }}
@@ -107,22 +89,14 @@ jobs:
           APP_VERSION: ${{ github.ref_name }}
         run: |
           export CGO_ENABLED=1
-          if [ "${{ matrix.build_type }}" = "debug" ]; then
-            go build -ldflags "-X github.com/shpaker/tnk9x/internal/app.Version=$APP_VERSION -X github.com/shpaker/tnk9x/internal/app.DebugFlag=true" -o dist/tnk9x ./cmd
-          else
-            go build -trimpath -ldflags "-s -w -X github.com/shpaker/tnk9x/internal/app.Version=$APP_VERSION" -o dist/tnk9x ./cmd
-          fi
+          go build -trimpath -ldflags "-s -w -X github.com/shpaker/tnk9x/internal/app.Version=$APP_VERSION" -o dist/tnk9x ./cmd
 
       - name: Package artifacts (Windows)
         shell: pwsh
-        if: |
-          matrix.os == 'windows' &&
-          ((contains(github.ref_name, 'a') && matrix.build_type == 'debug') ||
-           (!contains(github.ref_name, 'a') && matrix.build_type == 'prod'))
+        if: matrix.os == 'windows'
         run: |
           $tag = "${{ github.ref_name }}"
-          $suffix = "${{ matrix.build_type }}"
-          $zipName = "tnk9x_windows_${suffix}_$tag.zip"
+          $zipName = "tnk9x_windows_$tag.zip"
 
           New-Item -ItemType Directory -Force -Path package | Out-Null
           Copy-Item dist/tnk9x.exe package/
@@ -135,16 +109,12 @@ jobs:
           "PACKAGE_NAME=$zipName" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: Package artifacts (Linux)
-        if: |
-          matrix.os == 'linux' &&
-          ((contains(github.ref_name, 'a') && matrix.build_type == 'debug') ||
-           (!contains(github.ref_name, 'a') && matrix.build_type == 'prod'))
+        if: matrix.os == 'linux'
         shell: bash
         env:
           TAG_NAME: ${{ github.ref_name }}
         run: |
-          suffix="${{ matrix.build_type }}"
-          zip_name="tnk9x_linux_${suffix}_${TAG_NAME}.zip"
+          zip_name="tnk9x_linux_${TAG_NAME}.zip"
 
           mkdir -p package/assets
           cp dist/tnk9x package/
@@ -156,16 +126,12 @@ jobs:
           echo "PACKAGE_NAME=${zip_name}" >> "$GITHUB_ENV"
 
       - name: Package artifacts (macOS)
-        if: |
-          matrix.os == 'macos' &&
-          ((contains(github.ref_name, 'a') && matrix.build_type == 'debug') ||
-           (!contains(github.ref_name, 'a') && matrix.build_type == 'prod'))
+        if: matrix.os == 'macos'
         shell: bash
         env:
           TAG_NAME: ${{ github.ref_name }}
         run: |
-          suffix="${{ matrix.build_type }}"
-          zip_name="tnk9x_macos_${suffix}_${TAG_NAME}.zip"
+          zip_name="tnk9x_macos_${TAG_NAME}.zip"
 
           mkdir -p package/assets
           cp dist/tnk9x package/
@@ -177,12 +143,9 @@ jobs:
           echo "PACKAGE_NAME=${zip_name}" >> "$GITHUB_ENV"
 
       - name: Upload artifact
-        if: |
-          (contains(github.ref_name, 'a') && matrix.build_type == 'debug') ||
-          (!contains(github.ref_name, 'a') && matrix.build_type == 'prod')
         uses: actions/upload-artifact@v4
         with:
-          name: build-${{ matrix.os }}-${{ matrix.build_type }}
+          name: build-${{ matrix.os }}
           path: ${{ env.PACKAGE_NAME }}
 
   release:

@@ -3,30 +3,9 @@ package input_adapters
 import (
 	"testing"
 
+	"github.com/shpaker/tnk9x/internal/testutil"
 	"github.com/shpaker/tnk9x/internal/types"
 )
-
-// stubTouchControls — управляемый источник тач-событий
-type stubTouchControls struct {
-	direction    types.Direction
-	hasDirection bool
-	fireJust     bool
-	pauseJust    bool
-}
-
-func (s *stubTouchControls) Update()             {}
-func (s *stubTouchControls) IsTouchActive() bool { return true }
-
-func (s *stubTouchControls) DPadDirection() (types.Direction, bool) {
-	return s.direction, s.hasDirection
-}
-
-func (s *stubTouchControls) FireJustPressed() bool  { return s.fireJust }
-func (s *stubTouchControls) PauseJustPressed() bool { return s.pauseJust }
-
-func (s *stubTouchControls) DPadJustPressed() (types.Direction, bool) {
-	return s.direction, false
-}
 
 // recordingTankActions записывает вызовы команд танка
 type recordingTankActions struct {
@@ -129,15 +108,16 @@ func (s *stubStageUseCases) SaveCarryOver() {}
 
 func newTouchAdapterUnderTest() (
 	*StageTouchInputAdapter,
-	*stubTouchControls,
+	*testutil.FakeTouchControls,
 	*recordingTankActions,
 	*stubStageUseCases,
 ) {
-	touch := &stubTouchControls{}
+	touch := &testutil.FakeTouchControls{}
 	actions := &recordingTankActions{}
 	stage := &stubStageUseCases{}
 	adapter := NewStageTouchInputAdapter(
 		actions, &types.TankEntity{}, stage, touch,
+		types.PlayerTankNumPlayer1,
 	)
 
 	return adapter, touch, actions, stage
@@ -147,8 +127,8 @@ func TestStageTouchInputAdapter_SteeringAndStop(t *testing.T) {
 	adapter, touch, actions, _ := newTouchAdapterUnderTest()
 
 	// Удержание крестовины: Rotate+Move каждый кадр
-	touch.direction = types.DirectionLeft
-	touch.hasDirection = true
+	touch.Directions[0] = types.DirectionLeft
+	touch.HasDirection[0] = true
 	adapter.Update(0)
 	adapter.Update(0)
 	if actions.moves != 2 || len(actions.rotations) != 2 {
@@ -162,7 +142,7 @@ func TestStageTouchInputAdapter_SteeringAndStop(t *testing.T) {
 	}
 
 	// Отпускание: ровно один Stop
-	touch.hasDirection = false
+	touch.HasDirection[0] = false
 	adapter.Update(0)
 	adapter.Update(0)
 	if actions.stops != 1 {
@@ -173,34 +153,58 @@ func TestStageTouchInputAdapter_SteeringAndStop(t *testing.T) {
 func TestStageTouchInputAdapter_ShootAndPause(t *testing.T) {
 	adapter, touch, actions, stage := newTouchAdapterUnderTest()
 
-	touch.fireJust = true
+	touch.FireJust[0] = true
 	adapter.Update(0)
 	if actions.shoots != 1 {
 		t.Errorf("ожидался один выстрел, получено %d", actions.shoots)
 	}
 
-	// Пауза: тап по паузе переключает её, во время паузы стрельба
-	// и движение подавляются
-	touch.pauseJust = true
-	touch.direction = types.DirectionUp
-	touch.hasDirection = true
+	// Паузу переключает стейт уровня, а не адаптер; во время паузы
+	// стрельба и движение подавляются
+	touch.PauseJust = true
+	stage.paused = true
+	touch.Directions[0] = types.DirectionUp
+	touch.HasDirection[0] = true
 	adapter.Update(0)
-	if stage.pauseToggles != 1 {
-		t.Errorf(
-			"ожидался один TogglePause, получено %d",
-			stage.pauseToggles,
-		)
+	if stage.pauseToggles != 0 {
+		t.Errorf("адаптер не должен переключать паузу: %d", stage.pauseToggles)
 	}
 	if actions.shoots != 1 || actions.moves != 0 {
 		t.Error("во время паузы стрельба и движение подавляются")
 	}
 }
 
+// Адаптер игрока слушает только свои контроллы
+func TestStageTouchInputAdapter_OwnPlayerOnly(t *testing.T) {
+	touch := &testutil.FakeTouchControls{}
+	actions := &recordingTankActions{}
+	adapter := NewStageTouchInputAdapter(
+		actions, &types.TankEntity{}, &stubStageUseCases{}, touch,
+		types.PlayerTankNumPlayer2,
+	)
+
+	touch.FireJust[0] = true
+	touch.HasDirection[0] = true
+	adapter.Update(0)
+	if actions.shoots != 0 || actions.moves != 0 {
+		t.Error("контроллы P1 не управляют танком P2")
+	}
+
+	touch.FireJust[1] = true
+	adapter.Update(0)
+	if actions.shoots != 1 {
+		t.Error("огонь P2 должен стрелять танком P2")
+	}
+}
+
 func TestStageTouchInputAdapter_NoTankIsSafe(t *testing.T) {
-	touch := &stubTouchControls{fireJust: true, hasDirection: true}
+	touch := &testutil.FakeTouchControls{}
+	touch.FireJust[0] = true
+	touch.HasDirection[0] = true
 	actions := &recordingTankActions{}
 	adapter := NewStageTouchInputAdapter(
 		actions, nil, &stubStageUseCases{}, touch,
+		types.PlayerTankNumPlayer1,
 	)
 
 	adapter.Update(0)

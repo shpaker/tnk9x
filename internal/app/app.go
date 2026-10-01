@@ -8,15 +8,17 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/audio"
-	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
-	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
 
+	"github.com/shpaker/tnk9x/internal/adapters/bindings"
 	"github.com/shpaker/tnk9x/internal/adapters/effects"
 	"github.com/shpaker/tnk9x/internal/adapters/level_select"
+	"github.com/shpaker/tnk9x/internal/adapters/menu_input"
 	"github.com/shpaker/tnk9x/internal/adapters/scripting"
+	"github.com/shpaker/tnk9x/internal/adapters/settings"
 	"github.com/shpaker/tnk9x/internal/adapters/stage"
 	"github.com/shpaker/tnk9x/internal/adapters/touch_controls"
+	"github.com/shpaker/tnk9x/internal/adapters/window"
 	"github.com/shpaker/tnk9x/internal/interfaces"
 	"github.com/shpaker/tnk9x/internal/repositories/processed"
 	"github.com/shpaker/tnk9x/internal/repositories/raw"
@@ -46,9 +48,8 @@ type gameState interface {
 }
 
 type App struct {
-	config     *Config
-	state      gameState
-	stageState *states.StageState
+	config *Config
+	state  gameState
 
 	// Контекст приложения: отмена (например, SIGINT) завершает игровой цикл
 	ctx context.Context
@@ -67,10 +68,18 @@ type App struct {
 	scriptEngine      interfaces.IAIScriptEngine
 	soundAdapter      *stage.SoundAdapter
 	touchControls     *touch_controls.TouchControlsAdapter
+	menuInput         interfaces.IMenuInputAdapter
 	effectsRenderer   *effects.EffectsRendererAdapter
+	windowAdapter     interfaces.IWindowAdapter
 
-	// Включённость графических эффектов, переключается F2
-	effectsSettings *types.EffectsSettingsEntity
+	// Пользовательские настройки (графика, полный экран, громкость,
+	// число игроков) и раскладка управления; их экраны общие
+	// для выбора уровня и паузы, хоткеи работают на всех экранах
+	settings         *types.SettingsEntity
+	controls         *types.ControlsEntity
+	settingsUseCases interfaces.ISettingsUseCases
+	settingsOverlay  *states.SettingsOverlay
+	hotkeysHandler   *states.HotkeysHandler
 
 	// Уровни кампании для превью экрана выбора; не мутируются —
 	// для игры уровень каждый раз читается заново
@@ -91,7 +100,6 @@ type App struct {
 	waveUseCases        interfaces.IWaveUseCases
 	progressionUseCases interfaces.IProgressionUseCases
 	levelSelectUseCases interfaces.ILevelSelectUseCases
-	debugUseCases       *use_cases.DebugUseCases
 }
 
 func New(cfg *Config) *App {
@@ -151,12 +159,19 @@ func New(cfg *Config) *App {
 		panic(err)
 	}
 
-	progressRepository := newProgressRepository(cfg)
+	// Прогресс и настройки — в одном пользовательском хранилище
+	storageRepository := newStorageRepository(cfg)
+	progressRepository := processed.NewProgressRepository(storageRepository)
 	progressionUseCases := use_cases.NewProgressionUseCases(
 		campaign,
 		loadProgress(progressRepository),
 		progressRepository,
 	)
+	settingsRepository := processed.NewSettingsRepository(storageRepository)
+	userSettings := loadSettings(settingsRepository)
+	controlsRepository := processed.NewControlsRepository(storageRepository)
+	userControls := loadControls(controlsRepository)
+
 	scriptsRepository := processed.NewScriptsRepository(fileRepository)
 	soundsRepository := processed.NewSoundsRepository(fileRepository)
 
@@ -165,7 +180,7 @@ func New(cfg *Config) *App {
 	soundAdapter, err := stage.NewSoundAdapter(
 		soundsRepository,
 		audioContext,
-		cfg.GetVolume(),
+		userSettings.GetVolume(),
 	)
 	if err != nil {
 		fmt.Printf("Error creating sound adapter: %v\n", err)
@@ -201,6 +216,45 @@ func New(cfg *Config) *App {
 	}
 	entitiesCollisionService := collision_services.NewEntitiesCollisionService()
 
+	// Ввод меню и экраны настроек общие для выбора уровня и паузы;
+	// FULLSCREEN в настройках — только там, где окно можно
+	// развернуть при старте (в браузере — только жестом)
+	touchControls := touch_controls.NewTouchControlsAdapter(
+		cfg.ScreenWidth()/screenScaleFactor,
+		cfg.ScreenHeight()/screenScaleFactor,
+		userSettings,
+	)
+	menuInput := menu_input.NewMenuInputAdapter(touchControls)
+	windowAdapter := window.NewWindowAdapter()
+	settingsUseCases := use_cases.NewSettingsUseCases(
+		settingsRepository,
+		runtime.GOOS != "js",
+	)
+	controlsOverlay := states.NewControlsOverlay(
+		use_cases.NewControlsUseCases(controlsRepository),
+		settings.NewControlsRendererAdapter(
+			textFace,
+			int(cfg.GetTitleFontSize()),
+			int(cfg.GetRegularFontSize()),
+		),
+		menuInput,
+		bindings.NewCaptureAdapter(),
+		userControls,
+	)
+	settingsOverlay := states.NewSettingsOverlay(
+		settingsUseCases,
+		settings.NewSettingsRendererAdapter(
+			textFace,
+			int(cfg.GetTitleFontSize()),
+			int(cfg.GetRegularFontSize()),
+		),
+		menuInput,
+		soundAdapter,
+		windowAdapter,
+		controlsOverlay,
+		userSettings,
+	)
+
 	app := &App{
 		config:            cfg,
 		session:           session_entities.NewGameSessionEntity(),
@@ -215,14 +269,21 @@ func New(cfg *Config) *App {
 		scriptEngine: scripting.NewLuaEngine(
 			services.NewNavigationService(),
 		),
-		soundAdapter:    soundAdapter,
-		effectsRenderer: effectsRenderer,
-		effectsSettings: types.NewEffectsSettingsEntity(
-			cfg.GetEffectsEnabled(),
-		),
-		touchControls: touch_controls.NewTouchControlsAdapter(
-			cfg.ScreenWidth()/screenScaleFactor,
-			cfg.ScreenHeight()/screenScaleFactor,
+		soundAdapter:     soundAdapter,
+		touchControls:    touchControls,
+		menuInput:        menuInput,
+		effectsRenderer:  effectsRenderer,
+		windowAdapter:    windowAdapter,
+		settings:         userSettings,
+		controls:         userControls,
+		settingsUseCases: settingsUseCases,
+		settingsOverlay:  settingsOverlay,
+		hotkeysHandler: states.NewHotkeysHandler(
+			settingsUseCases,
+			bindings.NewHotkeysAdapter(userControls),
+			windowAdapter,
+			settingsOverlay,
+			userSettings,
 		),
 		boundaryCollisionService: collision_services.NewBoundaryCollisionService(
 			mapSizePx,
@@ -260,7 +321,6 @@ func New(cfg *Config) *App {
 				CellSizePx:    int(cfg.GetBaseSizePx()),
 			},
 		),
-		debugUseCases: use_cases.NewDebugUseCases(Version),
 	}
 
 	app.state = app.newLevelSelectState(0)
@@ -288,15 +348,41 @@ func loadCampaignLevels(
 	return levels, nil
 }
 
-// newProgressRepository — хранилище прогресса: файл в каталоге
-// конфигурации ОС на десктопе, localStorage в браузере
-func newProgressRepository(cfg *Config) interfaces.IProgressRepository {
+// newStorageRepository — пользовательское хранилище прогресса
+// и настроек: файлы в каталоге конфигурации ОС на десктопе,
+// localStorage в браузере
+func newStorageRepository(cfg *Config) interfaces.IStorageRepository {
 	dir, err := raw.DefaultStorageDir(cfg.GetGameTitle())
 	if err != nil {
 		log.Printf("storage unavailable: %v", err)
 		dir = "."
 	}
-	return processed.NewProgressRepository(raw.NewStorageRepository(dir))
+	return raw.NewStorageRepository(dir)
+}
+
+// loadSettings читает настройки; повреждённое или недоступное
+// сохранение не мешает игре — начинаем с настроек по умолчанию
+func loadSettings(
+	repository interfaces.ISettingsRepository,
+) *types.SettingsEntity {
+	settings, err := repository.GetSettings()
+	if err != nil {
+		log.Printf("load settings: %v", err)
+	}
+	return settings
+}
+
+// loadControls читает раскладку; повреждённое сохранение не мешает
+// игре, а неизвестные движку имена заменяются умолчаниями
+func loadControls(
+	repository interfaces.IControlsRepository,
+) *types.ControlsEntity {
+	controls, err := repository.GetControls()
+	if err != nil {
+		log.Printf("load controls: %v", err)
+	}
+	bindings.RepairUnknown(controls)
+	return controls
 }
 
 // loadProgress читает прогресс; повреждённое или недоступное
@@ -316,14 +402,17 @@ func loadProgress(
 func (app *App) newLevelSelectState(lastLevel int) *states.LevelSelectState {
 	// В браузере ebiten.Termination заморозил бы canvas,
 	// поэтому выход есть только на десктопе
-	return states.NewLevelSelectState(
-		app.levelSelectUseCases,
-		app.levelSelectRenderer,
-		app.touchControls,
-		app.campaignLevels,
-		lastLevel,
-		runtime.GOOS != "js",
-	)
+	return states.NewLevelSelectState(states.LevelSelectStateDependencies{
+		LevelSelectUseCases: app.levelSelectUseCases,
+		SettingsUseCases:    app.settingsUseCases,
+		Renderer:            app.levelSelectRenderer,
+		MenuInput:           app.menuInput,
+		SettingsOverlay:     app.settingsOverlay,
+		Settings:            app.settings,
+		Levels:              app.campaignLevels,
+		LastLevel:           lastLevel,
+		QuitAvailable:       runtime.GOOS != "js",
+	})
 }
 
 func (app *App) Layout(outsideWidth, outsideHeight int) (int, int) {
@@ -340,26 +429,12 @@ func (app *App) Update() error {
 		}
 	}
 
-	if inpututil.IsKeyJustPressed(ebiten.KeyF1) {
-		Debug = !Debug
-		// Обновляем флаг дебаг-режима в текущем игровом состоянии
-		if app.stageState != nil {
-			app.stageState.SetDebugEnabled(Debug)
-		}
-	}
-
-	if inpututil.IsKeyJustPressed(ebiten.KeyF2) {
-		app.effectsSettings.Toggle()
-	}
-
-	// Полноэкранный режим переключается клавишей F
-	if inpututil.IsKeyJustPressed(ebiten.KeyF) {
-		ebiten.SetFullscreen(!ebiten.IsFullscreen())
-	}
-
-	// Сенсорный ввод опрашивается один раз на кадр до обновления
-	// состояния: события кадра общие для стейта и адаптеров
+	// Ввод опрашивается один раз на кадр до обновления состояния:
+	// тач — первым, меню собирает в том числе его события; затем
+	// глобальные хоткеи
 	app.touchControls.Update()
+	app.menuInput.Update()
+	app.hotkeysHandler.Update()
 
 	transition := app.state.Update()
 
@@ -374,7 +449,7 @@ func (app *App) applyTransition(transition types.StateTransition) error {
 		return nil
 	case types.TransitionToStage:
 		stageSession := app.session.StageSession()
-		stageSession.SetPlayerCount(app.config.GetPlayerCount())
+		stageSession.SetPlayerCount(app.settings.GetPlayers())
 		stageSession.SetStageNumber(transition.Level)
 		stageSession.SetCarryOver(transition.CarryOver)
 		app.session.Level = int(transition.Level)
@@ -383,14 +458,11 @@ func (app *App) applyTransition(transition types.StateTransition) error {
 		if err != nil {
 			return err
 		}
-		stageState.SetDebugEnabled(Debug)
 		app.state = stageState
-		app.stageState = stageState
 	case types.TransitionToLevelSelect:
 		app.state = app.newLevelSelectState(int(transition.Level))
-		app.stageState = nil
 	case types.TransitionToQuit:
-		// Выход по ESC с экрана выбора уровня; в js-сборке выхода
+		// Пункт QUIT меню экрана выбора уровня; в js-сборке выхода
 		// нет, поэтому переход возможен только на десктопе
 		return ebiten.Termination
 	}
@@ -400,51 +472,6 @@ func (app *App) applyTransition(transition types.StateTransition) error {
 
 func (app *App) Draw(screen *ebiten.Image) {
 	app.state.Draw(screen)
-	if app.debugUseCases == nil {
-		return
-	}
-
-	if !Debug {
-		return
-	}
-
-	debugText := app.debugUseCases.BuildDebugInfo(app.collectDebugData())
-	if debugText == "" {
-		return
-	}
-
-	ebitenutil.DebugPrintAt(
-		screen,
-		debugText,
-		0,
-		0,
-	)
-}
-
-// collectDebugData собирает метрики движка и данные сессии для HUD
-func (app *App) collectDebugData() types.DebugInfoData {
-	data := types.DebugInfoData{
-		FPS: ebiten.ActualFPS(),
-		TPS: ebiten.ActualTPS(),
-	}
-
-	stageSession := app.session.StageSession()
-	if stageSession == nil {
-		return data
-	}
-
-	data.Player1Lives = stageSession.GetPlayerLives(types.PlayerTankNumPlayer1)
-	data.Player1InitialLives = stageSession.GetPlayerInitialLives(
-		types.PlayerTankNumPlayer1,
-	)
-	data.Player2Lives = stageSession.GetPlayerLives(types.PlayerTankNumPlayer2)
-	data.Player2InitialLives = stageSession.GetPlayerInitialLives(
-		types.PlayerTankNumPlayer2,
-	)
-	data.TotalEnemies = stageSession.GetTotalEnemies()
-	data.RemainingEnemies = stageSession.GetRemainingEnemies()
-
-	return data
 }
 
 func (app *App) Run(ctx context.Context) error {
@@ -460,7 +487,7 @@ func (app *App) Run(ctx context.Context) error {
 	)
 	// В браузере полный экран разрешён только по жесту пользователя
 	if runtime.GOOS != "js" {
-		ebiten.SetFullscreen(app.config.GetFullscreen())
+		app.windowAdapter.SetFullscreen(app.settings.IsFullscreen())
 	}
 
 	return ebiten.RunGame(app)

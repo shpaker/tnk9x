@@ -5,10 +5,6 @@ app:
   subtitle_font_size: 8
   regular_font_size: 8
   game_title: "TNK9X"
-  volume: 0.5  # Volume from 0.0 to 1.0
-  fullscreen: true  # desktop starts fullscreen, false for a window of screen_px; toggle with F
-  effects: true  # normal graphics with effects at startup, false for classic; toggle with F2 or GRAPHICS in the pause menu
-  players: 1     # 1 or 2 (two players share one keyboard)
 
 game:
   enemy_spawners:

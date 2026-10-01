@@ -3,8 +3,6 @@ package app
 import (
 	"fmt"
 
-	"github.com/hajimehoshi/ebiten/v2"
-
 	"github.com/shpaker/tnk9x/internal/adapters/stage"
 	"github.com/shpaker/tnk9x/internal/adapters/stage/input_adapters"
 	"github.com/shpaker/tnk9x/internal/interfaces"
@@ -220,42 +218,25 @@ func (app *App) newStageState() (*states.StageState, error) {
 		bonusUseCases,
 	)
 
-	inputAdapter1 := input_adapters.NewStageKeyboardInputAdapter(
-		tankActionsUseCases,
-		nil,
-		stageUseCases,
-		ebiten.KeyW,
-		ebiten.KeyS,
-		ebiten.KeyA,
-		ebiten.KeyD,
-		ebiten.KeySpace,
-		ebiten.KeyP,
-	)
-
-	inputAdapter2 := input_adapters.NewStageKeyboardInputAdapter(
-		tankActionsUseCases,
-		nil,
-		stageUseCases,
-		ebiten.KeyArrowUp,
-		ebiten.KeyArrowDown,
-		ebiten.KeyArrowLeft,
-		ebiten.KeyArrowRight,
-		ebiten.KeyEnter,
-		ebiten.KeyP,
-	)
-
-	// Первый игрок управляется и клавиатурой, и экранными
-	// контроллами: композит применяет оба источника каждый кадр
-	touchInputAdapter := input_adapters.NewStageTouchInputAdapter(
-		tankActionsUseCases,
-		nil,
-		stageUseCases,
-		app.touchControls,
-	)
-	player1InputAdapter := input_adapters.NewCompositeInputAdapter(
-		inputAdapter1,
-		touchInputAdapter,
-	)
+	// Каждый игрок управляется своей раскладкой клавиатуры, своим
+	// геймпадом и своими экранными контроллами: композит применяет
+	// все источники каждый кадр
+	playerInput := func(player types.PlayerTankNum) interfaces.IInputAdapter {
+		return input_adapters.NewCompositeInputAdapter(
+			input_adapters.NewStageKeyboardInputAdapter(
+				tankActionsUseCases, nil, stageUseCases,
+				app.controls, player,
+			),
+			input_adapters.NewStageGamepadInputAdapter(
+				tankActionsUseCases, nil, stageUseCases,
+				app.controls, player,
+			),
+			input_adapters.NewStageTouchInputAdapter(
+				tankActionsUseCases, nil, stageUseCases,
+				app.touchControls, player,
+			),
+		)
+	}
 
 	lightingUseCases := use_cases.NewLightingUseCases(
 		tankCommonUseCases,
@@ -287,16 +268,16 @@ func (app *App) newStageState() (*states.StageState, error) {
 		VisualEffectsUseCases: visualEffectsUseCases,
 		ProgressionUseCases:   app.progressionUseCases,
 		InputAdapters: [2]interfaces.IInputAdapter{
-			player1InputAdapter,
-			inputAdapter2,
+			playerInput(types.PlayerTankNumPlayer1),
+			playerInput(types.PlayerTankNumPlayer2),
 		},
 		EnemyInputAdapter:  enemyInputAdapter,
 		Renderer:           rendererAdapter,
 		SoundPlayerAdapter: app.soundAdapter,
-		TouchControls:      app.touchControls,
+		MenuInput:          app.menuInput,
 		StageSession:       stageSession,
 		BonusesRepository:  bonusesRepository,
-		EffectsSettings:    app.effectsSettings,
+		SettingsOverlay:    app.settingsOverlay,
 		Level:              level,
 	}), nil
 }
@@ -440,7 +421,7 @@ func (app *App) buildStageRenderer(
 		VisualEffectsUseCases: visualEffectsUseCases,
 		SpriteCache:           app.spriteCache,
 		Effects:               app.effectsRenderer,
-		EffectsSettings:       app.effectsSettings,
+		Settings:              app.settings,
 		FontFace:              app.textFace,
 		HUDFontFace:           app.hudTextFace,
 		MapOffsetX:            stageMapOffsetX,

@@ -17,7 +17,7 @@ concurrency:
 jobs:
   deploy:
     name: Build and Deploy WASM
-    # Дебаг-теги (содержат 'a', см. release.yml) на Pages не публикуем
+    # Альфа-теги (содержат 'a') на Pages не публикуем
     if: ${{ !contains(github.ref_name, 'a') }}
     runs-on: ubuntu-latest
     environment:

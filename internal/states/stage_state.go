@@ -4,7 +4,6 @@ import (
 	"log"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/inpututil"
 
 	"github.com/shpaker/tnk9x/internal/interfaces"
 	"github.com/shpaker/tnk9x/internal/types"
@@ -43,14 +42,14 @@ type StageStateDependencies struct {
 	EnemyInputAdapter  interfaces.IAiInputAdapter
 	Renderer           StageRenderer
 	SoundPlayerAdapter interfaces.ISoundPlayerAdapter
-	TouchControls      interfaces.ITouchControlsAdapter
+	MenuInput          interfaces.IMenuInputAdapter
 
 	// Session & Repositories
 	StageSession      *session_entities.StageSessionEntity
 	BonusesRepository interfaces.IBonusesRepository
 
-	// Включённость графических эффектов, общая для приложения
-	EffectsSettings *types.EffectsSettingsEntity
+	// Экран настроек из меню паузы, общий для приложения
+	SettingsOverlay *SettingsOverlay
 	// Level — сценарий уровня для подсчёта звёзд
 	Level *types.LevelEntity
 }
@@ -72,18 +71,17 @@ type StageState struct {
 	enemyInputAdapter  interfaces.IAiInputAdapter
 	renderer           StageRenderer
 	soundPlayerAdapter interfaces.ISoundPlayerAdapter
-	touchControls      interfaces.ITouchControlsAdapter
+	menuInput          interfaces.IMenuInputAdapter
 
 	// Session & Repositories
 	stageSession      *session_entities.StageSessionEntity
 	bonusesRepository interfaces.IBonusesRepository
 
-	// Entities
-	effectsSettings *types.EffectsSettingsEntity
+	// Presentation
+	settingsOverlay *SettingsOverlay
 
 	isSetUp         bool
 	endSoundHandled bool
-	debugEnabled    bool // Флаг дебаг-режима
 
 	// Меню паузы — чистая презентация поверх доменного флага паузы:
 	// видимо, пока уровень на паузе и не завершён
@@ -113,22 +111,18 @@ func NewStageState(deps StageStateDependencies) *StageState {
 		enemyInputAdapter:     deps.EnemyInputAdapter,
 		renderer:              deps.Renderer,
 		soundPlayerAdapter:    deps.SoundPlayerAdapter,
-		touchControls:         deps.TouchControls,
+		menuInput:             deps.MenuInput,
 		stageSession:          deps.StageSession,
 		bonusesRepository:     deps.BonusesRepository,
-		effectsSettings:       deps.EffectsSettings,
+		settingsOverlay:       deps.SettingsOverlay,
 		level:                 deps.Level,
 		pauseMenuItems: []types.PauseMenuItem{
 			types.PauseMenuItemContinue,
-			types.PauseMenuItemGraphics,
+			types.PauseMenuItemRestart,
+			types.PauseMenuItemSettings,
 			types.PauseMenuItemExitToLevels,
 		},
 	}
-}
-
-// SetDebugEnabled устанавливает флаг дебаг-режима
-func (state *StageState) SetDebugEnabled(enabled bool) {
-	state.debugEnabled = enabled
 }
 
 func (state *StageState) SetUp() {
@@ -188,21 +182,15 @@ func (state *StageState) Update() types.StateTransition {
 		dt = 1.0 / 60.0
 	}
 
-	// Обработка дебаг-команд
-	// Клавиша 0 повышает уровень игрока (только в режиме дебага)
-	if state.debugEnabled && inpututil.IsKeyJustPressed(ebiten.KeyDigit0) {
-		playerTanks := state.tankCommonUseCases.GetAllPlayerTanks()
-		// Повышаем уровень всех активных танков игроков
-		for _, tank := range playerTanks {
-			if tank != nil && tank.IsActive() {
-				state.tankCommonUseCases.LevelUp(tank)
-				// UpdateTankAnimation вызывается внутри LevelUp
-			}
-		}
+	// Пока открыты настройки, ввод идёт только в них: иначе Esc,
+	// P или тач-пауза сняли бы паузу под оверлеем
+	settingsOpen := state.settingsOverlay.IsOpen()
+	if settingsOpen {
+		state.settingsOverlay.Update()
 	}
 
 	for _, adapter := range state.inputAdapters {
-		if adapter != nil {
+		if adapter != nil && !settingsOpen {
 			adapter.Update(dt)
 		}
 	}
@@ -226,7 +214,7 @@ func (state *StageState) Update() types.StateTransition {
 
 	// Меню паузы работает только пока уровень не завершён:
 	// на экране итогов действует своё меню
-	if !stageFinished {
+	if !stageFinished && !settingsOpen {
 		transition = state.handlePauseMenu()
 	}
 
@@ -294,10 +282,13 @@ func (state *StageState) Update() types.StateTransition {
 	return transition
 }
 
-// handlePauseMenu — переключение паузы по ESC и управление меню:
-// стрелки или крестовина, выбор Enter/Space или огнём
+// handlePauseMenu — единственная точка переключения паузы: Esc,
+// Start или тач-пауза; в открытом меню «назад» тоже возвращает
+// в игру. Меню — стрелки, крестовина или стик, выбор Enter, A
+// или огнём
 func (state *StageState) handlePauseMenu() types.StateTransition {
-	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
+	if state.menuInput.PauseJustPressed() ||
+		(state.stageUseCases.IsPaused() && state.menuInput.Back()) {
 		state.stageUseCases.TogglePause()
 	}
 
@@ -311,41 +302,18 @@ func (state *StageState) handlePauseMenu() types.StateTransition {
 		return types.StateTransition{}
 	}
 
-	moveUp, moveDown := state.menuSteps()
-	if moveUp && state.pauseMenuIndex > 0 {
-		state.pauseMenuIndex--
-	}
-	if moveDown && state.pauseMenuIndex < len(state.pauseMenuItems)-1 {
-		state.pauseMenuIndex++
-	}
+	moveUp, moveDown := state.menuInput.Steps()
+	state.pauseMenuIndex = stepIndex(
+		state.pauseMenuIndex, len(state.pauseMenuItems), moveUp, moveDown,
+	)
 
-	if state.menuConfirmed() {
+	if state.menuInput.Confirmed() {
 		return state.applyPauseMenuSelection(
 			state.pauseMenuItems[state.pauseMenuIndex],
 		)
 	}
 
 	return types.StateTransition{}
-}
-
-// menuSteps — шаг вверх или вниз по пунктам меню: стрелки, WASD
-// или нажатие крестовины
-func (state *StageState) menuSteps() (bool, bool) {
-	dpad, pressed := state.touchControls.DPadJustPressed()
-	moveUp := inpututil.IsKeyJustPressed(ebiten.KeyUp) ||
-		inpututil.IsKeyJustPressed(ebiten.KeyW) ||
-		(pressed && dpad == types.DirectionUp)
-	moveDown := inpututil.IsKeyJustPressed(ebiten.KeyDown) ||
-		inpututil.IsKeyJustPressed(ebiten.KeyS) ||
-		(pressed && dpad == types.DirectionDown)
-	return moveUp, moveDown
-}
-
-// menuConfirmed — выбор пункта меню: Enter, пробел или огонь
-func (state *StageState) menuConfirmed() bool {
-	return inpututil.IsKeyJustPressed(ebiten.KeyEnter) ||
-		inpututil.IsKeyJustPressed(ebiten.KeySpace) ||
-		state.touchControls.FireJustPressed()
 }
 
 // applyPauseMenuSelection применяет выбранный пункт меню паузы
@@ -355,9 +323,14 @@ func (state *StageState) applyPauseMenuSelection(
 	switch item {
 	case types.PauseMenuItemContinue:
 		state.stageUseCases.ResumeStageState()
-	case types.PauseMenuItemGraphics:
-		// Меню остаётся открытым: смена видна сразу за оверлеем
-		state.effectsSettings.Toggle()
+	case types.PauseMenuItemRestart:
+		// Глушим звуки уровня перед перезапуском
+		state.soundUseCases.RequestStopAll()
+
+		return state.restartTransition()
+	case types.PauseMenuItemSettings:
+		// Уровень остаётся на паузе; из настроек — обратно в меню
+		state.settingsOverlay.Open()
 	case types.PauseMenuItemExitToLevels:
 		// Глушим звуки уровня при выходе на экран выбора
 		state.soundUseCases.RequestStopAll()
@@ -431,11 +404,15 @@ func (state *StageState) Draw(screen *ebiten.Image) {
 		return
 	}
 
+	if state.settingsOverlay.IsOpen() {
+		state.settingsOverlay.Draw(screen)
+		return
+	}
+
 	if state.stageUseCases.IsPaused() {
 		state.renderer.DrawPauseMenu(screen, types.PauseMenuViewData{
-			Items:          state.pauseMenuItems,
-			ActiveIndex:    state.pauseMenuIndex,
-			EffectsEnabled: state.effectsSettings.IsEnabled(),
+			Items:       state.pauseMenuItems,
+			ActiveIndex: state.pauseMenuIndex,
 		})
 	}
 }
@@ -453,20 +430,16 @@ func (state *StageState) handleStageResult() types.StateTransition {
 	}
 
 	result := state.result
-	moveUp, moveDown := state.menuSteps()
-	if moveUp && result.ActiveIndex > 0 {
-		result.ActiveIndex--
-	}
-	if moveDown && result.ActiveIndex < len(result.Items)-1 {
-		result.ActiveIndex++
-	}
+	moveUp, moveDown := state.menuInput.Steps()
+	result.ActiveIndex = stepIndex(
+		result.ActiveIndex, len(result.Items), moveUp, moveDown,
+	)
 
-	if state.menuConfirmed() {
+	if state.menuInput.Confirmed() {
 		return state.applyStageResultItem(result.Items[result.ActiveIndex])
 	}
 	// ESC и кнопка паузы — выход к выбору уровней
-	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) ||
-		state.touchControls.PauseJustPressed() {
+	if state.menuInput.Back() {
 		return state.applyStageResultItem(types.StageResultItemLevels)
 	}
 
@@ -538,12 +511,18 @@ func (state *StageState) applyStageResultItem(
 			CarryOver: true,
 		}
 	case types.StageResultItemRetry:
-		return types.StateTransition{
-			Target: types.TransitionToStage,
-			Level:  state.stageSession.GetStageNumber(),
-		}
+		return state.restartTransition()
 	default:
 		return state.levelsTransition()
+	}
+}
+
+// restartTransition — этот же уровень заново, без переноса жизней
+// и прокачки
+func (state *StageState) restartTransition() types.StateTransition {
+	return types.StateTransition{
+		Target: types.TransitionToStage,
+		Level:  state.stageSession.GetStageNumber(),
 	}
 }
 

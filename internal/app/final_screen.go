@@ -26,7 +26,7 @@ func (app *App) DrawFinalScreen(
 		x,
 		y,
 		scale,
-		app.effectsSettings.IsEnabled(),
+		app.settings.IsEffectsEnabled(),
 	)
 
 	app.touchControls.DrawControls(screen)
