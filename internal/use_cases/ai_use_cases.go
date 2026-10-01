@@ -82,11 +82,15 @@ func (uc *AIUseCases) buildContext(
 			navGridCellSize,
 			uc.mapEntity.GetBlocks(),
 		),
-		HQ: types.AIHQInfo{
+	}
+	// В демо-сцене главного меню штаба нет: для скрипта он не цел,
+	// и танки без игроков патрулируют поле
+	if uc.hq != nil {
+		context.HQ = types.AIHQInfo{
 			Position: uc.hq.Position,
 			Size:     uc.hq.GetSize(),
 			Intact:   uc.hq.State == types.HQStateIntact,
-		},
+		}
 	}
 
 	for _, player := range uc.tanksRepository.GetActivePlayerTanks() {

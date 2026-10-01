@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"sync"
 	"testing"
@@ -44,6 +45,12 @@ func (r *failingMapsRepo) GetLevel(
 }
 
 func (r *failingMapsRepo) HasLevel(num int) bool { return false }
+
+func (r *failingMapsRepo) GetSceneLevel(
+	string, int,
+) (*types.LevelEntity, error) {
+	return nil, errLevelUnavailable
+}
 
 func (r *failingMapsRepo) GetLevelsCount() (int, error) { return 0, nil }
 
@@ -153,11 +160,35 @@ func TestApp_ApplyTransition_Quit(t *testing.T) {
 func TestApp_ApplyTransition_FullApp(t *testing.T) {
 	app := newFullApp(t)
 
-	if _, ok := app.state.(*states.LevelSelectState); !ok {
-		t.Fatalf(
-			"initial state %T, want LevelSelectState",
-			app.state,
-		)
+	if _, ok := app.state.(*states.SplashState); !ok {
+		t.Fatalf("initial state %T, want SplashState", app.state)
+	}
+
+	// Сплеш догружает граф, затем главное меню и выбор уровня
+	for _, done := app.loader.Step(); !done; _, done = app.loader.Step() {
+	}
+	if len(app.frameInputs) != 3 {
+		t.Errorf("после загрузки к вводу добавляются хоткеи: %d", len(app.frameInputs))
+	}
+	for _, step := range []struct {
+		target types.TransitionTarget
+		want   any
+	}{
+		{types.TransitionToMainMenu, &states.MainMenuState{}},
+		{types.TransitionToLevelSelect, &states.LevelSelectState{}},
+	} {
+		if err := app.applyTransition(types.StateTransition{Target: step.target}); err != nil {
+			t.Fatalf("переход %v: %v", step.target, err)
+		}
+		if fmt.Sprintf("%T", app.state) != fmt.Sprintf("%T", step.want) {
+			t.Fatalf("состояние %T, ожидалось %T", app.state, step.want)
+		}
+	}
+
+	// У одиночной игры и игры вдвоём раздельное прохождение
+	if app.progressionUseCases[0] == app.progressionUseCases[1] ||
+		app.levelSelectUseCases[0] == app.levelSelectUseCases[1] {
+		t.Error("прогресс режимов должен быть раздельным")
 	}
 
 	err := app.applyTransition(types.StateTransition{
@@ -201,5 +232,25 @@ func TestApp_Update_ContextCancelled(t *testing.T) {
 	cancel()
 	if err := app.Update(); !errors.Is(err, ebiten.Termination) {
 		t.Fatalf("ожидался ebiten.Termination, получено %v", err)
+	}
+}
+
+// Сцена главного меню на настоящем графе: название собирается,
+// по полю ездят танки с ИИ без игроков и штаба, сцена не падает
+func TestApp_MainMenuDemoScene(t *testing.T) {
+	app := newFullApp(t)
+	for _, done := app.loader.Step(); !done; _, done = app.loader.Step() {
+	}
+
+	scene, err := app.newDemoScene()
+	if err != nil {
+		t.Fatalf("демо-сцена: %v", err)
+	}
+	// 10 секунд сцены: сборка, выезд танков, стрельба, починка
+	for range 600 {
+		scene.Update()
+	}
+	if !scene.IsAssembled() {
+		t.Error("название должно собраться")
 	}
 }

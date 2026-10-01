@@ -80,6 +80,8 @@ type IBonusesRepository interface {
 type IMapsDataRepository interface {
 	// GetLevel читает уровень; каждый вызов создаёт новую карту
 	GetLevel(num int, tileBaseSize int) (*types.LevelEntity, error)
+	// GetSceneLevel читает карту вне кампании (демо-сцена) по имени
+	GetSceneLevel(name string, tileBaseSize int) (*types.LevelEntity, error)
 	// HasLevel — существует ли файл уровня
 	HasLevel(num int) bool
 
@@ -144,6 +146,11 @@ type IScriptsRepository interface {
 // IShadersRepository отдаёт исходники Kage-шейдеров по имени
 type IShadersRepository interface {
 	GetShader(name string) ([]byte, error)
+}
+
+// IImagesRepository — картинки экранов (логотипы) по имени
+type IImagesRepository interface {
+	GetImage(name string) (image.Image, error)
 }
 
 type IFontsRepository interface {

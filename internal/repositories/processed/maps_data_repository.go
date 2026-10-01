@@ -42,15 +42,9 @@ func NewMapsDataRepository(
 	}
 }
 
-func (mdr *MapsDataRepository) readFile(levelNumber int) (string, error) {
-	levelName := "levels/" + strconv.Itoa(levelNumber) + ".bcmap"
-
-	data, err := mdr.fileRepository.ReadFile(levelName)
-	if err != nil {
-		return "", fmt.Errorf("failed to read level %d: %w", levelNumber, err)
-	}
-
-	return string(data), nil
+// levelPath — файл уровня levels/<name>.bcmap
+func levelPath(name string) string {
+	return "levels/" + name + ".bcmap"
 }
 
 func (mdr *MapsDataRepository) createBlockFromChar(
@@ -181,14 +175,36 @@ func (mdr *MapsDataRepository) GetLevel(
 	levelNumber int,
 	tileBaseSize int,
 ) (*types.LevelEntity, error) {
-	data, err := mdr.readFile(levelNumber)
+	return mdr.loadLevel(
+		levelPath(strconv.Itoa(levelNumber)),
+		levelNumber,
+		tileBaseSize,
+	)
+}
+
+// GetSceneLevel читает карту вне кампании (например, демо-сцену
+// главного меню) из levels/<name>.bcmap; номер уровня у неё 0
+func (mdr *MapsDataRepository) GetSceneLevel(
+	name string,
+	tileBaseSize int,
+) (*types.LevelEntity, error) {
+	return mdr.loadLevel(levelPath(name), 0, tileBaseSize)
+}
+
+// loadLevel читает и разбирает файл уровня path
+func (mdr *MapsDataRepository) loadLevel(
+	path string,
+	levelNumber int,
+	tileBaseSize int,
+) (*types.LevelEntity, error) {
+	data, err := mdr.fileRepository.ReadFile(path)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to read level %s: %w", path, err)
 	}
 
-	file, err := parseLevelFile(data, mdr.defaults)
+	file, err := parseLevelFile(string(data), mdr.defaults)
 	if err != nil {
-		return nil, fmt.Errorf("level %d: %w", levelNumber, err)
+		return nil, fmt.Errorf("level %s: %w", path, err)
 	}
 
 	blocks, bonusSpawnPositions, err := mdr.parseLevelLines(
@@ -196,7 +212,7 @@ func (mdr *MapsDataRepository) GetLevel(
 		tileBaseSize,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("level %d: %w", levelNumber, err)
+		return nil, fmt.Errorf("level %s: %w", path, err)
 	}
 
 	sizePx := types.Size{
@@ -224,7 +240,7 @@ func (mdr *MapsDataRepository) GetLevel(
 
 // HasLevel — существует ли файл уровня
 func (mdr *MapsDataRepository) HasLevel(levelNumber int) bool {
-	_, err := mdr.readFile(levelNumber)
+	_, err := mdr.fileRepository.ReadFile(levelPath(strconv.Itoa(levelNumber)))
 	return err == nil
 }
 

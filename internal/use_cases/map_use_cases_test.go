@@ -155,3 +155,33 @@ func TestMapUseCases_NilMapEntity(t *testing.T) {
 		t.Errorf("позиция без карты: %v", got)
 	}
 }
+
+func TestMapUseCases_RestoreBlock(t *testing.T) {
+	brick := types.NewBlockEntity("brick", 16, 24, 8, nil)
+	mapEntity := types.NewMapEntity(
+		types.Size{Width: 208, Height: 208}, types.MapBlocks{brick}, nil,
+	)
+	mapUseCases := use_cases.NewMapUseCases(mapEntity)
+
+	// Отколотый кирпич возвращается в полный размер
+	brick.Position.X += 4
+	brick.Size.Width = 4
+	if mapUseCases.IsBlockIntact(brick) {
+		t.Fatal("отколотый кирпич не целый")
+	}
+	if !mapUseCases.RestoreBlock(brick, nil) || !mapUseCases.IsBlockIntact(brick) {
+		t.Error("отколотый кирпич должен восстановиться")
+	}
+
+	// Снесённый кирпич не встаёт под танком, а без помех — встаёт
+	_ = mapUseCases.RemoveBlock(brick)
+	tank := &types.TankEntity{}
+	tank.Position = types.Position{X: 12, Y: 20}
+	tank.Size = types.Size{Width: 16, Height: 16}
+	if mapUseCases.RestoreBlock(brick, []types.IEntityCollider{tank}) {
+		t.Error("кирпич не должен вставать под танком")
+	}
+	if !mapUseCases.RestoreBlock(brick, nil) || len(mapUseCases.GetBlocks()) != 1 {
+		t.Error("снесённый кирпич должен вернуться на карту один раз")
+	}
+}

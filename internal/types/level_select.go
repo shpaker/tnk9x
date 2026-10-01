@@ -40,24 +40,3 @@ type LevelSelectViewData struct {
 	// PlayerCount — режим игры для строки запуска
 	PlayerCount uint
 }
-
-// LevelSelectMenuItem — пункт меню экрана выбора уровня
-// (Esc, Start или тач-пауза)
-type LevelSelectMenuItem int
-
-const (
-	LevelSelectMenuItemBack LevelSelectMenuItem = iota
-	// LevelSelectMenuItemPlayers — один или двое игроков
-	LevelSelectMenuItemPlayers
-	LevelSelectMenuItemSettings
-	// LevelSelectMenuItemQuit — выход из игры, только на десктопе
-	LevelSelectMenuItemQuit
-)
-
-// LevelSelectMenuViewData — меню экрана выбора уровня для отрисовки
-type LevelSelectMenuViewData struct {
-	Items       []LevelSelectMenuItem
-	ActiveIndex int
-	// Players — значение строки PLAYERS
-	Players uint
-}

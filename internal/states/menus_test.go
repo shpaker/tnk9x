@@ -256,40 +256,114 @@ func (stubLevelSelectUseCases) BuildView(
 type nopLevelSelectRenderer struct{}
 
 func (nopLevelSelectRenderer) Draw(*ebiten.Image, types.LevelSelectViewData) {}
-func (nopLevelSelectRenderer) DrawMenu(
-	*ebiten.Image,
-	types.LevelSelectMenuViewData,
-) {
-}
 
-func TestLevelSelectState_PlayersAndQuit(t *testing.T) {
-	env := newMenusEnv()
-	state := states.NewLevelSelectState(states.LevelSelectStateDependencies{
-		LevelSelectUseCases: stubLevelSelectUseCases{},
+type nopMainMenuRenderer struct{}
+
+func (nopMainMenuRenderer) Draw(*ebiten.Image, types.MainMenuViewData) {}
+
+// countingScene — сцена за меню, считающая кадры
+type countingScene struct{ updates int }
+
+func (s *countingScene) Update()            { s.updates++ }
+func (s *countingScene) Draw(*ebiten.Image) {}
+
+func newMainMenu(env *menusEnv) *states.MainMenuState {
+	return states.NewMainMenuState(states.MainMenuStateDependencies{
 		SettingsUseCases: use_cases.NewSettingsUseCases(
 			memorySettingsRepository{}, true,
 		),
-		Renderer:        nopLevelSelectRenderer{},
+		Renderer:        nopMainMenuRenderer{},
 		MenuInput:       env.input,
+		Scene:           &countingScene{},
 		SettingsOverlay: env.settingsOverlay,
 		Settings:        env.settings,
 		QuitAvailable:   true,
 	})
-	update := func() { state.Update() }
+}
 
-	// Esc открывает меню, BACK -> PLAYERS, вправо — двое игроков
-	env.frame(update, testutil.FakeMenuInput{BackPressed: true})
-	env.frame(update, testutil.FakeMenuInput{Down: true})
-	env.frame(update, testutil.FakeMenuInput{Side: 1})
-	if env.settings.GetPlayers() != 2 {
-		t.Errorf("игроков %d, ожидалось 2", env.settings.GetPlayers())
+func TestMainMenuState_ModesAndQuit(t *testing.T) {
+	env := newMenusEnv()
+	menu := newMainMenu(env)
+
+	// 1 PLAYER -> 2 PLAYERS: выбор режима ведёт к выбору уровня
+	env.frame(func() { menu.Update() }, testutil.FakeMenuInput{Down: true})
+	*env.input = testutil.FakeMenuInput{Confirm: true}
+	transition := menu.Update()
+	if transition.Target != types.TransitionToLevelSelect ||
+		env.settings.GetPlayers() != 2 {
+		t.Errorf("2 PLAYERS: переход %v, игроков %d",
+			transition.Target, env.settings.GetPlayers())
 	}
 
-	// PLAYERS -> SETTINGS -> QUIT
-	env.frame(update, testutil.FakeMenuInput{Down: true})
-	env.frame(update, testutil.FakeMenuInput{Down: true})
+	// Курсор нового меню встаёт на последний режим; SETTINGS, QUIT
+	menu = newMainMenu(env)
+	env.frame(func() { menu.Update() }, testutil.FakeMenuInput{Down: true})
+	env.frame(func() { menu.Update() }, testutil.FakeMenuInput{Down: true})
 	*env.input = testutil.FakeMenuInput{Confirm: true}
-	if transition := state.Update(); transition.Target != types.TransitionToQuit {
+	if transition := menu.Update(); transition.Target != types.TransitionToQuit {
 		t.Errorf("QUIT должен завершать игру, переход %v", transition.Target)
+	}
+}
+
+func TestLevelSelectState_BackToMainMenu(t *testing.T) {
+	env := newMenusEnv()
+	state := states.NewLevelSelectState(states.LevelSelectStateDependencies{
+		LevelSelectUseCases: stubLevelSelectUseCases{},
+		Renderer:            nopLevelSelectRenderer{},
+		MenuInput:           env.input,
+		Settings:            env.settings,
+	})
+
+	*env.input = testutil.FakeMenuInput{Confirm: true}
+	if transition := state.Update(); transition.Target != types.TransitionToStage {
+		t.Errorf("выбор открытого уровня запускает его, переход %v", transition.Target)
+	}
+	*env.input = testutil.FakeMenuInput{BackPressed: true}
+	if transition := state.Update(); transition.Target != types.TransitionToMainMenu {
+		t.Errorf("назад ведёт в главное меню, переход %v", transition.Target)
+	}
+}
+
+// fakeLoader — загрузка из steps шагов
+type fakeLoader struct{ done, steps int }
+
+func (l *fakeLoader) Step() (float64, bool) {
+	l.done = min(l.done+1, l.steps)
+	return float64(l.done) / float64(l.steps), l.done == l.steps
+}
+
+type nopSplashRenderer struct{}
+
+func (nopSplashRenderer) Draw(*ebiten.Image, types.SplashViewData) {}
+
+// splashTicksToMenu — кадров до перехода в главное меню
+func splashTicksToMenu(splash *states.SplashState, input *testutil.FakeMenuInput, skip bool) int {
+	for frame := 1; frame < 1000; frame++ {
+		*input = testutil.FakeMenuInput{Confirm: skip}
+		if splash.Update().Target == types.TransitionToMainMenu {
+			return frame
+		}
+	}
+	return -1
+}
+
+func TestSplashState_LoadsThenFades(t *testing.T) {
+	input := &testutil.FakeMenuInput{}
+	loader := &fakeLoader{steps: 5}
+	splash := states.NewSplashState(loader, nopSplashRenderer{}, input)
+
+	frames := splashTicksToMenu(splash, input, false)
+	if loader.done != loader.steps {
+		t.Fatal("сплеш уходит только после загрузки")
+	}
+	if frames < 120 {
+		t.Errorf("сплеш виден не меньше 2 с, ушёл через %d кадров", frames)
+	}
+
+	// После загрузки ожидание можно пропустить
+	input = &testutil.FakeMenuInput{}
+	skipped := states.NewSplashState(&fakeLoader{steps: 5}, nopSplashRenderer{}, input)
+	if frames := splashTicksToMenu(skipped, input, true); frames < 5 || frames > 60 {
+		t.Errorf("пропуск: переход через %d кадров", frames)
 	}
 }

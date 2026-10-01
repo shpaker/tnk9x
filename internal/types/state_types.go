@@ -7,6 +7,7 @@ const (
 	TransitionNone TransitionTarget = iota
 	TransitionToStage
 	TransitionToLevelSelect
+	TransitionToMainMenu
 	TransitionToQuit
 )
 

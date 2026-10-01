@@ -44,15 +44,26 @@ func DrawMenu(
 	rows []MenuRow,
 	activeIndex int,
 ) {
+	height := float64(screen.Bounds().Dy())
+	DrawOverlay(
+		screen, font, title, height/4-float64(font.TitleFontSize)/2,
+	)
+	drawMenuRows(screen, font, rows, activeIndex)
+}
+
+// drawMenuRows — строки меню под заголовком
+func drawMenuRows(
+	screen *ebiten.Image,
+	font MenuFont,
+	rows []MenuRow,
+	activeIndex int,
+) {
 	bounds := screen.Bounds()
 	width := float64(bounds.Dx())
 	height := float64(bounds.Dy())
 
-	DrawOverlay(
-		screen, font, title, height/4-float64(font.TitleFontSize)/2,
-	)
-
-	_, titleHeight := text.Measure(title, font.Face, 0)
+	// Высота строки — по метрикам шрифта: заголовка может не быть
+	_, titleHeight := text.Measure("M", font.Face, 0)
 	scale := font.scale()
 	rowHeight := titleHeight * scale
 	gap := float64(font.RegularFontSize)
@@ -106,7 +117,17 @@ func DrawOverlay(
 		OverlayBackdropColor,
 		false,
 	)
+	drawTitle(screen, font, title, titleTop)
+}
 
+// drawTitle — заголовок крупным шрифтом по центру на высоте titleTop
+func drawTitle(
+	screen *ebiten.Image,
+	font MenuFont,
+	title string,
+	titleTop float64,
+) {
+	width := float64(screen.Bounds().Dx())
 	titleWidth, _ := text.Measure(title, font.Face, 0)
 	titleOp := &text.DrawOptions{}
 	titleOp.GeoM.Translate((width-titleWidth)/2, titleTop)
