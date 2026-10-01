@@ -144,7 +144,7 @@ func (s *DemoScene) assemble() {
 	if s.IsAssembled() {
 		for _, enemy := range s.stageUseCases.SpawnInitialEnemyTanks() {
 			if enemy != nil {
-				s.enemyInputAdapter.AddTank(enemy)
+				s.addTank(enemy)
 			}
 		}
 	}
@@ -157,7 +157,7 @@ func (s *DemoScene) updateTanks() {
 	s.stageUseCases.UpdateGameObjects(demoTickSeconds)
 
 	if spawned := s.stageUseCases.TrySpawnEnemy(); spawned != nil {
-		s.enemyInputAdapter.AddTank(spawned)
+		s.addTank(spawned)
 	}
 	s.enemyInputAdapter.Update(demoTickSeconds)
 
@@ -170,6 +170,13 @@ func (s *DemoScene) updateTanks() {
 	if len(blinking) > 0 {
 		s.renderUseCases.UpdateBlink(blinking)
 	}
+}
+
+// addTank передаёт танк ИИ. Бонус с танка снимаем: по классике
+// его несёт четвёртый враг, и мигание красным за меню отвлекает
+func (s *DemoScene) addTank(tank *types.TankEntity) {
+	tank.SetWithBonus(false)
+	s.enemyInputAdapter.AddTank(tank)
 }
 
 // repairTitle возвращает разбитые кирпичи названия на место, если
