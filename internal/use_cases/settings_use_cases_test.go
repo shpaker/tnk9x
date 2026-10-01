@@ -101,7 +101,10 @@ func TestSettings_SetPlayers(t *testing.T) {
 	_ = settingsUseCases.SetPlayers(settings, 1)
 	_ = settingsUseCases.SetPlayers(settings, 0)
 	if settings.GetPlayers() != 1 || repository.saves != 2 {
-		t.Errorf("без смены режима хранилище не трогается: %d", repository.saves)
+		t.Errorf(
+			"без смены режима хранилище не трогается: %d",
+			repository.saves,
+		)
 	}
 }
 

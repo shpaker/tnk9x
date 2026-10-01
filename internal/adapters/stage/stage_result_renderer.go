@@ -91,7 +91,10 @@ func (r *StageRendererAdapter) DrawStageResult(
 			height*resultTitleY-resultTitleDrop*(1-reveal.Title),
 		)
 		titleOp.ColorScale.ScaleWithColor(
-			withAlpha(color.NRGBA{R: 255, G: 255, B: 255, A: 255}, reveal.Title),
+			withAlpha(
+				color.NRGBA{R: 255, G: 255, B: 255, A: 255},
+				reveal.Title,
+			),
 		)
 		text.Draw(screen, title, r.fontFace, titleOp)
 	}

@@ -23,7 +23,10 @@ type IMapUseCases interface {
 	RemoveBlock(block *types.BlockEntity) error
 	// RestoreBlock возвращает блок в исходное целое состояние, если
 	// его клетку не занимает ни один из obstacles
-	RestoreBlock(block *types.BlockEntity, obstacles []types.IEntityCollider) bool
+	RestoreBlock(
+		block *types.BlockEntity,
+		obstacles []types.IEntityCollider,
+	) bool
 	// IsBlockIntact — блок на карте в исходном размере
 	IsBlockIntact(block *types.BlockEntity) bool
 	GetSizePx() types.Size

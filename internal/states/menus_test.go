@@ -316,7 +316,10 @@ func TestLevelSelectState_BackToMainMenu(t *testing.T) {
 
 	*env.input = testutil.FakeMenuInput{Confirm: true}
 	if transition := state.Update(); transition.Target != types.TransitionToStage {
-		t.Errorf("выбор открытого уровня запускает его, переход %v", transition.Target)
+		t.Errorf(
+			"выбор открытого уровня запускает его, переход %v",
+			transition.Target,
+		)
 	}
 	*env.input = testutil.FakeMenuInput{BackPressed: true}
 	if transition := state.Update(); transition.Target != types.TransitionToMainMenu {
@@ -337,7 +340,11 @@ type nopSplashRenderer struct{}
 func (nopSplashRenderer) Draw(*ebiten.Image, types.SplashViewData) {}
 
 // splashTicksToMenu — кадров до перехода в главное меню
-func splashTicksToMenu(splash *states.SplashState, input *testutil.FakeMenuInput, skip bool) int {
+func splashTicksToMenu(
+	splash *states.SplashState,
+	input *testutil.FakeMenuInput,
+	skip bool,
+) int {
 	for frame := 1; frame < 1000; frame++ {
 		*input = testutil.FakeMenuInput{Confirm: skip}
 		if splash.Update().Target == types.TransitionToMainMenu {
@@ -362,8 +369,13 @@ func TestSplashState_LoadsThenFades(t *testing.T) {
 
 	// После загрузки ожидание можно пропустить
 	input = &testutil.FakeMenuInput{}
-	skipped := states.NewSplashState(&fakeLoader{steps: 5}, nopSplashRenderer{}, input)
-	if frames := splashTicksToMenu(skipped, input, true); frames < 5 || frames > 60 {
+	skipped := states.NewSplashState(
+		&fakeLoader{steps: 5},
+		nopSplashRenderer{},
+		input,
+	)
+	if frames := splashTicksToMenu(skipped, input, true); frames < 5 ||
+		frames > 60 {
 		t.Errorf("пропуск: переход через %d кадров", frames)
 	}
 }

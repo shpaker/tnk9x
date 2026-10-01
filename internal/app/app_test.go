@@ -168,7 +168,10 @@ func TestApp_ApplyTransition_FullApp(t *testing.T) {
 	for _, done := app.loader.Step(); !done; _, done = app.loader.Step() {
 	}
 	if len(app.frameInputs) != 3 {
-		t.Errorf("после загрузки к вводу добавляются хоткеи: %d", len(app.frameInputs))
+		t.Errorf(
+			"после загрузки к вводу добавляются хоткеи: %d",
+			len(app.frameInputs),
+		)
 	}
 	for _, step := range []struct {
 		target types.TransitionTarget

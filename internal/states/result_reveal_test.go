@@ -6,12 +6,14 @@ func TestResultReveal_Stages(t *testing.T) {
 	const stars = 3
 
 	start := resultReveal(0, stars)
-	if start.Backdrop != 0 || start.Title != 0 || start.Stars != 0 || start.Menu {
+	if start.Backdrop != 0 || start.Title != 0 || start.Stars != 0 ||
+		start.Menu {
 		t.Errorf("на старте ничего не видно: %+v", start)
 	}
 
 	afterTitle := resultReveal(revealBackdropTicks+revealTitleTicks, stars)
-	if afterTitle.Backdrop != 1 || afterTitle.Title != 1 || afterTitle.Stars != 1 {
+	if afterTitle.Backdrop != 1 || afterTitle.Title != 1 ||
+		afterTitle.Stars != 1 {
 		t.Errorf("после заголовка загорается первая звезда: %+v", afterTitle)
 	}
 
