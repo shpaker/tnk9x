@@ -134,6 +134,16 @@ func (uc *RenderUseCases) IsTankBlinking(tank *types.TankEntity) bool {
 	return tank.GetWithBonus() || hasTint
 }
 
+// BonusPulse реализует IRenderUseCases: пока враг с бонусом виден,
+// от него за фазу мигания расходится одно кольцо
+func (uc *RenderUseCases) BonusPulse(tank *types.TankEntity) (float64, bool) {
+	if tank == nil || !tank.IsEnemy() || !tank.GetWithBonus() ||
+		!tank.IsActive() || !uc.IsTankVisible(tank) {
+		return 0, false
+	}
+	return tank.GetBlinkProgress(), true
+}
+
 // TankHealthTint возвращает тон спрайта тяжёлого танка в текущем кадре;
 // ok=false — спрайт рисуется без тона. Как в NES, танк чередует обычный
 // и тонированный спрайт; танк с бонусом и так пропадает в выключенной

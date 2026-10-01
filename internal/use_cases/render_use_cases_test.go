@@ -485,3 +485,27 @@ func TestRenderUseCases_IsTankBlinking(t *testing.T) {
 		})
 	}
 }
+
+// Кольцо расходится от врага с бонусом только в видимой фазе
+func TestRenderUseCases_BonusPulse(t *testing.T) {
+	env := newRenderTestEnv()
+	enemy := env.newTankInState(types.TankRoleEnemy, types.TankStateMoving)
+	enemy.SetWithBonus(true)
+
+	if _, ok := env.render.BonusPulse(enemy); ok {
+		t.Error("в скрытой фазе кольца быть не должно")
+	}
+	for !enemy.GetBlinkFlag() {
+		enemy.UpdateBlink()
+	}
+	enemy.UpdateBlink()
+	progress, ok := env.render.BonusPulse(enemy)
+	if !ok || progress <= 0 || progress >= 1 {
+		t.Errorf("в видимой фазе ожидалось кольцо, прогресс %v", progress)
+	}
+
+	enemy.SetWithBonus(false)
+	if _, ok := env.render.BonusPulse(enemy); ok {
+		t.Error("у врага без бонуса кольца быть не должно")
+	}
+}

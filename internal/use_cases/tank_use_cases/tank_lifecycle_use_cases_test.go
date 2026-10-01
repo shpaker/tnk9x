@@ -64,6 +64,10 @@ func (s *stubRenderUseCases) IsTankBlinking(tank *types.TankEntity) bool {
 	return false
 }
 
+func (s *stubRenderUseCases) BonusPulse(*types.TankEntity) (float64, bool) {
+	return 0, false
+}
+
 func (s *stubRenderUseCases) TankHealthTint(
 	tank *types.TankEntity,
 ) (color.NRGBA, bool) {

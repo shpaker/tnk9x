@@ -188,7 +188,44 @@ func (r *StageRendererAdapter) drawTanks(screen *ebiten.Image) {
 		if tank.HasShield() {
 			r.drawShield(screen, tank, position)
 		}
+		if progress, ok := r.renderUseCases.BonusPulse(tank); ok &&
+			r.settings.IsEffectsEnabled() {
+			r.drawBonusPulse(screen, tank, x, y, progress)
+		}
 	}
+}
+
+// Кольцо врага с бонусом: стартует у брони, расходится на
+// bonusPulseGrowth пикселей и гаснет к концу фазы мигания
+const (
+	bonusPulseInset  = 2.0
+	bonusPulseGrowth = 10.0
+	bonusPulseWidth  = 1.5
+)
+
+var bonusPulseColor = color.NRGBA{R: 255, G: 60, B: 50, A: 255}
+
+// drawBonusPulse рисует кольцо, расходящееся от врага с бонусом
+func (r *StageRendererAdapter) drawBonusPulse(
+	screen *ebiten.Image,
+	tank *types.TankEntity,
+	x, y, progress float64,
+) {
+	halfWidth := float64(tank.Size.Width) / 2
+	halfHeight := float64(tank.Size.Height) / 2
+	radius := max(halfWidth, halfHeight) - bonusPulseInset +
+		bonusPulseGrowth*progress
+	ringColor := bonusPulseColor
+	ringColor.A = uint8(float64(ringColor.A) * (1 - progress))
+	vector.StrokeCircle(
+		screen,
+		float32(x+halfWidth),
+		float32(y+halfHeight),
+		float32(radius),
+		bonusPulseWidth,
+		ringColor,
+		true,
+	)
 }
 
 // boatFrames — кадры корпуса лодки: пена перебегает по борту

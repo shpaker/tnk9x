@@ -89,6 +89,9 @@ type IRenderUseCases interface {
 	IsTankBlinking(tank *types.TankEntity) bool
 	// TankHealthTint — тон спрайта тяжёлого танка в текущем кадре
 	TankHealthTint(tank *types.TankEntity) (color.NRGBA, bool)
+	// BonusPulse — прогресс от 0 до 1 кольца, расходящегося от врага
+	// с бонусом в видимой фазе мигания; ok=false — кольца нет
+	BonusPulse(tank *types.TankEntity) (float64, bool)
 }
 
 type ITankLifecycleUseCases interface {
