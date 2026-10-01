@@ -45,9 +45,7 @@ func DrawMenu(
 	activeIndex int,
 ) {
 	height := float64(screen.Bounds().Dy())
-	DrawOverlay(
-		screen, font, title, height/4-float64(font.TitleFontSize)/2,
-	)
+	DrawOverlay(screen, font, title, font.TitleTop(height))
 	drawMenuRows(screen, font, rows, activeIndex)
 }
 
@@ -133,6 +131,12 @@ func drawTitle(
 	titleOp.GeoM.Translate((width-titleWidth)/2, titleTop)
 	titleOp.ColorScale.ScaleWithColor(color.White)
 	text.Draw(screen, title, font.Face, titleOp)
+}
+
+// TitleTop — высота заголовка оверлея: общая для всех меню,
+// чтобы заголовки экранов стояли на одном уровне
+func (f MenuFont) TitleTop(screenHeight float64) float64 {
+	return screenHeight/4 - float64(f.TitleFontSize)/2
 }
 
 // columnWidths — ширина колонки подписей строк со значениями

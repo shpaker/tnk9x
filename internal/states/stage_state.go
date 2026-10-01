@@ -406,7 +406,11 @@ func (state *StageState) Draw(screen *ebiten.Image) {
 		return
 	}
 
-	if state.stageUseCases.IsPaused() {
+	// Завершённый уровень тоже стоит на паузе, но итоги строятся
+	// только в следующем Update: без проверки меню паузы мелькнуло бы
+	// на один кадр перед экраном итогов
+	if state.stageUseCases.IsPaused() &&
+		!state.stageUseCases.IsStageFinished() {
 		state.renderer.DrawPauseMenu(screen, types.PauseMenuViewData{
 			Items:       state.pauseMenuItems,
 			ActiveIndex: state.pauseMenuIndex,

@@ -38,8 +38,8 @@ const (
 // Попадание во врага трясёт ощутимо, в игрока — сильнее
 const (
 	shakeBulletClash     = 0.5
-	shakeEnemyHit        = 0.55
-	shakeEnemyExplosion  = 0.65
+	shakeEnemyHit        = 0.6
+	shakeEnemyExplosion  = 0.8
 	shakePlayerHit       = 0.85
 	shakePlayerExplosion = 1.0
 	shakeHQExplosion     = 1.0

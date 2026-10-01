@@ -25,8 +25,8 @@ var (
 
 // Раскладка таблицы в логических координатах 256x224
 const (
-	controlsTitleTop  = 12
-	controlsTableTop  = 48
+	// controlsTableGap — отступ таблицы от низа заголовка
+	controlsTableGap  = 10
 	controlsRowStep   = 14
 	controlsLabelLeft = 24
 	keyColumnCenter   = 148
@@ -70,12 +70,14 @@ func (r *ControlsRendererAdapter) Draw(
 	screen *ebiten.Image,
 	view types.ControlsViewData,
 ) {
-	ui.DrawOverlay(screen, r.font, "CONTROLS", controlsTitleTop)
+	// Заголовок на той же высоте, что у SETTINGS и других меню
+	titleTop := r.font.TitleTop(float64(screen.Bounds().Dy()))
+	ui.DrawOverlay(screen, r.font, "CONTROLS", titleTop)
 	width := float64(screen.Bounds().Dx())
 	cursor := view.Cursor
 
 	_, isPlayerPage := cursor.Page.Player()
-	top := float64(controlsTableTop)
+	top := titleTop + float64(r.font.TitleFontSize) + controlsTableGap
 	for i, row := range view.Rows {
 		active := i == cursor.Row
 		rowColor := controlsRowColor
