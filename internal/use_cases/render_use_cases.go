@@ -20,6 +20,9 @@ var tankHealthTintColors = map[uint]color.NRGBA{
 	2: {R: 120, G: 255, B: 120, A: 255},
 }
 
+// bonusPulseColor — цвет кольца врага с бонусом без подсветки здоровья
+var bonusPulseColor = color.NRGBA{R: 255, G: 60, B: 50, A: 255}
+
 var _ interfaces.IRenderUseCases = (*RenderUseCases)(nil)
 
 type RenderUseCases struct {
@@ -134,14 +137,24 @@ func (uc *RenderUseCases) IsTankBlinking(tank *types.TankEntity) bool {
 	return tank.GetWithBonus() || hasTint
 }
 
-// BonusPulse реализует IRenderUseCases: пока враг с бонусом виден,
-// от него за фазу мигания расходится одно кольцо
-func (uc *RenderUseCases) BonusPulse(tank *types.TankEntity) (float64, bool) {
-	if tank == nil || !tank.IsEnemy() || !tank.GetWithBonus() ||
-		!tank.IsActive() || !uc.IsTankVisible(tank) {
-		return 0, false
+// BlinkPulse реализует IRenderUseCases: в подсвеченной фазе мигания
+// от танка расходится кольцо — в цвет подсветки здоровья у тяжёлого
+// врага, красное у врага с бонусом
+func (uc *RenderUseCases) BlinkPulse(
+	tank *types.TankEntity,
+) (float64, color.NRGBA, bool) {
+	if tank == nil || !tank.IsActive() || !uc.IsTankVisible(tank) {
+		return 0, color.NRGBA{}, false
 	}
-	return tank.GetBlinkProgress(), true
+	pulseColor, tinted := uc.TankHealthTint(tank)
+	switch {
+	case tinted:
+	case tank.IsEnemy() && tank.GetWithBonus():
+		pulseColor = bonusPulseColor
+	default:
+		return 0, color.NRGBA{}, false
+	}
+	return tank.GetBlinkProgress(), pulseColor, true
 }
 
 // TankHealthTint возвращает тон спрайта тяжёлого танка в текущем кадре;

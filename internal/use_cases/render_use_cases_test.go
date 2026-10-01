@@ -486,26 +486,44 @@ func TestRenderUseCases_IsTankBlinking(t *testing.T) {
 	}
 }
 
-// Кольцо расходится от врага с бонусом только в видимой фазе
-func TestRenderUseCases_BonusPulse(t *testing.T) {
+// Кольцо расходится от мигающего врага только в подсвеченной фазе:
+// у тяжёлого — в цвет здоровья, у врага с бонусом — красное
+func TestRenderUseCases_BlinkPulse(t *testing.T) {
 	env := newRenderTestEnv()
-	enemy := env.newTankInState(types.TankRoleEnemy, types.TankStateMoving)
-	enemy.SetWithBonus(true)
 
-	if _, ok := env.render.BonusPulse(enemy); ok {
-		t.Error("в скрытой фазе кольца быть не должно")
+	heavy := env.newTankInState(types.TankRoleEnemy, types.TankStateMoving)
+	heavy.SetSpecs(types.NewSpecsEntity(3, 1, false, 1, 1))
+	heavy.SetHitPoints(4)
+	if _, _, ok := env.render.BlinkPulse(heavy); ok {
+		t.Error("в обычной фазе тяжёлого танка кольца быть не должно")
 	}
-	for !enemy.GetBlinkFlag() {
-		enemy.UpdateBlink()
+	for !heavy.GetBlinkFlag() {
+		heavy.UpdateBlink()
 	}
-	enemy.UpdateBlink()
-	progress, ok := env.render.BonusPulse(enemy)
+	heavy.UpdateBlink()
+	progress, pulseColor, ok := env.render.BlinkPulse(heavy)
 	if !ok || progress <= 0 || progress >= 1 {
-		t.Errorf("в видимой фазе ожидалось кольцо, прогресс %v", progress)
+		t.Errorf("в подсвеченной фазе ожидалось кольцо, прогресс %v", progress)
+	}
+	if tint, _ := env.render.TankHealthTint(heavy); pulseColor != tint {
+		t.Errorf("цвет кольца %v, ожидался цвет здоровья %v", pulseColor, tint)
 	}
 
-	enemy.SetWithBonus(false)
-	if _, ok := env.render.BonusPulse(enemy); ok {
-		t.Error("у врага без бонуса кольца быть не должно")
+	bonus := env.newTankInState(types.TankRoleEnemy, types.TankStateMoving)
+	bonus.SetWithBonus(true)
+	for !bonus.GetBlinkFlag() {
+		bonus.UpdateBlink()
+	}
+	if _, pulseColor, ok := env.render.BlinkPulse(bonus); !ok ||
+		pulseColor.R <= pulseColor.G {
+		t.Error("у видимого врага с бонусом ожидалось красное кольцо")
+	}
+
+	plain := env.newTankInState(types.TankRoleEnemy, types.TankStateMoving)
+	for !plain.GetBlinkFlag() {
+		plain.UpdateBlink()
+	}
+	if _, _, ok := env.render.BlinkPulse(plain); ok {
+		t.Error("у обычного врага кольца быть не должно")
 	}
 }

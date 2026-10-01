@@ -188,41 +188,39 @@ func (r *StageRendererAdapter) drawTanks(screen *ebiten.Image) {
 		if tank.HasShield() {
 			r.drawShield(screen, tank, position)
 		}
-		if progress, ok := r.renderUseCases.BonusPulse(tank); ok &&
-			r.settings.IsEffectsEnabled() {
-			r.drawBonusPulse(screen, tank, x, y, progress)
+		progress, pulseColor, pulsing := r.renderUseCases.BlinkPulse(tank)
+		if pulsing && r.settings.IsEffectsEnabled() {
+			r.drawBlinkPulse(screen, tank, x, y, progress, pulseColor)
 		}
 	}
 }
 
-// Кольцо врага с бонусом: стартует у брони, расходится на
-// bonusPulseGrowth пикселей и гаснет к концу фазы мигания
+// Кольцо мигающего врага: стартует у брони, расходится на
+// blinkPulseGrowth пикселей и гаснет к концу фазы мигания
 const (
-	bonusPulseInset  = 2.0
-	bonusPulseGrowth = 10.0
-	bonusPulseWidth  = 1.5
+	blinkPulseInset  = 2.0
+	blinkPulseGrowth = 10.0
+	blinkPulseWidth  = 1.5
 )
 
-var bonusPulseColor = color.NRGBA{R: 255, G: 60, B: 50, A: 255}
-
-// drawBonusPulse рисует кольцо, расходящееся от врага с бонусом
-func (r *StageRendererAdapter) drawBonusPulse(
+// drawBlinkPulse рисует кольцо, расходящееся от мигающего врага
+func (r *StageRendererAdapter) drawBlinkPulse(
 	screen *ebiten.Image,
 	tank *types.TankEntity,
 	x, y, progress float64,
+	ringColor color.NRGBA,
 ) {
 	halfWidth := float64(tank.Size.Width) / 2
 	halfHeight := float64(tank.Size.Height) / 2
-	radius := max(halfWidth, halfHeight) - bonusPulseInset +
-		bonusPulseGrowth*progress
-	ringColor := bonusPulseColor
+	radius := max(halfWidth, halfHeight) - blinkPulseInset +
+		blinkPulseGrowth*progress
 	ringColor.A = uint8(float64(ringColor.A) * (1 - progress))
 	vector.StrokeCircle(
 		screen,
 		float32(x+halfWidth),
 		float32(y+halfHeight),
 		float32(radius),
-		bonusPulseWidth,
+		blinkPulseWidth,
 		ringColor,
 		true,
 	)

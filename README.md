@@ -57,7 +57,7 @@ A modern remake and tribute to the classic arcade game Battle City (NES, 1985), 
   - No fog of war: the whole field is visible, lights only brighten it
   - Headlights on every tank: a cone along the barrel that turns smoothly with the tank; the player's is long and bright with a soft aura around the tank, enemies' is shorter and reddish; walls are buildings, so light falls on their facades and they cast shadows
   - Bullets glow like tracers and light up the corridor they fly through
-  - An enemy carrying a bonus sends out a red ring pulse each time it blinks red
+  - Blinking enemies send out a ring pulse in their highlight phase: in the health colour for heavy tanks, red for bonus carriers
   - Materials: steel facades have a metallic sheen that blooms under bright light, brick is matte
   - The stage starts with the player tank already on the map; respawns after death keep the spawn animation
   - Invulnerability after spawning, as in the original: an animated force field over the tank in both graphics modes, pulsing with a flickering glow in normal graphics (also for the helmet bonus)
