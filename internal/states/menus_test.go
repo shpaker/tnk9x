@@ -277,7 +277,6 @@ func newMainMenu(env *menusEnv) *states.MainMenuState {
 		Scene:           &countingScene{},
 		SettingsOverlay: env.settingsOverlay,
 		Settings:        env.settings,
-		Version:         "0.20",
 		QuitAvailable:   true,
 	})
 }

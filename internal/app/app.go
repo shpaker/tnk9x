@@ -496,7 +496,6 @@ func (app *App) newMainMenuState() (*states.MainMenuState, error) {
 		Scene:            scene,
 		SettingsOverlay:  app.settingsOverlay,
 		Settings:         app.settings,
-		Version:          Version,
 		QuitAvailable:    runtime.GOOS != "js",
 	}), nil
 }

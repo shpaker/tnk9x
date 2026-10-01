@@ -43,8 +43,6 @@ type MainMenuStateDependencies struct {
 	// Entities
 	Settings *types.SettingsEntity
 
-	// Version — версия игры в углу экрана
-	Version string
 	// QuitAvailable — выход из игры есть только там, где приложение
 	// может завершиться (десктоп)
 	QuitAvailable bool
@@ -65,7 +63,6 @@ type MainMenuState struct {
 	// Entities
 	settings *types.SettingsEntity
 
-	version     string
 	items       []types.MainMenuItem
 	activeIndex int
 	ticks       uint
@@ -94,7 +91,6 @@ func NewMainMenuState(deps MainMenuStateDependencies) *MainMenuState {
 		scene:            deps.Scene,
 		settingsOverlay:  deps.SettingsOverlay,
 		settings:         deps.Settings,
-		version:          deps.Version,
 		items:            items,
 		activeIndex:      activeIndex,
 	}
@@ -137,7 +133,6 @@ func (s *MainMenuState) Draw(screen *ebiten.Image) {
 	s.renderer.Draw(screen, types.MainMenuViewData{
 		Items:       s.items,
 		ActiveIndex: s.activeIndex,
-		Version:     s.version,
 		Fade:        fade,
 	})
 	if s.settingsOverlay.IsOpen() {
