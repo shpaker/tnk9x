@@ -81,12 +81,13 @@ func (uc *CollisionUseCases) UpdateCollisions() {
 
 	uc.checkBulletsCollisions(bullets, hq)
 
-	uc.checkTanksCollisions(allTanks, bonuses)
+	uc.checkTanksCollisions(allTanks, bonuses, hq)
 }
 
 func (uc *CollisionUseCases) checkTanksCollisions(
 	allTanks []*types.TankEntity,
 	bonuses []*types.BonusEntity,
+	hq *types.HQEntity,
 ) {
 	for _, tank := range allTanks {
 
@@ -94,6 +95,7 @@ func (uc *CollisionUseCases) checkTanksCollisions(
 			continue
 		}
 		uc.checkTankBlockCollisions(tank)
+		uc.checkTankHQCollision(tank, hq)
 		uc.checkTankTankCollision(tank, allTanks)
 		uc.checkTankBoundaryCollision(tank)
 		uc.checkTankBulletCollisions(tank)
@@ -275,6 +277,31 @@ func (uc *CollisionUseCases) checkTankBlockCollisions(
 			uc.tankActions.Stop(tank, true)
 		}
 	}
+}
+
+// checkTankHQCollision не пускает танк на целый штаб: орёл —
+// препятствие, как блок; разрушенный штаб проходим
+func (uc *CollisionUseCases) checkTankHQCollision(
+	tank *types.TankEntity,
+	hq *types.HQEntity,
+) {
+	if hq == nil || !hq.IsIntact() ||
+		!uc.entitiesCollisionService.CheckColliders(tank, hq) {
+		return
+	}
+
+	correctedPos, err := uc.entitiesCollisionService.ResolveCollisionPosition(
+		tank,
+		hq,
+		tank.Direction,
+	)
+	if err != nil {
+		// Штаб сбоку/сзади: перекрытие не от текущего движения
+		return
+	}
+
+	tank.Position = correctedPos
+	uc.tankActions.Stop(tank, true)
 }
 
 func (uc *CollisionUseCases) checkTankTankCollision(
