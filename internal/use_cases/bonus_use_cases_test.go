@@ -120,7 +120,6 @@ func (s *stubConfigProvider) GetTitleFontSize() uint    { return 0 }
 func (s *stubConfigProvider) GetSubtitleFontSize() uint { return 0 }
 func (s *stubConfigProvider) GetRegularFontSize() uint  { return 0 }
 func (s *stubConfigProvider) GetGameTitle() string      { return "" }
-func (s *stubConfigProvider) GetVolume() float64        { return 0 }
 
 type bonusTestEnv struct {
 	tankCommon  *recordingTankCommon

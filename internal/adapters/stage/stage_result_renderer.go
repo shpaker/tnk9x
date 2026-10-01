@@ -20,6 +20,30 @@ var stageResultLabels = map[types.StageResultItem]string{
 	types.StageResultItemLevels:   "STAGES",
 }
 
+// resultCaption — пояснение под пунктом меню итогов: текст
+// и ряд звёзд за ним
+type resultCaption struct {
+	label string
+	stars uint
+}
+
+// stageResultCaptions — пояснения под пунктами меню итогов:
+// CONTINUE отличается от NEXT STAGE переносом и потолком звёзд
+var stageResultCaptions = map[types.StageResultItem]resultCaption{
+	types.StageResultItemContinue: {
+		label: "KEEP LIVES & TANK, MAX",
+		stars: types.MaxCarryOverStars,
+	},
+}
+
+// Раскладка пояснения: зазор под пунктом и ряд звёзд после текста
+const (
+	resultCaptionGap  = 3
+	captionStarRadius = 3.5
+	captionStarStep   = 9
+	captionStarsGap   = 6
+)
+
 // Раскладка экрана итогов: доли высоты экрана
 const (
 	resultTitleY  = 0.16
@@ -32,6 +56,7 @@ const (
 var (
 	newBestColor    = color.NRGBA{R: 252, G: 196, B: 36, A: 255}
 	subtleTextColor = color.NRGBA{R: 200, G: 200, B: 200, A: 255}
+	captionColor    = color.NRGBA{R: 110, G: 110, B: 110, A: 255}
 )
 
 // DrawStageResult рисует экран итогов: исход, звёзды, время
@@ -46,7 +71,7 @@ func (r *StageRendererAdapter) DrawStageResult(
 
 	vector.FillRect(
 		screen, 0, 0, float32(width), float32(height),
-		overlayBackdropColor, false,
+		ui.OverlayBackdropColor, false,
 	)
 
 	title := "VICTORY"
@@ -88,7 +113,7 @@ func (r *StageRendererAdapter) DrawStageResult(
 		)
 	}
 
-	layout := r.resultMenuLayout(height, len(view.Items))
+	layout := r.resultMenuLayout(height, view.Items)
 	for i, item := range view.Items {
 		rowColor := color.NRGBA{R: 150, G: 150, B: 150, A: 255}
 		if i == view.ActiveIndex {
@@ -97,23 +122,83 @@ func (r *StageRendererAdapter) DrawStageResult(
 		r.drawResultLine(
 			screen, stageResultLabels[item], layout.rowTops[i], rowColor,
 		)
+		if caption, ok := stageResultCaptions[item]; ok {
+			r.drawResultCaption(
+				screen, caption, layout.rowTops[i]+layout.captionOffset,
+			)
+		}
 	}
 }
 
-// resultMenuLayout — строки меню итогов в нижней части экрана
+// resultMenuLayout — вертикальная раскладка строк меню итогов
+// в логических координатах экрана
+type resultMenuLayout struct {
+	rowTops []float64
+	// captionOffset — сдвиг пояснения от верха его пункта
+	captionOffset float64
+}
+
+// resultMenuLayout — строки меню итогов в нижней части экрана;
+// пункт с пояснением занимает дополнительную строку
 func (r *StageRendererAdapter) resultMenuLayout(
 	height float64,
-	rows int,
-) pauseMenuLayout {
-	layout := r.pauseMenuLayout(height, rows)
-	shift := height*resultMenuTop - layout.rowTops[0]
-	if rows == 0 {
-		shift = 0
+	items []types.StageResultItem,
+) resultMenuLayout {
+	_, textHeight := text.Measure("PAUSED", r.fontFace, 0)
+	scale := float64(r.regularFontSize) / float64(r.titleFontSize)
+	if scale <= 0 {
+		scale = 1
 	}
-	for i := range layout.rowTops {
-		layout.rowTops[i] += shift
+	rowHeight := textHeight * scale
+	gap := float64(r.regularFontSize)
+	captionOffset := rowHeight + resultCaptionGap
+
+	rowTops := make([]float64, len(items))
+	top := height * resultMenuTop
+	for i, item := range items {
+		rowTops[i] = top
+		top += rowHeight + gap
+		if _, ok := stageResultCaptions[item]; ok {
+			top += captionOffset
+		}
 	}
-	return layout
+	return resultMenuLayout{
+		rowTops:       rowTops,
+		captionOffset: captionOffset,
+	}
+}
+
+// drawResultCaption рисует пояснение пункта по центру: тусклый текст
+// и за ним ряд звёзд
+func (r *StageRendererAdapter) drawResultCaption(
+	screen *ebiten.Image,
+	caption resultCaption,
+	top float64,
+) {
+	scale := float64(r.regularFontSize) / float64(r.titleFontSize)
+	if scale <= 0 {
+		scale = 1
+	}
+	labelWidth, _ := text.Measure(caption.label, r.fontFace, 0)
+	labelWidth *= scale
+	starsWidth := float64(captionStarStep*(caption.stars-1)) +
+		2*captionStarRadius
+	left := (float64(screen.Bounds().Dx()) -
+		labelWidth - captionStarsGap - starsWidth) / 2
+
+	op := &text.DrawOptions{}
+	op.GeoM.Scale(scale, scale)
+	op.GeoM.Translate(left, top)
+	op.ColorScale.ScaleWithColor(captionColor)
+	text.Draw(screen, caption.label, r.fontFace, op)
+
+	ui.DrawStarsRow(
+		screen,
+		float32(left+labelWidth+captionStarsGap+starsWidth/2),
+		float32(top+float64(r.regularFontSize)/2),
+		captionStarRadius, captionStarStep,
+		caption.stars, caption.stars,
+	)
 }
 
 func (r *StageRendererAdapter) drawResultLine(

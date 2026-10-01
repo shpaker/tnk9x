@@ -29,7 +29,7 @@ type StageRendererAdapter struct {
 	visualEffectsUseCases interfaces.IVisualEffectsUseCases
 	spriteCache           *SpriteCache
 	effects               *effects.EffectsRendererAdapter
-	effectsSettings       *types.EffectsSettingsEntity
+	settings              *types.SettingsEntity
 	fontFace              text.Face
 	hudFontFace           text.Face
 	titleFontSize         int
@@ -60,9 +60,10 @@ type StageRendererDependencies struct {
 	// Кэш GPU-спрайтов, общий для всех уровней
 	SpriteCache *SpriteCache
 
-	// Графические эффекты и их включённость, общие для всех уровней
-	Effects         *effects.EffectsRendererAdapter
-	EffectsSettings *types.EffectsSettingsEntity
+	// Графические эффекты и пользовательские настройки (включённость
+	// эффектов), общие для всех уровней
+	Effects  *effects.EffectsRendererAdapter
+	Settings *types.SettingsEntity
 
 	// Шрифты и раскладка
 	FontFace         text.Face
@@ -90,7 +91,7 @@ func NewStageRendererAdapter(
 		visualEffectsUseCases: deps.VisualEffectsUseCases,
 		spriteCache:           deps.SpriteCache,
 		effects:               deps.Effects,
-		effectsSettings:       deps.EffectsSettings,
+		settings:              deps.Settings,
 		fontFace:              deps.FontFace,
 		hudFontFace:           deps.HUDFontFace,
 		mapOffsetX:            deps.MapOffsetX,
@@ -241,7 +242,7 @@ func (r *StageRendererAdapter) recoiledPosition(
 	tank *types.TankEntity,
 ) types.Position {
 	position := tank.Position
-	if !r.effectsSettings.IsEnabled() || !tank.IsRecoiling() {
+	if !r.settings.IsEffectsEnabled() || !tank.IsRecoiling() {
 		return position
 	}
 	direction := tank.Direction.Vector()
@@ -419,7 +420,7 @@ func (r *StageRendererAdapter) drawBonuses(screen *ebiten.Image) {
 // DrawAll рисует поле уровня; с включёнными эффектами поле рисуется
 // в буфер сцены и переносится на экран проходом освещения
 func (r *StageRendererAdapter) DrawAll(screen *ebiten.Image) {
-	if !r.effectsSettings.IsEnabled() {
+	if !r.settings.IsEffectsEnabled() {
 		r.drawField(screen)
 		return
 	}
@@ -493,7 +494,7 @@ func (r *StageRendererAdapter) drawField(screen *ebiten.Image) {
 
 	r.drawExplosions(screen)
 
-	if r.effectsSettings.IsEnabled() {
+	if r.settings.IsEffectsEnabled() {
 		r.drawParticles(screen)
 	}
 
@@ -677,14 +678,8 @@ func (r *StageRendererAdapter) drawHUDText(
 	text.Draw(screen, message, r.hudFontFace, op)
 }
 
-// Цвета экрана уровня
-var (
-	// nesBorderGray — серый рамки NES, совпадает с фоном спрайтов HUD
-	nesBorderGray = color.RGBA{R: 109, G: 109, B: 109, A: 255}
-	// overlayBackdropColor — полупрозрачная подложка оверлеев паузы
-	// и конца уровня
-	overlayBackdropColor = color.NRGBA{R: 40, G: 40, B: 40, A: 240}
-)
+// nesBorderGray — серый рамки NES, совпадает с фоном спрайтов HUD
+var nesBorderGray = color.RGBA{R: 109, G: 109, B: 109, A: 255}
 
 func (r *StageRendererAdapter) drawScreenBackground(screen *ebiten.Image) {
 	vector.FillRect(

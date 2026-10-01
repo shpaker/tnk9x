@@ -73,6 +73,7 @@ type FakeSoundPlayer struct {
 	Stopped      []types.SoundID
 	StopAllCalls int
 	UpdateCalls  int
+	Volume       float64
 }
 
 var _ interfaces.ISoundPlayerAdapter = (*FakeSoundPlayer)(nil)
@@ -97,6 +98,71 @@ func (p *FakeSoundPlayer) StopAll() {
 
 func (p *FakeSoundPlayer) Update() {
 	p.UpdateCalls++
+}
+
+func (p *FakeSoundPlayer) SetVolume(volume float64) {
+	p.Volume = volume
+}
+
+// FakeTouchControls реализует interfaces.ITouchControlsAdapter:
+// события кадра задаются полями по номеру игрока
+type FakeTouchControls struct {
+	TouchActive   bool
+	Directions    [2]types.Direction
+	HasDirection  [2]bool
+	DirectionJust [2]bool
+	FireJust      [2]bool
+	PauseJust     bool
+}
+
+var _ interfaces.ITouchControlsAdapter = (*FakeTouchControls)(nil)
+
+func (f *FakeTouchControls) Update() {}
+
+func (f *FakeTouchControls) IsTouchActive() bool { return f.TouchActive }
+
+func (f *FakeTouchControls) DPadDirection(
+	player types.PlayerTankNum,
+) (types.Direction, bool) {
+	return f.Directions[player], f.HasDirection[player]
+}
+
+func (f *FakeTouchControls) DPadJustPressed(
+	player types.PlayerTankNum,
+) (types.Direction, bool) {
+	return f.Directions[player], f.DirectionJust[player]
+}
+
+func (f *FakeTouchControls) FireJustPressed(player types.PlayerTankNum) bool {
+	return f.FireJust[player]
+}
+
+func (f *FakeTouchControls) PauseJustPressed() bool { return f.PauseJust }
+
+// FakeMenuInput реализует interfaces.IMenuInputAdapter: события
+// кадра задаются полями, Reset очищает их перед следующим кадром
+type FakeMenuInput struct {
+	TouchActive bool
+	Up, Down    bool
+	Side        int
+	Confirm     bool
+	BackPressed bool
+	Pause       bool
+}
+
+var _ interfaces.IMenuInputAdapter = (*FakeMenuInput)(nil)
+
+func (f *FakeMenuInput) Update()                {}
+func (f *FakeMenuInput) IsTouchActive() bool    { return f.TouchActive }
+func (f *FakeMenuInput) Steps() (bool, bool)    { return f.Up, f.Down }
+func (f *FakeMenuInput) SideStep() int          { return f.Side }
+func (f *FakeMenuInput) Confirmed() bool        { return f.Confirm }
+func (f *FakeMenuInput) Back() bool             { return f.BackPressed }
+func (f *FakeMenuInput) PauseJustPressed() bool { return f.Pause }
+
+// Reset — кадр без нажатий
+func (f *FakeMenuInput) Reset() {
+	*f = FakeMenuInput{TouchActive: f.TouchActive}
 }
 
 // FakeTilesetRegistry реализует interfaces.ITilesetRepositoryRegistry:

@@ -17,15 +17,11 @@ type configSchema struct {
 }
 
 type appConfigSchema struct {
-	ScreenPx         [2]uint  `yaml:"screen_px"`
-	TitleFontSize    uint     `yaml:"title_font_size"`
-	SubtitleFontSize uint     `yaml:"subtitle_font_size"`
-	RegularFontSize  uint     `yaml:"regular_font_size"`
-	GameTitle        string   `yaml:"game_title"`
-	Volume           *float64 `yaml:"volume"`
-	Effects          *bool    `yaml:"effects"`
-	Fullscreen       *bool    `yaml:"fullscreen"`
-	Players          uint     `yaml:"players"`
+	ScreenPx         [2]uint `yaml:"screen_px"`
+	TitleFontSize    uint    `yaml:"title_font_size"`
+	SubtitleFontSize uint    `yaml:"subtitle_font_size"`
+	RegularFontSize  uint    `yaml:"regular_font_size"`
+	GameTitle        string  `yaml:"game_title"`
 }
 
 type gameConfigSchema struct {
@@ -59,10 +55,6 @@ type Config struct {
 	SubtitleFontSize uint
 	RegularFontSize  uint
 	GameTitle        string
-	Volume           float64
-	EffectsEnabled   bool
-	Fullscreen       bool
-	PlayerCount      uint
 
 	EnemySpawners          []types.Position
 	Player1Spawn           types.Position
@@ -108,9 +100,6 @@ func LoadConfig() (*Config, error) {
 		SubtitleFontSize: schema.App.SubtitleFontSize,
 		RegularFontSize:  schema.App.RegularFontSize,
 		GameTitle:        schema.App.GameTitle,
-		Volume:           1.0,  // Значение по умолчанию
-		EffectsEnabled:   true, // Значение по умолчанию
-		Fullscreen:       true, // Значение по умолчанию
 		ShotCooldown:     true, // Значение по умолчанию
 		EnemyBonusPickup: true, // Значение по умолчанию
 		EnemySpawners: convertCoordsToPositions(
@@ -150,11 +139,6 @@ func LoadConfig() (*Config, error) {
 		cfg.EnemyRespawnDelayTicks = 2 * 60
 	}
 
-	cfg.PlayerCount = schema.App.Players
-	if cfg.PlayerCount != 2 {
-		cfg.PlayerCount = 1
-	}
-
 	cfg.SpawnPlayerSafeRadius = schema.Game.SpawnPlayerSafeRadius
 	if cfg.SpawnPlayerSafeRadius <= 0 {
 		cfg.SpawnPlayerSafeRadius = 4
@@ -175,25 +159,6 @@ func LoadConfig() (*Config, error) {
 		return nil, fmt.Errorf("invalid default_level in config: %w", err)
 	}
 	cfg.LevelDefaults = levelDefaults
-
-	// Если громкость указана в конфиге, используем её значение
-	if schema.App.Volume != nil {
-		cfg.Volume = *schema.App.Volume
-		// Валидация громкости: должна быть от 0.0 до 1.0
-		if cfg.Volume < 0.0 {
-			cfg.Volume = 0.0
-		} else if cfg.Volume > 1.0 {
-			cfg.Volume = 1.0
-		}
-	}
-
-	if schema.App.Effects != nil {
-		cfg.EffectsEnabled = *schema.App.Effects
-	}
-
-	if schema.App.Fullscreen != nil {
-		cfg.Fullscreen = *schema.App.Fullscreen
-	}
 
 	if schema.Game.ShotCooldown != nil {
 		cfg.ShotCooldown = *schema.Game.ShotCooldown
@@ -267,23 +232,6 @@ func (c *Config) GetRegularFontSize() uint {
 
 func (c *Config) GetGameTitle() string {
 	return c.GameTitle
-}
-
-func (c *Config) GetVolume() float64 {
-	return c.Volume
-}
-
-func (c *Config) GetEffectsEnabled() bool {
-	return c.EffectsEnabled
-}
-
-// GetFullscreen — запуск на весь экран; действует только на десктопе
-func (c *Config) GetFullscreen() bool {
-	return c.Fullscreen
-}
-
-func (c *Config) GetPlayerCount() uint {
-	return c.PlayerCount
 }
 
 func (c *Config) ScreenWidth() int {

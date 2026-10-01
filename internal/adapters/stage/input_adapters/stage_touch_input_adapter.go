@@ -7,13 +7,15 @@ import (
 
 var _ interfaces.IInputAdapterWithTank = (*StageTouchInputAdapter)(nil)
 
-// StageTouchInputAdapter превращает события экранных контролов в
-// команды танку игрока; семантика повторяет клавиатурный адаптер:
-// Rotate+Move каждый кадр удержания, один Stop при отпускании
+// StageTouchInputAdapter превращает события экранных контролов игрока
+// в команды его танку; семантика повторяет клавиатурный адаптер:
+// Rotate+Move каждый кадр удержания, один Stop при отпускании. Пауза —
+// общая кнопка, её обрабатывает стейт уровня
 type StageTouchInputAdapter struct {
 	tankActions   interfaces.ITankActionsUseCases
 	stageUseCases interfaces.IStageUseCases
 	touchControls interfaces.ITouchControlsAdapter
+	player        types.PlayerTankNum
 
 	tank *types.TankEntity
 
@@ -31,23 +33,18 @@ func NewStageTouchInputAdapter(
 	tank *types.TankEntity,
 	stageUseCases interfaces.IStageUseCases,
 	touchControls interfaces.ITouchControlsAdapter,
+	player types.PlayerTankNum,
 ) *StageTouchInputAdapter {
 	return &StageTouchInputAdapter{
 		tankActions:   tankActions,
 		tank:          tank,
 		stageUseCases: stageUseCases,
 		touchControls: touchControls,
+		player:        player,
 	}
 }
 
 func (a *StageTouchInputAdapter) Update(dt float64) {
-	// На экране итогов кнопка паузы ведёт к выбору уровней, а не
-	// снимает паузу
-	if a.touchControls.PauseJustPressed() &&
-		!a.stageUseCases.IsStageFinished() {
-		a.stageUseCases.TogglePause()
-	}
-
 	if a.tank == nil {
 		return
 	}
@@ -59,11 +56,11 @@ func (a *StageTouchInputAdapter) Update(dt float64) {
 		return
 	}
 
-	if a.touchControls.FireJustPressed() {
+	if a.touchControls.FireJustPressed(a.player) {
 		_ = a.tankActions.Shoot(a.tank)
 	}
 
-	if direction, ok := a.touchControls.DPadDirection(); ok {
+	if direction, ok := a.touchControls.DPadDirection(a.player); ok {
 		_ = a.tankActions.Rotate(a.tank, direction)
 		_ = a.tankActions.Move(a.tank)
 		a.wasSteering = true

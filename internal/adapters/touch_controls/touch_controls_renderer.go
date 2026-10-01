@@ -16,21 +16,26 @@ const (
 	pressedAlpha = 0.30
 )
 
-// DrawControls рисует экранные контроллы в полях финального экрана;
-// до первого касания не рисует ничего
+// DrawControls рисует экранные контроллы в полях финального экрана:
+// наборы всех игроков и паузу; до первого касания не рисует ничего
 func (a *TouchControlsAdapter) DrawControls(screen ebiten.FinalScreen) {
 	if !a.touchSeen {
 		return
 	}
-	a.drawDPad(screen)
-	a.drawFire(screen)
+	for i, controls := range a.layout.Players {
+		a.drawDPad(screen, controls.DPad, &a.players[i])
+		a.drawFire(screen, controls.Fire, &a.players[i])
+	}
 	a.drawPause(screen)
 }
 
 // drawDPad — крест из трёх непересекающихся прямоугольников;
 // активное направление подсвечивается внешней третью плеча
-func (a *TouchControlsAdapter) drawDPad(screen ebiten.FinalScreen) {
-	r := a.layout.DPad
+func (a *TouchControlsAdapter) drawDPad(
+	screen ebiten.FinalScreen,
+	r image.Rectangle,
+	touches *playerTouches,
+) {
 	if r.Empty() {
 		return
 	}
@@ -47,17 +52,18 @@ func (a *TouchControlsAdapter) drawDPad(screen ebiten.FinalScreen) {
 	a.fillRect(screen, vertical, idleAlpha)
 	a.fillRect(screen, left, idleAlpha)
 	a.fillRect(screen, right, idleAlpha)
-	if !a.hasDirection {
+	if !touches.hasDirection {
 		return
 	}
-	a.fillRect(screen, a.dpadArmRect(a.direction), pressedAlpha)
+	a.fillRect(screen, dpadArmRect(r, touches.direction), pressedAlpha)
 }
 
-// dpadArmRect — внешняя треть плеча крестовины в заданном направлении
-func (a *TouchControlsAdapter) dpadArmRect(
+// dpadArmRect — внешняя треть плеча крестовины r в заданном
+// направлении
+func dpadArmRect(
+	r image.Rectangle,
 	direction types.Direction,
 ) image.Rectangle {
-	r := a.layout.DPad
 	third := r.Dx() / 3
 	switch direction {
 	case types.DirectionUp:
@@ -79,15 +85,18 @@ func (a *TouchControlsAdapter) dpadArmRect(
 	}
 }
 
-func (a *TouchControlsAdapter) drawFire(screen ebiten.FinalScreen) {
-	r := a.layout.Fire
+func (a *TouchControlsAdapter) drawFire(
+	screen ebiten.FinalScreen,
+	r image.Rectangle,
+	touches *playerTouches,
+) {
 	if r.Empty() {
 		return
 	}
 	op := &ebiten.DrawImageOptions{}
 	op.GeoM.Translate(float64(r.Min.X), float64(r.Min.Y))
 	alpha := float32(idleAlpha)
-	if len(a.fireTouchIDs) > 0 {
+	if len(touches.fireTouchIDs) > 0 {
 		alpha = idleAlpha + pressedAlpha
 	}
 	op.ColorScale.ScaleAlpha(alpha)

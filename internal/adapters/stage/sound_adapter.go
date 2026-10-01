@@ -35,16 +35,9 @@ func NewSoundAdapter(
 		return nil, fmt.Errorf("audio context is required")
 	}
 
-	// Валидация громкости: должна быть от 0.0 до 1.0
-	if volume < 0.0 {
-		volume = 0.0
-	} else if volume > 1.0 {
-		volume = 1.0
-	}
-
 	adapter := &SoundAdapter{
 		audioContext: audioContext,
-		volume:       volume,
+		volume:       clampVolume(volume),
 		pcm:          make(map[types.SoundID][]byte),
 		players:      make(map[types.SoundID]*audio.Player),
 		loopPlayers:  make(map[types.SoundID]*audio.Player),
@@ -70,6 +63,11 @@ func NewSoundAdapter(
 	}
 
 	return adapter, nil
+}
+
+// clampVolume — громкость в пределах 0..1
+func clampVolume(volume float64) float64 {
+	return max(0, min(volume, 1))
 }
 
 // decodePCM разворачивает ogg/vorbis в 16-битный PCM целиком в память
@@ -165,6 +163,18 @@ func (a *SoundAdapter) StopAll() {
 		}
 	}
 	a.loopPlayers = make(map[types.SoundID]*audio.Player)
+}
+
+// SetVolume меняет громкость новых и уже играющих звуков,
+// включая лупы
+func (a *SoundAdapter) SetVolume(volume float64) {
+	a.volume = clampVolume(volume)
+	for _, player := range a.players {
+		player.SetVolume(a.volume)
+	}
+	for _, player := range a.loopPlayers {
+		player.SetVolume(a.volume)
+	}
 }
 
 func (a *SoundAdapter) Update() {

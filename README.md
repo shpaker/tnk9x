@@ -17,8 +17,10 @@ A modern remake and tribute to the classic arcade game Battle City (NES, 1985), 
 **Playable now:**
 
 - Full game loop with HQ and a results screen: stars, time, lives lost; next stage, retry or back to stage select
-- Two-player keyboard controls
-- Touch controls for mobile browsers: auto-detected virtual D-pad, fire and pause in the letterbox area on every screen; menus are driven by the same controls (D-pad to move, fire to select, pause to go back)
+- One or two players, chosen in the stage select menu; each player has a keyboard layout, a gamepad and touch controls at once
+  - Default keys: P1 WASD and G to fire, P2 IJKL and ' to fire; rebind in settings
+- Gamepad support (standard layout, desktop and browser): the first connected gamepad drives P1, the second P2; D-pad or left stick to move, A to fire (rebindable), Start to pause; any gamepad drives the menus (A to select, B to go back)
+- Touch controls for mobile browsers: auto-detected virtual D-pad, fire and pause in the letterbox area on every screen; in two-player mode each player gets a D-pad and fire on their own side of the device (left and right in landscape, bottom and top in portrait); menus are driven by the same controls (D-pad to move, fire to select, pause to go back)
 - Tank movement with braking and grid snap
 - Bullets and destructible terrain with incremental brick chipping: each hit shaves a half-tile slab, reinforced bullets break tiles whole
 - All five surface types (brick, steel, forest, water, ice) with ice sliding and water blocking (a tank with a boat sails over it)
@@ -39,13 +41,17 @@ A modern remake and tribute to the classic arcade game Battle City (NES, 1985), 
 - Enemies pick up bonuses too, as in Tank 1990 (`game.enemy_bonus_pickup`, on by default): the enemy nearest to a dropped bonus races for it; helmet and boat go to the enemy itself, star and pistol make it stronger, grenade blows up the players, timer freezes them, shovel strips the HQ walls, tank adds an enemy to the reserve
 - Campaign of 35 stages in 7 packs (`assets/levels/main.bccamp`): stage select screen with a minimap preview, enemy composition and 3-star time; stages open one after another, packs open for collected stars
 - Stars per stage: win, no lives lost, within the time limit; best results are saved (OS config folder on desktop, localStorage in the browser)
-- Continue after a win: carry lives (at least 3) and tank level to the next stage, capped at 2 stars; offered only when it gives an edge
-- Two-player mode, graphics mode and fullscreen start set in `config.yml` (`app.players`, `app.effects`, `app.fullscreen`)
-- Pause menu on Esc/P/touch (continue, graphics, exit to stage select)
-- Desktop starts fullscreen by default (`app.fullscreen`); toggle with F (desktop and browser)
+- Continue after a win: carry lives (at least 3) and tank level to the next stage, capped at 2 stars; offered only when it gives an edge, with a caption under the menu item explaining the difference from the next stage
+- Pause menu on Esc, gamepad Start or the touch pause button (continue, restart, settings, exit to stage select)
+- Settings menu, shared by the stage select and the pause menu (keyboard, gamepad and touch):
+  - On the stage select Esc, Start or the touch pause button opens a menu: back, players (1 or 2), settings, quit (desktop only)
+  - Graphics (normal or classic), fullscreen (desktop only) and volume (0-100% in 10% steps), applied at once
+  - Controls: keyboard keys and gamepad buttons of both players and the graphics and fullscreen hotkeys; press a key to assign it, a key already used elsewhere is refused; reset all to defaults
+  - Saved between launches next to the progress (OS config folder on desktop, localStorage in the browser); `config.yml` holds only the game's own settings
+- Desktop starts fullscreen by default; toggle with F11 or in settings (the hotkey also works in the browser)
 - Sound effects and music
 - NES-style sidebar HUD (enemy reserve, player lives, stage flag) on an authentic 256x224 screen
-- Normal graphics with effects, on by default (`config.yml`): 2D ray-traced lighting and shadows from tanks, bullets, explosions and bonuses, bloom, water/ice/steel glints, tube TV filter; switch to classic graphics without effects with F2 or the GRAPHICS item of the pause menu (keyboard and touch)
+- Normal graphics with effects, on by default: 2D ray-traced lighting and shadows from tanks, bullets, explosions and bonuses, bloom, water/ice/steel glints, tube TV filter; switch to classic graphics without effects with F2 or in settings
   - No fog of war: the whole field is visible, lights only brighten it
   - Headlights on every tank: a cone along the barrel that turns smoothly with the tank; the player's is long and bright with a soft aura around the tank, enemies' is shorter and reddish; walls are buildings, so light falls on their facades and they cast shadows
   - Bullets glow like tracers and light up the corridor they fly through
@@ -68,13 +74,14 @@ A modern remake and tribute to the classic arcade game Battle City (NES, 1985), 
 - Kage shader pipeline: lighting pass with omni and cone lights on the logical screen, bloom, phosphor afterglow and CRT in the final-screen pass; shaders loaded via repository and compiled fail-fast on startup
 - Visual effects driven by a per-frame event queue from gameplay use cases; particles, flashes and shake live in a per-stage repository
 - Section-based text formats for maps and campaigns, parsed and validated fail-fast on startup
-- User storage behind a repository interface (file on desktop, localStorage in WASM), ready for a platform save backend
+- User storage for progress, settings and controls behind repository interfaces (files on desktop, localStorage in WASM), ready for a platform save backend
+- Input behind adapter interfaces: menu input (fixed keys, any gamepad, touch of either player), player input (rebindable keyboard, gamepad, touch) and hotkeys; states never poll input devices directly
 - Unit tests with a >=70% use-cases coverage gate
 - CI/CD (fmt, lint, test, build, release)
 
 ### Roadmap
 - HQ: defeat screen, protection mechanics
-- UI: score, settings
+- UI: score
 - Yandex Games: SDK, cloud saves, ads
 - Test coverage >80% total, performance profiling
 

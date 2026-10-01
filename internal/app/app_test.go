@@ -51,12 +51,14 @@ func (r *failingMapsRepo) GetLevelsCount() (int, error) { return 0, nil }
 // приватные поля доступны, так как тест живёт в пакете app
 func newAppTestEnv() (*App, *stubGameState) {
 	state := &stubGameState{}
+	settings := types.NewSettingsEntity()
+	settings.SetPlayers(2)
 	app := &App{
 		config: &Config{
 			TileBaseSize: 8,
 			BaseSizePx:   16,
-			PlayerCount:  2,
 		},
+		settings:       settings,
 		state:          state,
 		session:        session_entities.NewGameSessionEntity(),
 		mapsRepository: &failingMapsRepo{},
@@ -119,14 +121,14 @@ func TestApp_ApplyTransition_ToStage_SessionWrittenBeforeBuild(
 	}
 	stageSession := app.session.StageSession()
 	if got := stageSession.GetPlayerCount(); got != 2 {
-		t.Errorf("players %d, want 2 from config", got)
+		t.Errorf("players %d, want 2 from settings", got)
 	}
 	if got := stageSession.GetStageNumber(); got != 7 {
 		t.Errorf("stage number %d, want 7", got)
 	}
 
 	// Состояние при ошибке сборки не меняется
-	if app.state != state || app.stageState != nil {
+	if app.state != state {
 		t.Error("состояние заменено при ошибке сборки уровня")
 	}
 }
@@ -166,12 +168,8 @@ func TestApp_ApplyTransition_FullApp(t *testing.T) {
 		t.Fatalf("переход на уровень: %v", err)
 	}
 
-	stageState, ok := app.state.(*states.StageState)
-	if !ok {
+	if _, ok := app.state.(*states.StageState); !ok {
 		t.Fatalf("состояние %T, ожидалось StageState", app.state)
-	}
-	if app.stageState != stageState {
-		t.Error("ссылка на StageState не сохранена")
 	}
 	if app.session.Level != 2 {
 		t.Errorf("уровень сессии %d, ожидался 2", app.session.Level)
@@ -190,9 +188,6 @@ func TestApp_ApplyTransition_FullApp(t *testing.T) {
 	}
 	if _, ok := app.state.(*states.LevelSelectState); !ok {
 		t.Fatalf("state %T, want LevelSelectState", app.state)
-	}
-	if app.stageState != nil {
-		t.Error("ссылка на StageState не очищена")
 	}
 }
 

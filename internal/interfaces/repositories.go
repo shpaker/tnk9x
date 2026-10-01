@@ -105,6 +105,21 @@ type IProgressRepository interface {
 	SaveProgress(progress *types.ProgressEntity) error
 }
 
+// ISettingsRepository — пользовательские настройки (графика,
+// полный экран, громкость)
+type ISettingsRepository interface {
+	// GetSettings возвращает дефолты, если сохранения ещё нет
+	GetSettings() (*types.SettingsEntity, error)
+	SaveSettings(settings *types.SettingsEntity) error
+}
+
+// IControlsRepository — раскладка управления игроков и хоткеев
+type IControlsRepository interface {
+	// GetControls возвращает умолчания, если сохранения ещё нет
+	GetControls() (*types.ControlsEntity, error)
+	SaveControls(controls *types.ControlsEntity) error
+}
+
 // ITilesetRepositoryRegistry — единая точка доступа к тайлсетам по типу
 type ITilesetRepositoryRegistry interface {
 	GetImageData(

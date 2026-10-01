@@ -254,3 +254,43 @@ type ILevelSelectUseCases interface {
 		levels map[int]*types.LevelEntity,
 	) types.LevelSelectViewData
 }
+
+// ISettingsUseCases — изменение и сохранение пользовательских настроек
+type ISettingsUseCases interface {
+	// Items — строки экрана настроек по порядку
+	Items() []types.SettingsItem
+	// Change меняет значение пункта: переключает флаг или сдвигает
+	// громкость на step шагов — и сохраняет настройки
+	Change(
+		settings *types.SettingsEntity,
+		item types.SettingsItem,
+		step int,
+	) error
+	// ChangePlayers переключает режим на одного или двоих игроков
+	// и сохраняет настройки
+	ChangePlayers(settings *types.SettingsEntity, step int) error
+	BuildView(
+		settings *types.SettingsEntity,
+		activeIndex int,
+	) types.SettingsViewData
+}
+
+// IControlsUseCases — назначение клавиш и кнопок геймпада игроков
+// и хоткеев с сохранением раскладки
+type IControlsUseCases interface {
+	// Rows — строки страницы экрана раскладки по порядку
+	Rows(page types.ControlsPage) []types.ControlsRow
+	// Bind назначает имя ячейке; занятое другой ячейкой или
+	// зарезервированное имя — types.ErrBindingTaken
+	Bind(
+		controls *types.ControlsEntity,
+		slot types.ControlsSlot,
+		name string,
+	) error
+	// ResetAll возвращает всю раскладку к умолчаниям
+	ResetAll(controls *types.ControlsEntity) error
+	BuildView(
+		controls *types.ControlsEntity,
+		cursor types.ControlsCursor,
+	) types.ControlsViewData
+}

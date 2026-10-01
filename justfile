@@ -24,11 +24,8 @@ build-macos:
     mkdir -p "$out_dir"
     VERSION="dev-$(date -u +%Y-%m-%dT%H:%M)"
     release_output="{{binary_name}}_darwin_arm64"
-    debug_output="{{binary_name}}_darwin_arm64_debug"
     echo "Building macOS (Apple Silicon) release $VERSION -> $out_dir/$release_output"
     GOOS="darwin" GOARCH="arm64" CGO_ENABLED=1 {{gocmd}} build -trimpath -ldflags "-s -w -X github.com/shpaker/tnk9x/internal/app.Version=${VERSION}" -o "$out_dir/$release_output" ./cmd
-    echo "Building macOS (Apple Silicon) debug $VERSION -> $out_dir/$debug_output"
-    GOOS="darwin" GOARCH="arm64" CGO_ENABLED=1 {{gocmd}} build -ldflags "-X github.com/shpaker/tnk9x/internal/app.Version=${VERSION} -X github.com/shpaker/tnk9x/internal/app.DebugFlag=true" -o "$out_dir/$debug_output" ./cmd
     echo "macOS builds stored in $out_dir"
 
 build-windows:
@@ -39,11 +36,8 @@ build-windows:
     mkdir -p "$out_dir"
     VERSION="dev-$(date -u +%Y-%m-%dT%H:%M)"
     release_output="{{binary_name}}_windows_amd64.exe"
-    debug_output="{{binary_name}}_windows_amd64_debug.exe"
     echo "Building Windows (x64) release $VERSION -> $out_dir/$release_output"
     GOOS="windows" GOARCH="amd64" CGO_ENABLED=0 {{gocmd}} build -trimpath -ldflags "-s -w -X github.com/shpaker/tnk9x/internal/app.Version=${VERSION}" -o "$out_dir/$release_output" ./cmd
-    echo "Building Windows (x64) debug $VERSION -> $out_dir/$debug_output"
-    GOOS="windows" GOARCH="amd64" CGO_ENABLED=0 {{gocmd}} build -ldflags "-X github.com/shpaker/tnk9x/internal/app.Version=${VERSION} -X github.com/shpaker/tnk9x/internal/app.DebugFlag=true" -o "$out_dir/$debug_output" ./cmd
     echo "Windows builds stored in $out_dir"
 
 build-all: build-macos build-windows
@@ -208,9 +202,3 @@ check:
     @just lint
     @just test
     echo "All checks completed successfully"
-
-# Отладка
-debug: build
-    #!/bin/bash
-    echo "Running in debug mode..."
-    GORACE="history_size=7" ./{{binary_name}}

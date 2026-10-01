@@ -5,7 +5,9 @@ type PauseMenuItem int
 
 const (
 	PauseMenuItemContinue PauseMenuItem = iota
-	PauseMenuItemGraphics
+	// PauseMenuItemRestart — уровень заново с начальными жизнями
+	PauseMenuItemRestart
+	PauseMenuItemSettings
 	PauseMenuItemExitToLevels
 )
 
@@ -14,8 +16,6 @@ const (
 type PauseMenuViewData struct {
 	Items       []PauseMenuItem
 	ActiveIndex int
-	// EffectsEnabled — подпись пункта графики: обычная или классика
-	EffectsEnabled bool
 }
 
 // StageResultItem — пункт меню итогов уровня
