@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"sync"
 	"testing"
@@ -153,11 +154,35 @@ func TestApp_ApplyTransition_Quit(t *testing.T) {
 func TestApp_ApplyTransition_FullApp(t *testing.T) {
 	app := newFullApp(t)
 
-	if _, ok := app.state.(*states.LevelSelectState); !ok {
-		t.Fatalf(
-			"initial state %T, want LevelSelectState",
-			app.state,
-		)
+	if _, ok := app.state.(*states.SplashState); !ok {
+		t.Fatalf("initial state %T, want SplashState", app.state)
+	}
+
+	// Сплеш догружает граф, затем главное меню и выбор уровня
+	for _, done := app.loader.Step(); !done; _, done = app.loader.Step() {
+	}
+	if len(app.frameInputs) != 3 {
+		t.Errorf("после загрузки к вводу добавляются хоткеи: %d", len(app.frameInputs))
+	}
+	for _, step := range []struct {
+		target types.TransitionTarget
+		want   any
+	}{
+		{types.TransitionToMainMenu, &states.MainMenuState{}},
+		{types.TransitionToLevelSelect, &states.LevelSelectState{}},
+	} {
+		if err := app.applyTransition(types.StateTransition{Target: step.target}); err != nil {
+			t.Fatalf("переход %v: %v", step.target, err)
+		}
+		if fmt.Sprintf("%T", app.state) != fmt.Sprintf("%T", step.want) {
+			t.Fatalf("состояние %T, ожидалось %T", app.state, step.want)
+		}
+	}
+
+	// У одиночной игры и игры вдвоём раздельное прохождение
+	if app.progressionUseCases[0] == app.progressionUseCases[1] ||
+		app.levelSelectUseCases[0] == app.levelSelectUseCases[1] {
+		t.Error("прогресс режимов должен быть раздельным")
 	}
 
 	err := app.applyTransition(types.StateTransition{

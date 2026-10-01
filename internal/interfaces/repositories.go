@@ -146,6 +146,11 @@ type IShadersRepository interface {
 	GetShader(name string) ([]byte, error)
 }
 
+// IImagesRepository — картинки экранов (логотипы) по имени
+type IImagesRepository interface {
+	GetImage(name string) (image.Image, error)
+}
+
 type IFontsRepository interface {
 	GetFont(name string) ([]byte, error)
 }

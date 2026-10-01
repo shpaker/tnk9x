@@ -108,41 +108,6 @@ func (r *LevelSelectRendererAdapter) Draw(
 	r.drawFooter(screen, view, width, height)
 }
 
-// menuLabels — подписи пунктов меню экрана выбора уровня
-var menuLabels = map[types.LevelSelectMenuItem]string{
-	types.LevelSelectMenuItemBack:     "BACK",
-	types.LevelSelectMenuItemPlayers:  "PLAYERS",
-	types.LevelSelectMenuItemSettings: "SETTINGS",
-	types.LevelSelectMenuItemQuit:     "QUIT",
-}
-
-// DrawMenu рисует меню экрана выбора уровня оверлеем поверх экрана;
-// у строки PLAYERS — число игроков
-func (r *LevelSelectRendererAdapter) DrawMenu(
-	screen *ebiten.Image,
-	view types.LevelSelectMenuViewData,
-) {
-	rows := make([]ui.MenuRow, len(view.Items))
-	for i, item := range view.Items {
-		rows[i] = ui.MenuRow{Label: menuLabels[item]}
-		if item == types.LevelSelectMenuItemPlayers {
-			rows[i].Value = fmt.Sprint(view.Players)
-		}
-	}
-
-	ui.DrawMenu(
-		screen,
-		ui.MenuFont{
-			Face:            r.fontFace,
-			TitleFontSize:   r.titleFontSize,
-			RegularFontSize: r.regularFontSize,
-		},
-		"MENU",
-		rows,
-		view.ActiveIndex,
-	)
-}
-
 func (r *LevelSelectRendererAdapter) drawHeader(
 	screen *ebiten.Image,
 	view types.LevelSelectViewData,
@@ -398,8 +363,8 @@ func (r *LevelSelectRendererAdapter) drawInfo(
 
 // Подсказки управления: клавиатурная и сенсорная
 const (
-	keyboardHint = "ARROWS SELECT  ESC MENU"
-	touchHint    = "D-PAD SELECT  PAUSE MENU"
+	keyboardHint = "ARROWS SELECT  ESC BACK"
+	touchHint    = "D-PAD SELECT  PAUSE BACK"
 )
 
 func (r *LevelSelectRendererAdapter) drawFooter(

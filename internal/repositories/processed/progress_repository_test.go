@@ -27,7 +27,7 @@ func (s *memoryStorage) Save(key string, data []byte) error {
 
 func TestProgressRepository_RoundTrip(t *testing.T) {
 	storage := &memoryStorage{data: map[string][]byte{}}
-	repository := NewProgressRepository(storage)
+	repository := NewProgressRepository(storage, ProgressKeyOnePlayer)
 
 	progress := types.NewProgressEntity()
 	progress.SetStars(1, 3)
@@ -49,6 +49,7 @@ func TestProgressRepository_RoundTrip(t *testing.T) {
 func TestProgressRepository_Empty(t *testing.T) {
 	repository := NewProgressRepository(
 		&memoryStorage{data: map[string][]byte{}},
+		ProgressKeyOnePlayer,
 	)
 	progress, err := repository.GetProgress()
 	if err != nil || progress.TotalStars() != 0 {
@@ -65,7 +66,8 @@ func TestProgressRepository_Broken(t *testing.T) {
 	for name, data := range tests {
 		t.Run(name, func(t *testing.T) {
 			repository := NewProgressRepository(
-				&memoryStorage{data: map[string][]byte{progressKey: data}},
+				&memoryStorage{data: map[string][]byte{ProgressKeyOnePlayer: data}},
+				ProgressKeyOnePlayer,
 			)
 			progress, err := repository.GetProgress()
 			if err == nil {
@@ -82,7 +84,8 @@ func TestProgressRepository_Broken(t *testing.T) {
 func TestProgressRepository_Sanitizes(t *testing.T) {
 	data := []byte(`{"version":1,"stars":{"1":9,"x":2,"3":0}}`)
 	repository := NewProgressRepository(
-		&memoryStorage{data: map[string][]byte{progressKey: data}},
+		&memoryStorage{data: map[string][]byte{ProgressKeyOnePlayer: data}},
+		ProgressKeyOnePlayer,
 	)
 	progress, err := repository.GetProgress()
 	if err != nil {
@@ -99,11 +102,33 @@ func TestProgressRepository_StorageError(t *testing.T) {
 		data: map[string][]byte{},
 		err:  errors.New("denied"),
 	}
-	repository := NewProgressRepository(storage)
+	repository := NewProgressRepository(storage, ProgressKeyOnePlayer)
 	if _, err := repository.GetProgress(); err == nil {
 		t.Error("load must report the storage error")
 	}
 	if err := repository.SaveProgress(types.NewProgressEntity()); err == nil {
 		t.Error("save must report the storage error")
+	}
+}
+
+// У одиночной игры и игры вдвоём раздельный прогресс в одном хранилище
+func TestProgressRepository_SeparateModes(t *testing.T) {
+	storage := &memoryStorage{data: map[string][]byte{}}
+	single := NewProgressRepository(storage, ProgressKeyOnePlayer)
+	duo := NewProgressRepository(storage, ProgressKeyTwoPlayers)
+
+	progress := types.NewProgressEntity()
+	progress.SetStars(1, 3)
+	if err := duo.SaveProgress(progress); err != nil {
+		t.Fatalf("save: %v", err)
+	}
+
+	loaded, err := single.GetProgress()
+	if err != nil || loaded.TotalStars() != 0 {
+		t.Errorf("прогресс 2P не должен попадать в 1P: %v, %d", err, loaded.TotalStars())
+	}
+	loaded, _ = duo.GetProgress()
+	if loaded.GetStars(1) != 3 {
+		t.Errorf("прогресс 2P: %v", loaded.AllStars())
 	}
 }

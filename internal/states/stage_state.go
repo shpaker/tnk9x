@@ -19,10 +19,6 @@ type StageRenderer interface {
 	DrawStageResult(screen *ebiten.Image, view types.StageResultViewData)
 }
 
-// resultInputDelayTicks — пауза перед приёмом ввода на экране итогов,
-// чтобы очередь выстрела не пролистала результат
-const resultInputDelayTicks = 45
-
 // StageStateDependencies — готовый граф зависимостей уровня;
 // собирается composition root'ом, все поля обязательны
 type StageStateDependencies struct {
@@ -90,10 +86,11 @@ type StageState struct {
 	pauseMenuWasOpen bool
 
 	// Экран итогов: считается один раз при завершении уровня
-	level            *types.LevelEntity
-	result           *types.StageResultViewData
-	resultInputDelay uint
-	nextLevel        int
+	level  *types.LevelEntity
+	result *types.StageResultViewData
+	// resultTicks — тиков с начала появления экрана итогов
+	resultTicks uint
+	nextLevel   int
 }
 
 func NewStageState(deps StageStateDependencies) *StageState {
@@ -424,8 +421,7 @@ func (state *StageState) handleStageResult() types.StateTransition {
 		state.buildStageResult()
 		return types.StateTransition{}
 	}
-	if state.resultInputDelay > 0 {
-		state.resultInputDelay--
+	if state.revealResult() {
 		return types.StateTransition{}
 	}
 
@@ -489,7 +485,43 @@ func (state *StageState) buildStageResult() {
 		NewBest:      newBest,
 		Items:        items,
 	}
-	state.resultInputDelay = resultInputDelayTicks
+	state.resultTicks = 0
+}
+
+// revealStars — сколько звёзд загорается на экране итогов:
+// при поражении звёзд нет
+func (state *StageState) revealStars() uint {
+	if !state.result.Won {
+		return 0
+	}
+	return state.result.Stars
+}
+
+// revealResult продвигает поэтапное появление экрана итогов; каждая
+// загоревшаяся звезда звучит. Подтверждение или «назад» сразу
+// показывают экран целиком, ничего не выбирая: пункты принимаются
+// только после появления меню, чтобы очередь выстрелов не пролистала
+// итоги. Возвращает true, пока экран ещё появляется
+func (state *StageState) revealResult() bool {
+	stars := state.revealStars()
+	length := resultRevealLength(stars)
+	if state.resultTicks >= length {
+		return false
+	}
+
+	litBefore := resultReveal(state.resultTicks, stars).Stars
+	state.resultTicks++
+	skip := state.menuInput.Confirmed() || state.menuInput.Back()
+	if skip {
+		state.resultTicks = length
+	}
+
+	reveal := resultReveal(state.resultTicks, stars)
+	if reveal.Stars > litBefore && !skip {
+		state.soundUseCases.RequestSound(types.SoundIDBonus, false)
+	}
+	state.result.Reveal = reveal
+	return true
 }
 
 func (state *StageState) applyStageResultItem(

@@ -9,8 +9,12 @@ import (
 	"github.com/shpaker/tnk9x/internal/types"
 )
 
-// progressKey — ключ сохранения прогресса в хранилище
-const progressKey = "progress"
+// Ключи сохранения прогресса: у одиночной игры и игры вдвоём
+// раздельное прохождение кампании
+const (
+	ProgressKeyOnePlayer  = "progress"
+	ProgressKeyTwoPlayers = "progress-2p"
+)
 
 // progressFormatVersion — версия формата сохранения
 const progressFormatVersion = 1
@@ -21,13 +25,17 @@ var _ interfaces.IProgressRepository = (*ProgressRepository)(nil)
 // поверх пользовательского хранилища
 type ProgressRepository struct {
 	storage interfaces.IStorageRepository
+	key     string
 }
 
+// NewProgressRepository — прогресс режима под ключом key
 func NewProgressRepository(
 	storage interfaces.IStorageRepository,
+	key string,
 ) *ProgressRepository {
 	return &ProgressRepository{
 		storage: storage,
+		key:     key,
 	}
 }
 
@@ -38,7 +46,7 @@ type progressSchema struct {
 
 // GetProgress читает прогресс; отсутствие сохранения — пустой прогресс
 func (pr *ProgressRepository) GetProgress() (*types.ProgressEntity, error) {
-	data, err := pr.storage.Load(progressKey)
+	data, err := pr.storage.Load(pr.key)
 	if err != nil {
 		return types.NewProgressEntity(), err
 	}
@@ -83,5 +91,5 @@ func (pr *ProgressRepository) SaveProgress(
 	if err != nil {
 		return err
 	}
-	return pr.storage.Save(progressKey, data)
+	return pr.storage.Save(pr.key, data)
 }

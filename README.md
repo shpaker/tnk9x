@@ -16,8 +16,9 @@ A modern remake and tribute to the classic arcade game Battle City (NES, 1985), 
 
 **Playable now:**
 
-- Full game loop with HQ and a results screen: stars, time, lives lost; next stage, retry or back to stage select
-- One or two players, chosen in the stage select menu; each player has a keyboard layout, a gamepad and touch controls at once
+- Splash screen (SHPAKER logo from `assets/images/shpaker.png`, a text placeholder until it is drawn) with a real resource loading bar, fading through black into the main menu: 1 player, 2 players, settings, quit (desktop only), with the game version in the corner
+- Full game loop with HQ and a results screen that appears in stages: backdrop, result, stars one by one with a sound, time and lives lost, then the menu (any button skips the animation); next stage, retry or back to stage select
+- One or two players, chosen in the main menu, each mode with its own campaign progress; each player has a keyboard layout, a gamepad and touch controls at once
   - Default keys: P1 WASD and G to fire, P2 IJKL and ' to fire; rebind in settings
 - Gamepad support (standard layout, desktop and browser): the first connected gamepad drives P1, the second P2; D-pad or left stick to move, A to fire (rebindable), Start to pause; any gamepad drives the menus (A to select, B to go back)
 - Touch controls for mobile browsers: auto-detected virtual D-pad, fire and pause in the letterbox area on every screen; in two-player mode each player gets a D-pad and fire on their own side of the device (left and right in landscape, bottom and top in portrait); menus are driven by the same controls (D-pad to move, fire to select, pause to go back)
@@ -40,11 +41,11 @@ A modern remake and tribute to the classic arcade game Battle City (NES, 1985), 
   - Pistol: the tank gets the top level at once, so it survives three hits
 - Enemies pick up bonuses too, as in Tank 1990 (`game.enemy_bonus_pickup`, on by default): the enemy nearest to a dropped bonus races for it; helmet and boat go to the enemy itself, star and pistol make it stronger, grenade blows up the players, timer freezes them, shovel strips the HQ walls, tank adds an enemy to the reserve
 - Campaign of 35 stages in 7 packs (`assets/levels/main.bccamp`): stage select screen with a minimap preview, enemy composition and 3-star time; stages open one after another, packs open for collected stars
-- Stars per stage: win, no lives lost, within the time limit; best results are saved (OS config folder on desktop, localStorage in the browser)
+- Stars per stage: win, no lives lost, within the time limit; best results are saved per mode (OS config folder on desktop, localStorage in the browser)
 - Continue after a win: carry lives (at least 3) and tank level to the next stage, capped at 2 stars; offered only when it gives an edge, with a caption under the menu item explaining the difference from the next stage
 - Pause menu on Esc, gamepad Start or the touch pause button (continue, restart, settings, exit to stage select)
-- Settings menu, shared by the stage select and the pause menu (keyboard, gamepad and touch):
-  - On the stage select Esc, Start or the touch pause button opens a menu: back, players (1 or 2), settings, quit (desktop only)
+- Esc, B, Start or the touch pause button on the stage select goes back to the main menu
+- Settings menu, shared by the main menu and the pause menu (keyboard, gamepad and touch):
   - Graphics (normal or classic), fullscreen (desktop only) and volume (0-100% in 10% steps), applied at once
   - Controls: keyboard keys and gamepad buttons of both players and the graphics and fullscreen hotkeys; press a key to assign it, a key already used elsewhere is refused; reset all to defaults
   - Saved between launches next to the progress (OS config folder on desktop, localStorage in the browser); `config.yml` holds only the game's own settings
@@ -70,7 +71,7 @@ A modern remake and tribute to the classic arcade game Battle City (NES, 1985), 
 - Constructor-only DI from a composition root, repository pattern
 - Scripting behind a domain-typed engine interface: the Lua script owns all enemy behavior, Go passes a world snapshot and executes decisions
 - Navigation service (Dijkstra pathfinding, line-of-fire ray casting) exposed to scripts as query functions
-- App-lifetime GPU sprite cache with startup preload, fail-fast sprite/animation validation on startup
+- Resources load step by step on the splash screen (sprites, campaign, progress, scripts, sounds), fail-fast on any broken asset; app-lifetime GPU sprite cache with preload and sprite/animation validation
 - Kage shader pipeline: lighting pass with omni and cone lights on the logical screen, bloom, phosphor afterglow and CRT in the final-screen pass; shaders loaded via repository and compiled fail-fast on startup
 - Visual effects driven by a per-frame event queue from gameplay use cases; particles, flashes and shake live in a per-stage repository
 - Section-based text formats for maps and campaigns, parsed and validated fail-fast on startup

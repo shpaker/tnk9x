@@ -42,4 +42,17 @@ type StageResultViewData struct {
 	NewBest     bool
 	Items       []StageResultItem
 	ActiveIndex int
+	// Reveal — насколько экран уже появился
+	Reveal StageResultReveal
+}
+
+// StageResultReveal — поэтапное появление экрана итогов: доли 0..1
+// проявления подложки, заголовка и статистики, число загоревшихся
+// звёзд и показано ли меню
+type StageResultReveal struct {
+	Backdrop float64
+	Title    float64
+	Stars    uint
+	Stats    float64
+	Menu     bool
 }

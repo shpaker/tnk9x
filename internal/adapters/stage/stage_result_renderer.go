@@ -59,8 +59,12 @@ var (
 	captionColor    = color.NRGBA{R: 110, G: 110, B: 110, A: 255}
 )
 
-// DrawStageResult рисует экран итогов: исход, звёзды, время
-// и меню действий
+// resultTitleDrop — на сколько пикселей заголовок опускается
+// при появлении
+const resultTitleDrop = 6
+
+// DrawStageResult рисует экран итогов поэтапно, по view.Reveal:
+// подложка, исход, звёзды по одной, время и заметки, меню действий
 func (r *StageRendererAdapter) DrawStageResult(
 	screen *ebiten.Image,
 	view types.StageResultViewData,
@@ -68,49 +72,44 @@ func (r *StageRendererAdapter) DrawStageResult(
 	bounds := screen.Bounds()
 	width := float64(bounds.Dx())
 	height := float64(bounds.Dy())
+	reveal := view.Reveal
 
 	vector.FillRect(
 		screen, 0, 0, float32(width), float32(height),
-		ui.OverlayBackdropColor, false,
+		withAlpha(ui.OverlayBackdropColor, reveal.Backdrop), false,
 	)
 
-	title := "VICTORY"
-	if !view.Won {
-		title = "DEFEAT"
+	if reveal.Title > 0 {
+		title := "VICTORY"
+		if !view.Won {
+			title = "DEFEAT"
+		}
+		titleWidth, _ := text.Measure(title, r.fontFace, 0)
+		titleOp := &text.DrawOptions{}
+		titleOp.GeoM.Translate(
+			(width-titleWidth)/2,
+			height*resultTitleY-resultTitleDrop*(1-reveal.Title),
+		)
+		titleOp.ColorScale.ScaleWithColor(
+			withAlpha(color.NRGBA{R: 255, G: 255, B: 255, A: 255}, reveal.Title),
+		)
+		text.Draw(screen, title, r.fontFace, titleOp)
 	}
-	titleWidth, _ := text.Measure(title, r.fontFace, 0)
-	titleOp := &text.DrawOptions{}
-	titleOp.GeoM.Translate((width-titleWidth)/2, height*resultTitleY)
-	titleOp.ColorScale.ScaleWithColor(color.White)
-	text.Draw(screen, title, r.fontFace, titleOp)
 
-	if view.Won {
+	if view.Won && reveal.Title >= 1 {
 		ui.DrawStarsRow(
 			screen,
 			float32(width/2), float32(height*resultStarsY),
 			9, 24,
-			view.Stars, types.MaxLevelStars,
+			reveal.Stars, types.MaxLevelStars,
 		)
 	}
 
-	seconds := view.ElapsedTicks / 60
-	stats := fmt.Sprintf(
-		"TIME %d:%02d  LIVES LOST %d",
-		seconds/60, seconds%60, view.LivesLost,
-	)
-	r.drawResultLine(screen, stats, height*resultStatsY, subtleTextColor)
-	lineStep := float64(r.regularFontSize) + 4
-	noteTop := height*resultStatsY + lineStep
-	if view.NewBest {
-		r.drawResultLine(screen, "NEW BEST", noteTop, newBestColor)
-		noteTop += lineStep
+	if reveal.Stats > 0 {
+		r.drawResultStats(screen, view, height, reveal.Stats)
 	}
-	if view.CarriedOver {
-		r.drawResultLine(
-			screen,
-			fmt.Sprintf("CARRY-OVER: MAX %d STARS", types.MaxCarryOverStars),
-			noteTop, subtleTextColor,
-		)
+	if !reveal.Menu {
+		return
 	}
 
 	layout := r.resultMenuLayout(height, view.Items)
@@ -128,6 +127,44 @@ func (r *StageRendererAdapter) DrawStageResult(
 			)
 		}
 	}
+}
+
+// drawResultStats — время, потерянные жизни и заметки с прозрачностью
+// появления alpha
+func (r *StageRendererAdapter) drawResultStats(
+	screen *ebiten.Image,
+	view types.StageResultViewData,
+	height, alpha float64,
+) {
+	seconds := view.ElapsedTicks / 60
+	stats := fmt.Sprintf(
+		"TIME %d:%02d  LIVES LOST %d",
+		seconds/60, seconds%60, view.LivesLost,
+	)
+	r.drawResultLine(
+		screen, stats, height*resultStatsY, withAlpha(subtleTextColor, alpha),
+	)
+	lineStep := float64(r.regularFontSize) + 4
+	noteTop := height*resultStatsY + lineStep
+	if view.NewBest {
+		r.drawResultLine(
+			screen, "NEW BEST", noteTop, withAlpha(newBestColor, alpha),
+		)
+		noteTop += lineStep
+	}
+	if view.CarriedOver {
+		r.drawResultLine(
+			screen,
+			fmt.Sprintf("CARRY-OVER: MAX %d STARS", types.MaxCarryOverStars),
+			noteTop, withAlpha(subtleTextColor, alpha),
+		)
+	}
+}
+
+// withAlpha — цвет с прозрачностью, умноженной на alpha 0..1
+func withAlpha(c color.NRGBA, alpha float64) color.NRGBA {
+	c.A = uint8(float64(c.A) * min(max(alpha, 0), 1))
+	return c
 }
 
 // resultMenuLayout — вертикальная раскладка строк меню итогов

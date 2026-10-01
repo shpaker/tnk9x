@@ -44,15 +44,17 @@ func (uc *SettingsUseCases) Items() []types.SettingsItem {
 	return uc.items
 }
 
-// ChangePlayers: любой шаг переключает одного и двоих игроков
-func (uc *SettingsUseCases) ChangePlayers(
+// SetPlayers: число игроков ограничивается 1..MaxPlayers; без смены
+// режима хранилище не трогается
+func (uc *SettingsUseCases) SetPlayers(
 	settings *types.SettingsEntity,
-	step int,
+	players uint,
 ) error {
-	if step == 0 {
+	previous := settings.GetPlayers()
+	settings.SetPlayers(players)
+	if settings.GetPlayers() == previous {
 		return nil
 	}
-	settings.SetPlayers(types.MaxPlayers + 1 - settings.GetPlayers())
 	return uc.settingsRepository.SaveSettings(settings)
 }
 

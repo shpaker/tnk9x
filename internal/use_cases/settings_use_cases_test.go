@@ -84,22 +84,24 @@ func TestSettings_ChangeBackAndSaveError(t *testing.T) {
 	}
 }
 
-func TestSettings_ChangePlayers(t *testing.T) {
+func TestSettings_SetPlayers(t *testing.T) {
 	repository := &recordingSettingsRepository{}
 	settingsUseCases := use_cases.NewSettingsUseCases(repository, true)
 	settings := types.NewSettingsEntity()
 
-	_ = settingsUseCases.ChangePlayers(settings, 1)
+	_ = settingsUseCases.SetPlayers(settings, 2)
 	if settings.GetPlayers() != 2 {
 		t.Errorf("игроков %d, ожидалось 2", settings.GetPlayers())
 	}
-	_ = settingsUseCases.ChangePlayers(settings, -1)
+	_ = settingsUseCases.SetPlayers(settings, 1)
 	if settings.GetPlayers() != 1 {
 		t.Errorf("игроков %d, ожидался 1", settings.GetPlayers())
 	}
-	_ = settingsUseCases.ChangePlayers(settings, 0)
+	// Тот же режим и выход за шкалу не пишут лишний раз
+	_ = settingsUseCases.SetPlayers(settings, 1)
+	_ = settingsUseCases.SetPlayers(settings, 0)
 	if settings.GetPlayers() != 1 || repository.saves != 2 {
-		t.Errorf("без шага режим и хранилище не меняются")
+		t.Errorf("без смены режима хранилище не трогается: %d", repository.saves)
 	}
 }
 

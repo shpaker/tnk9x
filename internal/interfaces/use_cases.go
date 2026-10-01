@@ -266,9 +266,9 @@ type ISettingsUseCases interface {
 		item types.SettingsItem,
 		step int,
 	) error
-	// ChangePlayers переключает режим на одного или двоих игроков
-	// и сохраняет настройки
-	ChangePlayers(settings *types.SettingsEntity, step int) error
+	// SetPlayers выбирает режим на одного или двоих игроков;
+	// настройки сохраняются, только если режим сменился
+	SetPlayers(settings *types.SettingsEntity, players uint) error
 	BuildView(
 		settings *types.SettingsEntity,
 		activeIndex int,

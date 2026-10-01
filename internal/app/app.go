@@ -13,9 +13,11 @@ import (
 	"github.com/shpaker/tnk9x/internal/adapters/bindings"
 	"github.com/shpaker/tnk9x/internal/adapters/effects"
 	"github.com/shpaker/tnk9x/internal/adapters/level_select"
+	"github.com/shpaker/tnk9x/internal/adapters/main_menu"
 	"github.com/shpaker/tnk9x/internal/adapters/menu_input"
 	"github.com/shpaker/tnk9x/internal/adapters/scripting"
 	"github.com/shpaker/tnk9x/internal/adapters/settings"
+	"github.com/shpaker/tnk9x/internal/adapters/splash"
 	"github.com/shpaker/tnk9x/internal/adapters/stage"
 	"github.com/shpaker/tnk9x/internal/adapters/touch_controls"
 	"github.com/shpaker/tnk9x/internal/adapters/window"
@@ -40,6 +42,20 @@ const hudFontSize = 8
 // (768x672 -> 256x224)
 const screenScaleFactor = 3
 
+// Логотип сплеша: картинка assets/images/<splashLogoName>.png, пока её
+// нет — надпись splashLogoText
+const (
+	splashLogoName = "shpaker"
+	splashLogoText = "SHPAKER"
+)
+
+// progressKeys — ключи прогресса по режимам: у одиночной игры и игры
+// вдвоём раздельное прохождение
+var progressKeys = [types.MaxPlayers]string{
+	processed.ProgressKeyOnePlayer,
+	processed.ProgressKeyTwoPlayers,
+}
+
 // gameState — контракт состояния приложения, определён у потребителя;
 // Update возвращает запрос перехода (нулевое значение — остаться)
 type gameState interface {
@@ -47,6 +63,15 @@ type gameState interface {
 	Draw(screen *ebiten.Image)
 }
 
+// frameInput — источник ввода, опрашиваемый раз в кадр до состояния
+type frameInput interface {
+	Update()
+}
+
+// App — composition root. New собирает только то, что нужно сплешу;
+// остальной граф достраивают шаги загрузчика на сплеше, а стейты,
+// которым он нужен, собираются только после её завершения
+// (переход TransitionToMainMenu отдаёт сплеш)
 type App struct {
 	config *Config
 	state  gameState
@@ -56,35 +81,50 @@ type App struct {
 
 	session *session_entities.GameSessionEntity
 
-	// Долгоживущая инфраструктура — создаётся один раз на приложение
-	fileRepository    interfaces.IFileRepository
+	// Источники ввода кадра по порядку: тач, меню, затем хоткеи
+	// (добавляются в конце загрузки)
+	frameInputs []frameInput
+	loader      *bootLoader
+
+	// Старт: собирается в New
+	audioContext       *audio.Context
+	fileRepository     interfaces.IFileRepository
+	storageRepository  interfaces.IStorageRepository
+	settingsRepository interfaces.ISettingsRepository
+	controlsRepository interfaces.IControlsRepository
+	textFace           text.Face
+	hudTextFace        text.Face
+	touchControls      *touch_controls.TouchControlsAdapter
+	menuInput          interfaces.IMenuInputAdapter
+	effectsRenderer    *effects.EffectsRendererAdapter
+	windowAdapter      interfaces.IWindowAdapter
+
+	// Пользовательские настройки (графика, полный экран, громкость,
+	// режим) и раскладка управления
+	settings *types.SettingsEntity
+	controls *types.ControlsEntity
+
+	// Загружается на сплеше: долгоживущая инфраструктура
 	tilesetRegistry   interfaces.ITilesetRepositoryRegistry
 	spriteCache       *stage.SpriteCache
 	mapsRepository    interfaces.IMapsDataRepository
 	scriptsRepository interfaces.IScriptsRepository
 	soundsRepository  interfaces.ISoundsRepository
-	textFace          text.Face
-	hudTextFace       text.Face
 	scriptEngine      interfaces.IAIScriptEngine
 	soundAdapter      *stage.SoundAdapter
-	touchControls     *touch_controls.TouchControlsAdapter
-	menuInput         interfaces.IMenuInputAdapter
-	effectsRenderer   *effects.EffectsRendererAdapter
-	windowAdapter     interfaces.IWindowAdapter
 
-	// Пользовательские настройки (графика, полный экран, громкость,
-	// число игроков) и раскладка управления; их экраны общие
-	// для выбора уровня и паузы, хоткеи работают на всех экранах
-	settings         *types.SettingsEntity
-	controls         *types.ControlsEntity
+	// Экраны настроек общие для главного меню и паузы, хоткеи
+	// работают на всех экранах после загрузки
 	settingsUseCases interfaces.ISettingsUseCases
 	settingsOverlay  *states.SettingsOverlay
 	hotkeysHandler   *states.HotkeysHandler
 
-	// Уровни кампании для превью экрана выбора; не мутируются —
+	// Кампания; уровни для превью экрана выбора не мутируются —
 	// для игры уровень каждый раз читается заново
+	campaign            *types.CampaignEntity
 	campaignLevels      map[int]*types.LevelEntity
 	levelSelectRenderer *level_select.LevelSelectRendererAdapter
+	mainMenuRenderer    *main_menu.MainMenuRendererAdapter
 
 	// Stateless-сервисы
 	randomService            interfaces.IRandomService
@@ -95,237 +135,276 @@ type App struct {
 	spawnCollisionService    interfaces.ISpawnCollisionService
 	tankBrakingService       interfaces.ITankBrakingService
 
-	// Use Cases
+	// Use Cases; прогресс и выбор уровня — свои у каждого режима
 	specsUseCases       interfaces.ISpecsUseCases
 	waveUseCases        interfaces.IWaveUseCases
-	progressionUseCases interfaces.IProgressionUseCases
-	levelSelectUseCases interfaces.ILevelSelectUseCases
+	progressionUseCases [types.MaxPlayers]interfaces.IProgressionUseCases
+	levelSelectUseCases [types.MaxPlayers]interfaces.ILevelSelectUseCases
 }
 
+// New собирает минимум для сплеша: хранилище, настройки и раскладку,
+// шрифты, эффекты финального экрана и ввод меню; ресурсы игры
+// грузятся на сплеше по шагу за кадр
 func New(cfg *Config) *App {
-	// Создаем audio context один раз на приложение
-	audioContext := audio.NewContext(audioSampleRate)
-
 	fileRepository := raw.NewFileRepository(assetsFS())
-
-	tilesetRegistry, err := processed.NewTilesetRepositoryRegistry(
-		fileRepository,
-	)
-	if err != nil {
-		fmt.Printf("Error creating tileset registry: %v\n", err)
-		panic(err)
-	}
-
-	// Fail-fast проверка спрайтов: все идентификаторы, на которые
-	// ссылается код, должны существовать в тайлсетах — падение
-	// до открытия окна с полным списком проблем
-	spriteManifest := processed.RequiredSprites().
-		Merge(use_cases.RequiredSprites()).
-		Merge(stage.RequiredSprites()).
-		Merge(stageFactoryRequiredSprites())
-	spriteValidation := use_cases.NewSpriteValidationUseCases(tilesetRegistry)
-	if err := spriteValidation.Validate(spriteManifest); err != nil {
-		fmt.Printf("Error validating sprites: %v\n", err)
-		panic(err)
-	}
-
-	// Кэш GPU-спрайтов общий для всех уровней; прогрев при старте
-	// делает стоимость кадра детерминированной
-	spriteCache := stage.NewSpriteCache(
-		use_cases.NewSpriteUseCases(tilesetRegistry),
-	)
-	spriteCache.Preload(types.AllTilesetTypes())
-
-	mapsRepository := processed.NewMapsDataRepository(
-		fileRepository,
-		tilesetRegistry,
-		cfg.LevelDefaults,
-	)
-
-	// Fail-fast проверка кампании: все уровни существуют и разбираются
-	campaign, err := processed.NewCampaignRepository(fileRepository).
-		GetCampaign(cfg.Campaign)
-	if err != nil {
-		fmt.Printf("Error loading campaign: %v\n", err)
-		panic(err)
-	}
-	campaignLevels, err := loadCampaignLevels(
-		campaign,
-		mapsRepository,
-		int(cfg.GetTileBaseSize()),
-	)
-	if err != nil {
-		fmt.Printf("Error loading campaign levels: %v\n", err)
-		panic(err)
-	}
-
-	// Прогресс и настройки — в одном пользовательском хранилище
 	storageRepository := newStorageRepository(cfg)
-	progressRepository := processed.NewProgressRepository(storageRepository)
-	progressionUseCases := use_cases.NewProgressionUseCases(
-		campaign,
-		loadProgress(progressRepository),
-		progressRepository,
-	)
 	settingsRepository := processed.NewSettingsRepository(storageRepository)
 	userSettings := loadSettings(settingsRepository)
 	controlsRepository := processed.NewControlsRepository(storageRepository)
 	userControls := loadControls(controlsRepository)
 
-	scriptsRepository := processed.NewScriptsRepository(fileRepository)
-	soundsRepository := processed.NewSoundsRepository(fileRepository)
-
-	// Звуковой адаптер общий для всех уровней: PCM декодируется один
-	// раз при старте, плееры живут на единственном audio.Context
-	soundAdapter, err := stage.NewSoundAdapter(
-		soundsRepository,
-		audioContext,
-		userSettings.GetVolume(),
-	)
-	if err != nil {
-		fmt.Printf("Error creating sound adapter: %v\n", err)
-		panic(err)
-	}
-
-	// Шейдеры компилируются при старте: ошибка в исходнике
-	// останавливает запуск до открытия окна
+	// Шейдеры нужны финальному экрану с первого кадра: ошибка
+	// в исходнике останавливает запуск до открытия окна
 	effectsRenderer, err := effects.NewEffectsRendererAdapter(
 		processed.NewShadersRepository(fileRepository),
 	)
-	if err != nil {
-		fmt.Printf("Error creating effects renderer: %v\n", err)
-		panic(err)
-	}
+	mustLoad("creating effects renderer", err)
 
 	fontsRepository := processed.NewFontsRepository(fileRepository)
 	textFace, err := buildTextFace(fontsRepository, cfg.GetTitleFontSize())
-	if err != nil {
-		fmt.Printf("Error creating text face: %v\n", err)
-		panic(err)
-	}
-
+	mustLoad("creating text face", err)
 	hudTextFace, err := buildTextFace(fontsRepository, hudFontSize)
-	if err != nil {
-		fmt.Printf("Error creating HUD text face: %v\n", err)
-		panic(err)
-	}
+	mustLoad("creating HUD text face", err)
 
-	mapSizePx := types.Size{
-		Width:  cfg.MapBlocksCount.Width * int(cfg.TileBaseSize),
-		Height: cfg.MapBlocksCount.Height * int(cfg.TileBaseSize),
-	}
-	entitiesCollisionService := collision_services.NewEntitiesCollisionService()
-
-	// Ввод меню и экраны настроек общие для выбора уровня и паузы;
-	// FULLSCREEN в настройках — только там, где окно можно
-	// развернуть при старте (в браузере — только жестом)
 	touchControls := touch_controls.NewTouchControlsAdapter(
 		cfg.ScreenWidth()/screenScaleFactor,
 		cfg.ScreenHeight()/screenScaleFactor,
 		userSettings,
 	)
 	menuInput := menu_input.NewMenuInputAdapter(touchControls)
-	windowAdapter := window.NewWindowAdapter()
-	settingsUseCases := use_cases.NewSettingsUseCases(
-		settingsRepository,
+
+	app := &App{
+		config:             cfg,
+		session:            session_entities.NewGameSessionEntity(),
+		frameInputs:        []frameInput{touchControls, menuInput},
+		audioContext:       audio.NewContext(audioSampleRate),
+		fileRepository:     fileRepository,
+		storageRepository:  storageRepository,
+		settingsRepository: settingsRepository,
+		controlsRepository: controlsRepository,
+		textFace:           textFace,
+		hudTextFace:        hudTextFace,
+		touchControls:      touchControls,
+		menuInput:          menuInput,
+		effectsRenderer:    effectsRenderer,
+		windowAdapter:      window.NewWindowAdapter(),
+		settings:           userSettings,
+		controls:           userControls,
+	}
+
+	app.loader = newBootLoader(
+		app.loadSprites,
+		app.preloadSprites,
+		app.loadCampaign,
+		app.loadProgress,
+		app.loadScripts,
+		app.loadSounds,
+		app.assembleGame,
+	)
+	app.state = states.NewSplashState(
+		app.loader,
+		splash.NewSplashRendererAdapter(app.splashLogo()),
+		menuInput,
+	)
+
+	return app
+}
+
+// mustLoad останавливает запуск при ошибке ресурса: проблемы данных
+// видны сразу, а не посреди игры
+func mustLoad(what string, err error) {
+	if err != nil {
+		fmt.Printf("Error %s: %v\n", what, err)
+		panic(err)
+	}
+}
+
+// splashLogo — логотип дизайнера из assets/images, пока его нет —
+// текстовая заглушка
+func (app *App) splashLogo() splash.Logo {
+	img, err := processed.NewImagesRepository(app.fileRepository).
+		GetImage(splashLogoName)
+	if err != nil {
+		log.Printf("splash logo: %v; drawing text placeholder", err)
+		return splash.NewTextLogo(app.textFace, splashLogoText)
+	}
+	return splash.NewImageLogo(img)
+}
+
+// loadSprites — тайлсеты и fail-fast проверка спрайтов: все
+// идентификаторы, на которые ссылается код, существуют в тайлсетах
+func (app *App) loadSprites() {
+	tilesetRegistry, err := processed.NewTilesetRepositoryRegistry(
+		app.fileRepository,
+	)
+	mustLoad("creating tileset registry", err)
+
+	spriteManifest := processed.RequiredSprites().
+		Merge(use_cases.RequiredSprites()).
+		Merge(stage.RequiredSprites()).
+		Merge(stageFactoryRequiredSprites())
+	mustLoad(
+		"validating sprites",
+		use_cases.NewSpriteValidationUseCases(tilesetRegistry).
+			Validate(spriteManifest),
+	)
+	app.tilesetRegistry = tilesetRegistry
+}
+
+// preloadSprites — кэш GPU-спрайтов общий для всех уровней; прогрев
+// делает стоимость кадра детерминированной
+func (app *App) preloadSprites() {
+	app.spriteCache = stage.NewSpriteCache(
+		use_cases.NewSpriteUseCases(app.tilesetRegistry),
+	)
+	app.spriteCache.Preload(types.AllTilesetTypes())
+}
+
+// loadCampaign — карты и fail-fast проверка кампании: все уровни
+// существуют и разбираются
+func (app *App) loadCampaign() {
+	app.mapsRepository = processed.NewMapsDataRepository(
+		app.fileRepository,
+		app.tilesetRegistry,
+		app.config.LevelDefaults,
+	)
+	campaign, err := processed.NewCampaignRepository(app.fileRepository).
+		GetCampaign(app.config.Campaign)
+	mustLoad("loading campaign", err)
+	campaignLevels, err := loadCampaignLevels(
+		campaign,
+		app.mapsRepository,
+		int(app.config.GetTileBaseSize()),
+	)
+	mustLoad("loading campaign levels", err)
+
+	app.campaign = campaign
+	app.campaignLevels = campaignLevels
+}
+
+// loadProgress — прогресс кампании каждого режима в своём ключе
+// хранилища
+func (app *App) loadProgress() {
+	for mode, key := range progressKeys {
+		repository := processed.NewProgressRepository(
+			app.storageRepository, key,
+		)
+		progression := use_cases.NewProgressionUseCases(
+			app.campaign,
+			loadProgress(repository),
+			repository,
+		)
+		app.progressionUseCases[mode] = progression
+		app.levelSelectUseCases[mode] = use_cases.NewLevelSelectUseCases(
+			progression,
+		)
+	}
+}
+
+func (app *App) loadScripts() {
+	app.scriptsRepository = processed.NewScriptsRepository(app.fileRepository)
+	app.scriptEngine = scripting.NewLuaEngine(services.NewNavigationService())
+}
+
+// loadSounds — звуковой адаптер общий для всех уровней: PCM
+// декодируется один раз, плееры живут на единственном audio.Context
+func (app *App) loadSounds() {
+	app.soundsRepository = processed.NewSoundsRepository(app.fileRepository)
+	soundAdapter, err := stage.NewSoundAdapter(
+		app.soundsRepository,
+		app.audioContext,
+		app.settings.GetVolume(),
+	)
+	mustLoad("creating sound adapter", err)
+	app.soundAdapter = soundAdapter
+}
+
+// assembleGame достраивает граф: сервисы, use cases, экраны настроек
+// и раскладки, хоткеи и рендеры меню. FULLSCREEN в настройках —
+// только там, где окно можно развернуть при старте (в браузере —
+// только жестом)
+func (app *App) assembleGame() {
+	cfg := app.config
+	mapSizePx := types.Size{
+		Width:  cfg.MapBlocksCount.Width * int(cfg.TileBaseSize),
+		Height: cfg.MapBlocksCount.Height * int(cfg.TileBaseSize),
+	}
+	entitiesCollisionService := collision_services.NewEntitiesCollisionService()
+	app.boundaryCollisionService = collision_services.NewBoundaryCollisionService(
+		mapSizePx,
+	)
+	app.entitiesCollisionService = entitiesCollisionService
+	app.wallCollisionService = collision_services.NewWallCollisionService(
+		entitiesCollisionService,
+	)
+	app.bulletCollisionService = collision_services.NewBulletCollisionService(
+		int(cfg.GetTileBaseSize()),
+		entitiesCollisionService,
+	)
+	app.spawnCollisionService = collision_services.NewSpawnCollisionService(
+		entitiesCollisionService,
+	)
+	app.tankBrakingService = services.NewTankBrakingService()
+	app.randomService = services.NewRandomService()
+	app.specsUseCases = use_cases.NewSpecsUseCases()
+	app.waveUseCases = use_cases.NewWaveUseCases()
+
+	app.settingsUseCases = use_cases.NewSettingsUseCases(
+		app.settingsRepository,
 		runtime.GOOS != "js",
 	)
 	controlsOverlay := states.NewControlsOverlay(
-		use_cases.NewControlsUseCases(controlsRepository),
+		use_cases.NewControlsUseCases(app.controlsRepository),
 		settings.NewControlsRendererAdapter(
-			textFace,
+			app.textFace,
 			int(cfg.GetTitleFontSize()),
 			int(cfg.GetRegularFontSize()),
 		),
-		menuInput,
+		app.menuInput,
 		bindings.NewCaptureAdapter(),
-		userControls,
+		app.controls,
 	)
-	settingsOverlay := states.NewSettingsOverlay(
-		settingsUseCases,
+	app.settingsOverlay = states.NewSettingsOverlay(
+		app.settingsUseCases,
 		settings.NewSettingsRendererAdapter(
-			textFace,
+			app.textFace,
 			int(cfg.GetTitleFontSize()),
 			int(cfg.GetRegularFontSize()),
 		),
-		menuInput,
-		soundAdapter,
-		windowAdapter,
+		app.menuInput,
+		app.soundAdapter,
+		app.windowAdapter,
 		controlsOverlay,
-		userSettings,
+		app.settings,
 	)
+	app.hotkeysHandler = states.NewHotkeysHandler(
+		app.settingsUseCases,
+		bindings.NewHotkeysAdapter(app.controls),
+		app.windowAdapter,
+		app.settingsOverlay,
+		app.settings,
+	)
+	app.frameInputs = append(app.frameInputs, app.hotkeysHandler)
 
-	app := &App{
-		config:            cfg,
-		session:           session_entities.NewGameSessionEntity(),
-		fileRepository:    fileRepository,
-		tilesetRegistry:   tilesetRegistry,
-		spriteCache:       spriteCache,
-		mapsRepository:    mapsRepository,
-		scriptsRepository: scriptsRepository,
-		soundsRepository:  soundsRepository,
-		textFace:          textFace,
-		hudTextFace:       hudTextFace,
-		scriptEngine: scripting.NewLuaEngine(
-			services.NewNavigationService(),
-		),
-		soundAdapter:     soundAdapter,
-		touchControls:    touchControls,
-		menuInput:        menuInput,
-		effectsRenderer:  effectsRenderer,
-		windowAdapter:    windowAdapter,
-		settings:         userSettings,
-		controls:         userControls,
-		settingsUseCases: settingsUseCases,
-		settingsOverlay:  settingsOverlay,
-		hotkeysHandler: states.NewHotkeysHandler(
-			settingsUseCases,
-			bindings.NewHotkeysAdapter(userControls),
-			windowAdapter,
-			settingsOverlay,
-			userSettings,
-		),
-		boundaryCollisionService: collision_services.NewBoundaryCollisionService(
-			mapSizePx,
-		),
-		entitiesCollisionService: entitiesCollisionService,
-		wallCollisionService: collision_services.NewWallCollisionService(
-			entitiesCollisionService,
-		),
-		bulletCollisionService: collision_services.NewBulletCollisionService(
-			int(cfg.GetTileBaseSize()),
-			entitiesCollisionService,
-		),
-		spawnCollisionService: collision_services.NewSpawnCollisionService(
-			entitiesCollisionService,
-		),
-		tankBrakingService:  services.NewTankBrakingService(),
-		randomService:       services.NewRandomService(),
-		specsUseCases:       use_cases.NewSpecsUseCases(),
-		waveUseCases:        use_cases.NewWaveUseCases(),
-		progressionUseCases: progressionUseCases,
-		levelSelectUseCases: use_cases.NewLevelSelectUseCases(
-			progressionUseCases,
-		),
-		campaignLevels: campaignLevels,
-		levelSelectRenderer: level_select.NewLevelSelectRendererAdapter(
-			level_select.LevelSelectRendererDependencies{
-				FontFace:        textFace,
-				TitleFontSize:   int(cfg.GetTitleFontSize()),
-				RegularFontSize: int(cfg.GetRegularFontSize()),
-				HQPosition: types.Position{
-					X: float64(cfg.GetHQPosition()[0]),
-					Y: float64(cfg.GetHQPosition()[1]),
-				},
-				EnemySpawners: cfg.GetEnemySpawners(),
-				CellSizePx:    int(cfg.GetBaseSizePx()),
+	app.levelSelectRenderer = level_select.NewLevelSelectRendererAdapter(
+		level_select.LevelSelectRendererDependencies{
+			FontFace:        app.textFace,
+			TitleFontSize:   int(cfg.GetTitleFontSize()),
+			RegularFontSize: int(cfg.GetRegularFontSize()),
+			HQPosition: types.Position{
+				X: float64(cfg.GetHQPosition()[0]),
+				Y: float64(cfg.GetHQPosition()[1]),
 			},
-		),
-	}
-
-	app.state = app.newLevelSelectState(0)
-
-	return app
+			EnemySpawners: cfg.GetEnemySpawners(),
+			CellSizePx:    int(cfg.GetBaseSizePx()),
+		},
+	)
+	app.mainMenuRenderer = main_menu.NewMainMenuRendererAdapter(
+		app.textFace,
+		int(cfg.GetTitleFontSize()),
+		int(cfg.GetRegularFontSize()),
+		cfg.GetGameTitle(),
+	)
 }
 
 // loadCampaignLevels читает все уровни кампании: ошибка в любом
@@ -348,8 +427,8 @@ func loadCampaignLevels(
 	return levels, nil
 }
 
-// newStorageRepository — пользовательское хранилище прогресса
-// и настроек: файлы в каталоге конфигурации ОС на десктопе,
+// newStorageRepository — пользовательское хранилище прогресса,
+// настроек и раскладки: файлы в каталоге конфигурации ОС на десктопе,
 // localStorage в браузере
 func newStorageRepository(cfg *Config) interfaces.IStorageRepository {
 	dir, err := raw.DefaultStorageDir(cfg.GetGameTitle())
@@ -397,21 +476,36 @@ func loadProgress(
 	return progress
 }
 
-// newLevelSelectState собирает экран выбора уровня; курсор встаёт
-// на lastLevel или на последний открытый уровень
+// mode — индекс текущего режима: 0 — один игрок, 1 — двое
+func (app *App) mode() int {
+	return int(app.settings.GetPlayers()) - 1
+}
+
+// newMainMenuState собирает главное меню; в браузере
+// ebiten.Termination заморозил бы canvas, поэтому выход есть только
+// на десктопе
+func (app *App) newMainMenuState() *states.MainMenuState {
+	return states.NewMainMenuState(states.MainMenuStateDependencies{
+		SettingsUseCases: app.settingsUseCases,
+		Renderer:         app.mainMenuRenderer,
+		MenuInput:        app.menuInput,
+		SettingsOverlay:  app.settingsOverlay,
+		Settings:         app.settings,
+		Version:          Version,
+		QuitAvailable:    runtime.GOOS != "js",
+	})
+}
+
+// newLevelSelectState собирает экран выбора уровня кампании текущего
+// режима; курсор встаёт на lastLevel или на последний открытый уровень
 func (app *App) newLevelSelectState(lastLevel int) *states.LevelSelectState {
-	// В браузере ebiten.Termination заморозил бы canvas,
-	// поэтому выход есть только на десктопе
 	return states.NewLevelSelectState(states.LevelSelectStateDependencies{
-		LevelSelectUseCases: app.levelSelectUseCases,
-		SettingsUseCases:    app.settingsUseCases,
+		LevelSelectUseCases: app.levelSelectUseCases[app.mode()],
 		Renderer:            app.levelSelectRenderer,
 		MenuInput:           app.menuInput,
-		SettingsOverlay:     app.settingsOverlay,
 		Settings:            app.settings,
 		Levels:              app.campaignLevels,
 		LastLevel:           lastLevel,
-		QuitAvailable:       runtime.GOOS != "js",
 	})
 }
 
@@ -432,9 +526,9 @@ func (app *App) Update() error {
 	// Ввод опрашивается один раз на кадр до обновления состояния:
 	// тач — первым, меню собирает в том числе его события; затем
 	// глобальные хоткеи
-	app.touchControls.Update()
-	app.menuInput.Update()
-	app.hotkeysHandler.Update()
+	for _, input := range app.frameInputs {
+		input.Update()
+	}
 
 	transition := app.state.Update()
 
@@ -461,9 +555,11 @@ func (app *App) applyTransition(transition types.StateTransition) error {
 		app.state = stageState
 	case types.TransitionToLevelSelect:
 		app.state = app.newLevelSelectState(int(transition.Level))
+	case types.TransitionToMainMenu:
+		app.state = app.newMainMenuState()
 	case types.TransitionToQuit:
-		// Пункт QUIT меню экрана выбора уровня; в js-сборке выхода
-		// нет, поэтому переход возможен только на десктопе
+		// Пункт QUIT главного меню; в js-сборке выхода нет,
+		// поэтому переход возможен только на десктопе
 		return ebiten.Termination
 	}
 
@@ -493,6 +589,8 @@ func (app *App) Run(ctx context.Context) error {
 	return ebiten.RunGame(app)
 }
 
+// Close освобождает ресурсы; игру могут закрыть ещё на сплеше,
+// до загрузки скриптов и звуков
 func (app *App) Close() {
 	if app.scriptEngine != nil {
 		app.scriptEngine.Close()
