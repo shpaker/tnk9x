@@ -1049,6 +1049,12 @@ type stubBonusMap struct {
 
 func (s *stubBonusMap) GetBlocks() types.MapBlocks           { return nil }
 func (s *stubBonusMap) RemoveBlock(*types.BlockEntity) error { return nil }
+func (s *stubBonusMap) RestoreBlock(
+	*types.BlockEntity, []types.IEntityCollider,
+) bool {
+	return false
+}
+func (s *stubBonusMap) IsBlockIntact(*types.BlockEntity) bool { return true }
 
 func (s *stubBonusMap) GetSizePx() types.Size       { return types.Size{} }
 func (s *stubBonusMap) IsIceAt(types.Position) bool { return false }

@@ -80,6 +80,8 @@ type IBonusesRepository interface {
 type IMapsDataRepository interface {
 	// GetLevel читает уровень; каждый вызов создаёт новую карту
 	GetLevel(num int, tileBaseSize int) (*types.LevelEntity, error)
+	// GetSceneLevel читает карту вне кампании (демо-сцена) по имени
+	GetSceneLevel(name string, tileBaseSize int) (*types.LevelEntity, error)
 	// HasLevel — существует ли файл уровня
 	HasLevel(num int) bool
 

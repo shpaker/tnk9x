@@ -46,6 +46,12 @@ func (r *failingMapsRepo) GetLevel(
 
 func (r *failingMapsRepo) HasLevel(num int) bool { return false }
 
+func (r *failingMapsRepo) GetSceneLevel(
+	string, int,
+) (*types.LevelEntity, error) {
+	return nil, errLevelUnavailable
+}
+
 func (r *failingMapsRepo) GetLevelsCount() (int, error) { return 0, nil }
 
 // newAppTestEnv собирает минимальный App без тяжёлой инфраструктуры:
@@ -226,5 +232,25 @@ func TestApp_Update_ContextCancelled(t *testing.T) {
 	cancel()
 	if err := app.Update(); !errors.Is(err, ebiten.Termination) {
 		t.Fatalf("ожидался ebiten.Termination, получено %v", err)
+	}
+}
+
+// Сцена главного меню на настоящем графе: название собирается,
+// по полю ездят танки с ИИ без игроков и штаба, сцена не падает
+func TestApp_MainMenuDemoScene(t *testing.T) {
+	app := newFullApp(t)
+	for _, done := app.loader.Step(); !done; _, done = app.loader.Step() {
+	}
+
+	scene, err := app.newDemoScene()
+	if err != nil {
+		t.Fatalf("демо-сцена: %v", err)
+	}
+	// 10 секунд сцены: сборка, выезд танков, стрельба, починка
+	for range 600 {
+		scene.Update()
+	}
+	if !scene.IsAssembled() {
+		t.Error("название должно собраться")
 	}
 }

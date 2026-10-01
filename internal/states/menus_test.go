@@ -261,6 +261,12 @@ type nopMainMenuRenderer struct{}
 
 func (nopMainMenuRenderer) Draw(*ebiten.Image, types.MainMenuViewData) {}
 
+// countingScene — сцена за меню, считающая кадры
+type countingScene struct{ updates int }
+
+func (s *countingScene) Update()            { s.updates++ }
+func (s *countingScene) Draw(*ebiten.Image) {}
+
 func newMainMenu(env *menusEnv) *states.MainMenuState {
 	return states.NewMainMenuState(states.MainMenuStateDependencies{
 		SettingsUseCases: use_cases.NewSettingsUseCases(
@@ -268,6 +274,7 @@ func newMainMenu(env *menusEnv) *states.MainMenuState {
 		),
 		Renderer:        nopMainMenuRenderer{},
 		MenuInput:       env.input,
+		Scene:           &countingScene{},
 		SettingsOverlay: env.settingsOverlay,
 		Settings:        env.settings,
 		Version:         "0.20",

@@ -118,6 +118,13 @@ type stubMapUseCases struct {
 }
 
 func (s *stubMapUseCases) GetBlocks() types.MapBlocks { return s.mapEntity.GetBlocks() }
+func (s *stubMapUseCases) RestoreBlock(
+	*types.BlockEntity, []types.IEntityCollider,
+) bool {
+	return false
+}
+
+func (s *stubMapUseCases) IsBlockIntact(*types.BlockEntity) bool { return true }
 
 func (s *stubMapUseCases) RemoveBlock(block *types.BlockEntity) error {
 	return s.mapEntity.RemoveBlock(block)

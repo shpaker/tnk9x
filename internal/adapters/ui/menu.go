@@ -48,28 +48,13 @@ func DrawMenu(
 	DrawOverlay(
 		screen, font, title, height/4-float64(font.TitleFontSize)/2,
 	)
-	drawMenuRows(screen, font, title, rows, activeIndex)
+	drawMenuRows(screen, font, rows, activeIndex)
 }
 
-// DrawMenuScreen рисует полноэкранное меню без подложки оверлея:
-// заголовок и строки поверх уже нарисованного фона
-func DrawMenuScreen(
-	screen *ebiten.Image,
-	font MenuFont,
-	title string,
-	rows []MenuRow,
-	activeIndex int,
-) {
-	height := float64(screen.Bounds().Dy())
-	drawTitle(screen, font, title, height/4-float64(font.TitleFontSize)/2)
-	drawMenuRows(screen, font, title, rows, activeIndex)
-}
-
-// drawMenuRows — строки меню под заголовком title
+// drawMenuRows — строки меню под заголовком
 func drawMenuRows(
 	screen *ebiten.Image,
 	font MenuFont,
-	title string,
 	rows []MenuRow,
 	activeIndex int,
 ) {
@@ -77,7 +62,8 @@ func drawMenuRows(
 	width := float64(bounds.Dx())
 	height := float64(bounds.Dy())
 
-	_, titleHeight := text.Measure(title, font.Face, 0)
+	// Высота строки — по метрикам шрифта: заголовка может не быть
+	_, titleHeight := text.Measure("M", font.Face, 0)
 	scale := font.scale()
 	rowHeight := titleHeight * scale
 	gap := float64(font.RegularFontSize)

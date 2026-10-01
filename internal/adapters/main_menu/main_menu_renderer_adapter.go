@@ -27,15 +27,13 @@ var versionColor = color.NRGBA{R: 110, G: 110, B: 110, A: 255}
 
 // MainMenuRendererAdapter рисует главное меню
 type MainMenuRendererAdapter struct {
-	font  ui.MenuFont
-	title string
+	font ui.MenuFont
 }
 
 func NewMainMenuRendererAdapter(
 	fontFace text.Face,
 	titleFontSize int,
 	regularFontSize int,
-	title string,
 ) *MainMenuRendererAdapter {
 	return &MainMenuRendererAdapter{
 		font: ui.MenuFont{
@@ -43,7 +41,6 @@ func NewMainMenuRendererAdapter(
 			TitleFontSize:   titleFontSize,
 			RegularFontSize: regularFontSize,
 		},
-		title: title,
 	}
 }
 
@@ -51,13 +48,12 @@ func (r *MainMenuRendererAdapter) Draw(
 	screen *ebiten.Image,
 	view types.MainMenuViewData,
 ) {
-	screen.Fill(color.Black)
-
 	rows := make([]ui.MenuRow, len(view.Items))
 	for i, item := range view.Items {
 		rows[i] = ui.MenuRow{Label: mainMenuLabels[item]}
 	}
-	ui.DrawMenuScreen(screen, r.font, r.title, rows, view.ActiveIndex)
+	// Подложка как у паузы и итогов; название игры — блоки сцены
+	ui.DrawMenu(screen, r.font, "", rows, view.ActiveIndex)
 
 	bounds := screen.Bounds()
 	version := "V" + view.Version

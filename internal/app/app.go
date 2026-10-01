@@ -403,7 +403,6 @@ func (app *App) assembleGame() {
 		app.textFace,
 		int(cfg.GetTitleFontSize()),
 		int(cfg.GetRegularFontSize()),
-		cfg.GetGameTitle(),
 	)
 }
 
@@ -481,19 +480,25 @@ func (app *App) mode() int {
 	return int(app.settings.GetPlayers()) - 1
 }
 
-// newMainMenuState собирает главное меню; в браузере
-// ebiten.Termination заморозил бы canvas, поэтому выход есть только
-// на десктопе
-func (app *App) newMainMenuState() *states.MainMenuState {
+// newMainMenuState собирает главное меню над живой сценой с названием
+// из блоков; в браузере ebiten.Termination заморозил бы canvas,
+// поэтому выход есть только на десктопе
+func (app *App) newMainMenuState() (*states.MainMenuState, error) {
+	scene, err := app.newDemoScene()
+	if err != nil {
+		return nil, err
+	}
+
 	return states.NewMainMenuState(states.MainMenuStateDependencies{
 		SettingsUseCases: app.settingsUseCases,
 		Renderer:         app.mainMenuRenderer,
 		MenuInput:        app.menuInput,
+		Scene:            scene,
 		SettingsOverlay:  app.settingsOverlay,
 		Settings:         app.settings,
 		Version:          Version,
 		QuitAvailable:    runtime.GOOS != "js",
-	})
+	}), nil
 }
 
 // newLevelSelectState собирает экран выбора уровня кампании текущего
@@ -556,7 +561,11 @@ func (app *App) applyTransition(transition types.StateTransition) error {
 	case types.TransitionToLevelSelect:
 		app.state = app.newLevelSelectState(int(transition.Level))
 	case types.TransitionToMainMenu:
-		app.state = app.newMainMenuState()
+		mainMenu, err := app.newMainMenuState()
+		if err != nil {
+			return err
+		}
+		app.state = mainMenu
 	case types.TransitionToQuit:
 		// Пункт QUIT главного меню; в js-сборке выхода нет,
 		// поэтому переход возможен только на десктопе

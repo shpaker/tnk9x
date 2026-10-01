@@ -21,6 +21,11 @@ type IBulletUseCases interface {
 type IMapUseCases interface {
 	GetBlocks() types.MapBlocks
 	RemoveBlock(block *types.BlockEntity) error
+	// RestoreBlock возвращает блок в исходное целое состояние, если
+	// его клетку не занимает ни один из obstacles
+	RestoreBlock(block *types.BlockEntity, obstacles []types.IEntityCollider) bool
+	// IsBlockIntact — блок на карте в исходном размере
+	IsBlockIntact(block *types.BlockEntity) bool
 	GetSizePx() types.Size
 	GetRandomBonusSpawnPosition() types.Position
 	IsIceAt(position types.Position) bool

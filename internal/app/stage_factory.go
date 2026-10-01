@@ -11,6 +11,7 @@ import (
 	"github.com/shpaker/tnk9x/internal/states"
 	"github.com/shpaker/tnk9x/internal/types"
 	image_providers "github.com/shpaker/tnk9x/internal/types/image_providers"
+	"github.com/shpaker/tnk9x/internal/types/session_entities"
 	"github.com/shpaker/tnk9x/internal/use_cases"
 	state_use_cases "github.com/shpaker/tnk9x/internal/use_cases/state_use_cases"
 	tank_use_cases "github.com/shpaker/tnk9x/internal/use_cases/tank_use_cases"
@@ -26,6 +27,10 @@ const (
 // hqSizePx — размер штаба в пикселях логического экрана
 const hqSizePx = 16
 
+// demoSceneLevel — карта демо-сцены главного меню:
+// levels/demo/title.bcmap, вне кампании
+const demoSceneLevel = "demo/title"
+
 // stageFactoryRequiredSprites перечисляет спрайты, запрашиваемые
 // фабрикой уровня (см. createHQ)
 func stageFactoryRequiredSprites() types.SpriteManifest {
@@ -36,22 +41,137 @@ func stageFactoryRequiredSprites() types.SpriteManifest {
 	}
 }
 
-// newStageState собирает граф зависимостей уровня в топологическом порядке:
-// репозитории и сервисы приложения переиспользуются, игровое runtime-состояние
-// (танки, пули, бонусы, анимации, звуковые события) создаётся заново
+// stageGraph — граф уровня: общий для игры и демо-сцены главного меню
+type stageGraph struct {
+	mapUseCases           interfaces.IMapUseCases
+	tankTilesUseCases     *use_cases.TilesUseCases
+	renderUseCases        interfaces.IRenderUseCases
+	tankCommonUseCases    interfaces.ITankCommonUseCases
+	tankLifecycleUseCases interfaces.ITankLifecycleUseCases
+	tankActionsUseCases   interfaces.ITankActionsUseCases
+	bulletUseCases        interfaces.IBulletUseCases
+	soundUseCases         interfaces.ISoundUseCases
+	visualEffectsUseCases interfaces.IVisualEffectsUseCases
+	lightingUseCases      interfaces.ILightingUseCases
+	stageUseCases         interfaces.IStageUseCases
+	bonusesRepository     interfaces.IBonusesRepository
+	enemyInputAdapter     interfaces.IAiInputAdapter
+	renderer              *stage.StageRendererAdapter
+}
+
+// newStageState собирает уровень кампании: граф уровня со штабом
+// и вводом обоих игроков
 func (app *App) newStageState() (*states.StageState, error) {
-	tileBaseSize := int(app.config.GetTileBaseSize())
 	level, err := app.mapsRepository.GetLevel(
 		app.session.Level,
-		tileBaseSize,
+		int(app.config.GetTileBaseSize()),
 	)
 	if err != nil {
 		return nil, err
 	}
-	mapEntity := level.GetMap()
 
 	stageSession := app.session.StageSession()
 	stageSession.SetUpLevel(level)
+	graph, err := app.buildStageGraph(level, stageSession, true)
+	if err != nil {
+		return nil, err
+	}
+
+	// Каждый игрок управляется своей раскладкой клавиатуры, своим
+	// геймпадом и своими экранными контроллами: композит применяет
+	// все источники каждый кадр
+	playerInput := func(player types.PlayerTankNum) interfaces.IInputAdapter {
+		return input_adapters.NewCompositeInputAdapter(
+			input_adapters.NewStageKeyboardInputAdapter(
+				graph.tankActionsUseCases, nil, graph.stageUseCases,
+				app.controls, player,
+			),
+			input_adapters.NewStageGamepadInputAdapter(
+				graph.tankActionsUseCases, nil, graph.stageUseCases,
+				app.controls, player,
+			),
+			input_adapters.NewStageTouchInputAdapter(
+				graph.tankActionsUseCases, nil, graph.stageUseCases,
+				app.touchControls, player,
+			),
+		)
+	}
+
+	return states.NewStageState(states.StageStateDependencies{
+		TankCommonUseCases:    graph.tankCommonUseCases,
+		RenderUseCases:        graph.renderUseCases,
+		TankLifecycleUseCases: graph.tankLifecycleUseCases,
+		TilesUseCases:         graph.tankTilesUseCases,
+		StageUseCases:         graph.stageUseCases,
+		SoundUseCases:         graph.soundUseCases,
+		LightingUseCases:      graph.lightingUseCases,
+		VisualEffectsUseCases: graph.visualEffectsUseCases,
+		ProgressionUseCases:   app.progressionUseCases[app.mode()],
+		InputAdapters: [2]interfaces.IInputAdapter{
+			playerInput(types.PlayerTankNumPlayer1),
+			playerInput(types.PlayerTankNumPlayer2),
+		},
+		EnemyInputAdapter:  graph.enemyInputAdapter,
+		Renderer:           graph.renderer,
+		SoundPlayerAdapter: app.soundAdapter,
+		MenuInput:          app.menuInput,
+		StageSession:       stageSession,
+		BonusesRepository:  graph.bonusesRepository,
+		SettingsOverlay:    app.settingsOverlay,
+		Level:              level,
+	}), nil
+}
+
+// newDemoScene собирает живую сцену главного меню: карта с названием
+// игры из блоков, без игроков и без штаба, по танку каждого типа
+// врагов под управлением настоящего ИИ. Своя сессия — прогресс
+// и перенос кампании не затрагиваются
+func (app *App) newDemoScene() (*states.DemoScene, error) {
+	level, err := app.mapsRepository.GetSceneLevel(
+		demoSceneLevel,
+		int(app.config.GetTileBaseSize()),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	stageSession := session_entities.NewStageSessionEntity()
+	stageSession.SetUpLevel(level)
+	stageSession.Reset()
+	titleBlocks := append(types.MapBlocks{}, level.GetMap().GetBlocks()...)
+
+	graph, err := app.buildStageGraph(level, stageSession, false)
+	if err != nil {
+		return nil, err
+	}
+
+	return states.NewDemoScene(states.DemoSceneDependencies{
+		TankCommonUseCases:    graph.tankCommonUseCases,
+		RenderUseCases:        graph.renderUseCases,
+		TankLifecycleUseCases: graph.tankLifecycleUseCases,
+		TilesUseCases:         graph.tankTilesUseCases,
+		StageUseCases:         graph.stageUseCases,
+		SoundUseCases:         graph.soundUseCases,
+		LightingUseCases:      graph.lightingUseCases,
+		VisualEffectsUseCases: graph.visualEffectsUseCases,
+		MapUseCases:           graph.mapUseCases,
+		BulletUseCases:        graph.bulletUseCases,
+		EnemyInputAdapter:     graph.enemyInputAdapter,
+		Renderer:              graph.renderer,
+		TitleBlocks:           titleBlocks,
+	}), nil
+}
+
+// buildStageGraph собирает граф уровня в топологическом порядке:
+// репозитории и сервисы приложения переиспользуются, игровое
+// runtime-состояние (танки, пули, бонусы, анимации, звуковые события)
+// создаётся заново. withHQ=false — без штаба (демо-сцена)
+func (app *App) buildStageGraph(
+	level *types.LevelEntity,
+	stageSession *session_entities.StageSessionEntity,
+	withHQ bool,
+) (*stageGraph, error) {
+	mapEntity := level.GetMap()
 	gameRepositories := game_repos.NewGameRepositoriesRegistry()
 
 	// анимации блоков карты (вода) продвигаются общим UpdateAnimations
@@ -130,9 +250,13 @@ func (app *App) newStageState() (*states.StageState, error) {
 	)
 
 	hqTilesUseCases := app.buildHQTilesUseCases(gameRepositories)
-	hq, err := app.createHQ(hqTilesUseCases, baseSizePx)
-	if err != nil {
-		return nil, err
+	var hq *types.HQEntity
+	if withHQ {
+		created, err := app.createHQ(hqTilesUseCases, baseSizePx)
+		if err != nil {
+			return nil, err
+		}
+		hq = created
 	}
 	hqUseCases := use_cases.NewHQUseCases(
 		hqTilesUseCases,
@@ -218,26 +342,6 @@ func (app *App) newStageState() (*states.StageState, error) {
 		bonusUseCases,
 	)
 
-	// Каждый игрок управляется своей раскладкой клавиатуры, своим
-	// геймпадом и своими экранными контроллами: композит применяет
-	// все источники каждый кадр
-	playerInput := func(player types.PlayerTankNum) interfaces.IInputAdapter {
-		return input_adapters.NewCompositeInputAdapter(
-			input_adapters.NewStageKeyboardInputAdapter(
-				tankActionsUseCases, nil, stageUseCases,
-				app.controls, player,
-			),
-			input_adapters.NewStageGamepadInputAdapter(
-				tankActionsUseCases, nil, stageUseCases,
-				app.controls, player,
-			),
-			input_adapters.NewStageTouchInputAdapter(
-				tankActionsUseCases, nil, stageUseCases,
-				app.touchControls, player,
-			),
-		)
-	}
-
 	lightingUseCases := use_cases.NewLightingUseCases(
 		tankCommonUseCases,
 		bulletUseCases,
@@ -246,40 +350,31 @@ func (app *App) newStageState() (*states.StageState, error) {
 		visualEffectsUseCases,
 	)
 
-	rendererAdapter := app.buildStageRenderer(
-		mapUseCases,
-		tankCommonUseCases,
-		bulletUseCases,
-		hqUseCases,
-		renderUseCases,
-		bonusUseCases,
-		lightingUseCases,
-		visualEffectsUseCases,
-	)
-
-	return states.NewStageState(states.StageStateDependencies{
-		TankCommonUseCases:    tankCommonUseCases,
-		RenderUseCases:        renderUseCases,
-		TankLifecycleUseCases: tankLifecycleUseCases,
-		TilesUseCases:         tankTilesUseCases,
-		StageUseCases:         stageUseCases,
-		SoundUseCases:         soundUseCases,
-		LightingUseCases:      lightingUseCases,
-		VisualEffectsUseCases: visualEffectsUseCases,
-		ProgressionUseCases:   app.progressionUseCases[app.mode()],
-		InputAdapters: [2]interfaces.IInputAdapter{
-			playerInput(types.PlayerTankNumPlayer1),
-			playerInput(types.PlayerTankNumPlayer2),
-		},
-		EnemyInputAdapter:  enemyInputAdapter,
-		Renderer:           rendererAdapter,
-		SoundPlayerAdapter: app.soundAdapter,
-		MenuInput:          app.menuInput,
-		StageSession:       stageSession,
-		BonusesRepository:  bonusesRepository,
-		SettingsOverlay:    app.settingsOverlay,
-		Level:              level,
-	}), nil
+	return &stageGraph{
+		mapUseCases:           mapUseCases,
+		tankTilesUseCases:     tankTilesUseCases,
+		renderUseCases:        renderUseCases,
+		tankCommonUseCases:    tankCommonUseCases,
+		tankLifecycleUseCases: tankLifecycleUseCases,
+		tankActionsUseCases:   tankActionsUseCases,
+		bulletUseCases:        bulletUseCases,
+		soundUseCases:         soundUseCases,
+		visualEffectsUseCases: visualEffectsUseCases,
+		lightingUseCases:      lightingUseCases,
+		stageUseCases:         stageUseCases,
+		bonusesRepository:     bonusesRepository,
+		enemyInputAdapter:     enemyInputAdapter,
+		renderer: app.buildStageRenderer(
+			mapUseCases,
+			tankCommonUseCases,
+			bulletUseCases,
+			hqUseCases,
+			renderUseCases,
+			bonusUseCases,
+			lightingUseCases,
+			visualEffectsUseCases,
+		),
+	}, nil
 }
 
 // buildTankTilesUseCases — тайлы танков с анимациями спавна и взрыва;

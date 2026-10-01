@@ -13,6 +13,8 @@ type BlockEntity struct {
 type BlockData struct {
 	Name     BlockType
 	Position Position
+	// Size — исходный размер блока до разрушения
+	Size Size
 }
 
 func (b *BlockEntity) GetImageID() (string, error) {
@@ -65,6 +67,7 @@ func NewBlockEntity(
 		Data: &BlockData{
 			Name:     BlockType(blockType),
 			Position: Position{X: positionX, Y: positionY},
+			Size:     Size{Width: size, Height: size},
 		},
 	}
 }

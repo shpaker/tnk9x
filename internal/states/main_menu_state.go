@@ -18,6 +18,13 @@ type MainMenuRenderer interface {
 	Draw(screen *ebiten.Image, view types.MainMenuViewData)
 }
 
+// MenuScene — живая сцена за главным меню; контракт определён
+// у потребителя
+type MenuScene interface {
+	Update()
+	Draw(screen *ebiten.Image)
+}
+
 // MainMenuStateDependencies — готовый граф зависимостей главного
 // меню; собирается composition root'ом, все поля обязательны
 type MainMenuStateDependencies struct {
@@ -29,6 +36,8 @@ type MainMenuStateDependencies struct {
 	MenuInput interfaces.IMenuInputAdapter
 
 	// Presentation
+	// Scene — сцена за меню: название из блоков и танки с ИИ
+	Scene           MenuScene
 	SettingsOverlay *SettingsOverlay
 
 	// Entities
@@ -51,6 +60,7 @@ type MainMenuState struct {
 	renderer  MainMenuRenderer
 	menuInput interfaces.IMenuInputAdapter
 	// Presentation
+	scene           MenuScene
 	settingsOverlay *SettingsOverlay
 	// Entities
 	settings *types.SettingsEntity
@@ -81,6 +91,7 @@ func NewMainMenuState(deps MainMenuStateDependencies) *MainMenuState {
 		settingsUseCases: deps.SettingsUseCases,
 		renderer:         deps.Renderer,
 		menuInput:        deps.MenuInput,
+		scene:            deps.Scene,
 		settingsOverlay:  deps.SettingsOverlay,
 		settings:         deps.Settings,
 		version:          deps.Version,
@@ -90,6 +101,8 @@ func NewMainMenuState(deps MainMenuStateDependencies) *MainMenuState {
 }
 
 func (s *MainMenuState) Update() types.StateTransition {
+	// Сцена живёт и под открытыми настройками
+	s.scene.Update()
 	s.ticks++
 	if s.settingsOverlay.IsOpen() {
 		s.settingsOverlay.Update()
@@ -120,6 +133,7 @@ func (s *MainMenuState) Draw(screen *ebiten.Image) {
 	if s.ticks < mainMenuFadeInTicks {
 		fade = 1 - float64(s.ticks)/mainMenuFadeInTicks
 	}
+	s.scene.Draw(screen)
 	s.renderer.Draw(screen, types.MainMenuViewData{
 		Items:       s.items,
 		ActiveIndex: s.activeIndex,
