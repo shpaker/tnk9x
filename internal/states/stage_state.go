@@ -285,9 +285,13 @@ func (state *StageState) handlePauseMenu() types.StateTransition {
 	}
 
 	menuOpen := state.stageUseCases.IsPaused()
-	// При каждом открытии меню курсор возвращается на первый пункт
+	// При каждом открытии меню курсор возвращается на первый пункт,
+	// а луп двигателя глушится: на паузе управление звуком двигателя
+	// в Update не выполняется. После CONTINUE двигатель запросится
+	// снова, если игрок едет
 	if menuOpen && !state.pauseMenuWasOpen {
 		state.pauseMenuIndex = 0
+		state.soundUseCases.RequestStop(types.SoundIDEngine)
 	}
 	state.pauseMenuWasOpen = menuOpen
 	if !menuOpen {
