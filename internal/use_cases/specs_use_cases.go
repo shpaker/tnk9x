@@ -102,8 +102,8 @@ func (uc *SpecsUseCases) GetTankSpecs(
 	isEnemy bool,
 	level uint,
 ) *types.SpecsEntity {
-	if level > 3 {
-		level = 3
+	if level > types.MaxTankLevel {
+		level = types.MaxTankLevel
 	}
 
 	if isEnemy {

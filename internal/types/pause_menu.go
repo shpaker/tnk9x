@@ -28,7 +28,28 @@ const (
 	StageResultItemContinue
 	StageResultItemRetry
 	StageResultItemLevels
+	// StageResultItemRevive — второй шанс: уровень продолжается
+	// с того же места (за рекламу)
+	StageResultItemRevive
+	// StageResultItemBoostNext — следующий уровень с усиленным
+	// переносом (за рекламу)
+	StageResultItemBoostNext
+	// StageResultItemBoostRetry — этот же уровень заново с усиленным
+	// переносом (за рекламу)
+	StageResultItemBoostRetry
 )
+
+// IsRewarded — пункт оплачивается рекламой за вознаграждение
+func (i StageResultItem) IsRewarded() bool {
+	switch i {
+	case StageResultItemRevive,
+		StageResultItemBoostNext,
+		StageResultItemBoostRetry:
+		return true
+	default:
+		return false
+	}
+}
 
 // StageResultViewData — экран итогов уровня для отрисовки
 type StageResultViewData struct {

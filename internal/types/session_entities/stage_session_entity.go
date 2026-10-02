@@ -9,6 +9,12 @@ const (
 	defaultStagePlayer2Lives = 3
 	// maxCarriedLives — потолок перенесённых жизней, чтобы число влезало в HUD
 	maxCarriedLives = 9
+	// reviveLives — жизни выбывшего игрока после второго шанса:
+	// одну спишет штатный респаун, одна останется у танка на поле
+	reviveLives = 2
+	// Усиленный перенос: жизнь и уровень танка сверх снимка
+	boostExtraLives = 1
+	boostExtraTier  = 1
 )
 
 // noSpawner — пустой слот истории спаунеров
@@ -44,6 +50,8 @@ type StageSessionEntity struct {
 	hasCarryOver bool
 	// Текущий уровень запущен с переносом снимка
 	carryOver bool
+	// Второй шанс на этой попытке уровня уже использован
+	reviveUsed bool
 
 	enemySpawnTicks uint
 
@@ -181,6 +189,7 @@ func (s *StageSessionEntity) Reset() {
 	s.enemySpawnTicks = 0
 	s.isPaused = false
 	s.enemyFreezeTicks = 0
+	s.reviveUsed = false
 	s.ClearDestroyedEnemiesTracking()
 
 	playerCount := int(s.GetPlayerCount())
@@ -228,6 +237,23 @@ func (s *StageSessionEntity) HasCarryOverAdvantage() bool {
 		}
 	}
 	return false
+}
+
+// BoostCarryOver усиливает снимок переноса: жизнь и уровень танка
+// сверх снятых после победы, а без снимка (после поражения) — сверх
+// начальных. Применяется штатным переносом (SetCarryOver)
+func (s *StageSessionEntity) BoostCarryOver() {
+	for i := 0; i < int(s.GetPlayerCount()) && i < len(s.carriedLives); i++ {
+		lives := s.GetPlayerInitialLives(types.PlayerTankNum(i))
+		tier := uint(0)
+		if s.hasCarryOver {
+			lives = max(lives, s.carriedLives[i])
+			tier = s.carriedTiers[i]
+		}
+		s.carriedLives[i] = min(lives+boostExtraLives, maxCarriedLives)
+		s.carriedTiers[i] = min(tier+boostExtraTier, types.MaxTankLevel)
+	}
+	s.hasCarryOver = true
 }
 
 // SetCarryOver включает перенос снимка на следующий уровень;
@@ -288,6 +314,23 @@ func (s *StageSessionEntity) SetPlayerLives(
 	if int(num) >= 0 && int(num) < len(s.playerLives) {
 		s.playerLives[num] = lives
 	}
+}
+
+// RevivePlayers — второй шанс: выбывшие игроки снова получают
+// жизни, танки вернёт штатный респаун. Потерянные жизни остаются
+// в счёте — звёзд за такой уровень не больше одной
+func (s *StageSessionEntity) RevivePlayers() {
+	for i := 0; i < int(s.GetPlayerCount()) && i < len(s.playerLives); i++ {
+		if s.playerLives[i] == 0 {
+			s.playerLives[i] = reviveLives
+		}
+	}
+	s.reviveUsed = true
+}
+
+// IsReviveUsed — второй шанс на этой попытке уже использован
+func (s *StageSessionEntity) IsReviveUsed() bool {
+	return s.reviveUsed
 }
 
 // DecrementPlayerLives списывает жизнь за гибель танка игрока

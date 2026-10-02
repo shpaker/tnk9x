@@ -1,5 +1,8 @@
 package types
 
+// MaxTankLevel — старший уровень прокачки танка (звёзды бонуса)
+const MaxTankLevel uint = 3
+
 // SpecsEntity содержит спецификации танка и пуль
 type SpecsEntity struct {
 	level             uint    // Уровень танка (0-3)
@@ -37,8 +40,8 @@ func (t *SpecsEntity) SetLevel(level uint) {
 	if t == nil {
 		return
 	}
-	if level > 3 {
-		level = 3
+	if level > MaxTankLevel {
+		level = MaxTankLevel
 	}
 	t.level = level
 }

@@ -104,6 +104,10 @@ func (s *stubStageUseCases) GetStageResult() types.StageResult {
 	return types.StageResult{}
 }
 
+func (s *stubStageUseCases) BoostCarryOver()        {}
+func (s *stubStageUseCases) CanRevivePlayers() bool { return false }
+func (s *stubStageUseCases) RevivePlayers()         {}
+
 func (s *stubStageUseCases) SaveCarryOver() {}
 
 func newTouchAdapterUnderTest() (

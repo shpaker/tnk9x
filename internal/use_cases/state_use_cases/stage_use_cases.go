@@ -402,6 +402,29 @@ func (uc *StageUseCases) SaveCarryOver() {
 	}
 }
 
+// BoostCarryOver реализует IStageUseCases
+func (uc *StageUseCases) BoostCarryOver() {
+	uc.stageSession.BoostCarryOver()
+}
+
+// CanRevivePlayers реализует IStageUseCases: второй шанс — только
+// при поражении потерей жизней. Штаб должен быть цел, а не просто
+// не разрушен: взрывающийся на паузе штаб так и остался бы
+// взрывающимся. Без оставшихся врагов возрождение дало бы победу
+func (uc *StageUseCases) CanRevivePlayers() bool {
+	if uc.stageSession.IsReviveUsed() || !uc.IsStageLost() {
+		return false
+	}
+	hq := uc.hqUseCases.GetHQ()
+	return hq != nil && hq.IsIntact() &&
+		uc.stageSession.GetRemainingEnemies() > 0
+}
+
+// RevivePlayers реализует IStageUseCases
+func (uc *StageUseCases) RevivePlayers() {
+	uc.stageSession.RevivePlayers()
+}
+
 func (uc *StageUseCases) trackDestroyedEnemies() {
 	if uc.stageSession == nil || uc.tankCommonUseCases == nil {
 		return

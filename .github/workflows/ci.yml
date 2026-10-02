@@ -168,6 +168,9 @@ jobs:
       - name: Run linter
         run: just lint
 
+      - name: Run linter for js/wasm
+        run: just lint-wasm
+
   test:
     name: Tests
     runs-on: ubuntu-latest
@@ -281,3 +284,6 @@ jobs:
 
       - name: Build application
         run: just build
+
+      - name: Build web (js/wasm)
+        run: just build-web pages

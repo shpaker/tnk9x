@@ -10,7 +10,9 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 
+	"github.com/shpaker/tnk9x/internal/adapters/platform"
 	"github.com/shpaker/tnk9x/internal/states"
+	"github.com/shpaker/tnk9x/internal/testutil"
 	"github.com/shpaker/tnk9x/internal/types"
 	"github.com/shpaker/tnk9x/internal/types/session_entities"
 )
@@ -24,13 +26,28 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-type stubGameState struct{}
+type stubGameState struct {
+	updates int
+}
 
 func (s *stubGameState) Update() types.StateTransition {
+	s.updates++
 	return types.StateTransition{}
 }
 
 func (s *stubGameState) Draw(screen *ebiten.Image) {}
+
+// stubStageLikeState — состояние с геймплеем, реагирующее
+// на приостановку площадкой
+type stubStageLikeState struct {
+	stubGameState
+	suspends int
+	active   bool
+}
+
+func (s *stubStageLikeState) Suspend() { s.suspends++ }
+
+func (s *stubStageLikeState) IsGameplayActive() bool { return s.active }
 
 var errLevelUnavailable = errors.New("level unavailable")
 
@@ -55,20 +72,24 @@ func (r *failingMapsRepo) GetSceneLevel(
 func (r *failingMapsRepo) GetLevelsCount() (int, error) { return 0, nil }
 
 // newAppTestEnv собирает минимальный App без тяжёлой инфраструктуры:
-// приватные поля доступны, так как тест живёт в пакете app
+// приватные поля доступны, так как тест живёт в пакете app.
+// Площадка — настоящая десктопная (тесты собираются без тега js)
 func newAppTestEnv() (*App, *stubGameState) {
 	state := &stubGameState{}
 	settings := types.NewSettingsEntity()
 	settings.SetPlayers(2)
+	platformAdapter := platform.NewPlatformAdapter()
 	app := &App{
 		config: &Config{
 			TileBaseSize: 8,
 			BaseSizePx:   16,
 		},
-		settings:       settings,
-		state:          state,
-		session:        session_entities.NewGameSessionEntity(),
-		mapsRepository: &failingMapsRepo{},
+		settings:        settings,
+		state:           state,
+		session:         session_entities.NewGameSessionEntity(),
+		mapsRepository:  &failingMapsRepo{},
+		platformAdapter: platformAdapter,
+		rewardAdapter:   platformAdapter,
 	}
 	return app, state
 }
@@ -164,6 +185,12 @@ func TestApp_ApplyTransition_FullApp(t *testing.T) {
 		t.Fatalf("initial state %T, want SplashState", app.state)
 	}
 
+	// Готовность площадке — с появлением главного меню
+	fakePlatform := &testutil.FakePlatform{}
+	defaultPlatform := app.platformAdapter
+	app.platformAdapter = fakePlatform
+	defer func() { app.platformAdapter = defaultPlatform }()
+
 	// Сплеш догружает граф, затем главное меню и выбор уровня
 	for _, done := app.loader.Step(); !done; _, done = app.loader.Step() {
 	}
@@ -183,6 +210,10 @@ func TestApp_ApplyTransition_FullApp(t *testing.T) {
 		if fmt.Sprintf("%T", app.state) != fmt.Sprintf("%T", step.want) {
 			t.Fatalf("состояние %T, ожидалось %T", app.state, step.want)
 		}
+	}
+
+	if fakePlatform.ReadyCalls != 1 {
+		t.Errorf("Ready calls %d, want 1", fakePlatform.ReadyCalls)
 	}
 
 	// У одиночной игры и игры вдвоём раздельное прохождение
@@ -235,6 +266,110 @@ func TestApp_Update_ContextCancelled(t *testing.T) {
 	}
 }
 
+// Десктоп: площадка не приостанавливает игру, состояние обновляется
+// каждый кадр
+func TestApp_Update_StateEveryFrame(t *testing.T) {
+	app, state := newAppTestEnv()
+
+	for range 3 {
+		if err := app.Update(); err != nil {
+			t.Fatalf("Update: %v", err)
+		}
+	}
+	if state.updates != 3 {
+		t.Errorf("state updates %d, want 3", state.updates)
+	}
+}
+
+// Пока площадка приостановила игру, кадры пропускаются: состояние
+// не обновляется, геймплей не размечается, а начало приостановки
+// отдаётся состоянию один раз
+func TestApp_Update_SuspendedSkipsFrames(t *testing.T) {
+	app, _ := newAppTestEnv()
+	state := &stubStageLikeState{active: true}
+	app.state = state
+	fakePlatform := &testutil.FakePlatform{
+		Suspended:     true,
+		JustSuspended: true,
+	}
+	app.platformAdapter = fakePlatform
+
+	_ = app.Update()
+	fakePlatform.JustSuspended = false
+	_ = app.Update()
+
+	if state.updates != 0 {
+		t.Errorf("state updated %d times while suspended", state.updates)
+	}
+	if state.suspends != 1 {
+		t.Errorf("Suspend called %d times, want 1", state.suspends)
+	}
+	if active, ok := fakePlatform.LastGameplay(); !ok || active {
+		t.Error("gameplay must be reported inactive while suspended")
+	}
+
+	fakePlatform.Suspended = false
+	_ = app.Update()
+	if state.updates != 1 {
+		t.Errorf("state updates %d after resume, want 1", state.updates)
+	}
+	if active, _ := fakePlatform.LastGameplay(); !active {
+		t.Error("gameplay of the state must be reported after resume")
+	}
+}
+
+// Приостановка, начавшаяся и закончившаяся между кадрами (скрытая
+// вкладка): состояние уходит на паузу, кадр идёт как обычно
+func TestApp_Update_MissedSuspension(t *testing.T) {
+	app, _ := newAppTestEnv()
+	state := &stubStageLikeState{}
+	app.state = state
+	app.platformAdapter = &testutil.FakePlatform{JustSuspended: true}
+
+	_ = app.Update()
+
+	if state.suspends != 1 || state.updates != 1 {
+		t.Errorf("suspends %d, updates %d, want 1 and 1",
+			state.suspends, state.updates)
+	}
+}
+
+// Переход через логическую паузу просит площадку о рекламе
+// ещё до сборки нового состояния
+func TestApp_ApplyTransition_Intermission(t *testing.T) {
+	app, _ := newAppTestEnv()
+	fakePlatform := &testutil.FakePlatform{}
+	app.platformAdapter = fakePlatform
+
+	_ = app.applyTransition(types.StateTransition{
+		Target:       types.TransitionToStage,
+		Level:        1,
+		Intermission: true,
+	})
+
+	if fakePlatform.IntermissionCalls != 1 {
+		t.Errorf("intermissions %d, want 1", fakePlatform.IntermissionCalls)
+	}
+	if active, ok := fakePlatform.LastGameplay(); !ok || active {
+		t.Error("gameplay must stop before the intermission")
+	}
+}
+
+func TestApp_ApplyTransition_NoIntermission(t *testing.T) {
+	app, _ := newAppTestEnv()
+	fakePlatform := &testutil.FakePlatform{}
+	app.platformAdapter = fakePlatform
+
+	_ = app.applyTransition(types.StateTransition{
+		Target: types.TransitionToStage,
+		Level:  1,
+	})
+
+	if fakePlatform.IntermissionCalls != 0 {
+		t.Errorf("intermissions %d, want 0", fakePlatform.IntermissionCalls)
+	}
+}
+
 // Сцена главного меню на настоящем графе: название собирается,
 // по полю ездят танки с ИИ без игроков и штаба, сцена не падает
 func TestApp_MainMenuDemoScene(t *testing.T) {
@@ -252,5 +387,125 @@ func TestApp_MainMenuDemoScene(t *testing.T) {
 	}
 	if !scene.IsAssembled() {
 		t.Error("название должно собраться")
+	}
+}
+
+// lostStageWithRewards — уровень на настоящем графе с rewarded
+// у площадки, проигранный потерей всех жизней; меню итогов уже
+// показано. Подмены ввода и площадки откатываются по завершении теста
+func lostStageWithRewards(
+	t *testing.T,
+) (*App, *states.StageState, *testutil.FakeMenuInput, *testutil.FakeReward) {
+	t.Helper()
+	app := newFullApp(t)
+	for _, done := app.loader.Step(); !done; _, done = app.loader.Step() {
+	}
+
+	menuInput := &testutil.FakeMenuInput{}
+	reward := &testutil.FakeReward{Available: true}
+	defaultMenuInput, defaultReward := app.menuInput, app.rewardAdapter
+	app.menuInput, app.rewardAdapter = menuInput, reward
+	t.Cleanup(func() {
+		app.menuInput, app.rewardAdapter = defaultMenuInput, defaultReward
+	})
+
+	err := app.applyTransition(types.StateTransition{
+		Target: types.TransitionToStage,
+		Level:  1,
+	})
+	if err != nil {
+		t.Fatalf("переход на уровень: %v", err)
+	}
+	stage, ok := app.state.(*states.StageState)
+	if !ok {
+		t.Fatalf("состояние %T, ожидалось StageState", app.state)
+	}
+
+	stage.Update()
+	stageSession := app.session.StageSession()
+	for i := range stageSession.GetPlayerCount() {
+		stageSession.SetPlayerLives(types.PlayerTankNum(i), 0)
+	}
+	stage.Update() // итог уровня
+	menuInput.Confirm = true
+	stage.Update() // экран итогов показан целиком
+	menuInput.Reset()
+	stage.Update() // меню итогов принимает ввод
+	return app, stage, menuInput, reward
+}
+
+// selectResultItem спускается на index-й пункт меню итогов
+// и подтверждает его
+func selectResultItem(
+	stage *states.StageState,
+	menuInput *testutil.FakeMenuInput,
+	index int,
+) types.StateTransition {
+	for range index {
+		menuInput.Down = true
+		stage.Update()
+		menuInput.Reset()
+	}
+	menuInput.Confirm = true
+	transition := stage.Update()
+	menuInput.Reset()
+	return transition
+}
+
+// Поражение: RETRY, REVIVE, RETRY+BOOST, STAGES. Второй шанс
+// за рекламу продолжает уровень с того же места
+func TestApp_StageRevive_FullApp(t *testing.T) {
+	_, stage, menuInput, reward := lostStageWithRewards(t)
+
+	selectResultItem(stage, menuInput, 1)
+	if reward.Requests != 1 {
+		t.Fatalf("reward requests %d, want 1", reward.Requests)
+	}
+
+	reward.Status = types.RewardStatusPending
+	stage.Update()
+	if stage.IsGameplayActive() {
+		t.Fatal("stage must wait for the ad")
+	}
+
+	reward.Status = types.RewardStatusGranted
+	stage.Update()
+	if !stage.IsGameplayActive() {
+		t.Error("stage must continue after revive")
+	}
+}
+
+// Реклама не досмотрена: награды нет, меню итогов остаётся
+func TestApp_StageReviveDenied_FullApp(t *testing.T) {
+	_, stage, menuInput, reward := lostStageWithRewards(t)
+
+	selectResultItem(stage, menuInput, 1)
+	reward.Status = types.RewardStatusDenied
+	if transition := stage.Update(); transition.Target != types.TransitionNone {
+		t.Errorf("transition %v without reward", transition.Target)
+	}
+	if stage.IsGameplayActive() {
+		t.Error("stage must stay on the result screen")
+	}
+}
+
+// Усиленный перенос: тот же уровень заново, без второй рекламы
+func TestApp_StageBoostRetry_FullApp(t *testing.T) {
+	app, stage, menuInput, reward := lostStageWithRewards(t)
+
+	selectResultItem(stage, menuInput, 2)
+	reward.Status = types.RewardStatusGranted
+	transition := stage.Update()
+
+	want := types.StateTransition{
+		Target:    types.TransitionToStage,
+		Level:     1,
+		CarryOver: true,
+	}
+	if transition != want {
+		t.Errorf("transition %+v, want %+v", transition, want)
+	}
+	if !app.session.StageSession().HasCarryOverAdvantage() {
+		t.Error("boost must prepare a carry-over advantage")
 	}
 }

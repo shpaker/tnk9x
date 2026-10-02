@@ -14,10 +14,13 @@ import (
 
 // stageResultLabels — подписи пунктов меню итогов
 var stageResultLabels = map[types.StageResultItem]string{
-	types.StageResultItemNext:     "NEXT STAGE",
-	types.StageResultItemContinue: "CONTINUE",
-	types.StageResultItemRetry:    "RETRY",
-	types.StageResultItemLevels:   "STAGES",
+	types.StageResultItemNext:       "NEXT STAGE",
+	types.StageResultItemContinue:   "CONTINUE",
+	types.StageResultItemRetry:      "RETRY",
+	types.StageResultItemLevels:     "STAGES",
+	types.StageResultItemRevive:     "REVIVE",
+	types.StageResultItemBoostNext:  "NEXT + BOOST",
+	types.StageResultItemBoostRetry: "RETRY + BOOST",
 }
 
 // resultCaption — пояснение под пунктом меню итогов: текст
@@ -27,14 +30,31 @@ type resultCaption struct {
 	stars uint
 }
 
+// boostCaption — пояснение усиленного переноса: прокачка и жизнь
+// сверху, потолок звёзд как у переноса
+var boostCaption = resultCaption{
+	label: "TANK UP & +1 LIFE, MAX",
+	stars: types.MaxCarryOverStars,
+}
+
 // stageResultCaptions — пояснения под пунктами меню итогов:
-// CONTINUE отличается от NEXT STAGE переносом и потолком звёзд
+// CONTINUE отличается от NEXT STAGE переносом и потолком звёзд,
+// BOOST — усилением и тем же потолком
 var stageResultCaptions = map[types.StageResultItem]resultCaption{
 	types.StageResultItemContinue: {
 		label: "KEEP LIVES & TANK, MAX",
 		stars: types.MaxCarryOverStars,
 	},
+	types.StageResultItemBoostNext:  boostCaption,
+	types.StageResultItemBoostRetry: boostCaption,
 }
+
+// Метка пункта за рекламу: рамка с текстом справа от подписи
+const (
+	rewardBadgeLabel   = "AD"
+	rewardBadgeGap     = 6
+	rewardBadgePadding = 2
+)
 
 // Раскладка пояснения: зазор под пунктом и ряд звёзд после текста
 const (
@@ -51,6 +71,9 @@ const (
 	resultStatsY  = 0.46
 	resultMenuTop = 0.62
 )
+
+// resultMenuBottomMargin — отступ меню итогов от низа экрана
+const resultMenuBottomMargin = 4
 
 // Цвета экрана итогов
 var (
@@ -118,9 +141,15 @@ func (r *StageRendererAdapter) DrawStageResult(
 		if i == view.ActiveIndex {
 			rowColor = color.NRGBA{R: 255, G: 255, B: 255, A: 255}
 		}
-		r.drawResultLine(
-			screen, stageResultLabels[item], layout.rowTops[i], rowColor,
-		)
+		if item.IsRewarded() {
+			r.drawRewardedResultLine(
+				screen, stageResultLabels[item], layout.rowTops[i], rowColor,
+			)
+		} else {
+			r.drawResultLine(
+				screen, stageResultLabels[item], layout.rowTops[i], rowColor,
+			)
+		}
 		if caption, ok := stageResultCaptions[item]; ok {
 			r.drawResultCaption(
 				screen, caption, layout.rowTops[i]+layout.captionOffset,
@@ -175,8 +204,16 @@ type resultMenuLayout struct {
 	captionOffset float64
 }
 
-// resultMenuLayout — строки меню итогов в нижней части экрана;
-// пункт с пояснением занимает дополнительную строку
+// resultMenuMetrics — размеры строк меню итогов в логических
+// координатах экрана: меню занимает полосу от top до bottom
+type resultMenuMetrics struct {
+	top       float64
+	bottom    float64
+	rowHeight float64
+	gap       float64
+}
+
+// resultMenuLayout — строки меню итогов в нижней части экрана
 func (r *StageRendererAdapter) resultMenuLayout(
 	height float64,
 	items []types.StageResultItem,
@@ -186,15 +223,41 @@ func (r *StageRendererAdapter) resultMenuLayout(
 	if scale <= 0 {
 		scale = 1
 	}
-	rowHeight := textHeight * scale
-	gap := float64(r.regularFontSize)
-	captionOffset := rowHeight + resultCaptionGap
+	return layoutResultMenu(resultMenuMetrics{
+		top:       height * resultMenuTop,
+		bottom:    height - resultMenuBottomMargin,
+		rowHeight: textHeight * scale,
+		gap:       float64(r.regularFontSize),
+	}, items)
+}
+
+// layoutResultMenu раскладывает строки сверху вниз; пункт
+// с пояснением занимает дополнительную строку. Зазор между строками
+// ужимается, только если меню иначе не помещается в свою полосу
+func layoutResultMenu(
+	metrics resultMenuMetrics,
+	items []types.StageResultItem,
+) resultMenuLayout {
+	captionOffset := metrics.rowHeight + resultCaptionGap
+
+	gap := metrics.gap
+	if len(items) > 1 {
+		content := float64(len(items)) * metrics.rowHeight
+		for _, item := range items {
+			if _, ok := stageResultCaptions[item]; ok {
+				content += captionOffset
+			}
+		}
+		fit := (metrics.bottom - metrics.top - content) /
+			float64(len(items)-1)
+		gap = max(0, min(gap, fit))
+	}
 
 	rowTops := make([]float64, len(items))
-	top := height * resultMenuTop
+	top := metrics.top
 	for i, item := range items {
 		rowTops[i] = top
-		top += rowHeight + gap
+		top += metrics.rowHeight + gap
 		if _, ok := stageResultCaptions[item]; ok {
 			top += captionOffset
 		}
@@ -236,6 +299,49 @@ func (r *StageRendererAdapter) drawResultCaption(
 		captionStarRadius, captionStarStep,
 		caption.stars, caption.stars,
 	)
+}
+
+// drawRewardedResultLine рисует пункт за рекламу: подпись и метку
+// AD справа от неё, вместе по центру
+func (r *StageRendererAdapter) drawRewardedResultLine(
+	screen *ebiten.Image,
+	label string,
+	top float64,
+	lineColor color.NRGBA,
+) {
+	scale := float64(r.regularFontSize) / float64(r.titleFontSize)
+	if scale <= 0 {
+		scale = 1
+	}
+	labelWidth, _ := text.Measure(label, r.fontFace, 0)
+	labelWidth *= scale
+	badgeTextWidth, badgeTextHeight := text.Measure(
+		rewardBadgeLabel, r.fontFace, 0,
+	)
+	badgeTextWidth *= scale
+	badgeTextHeight *= scale
+	badgeWidth := badgeTextWidth + 2*rewardBadgePadding
+	left := (float64(screen.Bounds().Dx()) -
+		labelWidth - rewardBadgeGap - badgeWidth) / 2
+
+	op := &text.DrawOptions{}
+	op.GeoM.Scale(scale, scale)
+	op.GeoM.Translate(left, top)
+	op.ColorScale.ScaleWithColor(lineColor)
+	text.Draw(screen, label, r.fontFace, op)
+
+	badgeLeft := left + labelWidth + rewardBadgeGap
+	vector.StrokeRect(
+		screen,
+		float32(badgeLeft), float32(top-rewardBadgePadding),
+		float32(badgeWidth), float32(badgeTextHeight+2*rewardBadgePadding),
+		1, newBestColor, false,
+	)
+	badgeOp := &text.DrawOptions{}
+	badgeOp.GeoM.Scale(scale, scale)
+	badgeOp.GeoM.Translate(badgeLeft+rewardBadgePadding, top)
+	badgeOp.ColorScale.ScaleWithColor(newBestColor)
+	text.Draw(screen, rewardBadgeLabel, r.fontFace, badgeOp)
 }
 
 func (r *StageRendererAdapter) drawResultLine(

@@ -115,3 +115,39 @@ type IWindowAdapter interface {
 	IsFullscreen() bool
 	SetFullscreen(fullscreen bool)
 }
+
+// IPlatformAdapter — площадка, на которой запущена игра: десктоп,
+// веб-страница или игровой портал. Контракт нейтрален к площадке:
+// чего площадка не умеет, то её адаптер не делает. Опрашивается
+// раз в кадр
+type IPlatformAdapter interface {
+	// Update опрашивает площадку; вызывается первым в кадре
+	Update()
+	// IsSuspended — площадка приостановила игру в этом кадре
+	// (реклама, скрытая вкладка, собственная пауза площадки)
+	IsSuspended() bool
+	// IsJustSuspended — приостановка началась с прошлого кадра,
+	// в том числе пропущенная целиком, пока кадры не шли
+	IsJustSuspended() bool
+	// Ready сообщает, что игра загружена и готова к игроку;
+	// повторные вызовы игнорируются
+	Ready()
+	// SetGameplayActive размечает активный геймплей; вызывается
+	// каждый кадр, площадке передаются только изменения
+	SetGameplayActive(active bool)
+	// RequestIntermission — логическая пауза игры: площадка может
+	// показать межуровневую рекламу и на это время приостановить игру
+	RequestIntermission()
+}
+
+// IRewardAdapter — реклама за вознаграждение по действию игрока
+type IRewardAdapter interface {
+	// IsRewardAvailable — площадка умеет показывать такую рекламу
+	IsRewardAvailable() bool
+	// RequestReward показывает рекламу; исход — через PollReward
+	RequestReward()
+	// PollReward — исход последнего запроса: Pending, пока реклама
+	// показывается, итоговый Granted/Denied отдаётся один раз,
+	// дальше — None
+	PollReward() types.RewardStatus
+}

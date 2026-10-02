@@ -20,4 +20,7 @@ type StateTransition struct {
 	Level uint
 	// CarryOver — перенести жизни и прокачку танков с прошлого уровня
 	CarryOver bool
+	// Intermission — переход проходит через логическую паузу игры:
+	// площадка может показать в ней межуровневую рекламу
+	Intermission bool
 }

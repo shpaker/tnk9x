@@ -23,7 +23,6 @@
 <body>
   <div id="status">loading&hellip;</div>
   <a id="repo" href="https://github.com/shpaker/tnk9x" target="_blank" rel="noopener">github.com/shpaker/tnk9x</a>
-  <script src="wasm_exec.js"></script>
   <script>
     // Подсказки управления рисует сама игра в меню. Ссылка на репозиторий
     // занимает левый верхний угол (справа вверху — кнопка паузы тач-режима)
@@ -45,22 +44,10 @@
     }
     window.addEventListener("resize", placeRepo);
     placeRepo();
-    const status = document.getElementById("status");
-    const go = new Go();
-    async function instantiate() {
-      if (WebAssembly.instantiateStreaming) {
-        try {
-          return await WebAssembly.instantiateStreaming(
-            fetch("tnk9x.wasm"), go.importObject);
-        } catch (_) { /* неверный MIME у локального сервера — fallback ниже */ }
-      }
-      const buf = await (await fetch("tnk9x.wasm")).arrayBuffer();
-      return await WebAssembly.instantiate(buf, go.importObject);
-    }
-    instantiate().then((result) => {
-      status.remove();
-      go.run(result.instance);
-    }).catch((err) => { status.textContent = "failed to load: " + err; });
   </script>
+  <!-- Площадка — обычная страница: базовый мост без рекламы -->
+  <script src="bridge.js"></script>
+  <script src="wasm_exec.js"></script>
+  <script src="boot.js"></script>
 </body>
 </html>

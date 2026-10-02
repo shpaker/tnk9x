@@ -1195,3 +1195,80 @@ func TestStageUseCases_SaveCarryOverDestroyedTank(t *testing.T) {
 		t.Errorf("tier %d, want 0", got)
 	}
 }
+
+// newReviveTestEnv — одиночная игра, проигранная потерей жизней
+// при целом штабе
+func newReviveTestEnv() *stageTestEnv {
+	env := newStageTestEnv(1)
+	env.session.SetPlayerCount(1)
+	env.hq.hq = &types.HQEntity{State: types.HQStateIntact}
+	env.session.SetPlayerLives(types.PlayerTankNumPlayer1, 0)
+	return env
+}
+
+// Второй шанс — один раз за попытку: после него уровень не проигран
+func TestStageUseCases_RevivePlayers(t *testing.T) {
+	env := newReviveTestEnv()
+
+	if !env.stage.CanRevivePlayers() {
+		t.Fatal("revive must be offered after losing all lives")
+	}
+	env.stage.RevivePlayers()
+
+	if env.stage.IsStageFinished() {
+		t.Error("stage must continue after revive")
+	}
+
+	env.session.SetPlayerLives(types.PlayerTankNumPlayer1, 0)
+	if env.stage.CanRevivePlayers() {
+		t.Error("revive is offered once per attempt")
+	}
+}
+
+func TestStageUseCases_CanRevivePlayers_Denied(t *testing.T) {
+	tests := []struct {
+		name  string
+		setUp func(env *stageTestEnv)
+	}{
+		{"уровень не проигран", func(env *stageTestEnv) {
+			env.session.SetPlayerLives(types.PlayerTankNumPlayer1, 1)
+		}},
+		{"штаба нет", func(env *stageTestEnv) {
+			env.hq.hq = nil
+		}},
+		{"штаб взрывается", func(env *stageTestEnv) {
+			env.hq.hq.State = types.HQStateExploding
+		}},
+		{"штаб разрушен", func(env *stageTestEnv) {
+			env.hq.hq.State = types.HQStateDestroyed
+			env.hq.destroyed = true
+		}},
+		{"враги кончились", func(env *stageTestEnv) {
+			for range env.session.GetTotalEnemies() {
+				env.session.IncrementDestroyedEnemies()
+			}
+		}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			env := newReviveTestEnv()
+			tt.setUp(env)
+			if env.stage.CanRevivePlayers() {
+				t.Error("revive must not be offered")
+			}
+		})
+	}
+}
+
+// Усиленный перенос делегируется сессии: уровень стартует с переносом
+func TestStageUseCases_BoostCarryOver(t *testing.T) {
+	env := newStageTestEnv(1)
+
+	env.stage.BoostCarryOver()
+	env.session.SetCarryOver(true)
+	env.session.Reset()
+
+	if !env.stage.GetStageResult().CarriedOver {
+		t.Error("boosted stage must count as carried over")
+	}
+}

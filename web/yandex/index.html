@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>tnk9x</title>
+  <link rel="icon" href="data:,">
+  <style>
+    html, body { margin: 0; height: 100%; background: #000; overflow: hidden;
+                 touch-action: none; overscroll-behavior: none;
+                 -webkit-user-select: none; user-select: none;
+                 -webkit-tap-highlight-color: transparent;
+                 -webkit-touch-callout: none; }
+    canvas { touch-action: none; }
+    #status { position: fixed; inset: 0; display: flex; align-items: center;
+              justify-content: center; color: #9a9a9a; font: 12px monospace; }
+  </style>
+  <!-- SDK Яндекс Игр: отдаётся площадкой (и sdk-dev-proxy) по /sdk.js -->
+  <script src="/sdk.js"></script>
+</head>
+<body>
+  <div id="status">loading&hellip;</div>
+  <!-- Базовый мост площадки, поверх него — мост Яндекс Игр -->
+  <script src="bridge.js"></script>
+  <script src="platform.js"></script>
+  <script src="wasm_exec.js"></script>
+  <script src="boot.js"></script>
+</body>
+</html>

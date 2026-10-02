@@ -83,6 +83,15 @@ linters-settings:
             desc: доступ к данным — только через интерфейсы
           - pkg: github.com/shpaker/tnk9x/internal/app
             desc: composition root никем не импортируется
+      js-isolation:
+        files:
+          - "**/internal/**"
+          - "**/cmd/**"
+          - "!**/internal/adapters/platform/**"
+          - "!**/internal/repositories/raw/**"
+        deny:
+          - pkg: syscall/js
+            desc: браузер — только в internal/adapters/platform за IPlatformAdapter и в хранилище internal/repositories/raw
       lua-isolation:
         files:
           - "**/internal/**"
