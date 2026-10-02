@@ -18,6 +18,9 @@ type SettingsEntity struct {
 	volumeLevel int
 	language    Language
 	players     uint
+	// helpShown — страница «Как играть» уже показана перед первым
+	// запуском уровня 1
+	helpShown bool
 }
 
 // NewSettingsEntity — настройки первого запуска: обычная графика
@@ -83,4 +86,13 @@ func (s *SettingsEntity) GetLanguage() Language {
 
 func (s *SettingsEntity) SetLanguage(language Language) {
 	s.language = language
+}
+
+// IsHelpShown — страница «Как играть» уже показана
+func (s *SettingsEntity) IsHelpShown() bool {
+	return s.helpShown
+}
+
+func (s *SettingsEntity) SetHelpShown(shown bool) {
+	s.helpShown = shown
 }

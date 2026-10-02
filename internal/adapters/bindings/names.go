@@ -88,6 +88,7 @@ var keyLabels = map[string]string{
 	"Delete":       "DEL",
 	"ContextMenu":  "MENU",
 	"NumpadEnter":  "NUMENT",
+	"Escape":       "ESC",
 }
 
 // KeyByName — клавиша по имени раскладки

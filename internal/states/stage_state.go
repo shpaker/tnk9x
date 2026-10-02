@@ -52,6 +52,8 @@ type StageStateDependencies struct {
 
 	// Экран настроек из меню паузы, общий для приложения
 	SettingsOverlay *SettingsOverlay
+	// Страница «Как играть» перед первым запуском уровня 1
+	HelpOverlay *HelpOverlay
 	// Level — сценарий уровня для подсчёта звёзд
 	Level *types.LevelEntity
 }
@@ -82,6 +84,7 @@ type StageState struct {
 
 	// Presentation
 	settingsOverlay *SettingsOverlay
+	helpOverlay     *HelpOverlay
 
 	isSetUp         bool
 	endSoundHandled bool
@@ -124,6 +127,7 @@ func NewStageState(deps StageStateDependencies) *StageState {
 		stageSession:          deps.StageSession,
 		bonusesRepository:     deps.BonusesRepository,
 		settingsOverlay:       deps.SettingsOverlay,
+		helpOverlay:           deps.HelpOverlay,
 		level:                 deps.Level,
 		pauseMenuItems: []types.PauseMenuItem{
 			types.PauseMenuItemContinue,
@@ -176,6 +180,12 @@ func (state *StageState) SetUp() {
 }
 
 func (state *StageState) Update() types.StateTransition {
+	// Пока открыта страница «Как играть», бой не начинается:
+	// ни стартового звука, ни танков, ни отсчёта времени
+	if state.isHelpOpen() {
+		state.helpOverlay.Update(state.stageSession.GetPlayerCount())
+		return types.StateTransition{}
+	}
 	if !state.isSetUp {
 		state.SetUp()
 		state.isSetUp = true
@@ -414,6 +424,11 @@ func (state *StageState) Draw(screen *ebiten.Image) {
 		StageNumber: state.stageSession.GetStageNumber(),
 	})
 
+	if state.isHelpOpen() {
+		state.helpOverlay.Draw(screen)
+		return
+	}
+
 	if state.result != nil {
 		state.renderer.DrawStageResult(screen, *state.result)
 		return
@@ -430,6 +445,13 @@ func (state *StageState) Draw(screen *ebiten.Image) {
 			ActiveIndex: state.pauseMenuIndex,
 		})
 	}
+}
+
+// isHelpOpen — уровень ещё не начат и перед ним показывается
+// страница «Как играть»
+func (state *StageState) isHelpOpen() bool {
+	return !state.isSetUp &&
+		state.helpOverlay.IsDue(state.stageSession.GetStageNumber())
 }
 
 // handleStageResult считает итог уровня при первом кадре после

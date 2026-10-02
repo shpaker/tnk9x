@@ -40,6 +40,8 @@ type settingsSchema struct {
 	// Language — язык, выбранный вручную; пустой — язык площадки
 	Language *string `json:"language,omitempty"`
 	Players  *uint   `json:"players,omitempty"`
+	// HelpShown — страница «Как играть» уже показана
+	HelpShown *bool `json:"help_shown,omitempty"`
 }
 
 // GetSettings читает настройки; отсутствие сохранения — дефолты
@@ -79,6 +81,9 @@ func (sr *SettingsRepository) GetSettings() (*types.SettingsEntity, error) {
 	if schema.Players != nil {
 		settings.SetPlayers(*schema.Players)
 	}
+	if schema.HelpShown != nil {
+		settings.SetHelpShown(*schema.HelpShown)
+	}
 	return settings, nil
 }
 
@@ -90,6 +95,7 @@ func (sr *SettingsRepository) SaveSettings(
 	volume := settings.GetVolumeLevel()
 	language := string(settings.GetLanguage())
 	players := settings.GetPlayers()
+	helpShown := settings.IsHelpShown()
 
 	data, err := json.Marshal(settingsSchema{
 		Version:    settingsFormatVersion,
@@ -98,6 +104,7 @@ func (sr *SettingsRepository) SaveSettings(
 		Volume:     &volume,
 		Language:   &language,
 		Players:    &players,
+		HelpShown:  &helpShown,
 	})
 	if err != nil {
 		return err

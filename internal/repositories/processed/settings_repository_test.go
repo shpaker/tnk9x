@@ -16,6 +16,7 @@ func TestSettingsRepository_RoundTrip(t *testing.T) {
 	settings.SetVolumeLevel(8)
 	settings.SetLanguage("ru")
 	settings.SetPlayers(2)
+	settings.SetHelpShown(true)
 	if err := repository.SaveSettings(settings); err != nil {
 		t.Fatalf("save: %v", err)
 	}
@@ -26,7 +27,7 @@ func TestSettingsRepository_RoundTrip(t *testing.T) {
 	}
 	if loaded.IsEffectsEnabled() || loaded.IsFullscreen() ||
 		loaded.GetVolumeLevel() != 8 || loaded.GetLanguage() != "ru" ||
-		loaded.GetPlayers() != 2 {
+		loaded.GetPlayers() != 2 || !loaded.IsHelpShown() {
 		t.Errorf("loaded settings %+v", loaded)
 	}
 }
@@ -48,7 +49,8 @@ func TestSettingsRepository_Defaults(t *testing.T) {
 	}
 	if !settings.IsEffectsEnabled() || !settings.IsFullscreen() ||
 		settings.GetVolumeLevel() != 3 ||
-		settings.GetLanguage() != types.LanguageAuto {
+		settings.GetLanguage() != types.LanguageAuto ||
+		settings.IsHelpShown() {
 		t.Errorf("partial settings %+v", settings)
 	}
 }

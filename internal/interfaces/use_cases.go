@@ -286,6 +286,8 @@ type ISettingsUseCases interface {
 	// SetPlayers выбирает режим на одного или двоих игроков;
 	// настройки сохраняются, только если режим сменился
 	SetPlayers(settings *types.SettingsEntity, players uint) error
+	// MarkHelpShown запоминает, что страница «Как играть» показана
+	MarkHelpShown(settings *types.SettingsEntity) error
 	BuildView(
 		settings *types.SettingsEntity,
 		activeIndex int,
@@ -319,4 +321,7 @@ type IControlsUseCases interface {
 		controls *types.ControlsEntity,
 		cursor types.ControlsCursor,
 	) types.ControlsViewData
+	// HelpRows — таблица управления страницы «Как играть»
+	// по текущей раскладке
+	HelpRows(controls *types.ControlsEntity) []types.HelpRow
 }

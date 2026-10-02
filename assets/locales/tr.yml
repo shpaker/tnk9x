@@ -51,6 +51,19 @@ controls:
   press_button: "BİR DÜĞMEYE BASIN  ESC İPTAL"
   already_taken: "ZATEN KULLANILIYOR"
 
+help:
+  title: "BRİFİNG"
+  goal: "DÜŞMANI YOK ET, ÜSSÜ KORU"
+  move: "HAREKET"
+  pause: "DURAKLAT"
+  player_1: "P1"
+  player_2: "P2"
+  touch_column: "EKRAN"
+  touch_dpad: "YÖN"
+  touch_fire: "DÜĞME"
+  touch_pause: "II"
+  start: "{{.Button}}: BAŞLA"
+
 keys:
   up: "YUKARI"
   down: "AŞAĞI"

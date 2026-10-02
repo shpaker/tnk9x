@@ -187,3 +187,24 @@ func TestControls_RowsAndView(t *testing.T) {
 		t.Errorf("страница хоткеев: %+v", hotkeys.Rows)
 	}
 }
+
+func TestControls_HelpRows(t *testing.T) {
+	useCases, _, controls := newControls()
+
+	rows := useCases.HelpRows(controls)
+	if len(rows) != int(types.InputActionsCount)+1 {
+		t.Fatalf("строк %d", len(rows))
+	}
+	fire := rows[types.InputActionFire]
+	if fire.Kind != types.HelpRowAction ||
+		fire.Keys != [types.MaxPlayers]string{"G", "Quote"} ||
+		fire.Button != "A" {
+		t.Errorf("огонь %+v", fire)
+	}
+	pause := rows[len(rows)-1]
+	if pause.Kind != types.HelpRowPause ||
+		pause.Keys[0] != types.ReservedKey ||
+		pause.Button != types.ReservedButton {
+		t.Errorf("пауза %+v", pause)
+	}
+}

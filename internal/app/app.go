@@ -146,6 +146,7 @@ type App struct {
 	// работают на всех экранах после загрузки
 	settingsUseCases interfaces.ISettingsUseCases
 	settingsOverlay  *states.SettingsOverlay
+	helpOverlay      *states.HelpOverlay
 	hotkeysHandler   *states.HotkeysHandler
 
 	// Кампания; уровни для превью экрана выбора не мутируются —
@@ -404,8 +405,9 @@ func (app *App) assembleGame() {
 		runtime.GOOS != "js",
 		cfg.Languages.Languages,
 	)
+	controlsUseCases := use_cases.NewControlsUseCases(app.controlsRepository)
 	controlsOverlay := states.NewControlsOverlay(
-		use_cases.NewControlsUseCases(app.controlsRepository),
+		controlsUseCases,
 		settings.NewControlsRendererAdapter(
 			app.texts,
 			app.textFace,
@@ -430,6 +432,19 @@ func (app *App) assembleGame() {
 		app.windowAdapter,
 		controlsOverlay,
 		app.settings,
+	)
+	app.helpOverlay = states.NewHelpOverlay(
+		app.settingsUseCases,
+		controlsUseCases,
+		settings.NewHelpRendererAdapter(
+			app.texts,
+			app.textFace,
+			int(cfg.GetTitleFontSize()),
+			int(cfg.GetRegularFontSize()),
+		),
+		app.menuInput,
+		app.settings,
+		app.controls,
 	)
 	app.hotkeysHandler = states.NewHotkeysHandler(
 		app.settingsUseCases,

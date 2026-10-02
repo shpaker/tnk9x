@@ -119,6 +119,7 @@ func (app *App) newStageState() (*states.StageState, error) {
 		StageSession:       stageSession,
 		BonusesRepository:  graph.bonusesRepository,
 		SettingsOverlay:    app.settingsOverlay,
+		HelpOverlay:        app.helpOverlay,
 		Level:              level,
 	}), nil
 }
