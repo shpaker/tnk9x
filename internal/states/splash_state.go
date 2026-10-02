@@ -68,7 +68,8 @@ func (s *SplashState) Update() types.StateTransition {
 		return types.StateTransition{}
 	}
 
-	skip := s.menuInput.Confirmed() || s.menuInput.Back()
+	skip := s.menuInput.Confirmed() || s.menuInput.Back() ||
+		tappedAnywhere(s.menuInput)
 	if s.loaded && (s.ticks >= splashMinTicks || skip) {
 		s.fadeOutTicks = 1
 	}

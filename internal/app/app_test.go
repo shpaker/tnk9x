@@ -90,6 +90,7 @@ func newAppTestEnv() (*App, *stubGameState) {
 		mapsRepository:  &failingMapsRepo{},
 		platformAdapter: platformAdapter,
 		rewardAdapter:   platformAdapter,
+		windowAdapter:   &testutil.FakeWindow{},
 	}
 	return app, state
 }
@@ -195,7 +196,10 @@ func TestApp_ApplyTransition_FullApp(t *testing.T) {
 	for _, done := app.loader.Step(); !done; _, done = app.loader.Step() {
 	}
 	if len(app.frameInputs) != 3 {
-		t.Errorf("после загрузки к вводу добавляются хоткеи: %d", len(app.frameInputs))
+		t.Errorf(
+			"после загрузки к вводу добавляются хоткеи: %d",
+			len(app.frameInputs),
+		)
 	}
 	for _, step := range []struct {
 		target types.TransitionTarget
@@ -507,5 +511,25 @@ func TestApp_StageBoostRetry_FullApp(t *testing.T) {
 	}
 	if !app.session.StageSession().HasCarryOverAdvantage() {
 		t.Error("boost must prepare a carry-over advantage")
+	}
+}
+
+// Мышь управляет только меню: в бою курсор спрятан, вне боя виден
+func TestApp_Update_CursorHiddenInGameplay(t *testing.T) {
+	app, _ := newAppTestEnv()
+	window := &testutil.FakeWindow{}
+	app.windowAdapter = window
+	state := &stubStageLikeState{active: true}
+	app.state = state
+
+	_ = app.Update()
+	if !window.CursorHidden {
+		t.Error("в бою курсор спрятан")
+	}
+
+	state.active = false
+	_ = app.Update()
+	if window.CursorHidden {
+		t.Error("на паузе и в меню курсор виден")
 	}
 }

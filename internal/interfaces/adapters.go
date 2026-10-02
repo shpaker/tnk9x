@@ -53,11 +53,15 @@ type ITouchControlsAdapter interface {
 	// TapJustPressed — новое касание игрового экрана вне контролов
 	// в логических координатах экрана
 	TapJustPressed() (types.Position, bool)
+	// GamePosition переводит координаты ebiten (тач, курсор мыши)
+	// в логические координаты нарисованного игрового экрана;
+	// точки на полях вне игры — false
+	GamePosition(x, y int) (types.Position, bool)
 }
 
 // IMenuInputAdapter — ввод меню и паузы, не зависящий от раскладки
 // игроков: стрелки и WASD, Enter и Space, Esc; крестовина, стик,
-// A, B и Start любого геймпада; тач-контролы любого игрока.
+// A, B и Start любого геймпада; тач-контролы любого игрока; мышь.
 // Update опрашивается раз в кадр из game loop до обновления состояния
 type IMenuInputAdapter interface {
 	Update()
@@ -65,17 +69,26 @@ type IMenuInputAdapter interface {
 	IsTouchActive() bool
 	// Steps — шаг вверх или вниз по пунктам меню
 	Steps() (up bool, down bool)
-	// SideStep — сдвиг влево (-1) или вправо (+1), 0 — без нажатия
+	// SideStep — сдвиг влево (-1) или вправо (+1), 0 — без нажатия;
+	// колесо мыши тоже даёт шаг
 	SideStep() int
 	// Confirmed — выбор пункта: Enter, Space, A или огонь
 	Confirmed() bool
-	// Back — выход из меню: Esc, B, Start или тач-пауза
+	// Back — выход из меню: Esc, B, Start, тач-пауза или правая
+	// кнопка мыши
 	Back() bool
 	// PauseJustPressed — пауза: Esc, Start или тач-пауза
 	PauseJustPressed() bool
-	// Tapped — тап по игровому экрану в логических координатах:
-	// нажатие экранных кнопок меню
+	// Tapped — тап или клик левой кнопкой мыши по игровому экрану
+	// в логических координатах: нажатие пунктов и экранных кнопок
 	Tapped() (types.Position, bool)
+	// Pointed — курсор мыши сдвинулся в этом кадре над игровым
+	// экраном: наведение на пункт меню. Неподвижный курсор не
+	// перебивает навигацию с клавиатуры
+	Pointed() (types.Position, bool)
+	// IsPointerActive — «мышь замечена хотя бы раз»: экранные кнопки
+	// меню, которые без мыши и тача не нужны
+	IsPointerActive() bool
 }
 
 // IHotkeysAdapter — нажатые в этом кадре глобальные хоткеи
@@ -110,10 +123,12 @@ type ISoundPlayerAdapter interface {
 	SetVolume(volume float64)
 }
 
-// IWindowAdapter — окно приложения: полноэкранный режим
+// IWindowAdapter — окно приложения: полноэкранный режим и курсор
 type IWindowAdapter interface {
 	IsFullscreen() bool
 	SetFullscreen(fullscreen bool)
+	// SetCursorVisible показывает или прячет системный курсор мыши
+	SetCursorVisible(visible bool)
 }
 
 // IPlatformAdapter — площадка, на которой запущена игра: десктоп,

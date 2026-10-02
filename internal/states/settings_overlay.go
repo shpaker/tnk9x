@@ -13,6 +13,8 @@ import (
 // определён у потребителя
 type SettingsRenderer interface {
 	Draw(screen *ebiten.Image, view types.SettingsViewData)
+	// HitRow — строка последней отрисовки под точкой
+	HitRow(position types.Position) (int, bool)
 }
 
 // SettingsOverlay — экран настроек поверх выбора уровня или меню
@@ -72,8 +74,9 @@ func (o *SettingsOverlay) IsCapturing() bool {
 	return o.open && o.controlsOverlay.IsCapturing()
 }
 
-// Update: вверх-вниз — выбор строки, влево-вправо или выбор —
-// смена значения; Esc, B, Start, пауза или BACK закрывают экран.
+// Update: вверх-вниз или наведение — выбор строки, влево-вправо,
+// колесо, выбор или клик — смена значения; Esc, B, Start, пауза,
+// правая кнопка мыши или BACK закрывают экран.
 // Пока открыт экран раскладки, ввод уходит в него
 func (o *SettingsOverlay) Update() {
 	if o.controlsOverlay.IsOpen() {
@@ -88,10 +91,14 @@ func (o *SettingsOverlay) Update() {
 	items := o.settingsUseCases.Items()
 	moveUp, moveDown := o.menuInput.Steps()
 	o.activeIndex = stepIndex(o.activeIndex, len(items), moveUp, moveDown)
+	activeIndex, clicked := pointerIndex(
+		o.menuInput, o.renderer.HitRow, o.activeIndex,
+	)
+	o.activeIndex = activeIndex
 	item := items[o.activeIndex]
 
 	step := o.menuInput.SideStep()
-	if o.menuInput.Confirmed() {
+	if o.menuInput.Confirmed() || clicked {
 		switch item {
 		case types.SettingsItemBack:
 			o.open = false

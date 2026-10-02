@@ -37,6 +37,9 @@ type LevelSelectViewData struct {
 	// TouchActive — управление с экрана: подсказки меняются
 	// с клавиатурных на тач-варианты
 	TouchActive bool
+	// PointerActive — мышь замечена: экранная кнопка выхода нужна
+	// и без тача
+	PointerActive bool
 	// PlayerCount — режим игры для строки запуска
 	PlayerCount uint
 }

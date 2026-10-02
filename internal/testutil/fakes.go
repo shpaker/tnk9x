@@ -145,6 +145,11 @@ func (f *FakeTouchControls) TapJustPressed() (types.Position, bool) {
 	return f.Tap, f.TapJust
 }
 
+// GamePosition — логические координаты совпадают с координатами ebiten
+func (f *FakeTouchControls) GamePosition(x, y int) (types.Position, bool) {
+	return types.Position{X: float64(x), Y: float64(y)}, true
+}
+
 // FakeMenuInput реализует interfaces.IMenuInputAdapter: события
 // кадра задаются полями, Reset очищает их перед следующим кадром
 type FakeMenuInput struct {
@@ -156,22 +161,34 @@ type FakeMenuInput struct {
 	Pause       bool
 	TapPosition types.Position
 	TapPressed  bool
+	// Наведение мыши в этом кадре и защёлка «мышь замечена»
+	PointPosition types.Position
+	PointMoved    bool
+	PointerActive bool
 }
 
 var _ interfaces.IMenuInputAdapter = (*FakeMenuInput)(nil)
 
-func (f *FakeMenuInput) Update()                        {}
-func (f *FakeMenuInput) IsTouchActive() bool            { return f.TouchActive }
-func (f *FakeMenuInput) Steps() (bool, bool)            { return f.Up, f.Down }
-func (f *FakeMenuInput) SideStep() int                  { return f.Side }
-func (f *FakeMenuInput) Confirmed() bool                { return f.Confirm }
-func (f *FakeMenuInput) Back() bool                     { return f.BackPressed }
-func (f *FakeMenuInput) PauseJustPressed() bool         { return f.Pause }
+func (f *FakeMenuInput) Update()                {}
+func (f *FakeMenuInput) IsTouchActive() bool    { return f.TouchActive }
+func (f *FakeMenuInput) Steps() (bool, bool)    { return f.Up, f.Down }
+func (f *FakeMenuInput) SideStep() int          { return f.Side }
+func (f *FakeMenuInput) Confirmed() bool        { return f.Confirm }
+func (f *FakeMenuInput) Back() bool             { return f.BackPressed }
+func (f *FakeMenuInput) PauseJustPressed() bool { return f.Pause }
+
 func (f *FakeMenuInput) Tapped() (types.Position, bool) { return f.TapPosition, f.TapPressed }
+func (f *FakeMenuInput) Pointed() (types.Position, bool) {
+	return f.PointPosition, f.PointMoved
+}
+func (f *FakeMenuInput) IsPointerActive() bool { return f.PointerActive }
 
 // Reset — кадр без нажатий
 func (f *FakeMenuInput) Reset() {
-	*f = FakeMenuInput{TouchActive: f.TouchActive}
+	*f = FakeMenuInput{
+		TouchActive:   f.TouchActive,
+		PointerActive: f.PointerActive,
+	}
 }
 
 // FakeTilesetRegistry реализует interfaces.ITilesetRepositoryRegistry:
@@ -346,6 +363,29 @@ func (f *FakePlatform) LastGameplay() (bool, bool) {
 		return false, false
 	}
 	return f.Gameplay[len(f.Gameplay)-1], true
+}
+
+// FakeWindow реализует interfaces.IWindowAdapter: полный экран
+// и видимость курсора хранятся в полях
+type FakeWindow struct {
+	Fullscreen   bool
+	CursorHidden bool
+}
+
+var _ interfaces.IWindowAdapter = (*FakeWindow)(nil)
+
+func (f *FakeWindow) IsFullscreen() bool { return f.Fullscreen }
+
+func (f *FakeWindow) SetFullscreen(
+	fullscreen bool,
+) {
+	f.Fullscreen = fullscreen
+}
+
+func (f *FakeWindow) SetCursorVisible(
+	visible bool,
+) {
+	f.CursorHidden = !visible
 }
 
 // FakeReward реализует interfaces.IRewardAdapter: итоговый Status

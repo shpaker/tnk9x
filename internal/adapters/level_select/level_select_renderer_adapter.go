@@ -29,6 +29,8 @@ const (
 	startBottom   = 10
 	// backPadding — поля рамки тап-кнопки вокруг подписи
 	backPadding = 3
+	// packArrowHitWidth — ширина хита стрелок пачек от края экрана
+	packArrowHitWidth = 32
 )
 
 // Цвета экрана выбора уровня
@@ -67,8 +69,13 @@ type LevelSelectRendererAdapter struct {
 	spawnerPosition []types.Position
 	cellSizePx      float64
 	// backRect — кнопка выхода в главное меню последней отрисовки;
-	// пустая без тача
+	// пустая без тача и мыши
 	backRect image.Rectangle
+	// cellHits — ячейки уровней последней отрисовки по позициям
+	cellHits ui.HitAreas
+	// Стрелки пачек последней отрисовки; пустые у крайних пачек
+	previousPackRect image.Rectangle
+	nextPackRect     image.Rectangle
 }
 
 // LevelSelectRendererDependencies — зависимости рендера экрана выбора
@@ -124,11 +131,21 @@ func (r *LevelSelectRendererAdapter) drawHeader(
 	)
 	r.drawCentered(screen, header, headerY, width, textColor)
 
+	r.previousPackRect = image.Rectangle{}
+	r.nextPackRect = image.Rectangle{}
+	arrowTop := headerY - backPadding
+	arrowBottom := headerY + r.regularFontSize + backPadding
 	if view.PackIndex > 0 {
 		r.drawText(screen, "<", 8, headerY, textColor)
+		r.previousPackRect = image.Rect(
+			0, arrowTop, packArrowHitWidth, arrowBottom,
+		)
 	}
 	if view.PackIndex < view.PacksCount-1 {
 		r.drawText(screen, ">", width-16, headerY, textColor)
+		r.nextPackRect = image.Rect(
+			int(width)-packArrowHitWidth, arrowTop, int(width), arrowBottom,
+		)
 	}
 
 	// Счётчики звёзд: пачка слева, кампания справа
@@ -173,8 +190,14 @@ func (r *LevelSelectRendererAdapter) drawCells(
 	width float64,
 ) {
 	left := cellsLeft(width, len(view.Entries))
+	r.cellHits.Reset()
 	for position, entry := range view.Entries {
 		x := left + float64(position)*(cellWidth+cellGap)
+		// Хит ячейки захватывает половину зазора до соседних
+		r.cellHits.Add(image.Rect(
+			int(x-cellGap/2), cellsTop,
+			int(x+cellWidth+cellGap/2), cellsTop+cellHeight,
+		))
 		border := cellColor
 		if position == view.ActivePosition {
 			border = cellActiveColor
@@ -378,6 +401,28 @@ func (r *LevelSelectRendererAdapter) HitBack(position types.Position) bool {
 	return image.Pt(int(position.X), int(position.Y)).In(r.backRect)
 }
 
+// HitLevel — позиция ячейки уровня последней отрисовки под точкой
+func (r *LevelSelectRendererAdapter) HitLevel(
+	position types.Position,
+) (int, bool) {
+	return r.cellHits.Hit(position)
+}
+
+// HitPack — стрелка пачки последней отрисовки под точкой:
+// -1 — предыдущая, +1 — следующая
+func (r *LevelSelectRendererAdapter) HitPack(
+	position types.Position,
+) (int, bool) {
+	point := image.Pt(int(position.X), int(position.Y))
+	switch {
+	case point.In(r.previousPackRect):
+		return -1, true
+	case point.In(r.nextPackRect):
+		return 1, true
+	}
+	return 0, false
+}
+
 func (r *LevelSelectRendererAdapter) drawFooter(
 	screen *ebiten.Image,
 	view types.LevelSelectViewData,
@@ -387,6 +432,8 @@ func (r *LevelSelectRendererAdapter) drawFooter(
 	button := "ENTER"
 	if view.TouchActive {
 		button = "FIRE"
+	}
+	if view.TouchActive || view.PointerActive {
 		r.drawBackButton(screen, width, height-hintBottomGap)
 	} else {
 		r.drawCentered(

@@ -50,6 +50,8 @@ var (
 // или хоткеев, колонки клавиатуры и геймпада
 type ControlsRendererAdapter struct {
 	font ui.MenuFont
+	// hits — строки последней отрисовки для мыши и тапов
+	hits ui.HitAreas
 }
 
 func NewControlsRendererAdapter(
@@ -78,7 +80,12 @@ func (r *ControlsRendererAdapter) Draw(
 
 	_, isPlayerPage := cursor.Page.Player()
 	top := titleTop + float64(r.font.TitleFontSize) + controlsTitleGap
+	rowHeight := float64(r.font.RegularFontSize)
+	r.hits.Reset()
 	for i, row := range view.Rows {
+		r.hits.Add(ui.RowRect(
+			0, width, top, rowHeight, controlsRowStep-rowHeight,
+		))
 		active := i == cursor.Row
 		rowColor := controlsRowColor
 		if active {
@@ -140,6 +147,19 @@ func (r *ControlsRendererAdapter) Draw(
 	}
 
 	r.drawHint(screen, cursor, width)
+}
+
+// HitCell — строка последней отрисовки под точкой и колонка: правее
+// середины между колонками — геймпад, левее — клавиатура
+func (r *ControlsRendererAdapter) HitCell(
+	position types.Position,
+) (int, types.ControlsDevice, bool) {
+	row, ok := r.hits.Hit(position)
+	column := types.ControlsDeviceKeyboard
+	if position.X >= (keyColumnCenter+padColumnCenter)/2 {
+		column = types.ControlsDeviceGamepad
+	}
+	return row, column, ok
 }
 
 // drawCell — значение ячейки; выбранная ячейка на подложке, в

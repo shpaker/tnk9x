@@ -311,3 +311,22 @@ func TestTouchControlsAdapter_TwoPlayers(t *testing.T) {
 		t.Error("без второго игрока направления P2 нет")
 	}
 }
+
+func TestTouchControlsAdapter_GamePosition(t *testing.T) {
+	// До SetScreenSize геометрия неизвестна
+	inert := NewTouchControlsAdapter(256, 224, types.NewSettingsEntity())
+	if _, ok := inert.GamePosition(128, 112); ok {
+		t.Error("до первой отрисовки позиций нет")
+	}
+
+	adapter := newTestAdapter(&fakeTouches{})
+	position, ok := adapter.GamePosition(128, 112)
+	if !ok || math.Abs(position.X-128) > 1 || math.Abs(position.Y-112) > 1 {
+		t.Errorf("центр экрана — центр игры, получено %v, %v", position, ok)
+	}
+
+	// Угол логического экрана ebiten лежит на чёрном поле
+	if _, ok := adapter.GamePosition(0, 0); ok {
+		t.Error("точка на поле вне игры не переводится")
+	}
+}

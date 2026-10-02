@@ -46,7 +46,8 @@ A modern remake and tribute to the classic arcade game Battle City (NES, 1985), 
 - Stars per stage: win, no lives lost, within the time limit; best results are saved per mode (OS config folder on desktop, the web platform's storage in the browser: localStorage, cloud saves on Yandex Games)
 - Continue after a win: carry lives (at least 3) and tank level to the next stage, capped at 2 stars; offered only when it gives an edge, with a caption under the menu item explaining the difference from the next stage
 - Pause menu on Esc, gamepad Start or the touch pause button (continue, restart, settings, exit to stage select)
-- Esc, B, Start or the touch pause button on the stage select goes back to the main menu; with touch controls the stage select also shows a tappable MAIN MENU button
+- Esc, B, Start or the touch pause button on the stage select goes back to the main menu; with touch controls or a mouse the stage select also shows a tappable MAIN MENU button
+- Mouse in menus (main menu, settings, controls, stage select, pause, stage results): hover highlights an item, left click selects it, right click goes back, the wheel changes values; taps on menu items work the same way; the cursor is hidden during battle
 - Settings menu, shared by the main menu and the pause menu (keyboard, gamepad and touch):
   - Graphics (normal or classic), fullscreen (desktop only) and volume (0-100% in 10% steps), applied at once
   - Controls: keyboard keys and gamepad buttons of both players and the graphics and fullscreen hotkeys; press a key to assign it, a key already used elsewhere is refused; reset all to defaults
@@ -86,7 +87,7 @@ A modern remake and tribute to the classic arcade game Battle City (NES, 1985), 
 - Section-based text formats for maps and campaigns, parsed and validated fail-fast on startup
 - User storage for progress, settings and controls behind repository interfaces (files on desktop, the platform bridge storage in WASM)
 - Platform abstraction: `IPlatformAdapter` (suspension, readiness, gameplay markers, ad breaks) and `IRewardAdapter`, one adapter per build target by build tags (no platform on desktop, `window.tnk9xPlatform` in the browser); portal specifics live only in `web/<platform>/` (see [web/README.md](web/README.md)); `syscall/js` is confined to the platform adapter and the storage by depguard
-- Input behind adapter interfaces: menu input (fixed keys, any gamepad, touch of either player), player input (rebindable keyboard, gamepad, touch) and hotkeys; states never poll input devices directly
+- Input behind adapter interfaces: menu input (fixed keys, any gamepad, touch of either player, mouse), player input (rebindable keyboard, gamepad, touch) and hotkeys; states never poll input devices directly
 - Unit tests with a >=70% use-cases coverage gate
 - CI/CD (fmt, lint, test, build, release); desktop and js/wasm targets are both built and linted
 

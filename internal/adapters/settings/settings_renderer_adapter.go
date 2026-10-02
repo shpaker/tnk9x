@@ -21,6 +21,8 @@ var settingsLabels = map[types.SettingsItem]string{
 // экрана выбора уровня или меню паузы
 type SettingsRendererAdapter struct {
 	font ui.MenuFont
+	// hits — строки последней отрисовки для мыши и тапов
+	hits ui.HitAreas
 }
 
 func NewSettingsRendererAdapter(
@@ -49,5 +51,10 @@ func (r *SettingsRendererAdapter) Draw(
 		}
 	}
 
-	ui.DrawMenu(screen, r.font, "SETTINGS", rows, view.ActiveIndex)
+	ui.DrawMenu(screen, r.font, "SETTINGS", rows, view.ActiveIndex, &r.hits)
+}
+
+// HitRow — строка последней отрисовки под точкой
+func (r *SettingsRendererAdapter) HitRow(position types.Position) (int, bool) {
+	return r.hits.Hit(position)
 }

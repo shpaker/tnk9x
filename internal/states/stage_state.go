@@ -17,6 +17,10 @@ type StageRenderer interface {
 	DrawSidebar(screen *ebiten.Image, hud types.StageHUDData)
 	DrawPauseMenu(screen *ebiten.Image, view types.PauseMenuViewData)
 	DrawStageResult(screen *ebiten.Image, view types.StageResultViewData)
+	// HitPauseRow и HitResultRow — пункт меню паузы или итогов
+	// последней отрисовки под точкой
+	HitPauseRow(position types.Position) (int, bool)
+	HitResultRow(position types.Position) (int, bool)
 }
 
 // StageStateDependencies — готовый граф зависимостей уровня;
@@ -331,8 +335,12 @@ func (state *StageState) handlePauseMenu() types.StateTransition {
 	state.pauseMenuIndex = stepIndex(
 		state.pauseMenuIndex, len(state.pauseMenuItems), moveUp, moveDown,
 	)
+	pauseMenuIndex, clicked := pointerIndex(
+		state.menuInput, state.renderer.HitPauseRow, state.pauseMenuIndex,
+	)
+	state.pauseMenuIndex = pauseMenuIndex
 
-	if state.menuInput.Confirmed() {
+	if state.menuInput.Confirmed() || clicked {
 		return state.applyPauseMenuSelection(
 			state.pauseMenuItems[state.pauseMenuIndex],
 		)
@@ -443,8 +451,12 @@ func (state *StageState) handleStageResult() types.StateTransition {
 	result.ActiveIndex = stepIndex(
 		result.ActiveIndex, len(result.Items), moveUp, moveDown,
 	)
+	activeIndex, clicked := pointerIndex(
+		state.menuInput, state.renderer.HitResultRow, result.ActiveIndex,
+	)
+	result.ActiveIndex = activeIndex
 
-	if state.menuInput.Confirmed() {
+	if state.menuInput.Confirmed() || clicked {
 		return state.applyStageResultItem(result.Items[result.ActiveIndex])
 	}
 	// ESC и кнопка паузы — выход к выбору уровней
@@ -523,7 +535,8 @@ func (state *StageState) revealResult() bool {
 
 	litBefore := resultReveal(state.resultTicks, stars).Stars
 	state.resultTicks++
-	skip := state.menuInput.Confirmed() || state.menuInput.Back()
+	skip := state.menuInput.Confirmed() || state.menuInput.Back() ||
+		tappedAnywhere(state.menuInput)
 	if skip {
 		state.resultTicks = length
 	}

@@ -36,16 +36,18 @@ type MenuRow struct {
 const menuValueGap = 16
 
 // DrawMenu рисует оверлей меню: подложку, заголовок и строки;
-// активная строка белая, её значение обрамлено стрелками
+// активная строка белая, её значение обрамлено стрелками. Строки
+// запоминаются в hits для тапов и мыши
 func DrawMenu(
 	screen *ebiten.Image,
 	font MenuFont,
 	title string,
 	rows []MenuRow,
 	activeIndex int,
+	hits *HitAreas,
 ) {
 	DrawOverlay(screen, font, title, MenuTitleTop(screen, font))
-	drawMenuRows(screen, font, rows, activeIndex)
+	drawMenuRows(screen, font, rows, activeIndex, hits)
 }
 
 // MenuTitleTop — высота заголовка меню и подменю: у всех оверлеев
@@ -61,6 +63,7 @@ func drawMenuRows(
 	font MenuFont,
 	rows []MenuRow,
 	activeIndex int,
+	hits *HitAreas,
 ) {
 	bounds := screen.Bounds()
 	width := float64(bounds.Dx())
@@ -76,8 +79,14 @@ func drawMenuRows(
 	labelsWidth, valuesWidth := font.columnWidths(rows)
 	left := (width - labelsWidth - menuValueGap - valuesWidth) / 2
 
+	// Строка ловит тапы по всей ширине колонок или подписи, если
+	// она шире
+	hits.Reset()
 	for i, row := range rows {
 		top := firstTop + float64(i)*(rowHeight+gap)
+		hitLeft := min(left, (width-font.TextWidth(row.Label))/2)
+		hits.Add(RowRect(hitLeft, width-hitLeft, top, rowHeight, gap))
+
 		rowColor := menuRowColor
 		if i == activeIndex {
 			rowColor = menuActiveRowColor

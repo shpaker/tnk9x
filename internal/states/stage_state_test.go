@@ -116,6 +116,19 @@ func (f *fakeSoundUseCases) RequestStopAll() {}
 
 func (f *fakeSoundUseCases) GetEvents() []types.SoundEntity { return nil }
 
+// fakeStageRenderer — пункт меню под точкой равен её Y
+type fakeStageRenderer struct {
+	StageRenderer
+}
+
+func (fakeStageRenderer) HitPauseRow(position types.Position) (int, bool) {
+	return int(position.Y), true
+}
+
+func (fakeStageRenderer) HitResultRow(position types.Position) (int, bool) {
+	return int(position.Y), true
+}
+
 func TestStageState_PauseStopsEngine(t *testing.T) {
 	stageUseCases := &fakeStageUseCases{}
 	soundUseCases := &fakeSoundUseCases{}
@@ -123,6 +136,7 @@ func TestStageState_PauseStopsEngine(t *testing.T) {
 	state := NewStageState(StageStateDependencies{
 		StageUseCases: stageUseCases,
 		SoundUseCases: soundUseCases,
+		Renderer:      fakeStageRenderer{},
 		MenuInput:     input,
 	})
 	frame := func(pressed testutil.FakeMenuInput) {
@@ -150,7 +164,10 @@ func TestStageState_PauseStopsEngine(t *testing.T) {
 	// Пока меню открыто, остановка не повторяется
 	frame(testutil.FakeMenuInput{})
 	if engineStops() != 1 {
-		t.Errorf("остановка двигателя — один раз на открытие, их %d", engineStops())
+		t.Errorf(
+			"остановка двигателя — один раз на открытие, их %d",
+			engineStops(),
+		)
 	}
 
 	// CONTINUE снимает паузу; после кадра игры повторное открытие
@@ -162,6 +179,46 @@ func TestStageState_PauseStopsEngine(t *testing.T) {
 	frame(testutil.FakeMenuInput{})
 	frame(testutil.FakeMenuInput{Pause: true})
 	if engineStops() != 2 {
-		t.Errorf("каждое открытие меню глушит двигатель, остановок %d", engineStops())
+		t.Errorf(
+			"каждое открытие меню глушит двигатель, остановок %d",
+			engineStops(),
+		)
+	}
+}
+
+func TestStageState_PauseMenuMouse(t *testing.T) {
+	stageUseCases := &fakeStageUseCases{}
+	input := &testutil.FakeMenuInput{}
+	state := NewStageState(StageStateDependencies{
+		StageUseCases: stageUseCases,
+		SoundUseCases: &fakeSoundUseCases{},
+		Renderer:      fakeStageRenderer{},
+		MenuInput:     input,
+	})
+	frame := func(pressed testutil.FakeMenuInput) {
+		*input = pressed
+		state.handlePauseMenu()
+		input.Reset()
+	}
+
+	// Правая кнопка в бою паузу не ставит
+	frame(testutil.FakeMenuInput{BackPressed: true})
+	if stageUseCases.paused {
+		t.Fatal("назад в бою не ставит паузу")
+	}
+
+	// Наведение выделяет пункт, клик по CONTINUE снимает паузу
+	frame(testutil.FakeMenuInput{Pause: true})
+	frame(testutil.FakeMenuInput{
+		PointPosition: types.Position{Y: 2}, PointMoved: true,
+	})
+	if state.pauseMenuIndex != 2 {
+		t.Errorf("наведение выделяет пункт, курсор %d", state.pauseMenuIndex)
+	}
+	frame(testutil.FakeMenuInput{
+		TapPosition: types.Position{Y: 0}, TapPressed: true,
+	})
+	if stageUseCases.paused {
+		t.Error("клик по CONTINUE снимает паузу")
 	}
 }

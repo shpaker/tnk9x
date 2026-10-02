@@ -14,6 +14,10 @@ type LevelSelectRenderer interface {
 	// HitBack — тап попал в экранную кнопку выхода в главное меню
 	// последней отрисовки
 	HitBack(position types.Position) bool
+	// HitLevel — позиция ячейки уровня последней отрисовки под точкой
+	HitLevel(position types.Position) (int, bool)
+	// HitPack — стрелка пачки под точкой: -1 или +1
+	HitPack(position types.Position) (int, bool)
 }
 
 // LevelSelectStateDependencies — готовый граф зависимостей экрана
@@ -70,7 +74,7 @@ func (s *LevelSelectState) Update() types.StateTransition {
 
 	s.handleNavigation()
 
-	if s.menuInput.Confirmed() {
+	if s.menuInput.Confirmed() || s.handlePointer() {
 		return s.startTransition()
 	}
 
@@ -80,6 +84,7 @@ func (s *LevelSelectState) Update() types.StateTransition {
 func (s *LevelSelectState) Draw(screen *ebiten.Image) {
 	view := s.levelSelectUseCases.BuildView(s.selector, s.levels)
 	view.TouchActive = s.menuInput.IsTouchActive()
+	view.PointerActive = s.menuInput.IsPointerActive()
 	view.PlayerCount = s.settings.GetPlayers()
 	s.renderer.Draw(screen, view)
 }
@@ -102,6 +107,30 @@ func (s *LevelSelectState) handleNavigation() {
 	if moveDown {
 		s.levelSelectUseCases.MovePack(s.selector, 1)
 	}
+}
+
+// handlePointer: наведение выбирает уровень, клик по стрелкам листает
+// пачки, клик по ячейке выбирает уровень; true — уровень выбран
+// кликом и его пора запускать
+func (s *LevelSelectState) handlePointer() bool {
+	if position, pointed := s.menuInput.Pointed(); pointed {
+		if level, ok := s.renderer.HitLevel(position); ok {
+			s.levelSelectUseCases.SetPosition(s.selector, level)
+		}
+	}
+	position, tapped := s.menuInput.Tapped()
+	if !tapped {
+		return false
+	}
+	if step, ok := s.renderer.HitPack(position); ok {
+		s.levelSelectUseCases.MovePack(s.selector, step)
+		return false
+	}
+	level, ok := s.renderer.HitLevel(position)
+	if ok {
+		s.levelSelectUseCases.SetPosition(s.selector, level)
+	}
+	return ok
 }
 
 // startTransition запускает выбранный уровень, если он открыт

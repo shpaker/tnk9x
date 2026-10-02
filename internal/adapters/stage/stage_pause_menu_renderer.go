@@ -36,5 +36,13 @@ func (r *StageRendererAdapter) DrawPauseMenu(
 		"PAUSED",
 		rows,
 		view.ActiveIndex,
+		&r.pauseHits,
 	)
+}
+
+// HitPauseRow — пункт меню паузы последней отрисовки под точкой
+func (r *StageRendererAdapter) HitPauseRow(
+	position types.Position,
+) (int, bool) {
+	return r.pauseHits.Hit(position)
 }
