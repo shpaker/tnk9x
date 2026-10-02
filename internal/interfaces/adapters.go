@@ -153,6 +153,9 @@ type IPlatformAdapter interface {
 	// RequestIntermission — логическая пауза игры: площадка может
 	// показать межуровневую рекламу и на это время приостановить игру
 	RequestIntermission()
+	// GetLanguage — язык интерфейса площадки как его отдаёт площадка
+	// ("ru", "ru-RU", "ru_RU.UTF-8"); пустая строка — неизвестен
+	GetLanguage() string
 }
 
 // IRewardAdapter — реклама за вознаграждение по действию игрока
@@ -165,4 +168,26 @@ type IRewardAdapter interface {
 	// показывается, итоговый Granted/Denied отдаётся один раз,
 	// дальше — None
 	PollReward() types.RewardStatus
+}
+
+// ITextsAdapter — тексты интерфейса на активном языке из файлов
+// локалей. Ключа нет в языке — текст языка по умолчанию, нет нигде —
+// сам ключ: пропуск виден на экране
+type ITextsAdapter interface {
+	// GetLanguage — активный язык
+	GetLanguage() types.Language
+	// SetLanguage делает активным язык с файлом локали
+	SetLanguage(language types.Language) error
+	// Get — текст без параметров
+	Get(key types.TextKey) string
+	// Format — текст с именованными параметрами шаблона
+	Format(key types.TextKey, args types.TextArgs) string
+	// Plural — текст в форме множественного числа для count;
+	// count доступен шаблону как {{.Count}}
+	Plural(key types.TextKey, count int, args types.TextArgs) string
+	// GetOr — текст ключа, а без перевода — fallback: названия
+	// уровней и пачек из файлов карт и кампании
+	GetOr(key types.TextKey, fallback string) string
+	// GetLanguageName — название языка на нём самом
+	GetLanguageName(language types.Language) string
 }

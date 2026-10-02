@@ -7,6 +7,8 @@ const (
 	SettingsItemGraphics SettingsItem = iota
 	SettingsItemFullscreen
 	SettingsItemVolume
+	// SettingsItemLanguage — язык интерфейса: AUTO или выбранный
+	SettingsItemLanguage
 	// SettingsItemControls — переход к экрану раскладки
 	SettingsItemControls
 	SettingsItemBack

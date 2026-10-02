@@ -18,11 +18,12 @@ type SettingsRenderer interface {
 }
 
 // SettingsOverlay — экран настроек поверх выбора уровня или меню
-// паузы; один на приложение. Изменения сразу применяются к звуку
-// и окну и сохраняются; CONTROLS открывает экран раскладки
+// паузы; один на приложение. Изменения сразу применяются к звуку,
+// окну и языку и сохраняются; CONTROLS открывает экран раскладки
 type SettingsOverlay struct {
 	// Use Cases
-	settingsUseCases interfaces.ISettingsUseCases
+	settingsUseCases     interfaces.ISettingsUseCases
+	localizationUseCases interfaces.ILocalizationUseCases
 	// Adapters
 	renderer    SettingsRenderer
 	menuInput   interfaces.IMenuInputAdapter
@@ -39,6 +40,7 @@ type SettingsOverlay struct {
 
 func NewSettingsOverlay(
 	settingsUseCases interfaces.ISettingsUseCases,
+	localizationUseCases interfaces.ILocalizationUseCases,
 	renderer SettingsRenderer,
 	menuInput interfaces.IMenuInputAdapter,
 	soundPlayer interfaces.ISoundPlayerAdapter,
@@ -47,13 +49,14 @@ func NewSettingsOverlay(
 	settings *types.SettingsEntity,
 ) *SettingsOverlay {
 	return &SettingsOverlay{
-		settingsUseCases: settingsUseCases,
-		renderer:         renderer,
-		menuInput:        menuInput,
-		soundPlayer:      soundPlayer,
-		window:           window,
-		controlsOverlay:  controlsOverlay,
-		settings:         settings,
+		settingsUseCases:     settingsUseCases,
+		localizationUseCases: localizationUseCases,
+		renderer:             renderer,
+		menuInput:            menuInput,
+		soundPlayer:          soundPlayer,
+		window:               window,
+		controlsOverlay:      controlsOverlay,
+		settings:             settings,
 	}
 }
 
@@ -125,8 +128,8 @@ func (o *SettingsOverlay) Draw(screen *ebiten.Image) {
 	)
 }
 
-// change меняет значение пункта и применяет его к звуку и окну;
-// ошибка сохранения не мешает игре
+// change меняет значение пункта и применяет его к звуку, окну
+// и языку; ошибка сохранения не мешает игре
 func (o *SettingsOverlay) change(item types.SettingsItem, step int) {
 	if err := o.settingsUseCases.Change(o.settings, item, step); err != nil {
 		log.Printf("save settings: %v", err)
@@ -141,5 +144,9 @@ func (o *SettingsOverlay) change(item types.SettingsItem, step int) {
 		}
 	case types.SettingsItemFullscreen:
 		o.window.SetFullscreen(o.settings.IsFullscreen())
+	case types.SettingsItemLanguage:
+		if err := o.localizationUseCases.Apply(o.settings); err != nil {
+			log.Printf("apply language: %v", err)
+		}
 	}
 }

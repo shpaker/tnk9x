@@ -93,6 +93,16 @@ func (a *PlatformAdapter) RequestIntermission() {
 	a.bridge.Call("intermission")
 }
 
+// GetLanguage реализует IPlatformAdapter: язык, который мост
+// узнал у площадки (SDK портала или браузер)
+func (a *PlatformAdapter) GetLanguage() string {
+	language := a.bridge.Get("language")
+	if language.Type() != js.TypeString {
+		return ""
+	}
+	return language.String()
+}
+
 // IsRewardAvailable реализует IRewardAdapter
 func (a *PlatformAdapter) IsRewardAvailable() bool {
 	return a.bridge.Get("rewardAvailable").Bool()

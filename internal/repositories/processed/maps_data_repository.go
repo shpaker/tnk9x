@@ -222,14 +222,11 @@ func (mdr *MapsDataRepository) loadLevel(
 
 	mapEntity := types.NewMapEntity(sizePx, blocks, bonusSpawnPositions)
 
-	name := file.name
-	if name == "" {
-		name = fmt.Sprintf("STAGE %02d", levelNumber)
-	}
-
+	// Карта без названия: рендер подпишет её номером на языке
+	// интерфейса
 	return types.NewLevelEntity(
 		levelNumber,
-		name,
+		file.name,
 		file.maxActive,
 		file.time3StarTicks,
 		file.waves,

@@ -519,6 +519,7 @@ func (app *App) buildStageRenderer(
 		SpriteCache:           app.spriteCache,
 		Effects:               app.effectsRenderer,
 		Settings:              app.settings,
+		Texts:                 app.texts,
 		FontFace:              app.textFace,
 		HUDFontFace:           app.hudTextFace,
 		MapOffsetX:            stageMapOffsetX,

@@ -20,6 +20,7 @@ import (
 	"github.com/shpaker/tnk9x/internal/adapters/settings"
 	"github.com/shpaker/tnk9x/internal/adapters/splash"
 	"github.com/shpaker/tnk9x/internal/adapters/stage"
+	"github.com/shpaker/tnk9x/internal/adapters/texts"
 	"github.com/shpaker/tnk9x/internal/adapters/touch_controls"
 	"github.com/shpaker/tnk9x/internal/adapters/window"
 	"github.com/shpaker/tnk9x/internal/interfaces"
@@ -124,9 +125,13 @@ type App struct {
 	rewardAdapter   interfaces.IRewardAdapter
 
 	// Пользовательские настройки (графика, полный экран, громкость,
-	// режим) и раскладка управления
+	// язык, режим) и раскладка управления
 	settings *types.SettingsEntity
 	controls *types.ControlsEntity
+
+	// Тексты интерфейса на языке из настроек или языке площадки
+	texts                interfaces.ITextsAdapter
+	localizationUseCases interfaces.ILocalizationUseCases
 
 	// Загружается на сплеше: долгоживущая инфраструктура
 	tilesetRegistry   interfaces.ITilesetRepositoryRegistry
@@ -167,8 +172,8 @@ type App struct {
 }
 
 // New собирает минимум для сплеша: хранилище, настройки и раскладку,
-// шрифты, эффекты финального экрана и ввод меню; ресурсы игры
-// грузятся на сплеше по шагу за кадр
+// тексты на языке игрока, шрифты, эффекты финального экрана и ввод
+// меню; ресурсы игры грузятся на сплеше по шагу за кадр
 func New(cfg *Config) *App {
 	fileRepository := raw.NewFileRepository(assetsFS())
 	storageRepository := newStorageRepository(cfg)
@@ -198,6 +203,20 @@ func New(cfg *Config) *App {
 	menuInput := menu_input.NewMenuInputAdapter(touchControls)
 	platformAdapter := platform.NewPlatformAdapter()
 
+	// Язык определяется при запуске, до первого кадра: язык из
+	// настроек, иначе язык площадки
+	textsAdapter, err := texts.NewTextsAdapter(
+		processed.NewTextsRepository(fileRepository),
+		cfg.Languages,
+	)
+	mustLoad("loading texts", err)
+	localizationUseCases := use_cases.NewLocalizationUseCases(
+		textsAdapter,
+		cfg.Languages,
+		platformAdapter.GetLanguage(),
+	)
+	mustLoad("applying language", localizationUseCases.Apply(userSettings))
+
 	app := &App{
 		config:             cfg,
 		session:            session_entities.NewGameSessionEntity(),
@@ -217,6 +236,9 @@ func New(cfg *Config) *App {
 		rewardAdapter:      platformAdapter,
 		settings:           userSettings,
 		controls:           userControls,
+
+		texts:                textsAdapter,
+		localizationUseCases: localizationUseCases,
 	}
 
 	app.loader = newBootLoader(
@@ -378,11 +400,14 @@ func (app *App) assembleGame() {
 
 	app.settingsUseCases = use_cases.NewSettingsUseCases(
 		app.settingsRepository,
+		app.texts,
 		runtime.GOOS != "js",
+		cfg.Languages.Languages,
 	)
 	controlsOverlay := states.NewControlsOverlay(
 		use_cases.NewControlsUseCases(app.controlsRepository),
 		settings.NewControlsRendererAdapter(
+			app.texts,
 			app.textFace,
 			int(cfg.GetTitleFontSize()),
 			int(cfg.GetRegularFontSize()),
@@ -393,7 +418,9 @@ func (app *App) assembleGame() {
 	)
 	app.settingsOverlay = states.NewSettingsOverlay(
 		app.settingsUseCases,
+		app.localizationUseCases,
 		settings.NewSettingsRendererAdapter(
+			app.texts,
 			app.textFace,
 			int(cfg.GetTitleFontSize()),
 			int(cfg.GetRegularFontSize()),
@@ -415,6 +442,7 @@ func (app *App) assembleGame() {
 
 	app.levelSelectRenderer = level_select.NewLevelSelectRendererAdapter(
 		level_select.LevelSelectRendererDependencies{
+			Texts:           app.texts,
 			FontFace:        app.textFace,
 			TitleFontSize:   int(cfg.GetTitleFontSize()),
 			RegularFontSize: int(cfg.GetRegularFontSize()),
@@ -427,6 +455,7 @@ func (app *App) assembleGame() {
 		},
 	)
 	app.mainMenuRenderer = main_menu.NewMainMenuRendererAdapter(
+		app.texts,
 		app.textFace,
 		int(cfg.GetTitleFontSize()),
 		int(cfg.GetRegularFontSize()),

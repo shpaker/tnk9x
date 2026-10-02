@@ -1,0 +1,149 @@
+# English interface texts. Every locale has the same keys; the screen
+# is 256x224 with 8 px glyphs, so a line fits 32 characters, a title
+# 10. Strings are stored upper case. Placeholders: {{.Name}}; plural
+# forms: one, few, many, other (CLDR rules of the language).
+
+language:
+  name: "ENGLISH"
+
+main_menu:
+  one_player: "1 PLAYER"
+  two_players: "2 PLAYERS"
+  settings: "SETTINGS"
+  quit: "QUIT"
+
+pause:
+  title: "PAUSED"
+  continue: "CONTINUE"
+  restart: "RESTART"
+  settings: "SETTINGS"
+  exit_to_levels: "EXIT TO LEVELS"
+
+settings:
+  title: "SETTINGS"
+  graphics: "GRAPHICS"
+  fullscreen: "FULLSCREEN"
+  volume: "VOLUME"
+  language: "LANGUAGE"
+  controls: "CONTROLS"
+  back: "BACK"
+  graphics_normal: "NORMAL"
+  graphics_classic: "CLASSIC"
+  "on": "ON"
+  "off": "OFF"
+  volume_percent: "{{.Percent}}%"
+  language_auto: "AUTO"
+
+controls:
+  title: "CONTROLS"
+  player_1: "PLAYER 1"
+  player_2: "PLAYER 2"
+  hotkeys: "HOTKEYS"
+  # Action labels end before the key column: 11 characters
+  up: "UP"
+  down: "DOWN"
+  left: "LEFT"
+  right: "RIGHT"
+  fire: "FIRE"
+  hotkey_graphics: "GRAPHICS"
+  hotkey_fullscreen: "FULLSCREEN"
+  # Column headers and key cells: 7 characters
+  key_column: "KEY"
+  pad_column: "PAD"
+  reset_all: "RESET ALL"
+  back: "BACK"
+  press_key: "PRESS A KEY  ESC CANCEL"
+  press_button: "PRESS A BUTTON  ESC CANCEL"
+  already_taken: "ALREADY TAKEN"
+
+# Arrow key names in the key cells: 7 characters
+keys:
+  up: "UP"
+  down: "DOWN"
+  left: "LEFT"
+  right: "RIGHT"
+
+# The info column of the stage select fits 15 characters
+level_select:
+  locked: "LOCKED"
+  collect: "COLLECT"
+  win_stage: "WIN STAGE {{.Stage}}"
+  enemies: "ENEMIES"
+  win_previous: "WIN PREVIOUS"
+  # Followed by the stars of the best result: 6 characters
+  best: "BEST"
+  keyboard_hint: "ARROWS SELECT  ESC BACK"
+  main_menu: "MAIN MENU"
+  start_one: "PRESS {{.Button}}: 1 PLAYER"
+  start_two: "PRESS {{.Button}}: 2 PLAYERS"
+  button_enter: "ENTER"
+  button_fire: "FIRE"
+  stage_fallback: "STAGE {{.Stage}}"
+
+result:
+  victory: "VICTORY"
+  defeat: "DEFEAT"
+  next_stage: "NEXT STAGE"
+  continue: "CONTINUE"
+  retry: "RETRY"
+  stages: "STAGES"
+  revive: "REVIVE"
+  boost_next: "NEXT + BOOST"
+  boost_retry: "RETRY + BOOST"
+  # Captions are followed by two stars: 27 characters
+  keep_caption: "KEEP LIVES & TANK, MAX"
+  boost_caption: "TANK UP & +1 LIFE, MAX"
+  ad: "AD"
+  stats: "TIME {{.Time}}  LIVES LOST {{.Lives}}"
+  new_best: "NEW BEST"
+  carry_over:
+    one: "CARRY-OVER: MAX {{.Count}} STAR"
+    other: "CARRY-OVER: MAX {{.Count}} STARS"
+
+# Campaign stage names by number: 15 characters
+levels:
+  "1": "FIRST BLOOD"
+  "2": "CROSSROADS"
+  "3": "GREENWOOD"
+  "4": "BRICK TOWN"
+  "5": "MOAT"
+  "6": "THICKET"
+  "7": "STEEL MAZE"
+  "8": "RIVERSIDE"
+  "9": "IRON GROVE"
+  "10": "SIEGE LINE"
+  "11": "AMBUSH"
+  "12": "CANALS"
+  "13": "FORTRESS"
+  "14": "MARSHLAND"
+  "15": "DEEP WOODS"
+  "16": "JUNGLE"
+  "17": "ICE RINK"
+  "18": "ARMORY"
+  "19": "TRENCHES"
+  "20": "DELTA"
+  "21": "BATTLEFIELD"
+  "22": "CAMOUFLAGE"
+  "23": "BUNKERS"
+  "24": "GLACIER"
+  "25": "IRON CURTAIN"
+  "26": "WETLANDS"
+  "27": "STEEL CITY"
+  "28": "FROZEN WOODS"
+  "29": "FLOODPLAIN"
+  "30": "OVERGROWTH"
+  "31": "ARCHIPELAGO"
+  "32": "SNOWFIELD"
+  "33": "IRON JUNGLE"
+  "34": "LAST WALL"
+  "35": "FINAL STAND"
+
+# Campaign pack names by order: 22 characters
+packs:
+  "1": "BOOT CAMP"
+  "2": "FIRST CONTACT"
+  "3": "HARD LINE"
+  "4": "IRON STORM"
+  "5": "COLD FRONT"
+  "6": "DEEP STRIKE"
+  "7": "LAST STAND"

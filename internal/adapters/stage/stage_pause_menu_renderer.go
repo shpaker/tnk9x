@@ -8,11 +8,11 @@ import (
 )
 
 // pauseMenuLabels — подписи пунктов меню паузы
-var pauseMenuLabels = map[types.PauseMenuItem]string{
-	types.PauseMenuItemContinue:     "CONTINUE",
-	types.PauseMenuItemRestart:      "RESTART",
-	types.PauseMenuItemSettings:     "SETTINGS",
-	types.PauseMenuItemExitToLevels: "EXIT TO LEVELS",
+var pauseMenuLabels = map[types.PauseMenuItem]types.TextKey{
+	types.PauseMenuItemContinue:     types.TextPauseContinue,
+	types.PauseMenuItemRestart:      types.TextPauseRestart,
+	types.PauseMenuItemSettings:     types.TextPauseSettings,
+	types.PauseMenuItemExitToLevels: types.TextPauseExitToLevels,
 }
 
 // DrawPauseMenu рисует оверлей паузы с заголовком и пунктами меню;
@@ -23,7 +23,7 @@ func (r *StageRendererAdapter) DrawPauseMenu(
 ) {
 	rows := make([]ui.MenuRow, len(view.Items))
 	for i, item := range view.Items {
-		rows[i] = ui.MenuRow{Label: pauseMenuLabels[item]}
+		rows[i] = ui.MenuRow{Label: r.texts.Get(pauseMenuLabels[item])}
 	}
 
 	ui.DrawMenu(
@@ -33,7 +33,7 @@ func (r *StageRendererAdapter) DrawPauseMenu(
 			TitleFontSize:   r.titleFontSize,
 			RegularFontSize: r.regularFontSize,
 		},
-		"PAUSED",
+		r.texts.Get(types.TextPauseTitle),
 		rows,
 		view.ActiveIndex,
 		&r.pauseHits,

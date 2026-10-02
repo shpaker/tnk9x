@@ -31,6 +31,7 @@ type StageRendererAdapter struct {
 	spriteCache           *SpriteCache
 	effects               *effects.EffectsRendererAdapter
 	settings              *types.SettingsEntity
+	texts                 interfaces.ITextsAdapter
 	fontFace              text.Face
 	hudFontFace           text.Face
 	titleFontSize         int
@@ -70,6 +71,9 @@ type StageRendererDependencies struct {
 	Effects  *effects.EffectsRendererAdapter
 	Settings *types.SettingsEntity
 
+	// Тексты меню паузы и итогов на активном языке
+	Texts interfaces.ITextsAdapter
+
 	// Шрифты и раскладка
 	FontFace         text.Face
 	HUDFontFace      text.Face
@@ -97,6 +101,7 @@ func NewStageRendererAdapter(
 		spriteCache:           deps.SpriteCache,
 		effects:               deps.Effects,
 		settings:              deps.Settings,
+		texts:                 deps.Texts,
 		fontFace:              deps.FontFace,
 		hudFontFace:           deps.HUDFontFace,
 		mapOffsetX:            deps.MapOffsetX,

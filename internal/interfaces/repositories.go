@@ -153,6 +153,11 @@ type IImagesRepository interface {
 	GetImage(name string) (image.Image, error)
 }
 
+// ITextsRepository отдаёт файлы локалей: тексты интерфейса языка
+type ITextsRepository interface {
+	GetLocale(language types.Language) ([]byte, error)
+}
+
 type IFontsRepository interface {
 	GetFont(name string) ([]byte, error)
 }

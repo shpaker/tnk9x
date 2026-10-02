@@ -3,6 +3,8 @@
 package platform
 
 import (
+	"os"
+
 	"github.com/shpaker/tnk9x/internal/interfaces"
 	"github.com/shpaker/tnk9x/internal/types"
 )
@@ -14,7 +16,7 @@ var (
 
 // PlatformAdapter — игра без площадки (десктоп): игру никто
 // не приостанавливает, рекламы нет, сообщать о готовности
-// и геймплее некому
+// и геймплее некому; язык — язык ОС
 type PlatformAdapter struct{}
 
 func NewPlatformAdapter() *PlatformAdapter {
@@ -38,6 +40,16 @@ func (a *PlatformAdapter) SetGameplayActive(bool) {}
 
 // RequestIntermission реализует IPlatformAdapter
 func (a *PlatformAdapter) RequestIntermission() {}
+
+// GetLanguage реализует IPlatformAdapter: переменные локали
+// (их задают терминал и запуск вида LANG=ru_RU.UTF-8), иначе язык
+// интерфейса ОС
+func (a *PlatformAdapter) GetLanguage() string {
+	if language := languageFromEnv(os.Getenv); language != "" {
+		return language
+	}
+	return osLanguage()
+}
 
 // IsRewardAvailable реализует IRewardAdapter
 func (a *PlatformAdapter) IsRewardAvailable() bool { return false }

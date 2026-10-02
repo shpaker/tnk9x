@@ -37,7 +37,9 @@ type settingsSchema struct {
 	Effects    *bool `json:"effects,omitempty"`
 	Fullscreen *bool `json:"fullscreen,omitempty"`
 	Volume     *int  `json:"volume,omitempty"`
-	Players    *uint `json:"players,omitempty"`
+	// Language — язык, выбранный вручную; пустой — язык площадки
+	Language *string `json:"language,omitempty"`
+	Players  *uint   `json:"players,omitempty"`
 }
 
 // GetSettings читает настройки; отсутствие сохранения — дефолты
@@ -71,6 +73,9 @@ func (sr *SettingsRepository) GetSettings() (*types.SettingsEntity, error) {
 	if schema.Volume != nil {
 		settings.SetVolumeLevel(*schema.Volume)
 	}
+	if schema.Language != nil {
+		settings.SetLanguage(types.Language(*schema.Language))
+	}
 	if schema.Players != nil {
 		settings.SetPlayers(*schema.Players)
 	}
@@ -83,6 +88,7 @@ func (sr *SettingsRepository) SaveSettings(
 	effects := settings.IsEffectsEnabled()
 	fullscreen := settings.IsFullscreen()
 	volume := settings.GetVolumeLevel()
+	language := string(settings.GetLanguage())
 	players := settings.GetPlayers()
 
 	data, err := json.Marshal(settingsSchema{
@@ -90,6 +96,7 @@ func (sr *SettingsRepository) SaveSettings(
 		Effects:    &effects,
 		Fullscreen: &fullscreen,
 		Volume:     &volume,
+		Language:   &language,
 		Players:    &players,
 	})
 	if err != nil {

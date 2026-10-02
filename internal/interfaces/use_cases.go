@@ -23,7 +23,10 @@ type IMapUseCases interface {
 	RemoveBlock(block *types.BlockEntity) error
 	// RestoreBlock возвращает блок в исходное целое состояние, если
 	// его клетку не занимает ни один из obstacles
-	RestoreBlock(block *types.BlockEntity, obstacles []types.IEntityCollider) bool
+	RestoreBlock(
+		block *types.BlockEntity,
+		obstacles []types.IEntityCollider,
+	) bool
 	// IsBlockIntact — блок на карте в исходном размере
 	IsBlockIntact(block *types.BlockEntity) bool
 	GetSizePx() types.Size
@@ -287,6 +290,15 @@ type ISettingsUseCases interface {
 		settings *types.SettingsEntity,
 		activeIndex int,
 	) types.SettingsViewData
+}
+
+// ILocalizationUseCases — выбор языка интерфейса: язык, выбранный
+// в настройках, иначе язык площадки по правилам конфигурации
+type ILocalizationUseCases interface {
+	// ResolveLanguage — язык интерфейса для настроек
+	ResolveLanguage(settings *types.SettingsEntity) types.Language
+	// Apply делает активным язык интерфейса для настроек
+	Apply(settings *types.SettingsEntity) error
 }
 
 // IControlsUseCases — назначение клавиш и кнопок геймпада игроков

@@ -4,8 +4,11 @@ go 1.24.3
 
 require (
 	github.com/hajimehoshi/ebiten/v2 v2.9.1
+	github.com/nicksnyder/go-i18n/v2 v2.6.1
 	github.com/yuin/gopher-lua v1.1.1
 	golang.org/x/image v0.31.0
+	golang.org/x/sys v0.36.0
+	golang.org/x/text v0.32.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -19,7 +22,5 @@ require (
 	github.com/jfreymuth/oggvorbis v1.0.5 // indirect
 	github.com/jfreymuth/vorbis v1.0.2 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
-	golang.org/x/sync v0.17.0 // indirect
-	golang.org/x/sys v0.36.0 // indirect
-	golang.org/x/text v0.29.0 // indirect
+	golang.org/x/sync v0.19.0 // indirect
 )

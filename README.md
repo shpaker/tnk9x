@@ -53,6 +53,7 @@ A modern remake and tribute to the classic arcade game Battle City (NES, 1985), 
   - Controls: keyboard keys and gamepad buttons of both players and the graphics and fullscreen hotkeys; press a key to assign it, a key already used elsewhere is refused; reset all to defaults
   - Saved between launches next to the progress (OS config folder on desktop, the web platform's storage in the browser); `config.yml` holds only the game's own settings
 - Desktop starts fullscreen by default; toggle with F11 or in settings (the hotkey also works in the browser)
+- English, Russian and Turkish: the language is detected at launch (Yandex Games SDK language on Yandex Games, the browser language on the web, the OS language on desktop; Belarusian, Kazakh, Ukrainian and Uzbek get Russian, others English) and can be picked in settings (LANGUAGE: auto or a language), applied at once and saved
 - Sound effects and music
 - NES-style sidebar HUD (enemy reserve, player lives, stage flag) on an authentic 256x224 screen
 - Normal graphics with effects, on by default: 2D ray-traced lighting and shadows from tanks, bullets, explosions and bonuses, bloom, water/ice/steel glints, tube TV filter; switch to classic graphics without effects with F2 or in settings
@@ -70,7 +71,7 @@ A modern remake and tribute to the classic arcade game Battle City (NES, 1985), 
 - Runs natively and [in the browser](https://shpaker.github.io/tnk9x/) (WebAssembly, deployed to GitHub Pages on release tags)
 - Web platforms behind one neutral browser bridge, the same WebAssembly build everywhere; desktop builds are not affected:
   - The game pauses while the platform suspends it (hidden tab, an ad, the portal's own pause): the frame loop stops, sound goes silent, and a running stage returns to its pause menu
-  - Yandex Games: SDK loading and gameplay markers, interstitial ads at natural breaks (leaving the results screen, restart or exit from the pause menu), cloud saves with migration of local saves, no external links; packaged by `just package-yandex` and uploaded to the developer console by hand
+  - Yandex Games: interface language from the SDK at launch, SDK loading and gameplay markers, interstitial ads at natural breaks (leaving the results screen, restart or exit from the pause menu), cloud saves with migration of local saves, no external links; packaged by `just package-yandex` and uploaded to the developer console by hand
   - Rewarded ads, only where the platform offers them, never as the default menu item:
     - REVIVE on defeat by lost lives while the HQ is intact: one more tank for each player, the stage goes on (once per attempt, at most 1 star)
     - NEXT + BOOST and RETRY + BOOST: the next or the same stage starts with one more life and a tank level up, capped at 2 stars like Continue
@@ -85,6 +86,7 @@ A modern remake and tribute to the classic arcade game Battle City (NES, 1985), 
 - Kage shader pipeline: lighting pass with omni and cone lights on the logical screen, bloom, phosphor afterglow and CRT in the final-screen pass; shaders loaded via repository and compiled fail-fast on startup
 - Visual effects driven by a per-frame event queue from gameplay use cases; particles, flashes and shake live in a per-stage repository
 - Section-based text formats for maps and campaigns, parsed and validated fail-fast on startup
+- Localization: interface texts in `assets/locales/<language>.yml` (go-i18n: CLDR plurals, named placeholders, fallback to the default language) behind `ITextsAdapter`, typed `TextKey` constants, a test that keeps every locale complete; languages and the platform-language rules in `config.yml`; the platform language comes through `IPlatformAdapter`
 - User storage for progress, settings and controls behind repository interfaces (files on desktop, the platform bridge storage in WASM)
 - Platform abstraction: `IPlatformAdapter` (suspension, readiness, gameplay markers, ad breaks) and `IRewardAdapter`, one adapter per build target by build tags (no platform on desktop, `window.tnk9xPlatform` in the browser); portal specifics live only in `web/<platform>/` (see [web/README.md](web/README.md)); `syscall/js` is confined to the platform adapter and the storage by depguard
 - Input behind adapter interfaces: menu input (fixed keys, any gamepad, touch of either player, mouse), player input (rebindable keyboard, gamepad, touch) and hotkeys; states never poll input devices directly

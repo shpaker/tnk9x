@@ -22,6 +22,10 @@ type appConfigSchema struct {
 	SubtitleFontSize uint    `yaml:"subtitle_font_size"`
 	RegularFontSize  uint    `yaml:"regular_font_size"`
 	GameTitle        string  `yaml:"game_title"`
+
+	Languages         []string          `yaml:"languages"`
+	DefaultLanguage   string            `yaml:"default_language"`
+	LanguageFallbacks map[string]string `yaml:"language_fallbacks"`
 }
 
 type gameConfigSchema struct {
@@ -55,6 +59,8 @@ type Config struct {
 	SubtitleFontSize uint
 	RegularFontSize  uint
 	GameTitle        string
+
+	Languages types.LanguageConfig
 
 	EnemySpawners          []types.Position
 	Player1Spawn           types.Position
@@ -135,6 +141,12 @@ func LoadConfig() (*Config, error) {
 		cfg.SubtitleFontSize = cfg.RegularFontSize
 	}
 
+	languages, err := parseLanguageConfig(schema.App)
+	if err != nil {
+		return nil, err
+	}
+	cfg.Languages = languages
+
 	if cfg.EnemyRespawnDelayTicks == 0 {
 		cfg.EnemyRespawnDelayTicks = 2 * 60
 	}
@@ -169,6 +181,38 @@ func LoadConfig() (*Config, error) {
 	}
 
 	return cfg, nil
+}
+
+// parseLanguageConfig — языки интерфейса: без списка — только
+// английский; язык по умолчанию — первый в списке, если не задан
+func parseLanguageConfig(schema appConfigSchema) (types.LanguageConfig, error) {
+	config := types.LanguageConfig{
+		Default:   types.Language(schema.DefaultLanguage),
+		Fallbacks: make(map[types.Language]types.Language),
+	}
+	for _, language := range schema.Languages {
+		config.Languages = append(config.Languages, types.Language(language))
+	}
+	if len(config.Languages) == 0 {
+		config.Languages = []types.Language{"en"}
+	}
+	if config.Default == types.LanguageAuto {
+		config.Default = config.Languages[0]
+	}
+	if !config.IsSupported(config.Default) {
+		return config, fmt.Errorf(
+			"default_language %q is not in languages", config.Default,
+		)
+	}
+	for from, to := range schema.LanguageFallbacks {
+		if !config.IsSupported(types.Language(to)) {
+			return config, fmt.Errorf(
+				"language_fallbacks %s: %q is not in languages", from, to,
+			)
+		}
+		config.Fallbacks[types.Language(from)] = types.Language(to)
+	}
+	return config, nil
 }
 
 func convertCoordsToPositions(coords [][2]int) []types.Position {
