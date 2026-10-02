@@ -6,6 +6,7 @@ import (
 	"github.com/shpaker/tnk9x/internal/interfaces"
 	"github.com/shpaker/tnk9x/internal/testutil"
 	"github.com/shpaker/tnk9x/internal/types"
+	"github.com/shpaker/tnk9x/internal/types/session_entities"
 )
 
 // fakeStageUseCases — только флаг паузы; остальные методы
@@ -18,6 +19,85 @@ type fakeStageUseCases struct {
 func (f *fakeStageUseCases) TogglePause()      { f.paused = !f.paused }
 func (f *fakeStageUseCases) IsPaused() bool    { return f.paused }
 func (f *fakeStageUseCases) ResumeStageState() { f.paused = false }
+
+// fakeFinishingStageUseCases — уровень завершается поражением
+// во время обновления игровых объектов
+type fakeFinishingStageUseCases struct {
+	fakeStageUseCases
+	finished bool
+}
+
+func (f *fakeFinishingStageUseCases) UpdateGameObjects(float64) { f.finished = true }
+func (f *fakeFinishingStageUseCases) IsStageFinished() bool     { return f.finished }
+func (f *fakeFinishingStageUseCases) IsStageWon() bool          { return false }
+func (f *fakeFinishingStageUseCases) PauseStageState()          { f.paused = true }
+func (f *fakeFinishingStageUseCases) CanRevivePlayers() bool    { return false }
+
+func (f *fakeFinishingStageUseCases) TryRespawnPlayersTanks() (
+	*types.TankEntity, *types.TankEntity,
+) {
+	return nil, nil
+}
+
+func (f *fakeFinishingStageUseCases) TrySpawnEnemy() *types.TankEntity {
+	return nil
+}
+
+func (f *fakeFinishingStageUseCases) GetStageResult() types.StageResult {
+	return types.StageResult{}
+}
+
+// fakeStageWorld — пустой мир уровня: танков, тайлов, бонусов,
+// фар и AI нет
+type fakeStageWorld struct {
+	interfaces.ITankLifecycleUseCases
+	interfaces.ITilesUseCases
+	interfaces.ILightingUseCases
+	interfaces.IAiInputAdapter
+	interfaces.IBonusesRepository
+	interfaces.IProgressionUseCases
+}
+
+func (fakeStageWorld) UpdateAllTanksLifecycle() error                       { return nil }
+func (fakeStageWorld) UpdateAnimations()                                    {}
+func (fakeStageWorld) UpdateHeadlights()                                    {}
+func (fakeStageWorld) Update(float64)                                       {}
+func (fakeStageWorld) GetAllBonuses() []*types.BonusEntity                  { return nil }
+func (fakeStageWorld) CalcStars(types.StageResult, *types.LevelEntity) uint { return 0 }
+func (fakeStageWorld) GetLevelStars(int) uint                               { return 0 }
+func (fakeStageWorld) NextLevel(level int) (int, bool)                      { return level + 1, false }
+
+// Итоги строятся в том же кадре, где уровень завершился: иначе Draw
+// видит паузу без итогов и на кадр рисует меню паузы
+func TestStageState_FinishBuildsResultSameFrame(t *testing.T) {
+	stageUseCases := &fakeFinishingStageUseCases{}
+	world := fakeStageWorld{}
+	state := NewStageState(StageStateDependencies{
+		TankCommonUseCases:    &testutil.FakeTankCommonUseCases{},
+		TankLifecycleUseCases: world,
+		TilesUseCases:         world,
+		StageUseCases:         stageUseCases,
+		SoundUseCases:         &fakeSoundUseCases{},
+		LightingUseCases:      world,
+		VisualEffectsUseCases: &testutil.FakeVisualEffectsUseCases{},
+		ProgressionUseCases:   world,
+		EnemyInputAdapter:     world,
+		SoundPlayerAdapter:    &testutil.FakeSoundPlayer{},
+		MenuInput:             &testutil.FakeMenuInput{},
+		RewardAdapter:         &testutil.FakeReward{},
+		StageSession:          session_entities.NewStageSessionEntity(),
+		BonusesRepository:     world,
+		SettingsOverlay:       &SettingsOverlay{},
+	})
+	state.isSetUp = true
+
+	state.Update()
+
+	if !stageUseCases.paused || state.result == nil {
+		t.Fatalf("в кадре завершения: пауза %v, итоги %v",
+			stageUseCases.paused, state.result != nil)
+	}
+}
 
 // fakeSoundUseCases записывает запрошенные остановки звуков
 type fakeSoundUseCases struct {
