@@ -98,7 +98,7 @@ A modern remake and tribute to the classic arcade game Battle City (NES, 1985), 
 
 ## Installation and Running
 
-**Requirements:** Go 1.24+, optionally — [Just](https://github.com/casey/just).
+**Requirements:** Go 1.25+, optionally — [Just](https://github.com/casey/just).
 
 ```bash
 git clone https://github.com/shpaker/tnk9x.git

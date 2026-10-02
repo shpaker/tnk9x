@@ -239,8 +239,7 @@ func headlightOf(tank *types.TankEntity) (types.LightEntity, int, bool) {
 	}
 	spec, halfAngle, priority := headlight, headlightHalfAngle, lightPriorityPlayer
 	if tank.IsEnemy() {
-		spec, halfAngle, priority =
-			enemyHeadlight, enemyHeadlightHalfAngle, lightPriorityEnemy
+		spec, halfAngle, priority = enemyHeadlight, enemyHeadlightHalfAngle, lightPriorityEnemy
 	}
 	angle := tank.GetHeadlightAngle()
 	direction := types.Position{X: math.Cos(angle), Y: math.Sin(angle)}
