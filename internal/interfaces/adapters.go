@@ -50,6 +50,9 @@ type ITouchControlsAdapter interface {
 	DPadJustPressed(player types.PlayerTankNum) (types.Direction, bool)
 	FireJustPressed(player types.PlayerTankNum) bool
 	PauseJustPressed() bool
+	// TapJustPressed — новое касание игрового экрана вне контролов
+	// в логических координатах экрана
+	TapJustPressed() (types.Position, bool)
 }
 
 // IMenuInputAdapter — ввод меню и паузы, не зависящий от раскладки
@@ -70,6 +73,9 @@ type IMenuInputAdapter interface {
 	Back() bool
 	// PauseJustPressed — пауза: Esc, Start или тач-пауза
 	PauseJustPressed() bool
+	// Tapped — тап по игровому экрану в логических координатах:
+	// нажатие экранных кнопок меню
+	Tapped() (types.Position, bool)
 }
 
 // IHotkeysAdapter — нажатые в этом кадре глобальные хоткеи

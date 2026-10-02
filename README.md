@@ -45,7 +45,7 @@ A modern remake and tribute to the classic arcade game Battle City (NES, 1985), 
 - Stars per stage: win, no lives lost, within the time limit; best results are saved per mode (OS config folder on desktop, localStorage in the browser)
 - Continue after a win: carry lives (at least 3) and tank level to the next stage, capped at 2 stars; offered only when it gives an edge, with a caption under the menu item explaining the difference from the next stage
 - Pause menu on Esc, gamepad Start or the touch pause button (continue, restart, settings, exit to stage select)
-- Esc, B, Start or the touch pause button on the stage select goes back to the main menu
+- Esc, B, Start or the touch pause button on the stage select goes back to the main menu; with touch controls the stage select also shows a tappable MAIN MENU button
 - Settings menu, shared by the main menu and the pause menu (keyboard, gamepad and touch):
   - Graphics (normal or classic), fullscreen (desktop only) and volume (0-100% in 10% steps), applied at once
   - Controls: keyboard keys and gamepad buttons of both players and the graphics and fullscreen hotkeys; press a key to assign it, a key already used elsewhere is refused; reset all to defaults

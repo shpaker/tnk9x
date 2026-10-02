@@ -44,11 +44,15 @@ func DrawMenu(
 	rows []MenuRow,
 	activeIndex int,
 ) {
-	height := float64(screen.Bounds().Dy())
-	DrawOverlay(
-		screen, font, title, height/4-float64(font.TitleFontSize)/2,
-	)
+	DrawOverlay(screen, font, title, MenuTitleTop(screen, font))
 	drawMenuRows(screen, font, rows, activeIndex)
+}
+
+// MenuTitleTop — высота заголовка меню и подменю: у всех оверлеев
+// заголовок на одной высоте
+func MenuTitleTop(screen *ebiten.Image, font MenuFont) float64 {
+	height := float64(screen.Bounds().Dy())
+	return height/4 - float64(font.TitleFontSize)/2
 }
 
 // drawMenuRows — строки меню под заголовком

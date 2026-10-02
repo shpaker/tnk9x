@@ -253,9 +253,15 @@ func (stubLevelSelectUseCases) BuildView(
 	return types.LevelSelectViewData{}
 }
 
+// nopLevelSelectRenderer — кнопка выхода занимает левый верхний
+// квадрат 10x10
 type nopLevelSelectRenderer struct{}
 
 func (nopLevelSelectRenderer) Draw(*ebiten.Image, types.LevelSelectViewData) {}
+
+func (nopLevelSelectRenderer) HitBack(position types.Position) bool {
+	return position.X < 10 && position.Y < 10
+}
 
 type nopMainMenuRenderer struct{}
 
@@ -321,6 +327,20 @@ func TestLevelSelectState_BackToMainMenu(t *testing.T) {
 	*env.input = testutil.FakeMenuInput{BackPressed: true}
 	if transition := state.Update(); transition.Target != types.TransitionToMainMenu {
 		t.Errorf("назад ведёт в главное меню, переход %v", transition.Target)
+	}
+
+	// Тап мимо кнопки выхода не действует, тап по ней — в главное меню
+	*env.input = testutil.FakeMenuInput{
+		TapPosition: types.Position{X: 100, Y: 100}, TapPressed: true,
+	}
+	if transition := state.Update(); transition.Target != types.TransitionNone {
+		t.Errorf("тап мимо кнопки не должен уходить, переход %v", transition.Target)
+	}
+	*env.input = testutil.FakeMenuInput{
+		TapPosition: types.Position{X: 5, Y: 5}, TapPressed: true,
+	}
+	if transition := state.Update(); transition.Target != types.TransitionToMainMenu {
+		t.Errorf("тап по кнопке ведёт в главное меню, переход %v", transition.Target)
 	}
 }
 

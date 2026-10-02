@@ -1,6 +1,7 @@
 package touch_controls
 
 import (
+	"math"
 	"testing"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -216,6 +217,38 @@ func TestTouchControlsAdapter_PauseZone(t *testing.T) {
 
 	if !adapter.PauseJustPressed() {
 		t.Error("тап по зоне паузы должен дать событие паузы")
+	}
+}
+
+// Касание игрового экрана — тап в логических координатах; касания
+// контролов и полей тапом не считаются
+func TestTouchControlsAdapter_TapOnGameScreen(t *testing.T) {
+	touches := &fakeTouches{positions: map[ebiten.TouchID][2]int{}}
+	adapter := newTestAdapter(touches)
+	x, y, scale := adapter.GameRect()
+
+	touches.positions[1] = logicalAt(
+		float64(x+100*scale+scale/2), float64(y+50*scale+scale/2),
+	)
+	touches.active = []ebiten.TouchID{1}
+	touches.justPressed = []ebiten.TouchID{1}
+	adapter.Update()
+	position, ok := adapter.TapJustPressed()
+	// Тачи ebiten целочисленные в логике экрана: допуск в пиксель
+	if !ok || math.Abs(position.X-100) > 1 || math.Abs(position.Y-50) > 1 {
+		t.Errorf("тап (100, 50), получено %v %v", position, ok)
+	}
+
+	fire := adapter.layout.Players[0].Fire
+	touches.positions[2] = logicalAt(
+		float64(fire.Min.X+fire.Max.X)/2,
+		float64(fire.Min.Y+fire.Max.Y)/2,
+	)
+	touches.active = []ebiten.TouchID{2}
+	touches.justPressed = []ebiten.TouchID{2}
+	adapter.Update()
+	if _, ok := adapter.TapJustPressed(); ok {
+		t.Error("касание огня не тап")
 	}
 }
 

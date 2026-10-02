@@ -11,6 +11,9 @@ import (
 // определён у потребителя
 type LevelSelectRenderer interface {
 	Draw(screen *ebiten.Image, view types.LevelSelectViewData)
+	// HitBack — тап попал в экранную кнопку выхода в главное меню
+	// последней отрисовки
+	HitBack(position types.Position) bool
 }
 
 // LevelSelectStateDependencies — готовый граф зависимостей экрана
@@ -61,7 +64,7 @@ func NewLevelSelectState(deps LevelSelectStateDependencies) *LevelSelectState {
 }
 
 func (s *LevelSelectState) Update() types.StateTransition {
-	if s.menuInput.Back() {
+	if s.menuInput.Back() || s.backTapped() {
 		return types.StateTransition{Target: types.TransitionToMainMenu}
 	}
 
@@ -79,6 +82,12 @@ func (s *LevelSelectState) Draw(screen *ebiten.Image) {
 	view.TouchActive = s.menuInput.IsTouchActive()
 	view.PlayerCount = s.settings.GetPlayers()
 	s.renderer.Draw(screen, view)
+}
+
+// backTapped — тап по экранной кнопке выхода в главное меню
+func (s *LevelSelectState) backTapped() bool {
+	position, tapped := s.menuInput.Tapped()
+	return tapped && s.renderer.HitBack(position)
 }
 
 // handleNavigation — влево-вправо листают уровни, вверх-вниз — пачки

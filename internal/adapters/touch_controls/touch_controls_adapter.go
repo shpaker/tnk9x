@@ -53,6 +53,9 @@ type TouchControlsAdapter struct {
 	// Состояние кадра
 	players   [playersCount]playerTouches
 	pauseJust bool
+	// Тап по игровому экрану в логических координатах
+	tapJust     bool
+	tapPosition types.Position
 
 	// Ebiten-функции инжектируются для headless-тестов
 	appendTouchIDs            func([]ebiten.TouchID) []ebiten.TouchID
@@ -93,6 +96,7 @@ func NewTouchControlsAdapter(
 // в кадр из game loop до обновления игрового состояния
 func (a *TouchControlsAdapter) Update() {
 	a.pauseJust = false
+	a.tapJust = false
 	for i := range a.players {
 		a.players[i].fireJust = false
 		a.players[i].directionJust = false
@@ -149,6 +153,10 @@ func (a *TouchControlsAdapter) FireJustPressed(
 
 func (a *TouchControlsAdapter) PauseJustPressed() bool {
 	return a.pauseJust
+}
+
+func (a *TouchControlsAdapter) TapJustPressed() (types.Position, bool) {
+	return a.tapPosition, a.tapJust
 }
 
 // SetScreenSize фиксирует размер финального экрана (вызывается из
@@ -217,7 +225,8 @@ func (a *TouchControlsAdapter) computeLayout() ControlsLayout {
 }
 
 // handleJustPressed раздаёт новые касания по зонам: контроллы
-// забирают тач во владение, касания вне контролов не действуют
+// забирают тач во владение, касание игрового экрана вне контролов —
+// тап по экранным кнопкам
 func (a *TouchControlsAdapter) handleJustPressed() {
 	for _, id := range a.justPressedIDs {
 		sx, sy := a.screenTouchPosition(id)
@@ -226,17 +235,38 @@ func (a *TouchControlsAdapter) handleJustPressed() {
 			a.pauseJust = true
 			continue
 		}
+		claimed := false
 		for i, controls := range a.layout.Players {
 			touches := &a.players[i]
 			switch {
 			case point.In(controls.DPad):
 				touches.dpadTouchIDs = append(touches.dpadTouchIDs, id)
+				claimed = true
 			case point.In(controls.Fire):
 				touches.fireTouchIDs = append(touches.fireTouchIDs, id)
 				touches.fireJust = true
+				claimed = true
 			}
 		}
+		if !claimed {
+			a.handleTap(sx, sy)
+		}
 	}
+}
+
+// handleTap переводит касание в логические координаты игрового
+// экрана; касания полей вне игры не действуют
+func (a *TouchControlsAdapter) handleTap(sx, sy float64) {
+	if a.gameScale <= 0 {
+		return
+	}
+	x := (sx - float64(a.gameX)) / float64(a.gameScale)
+	y := (sy - float64(a.gameY)) / float64(a.gameScale)
+	if x < 0 || y < 0 || x >= float64(a.logicalW) || y >= float64(a.logicalH) {
+		return
+	}
+	a.tapJust = true
+	a.tapPosition = types.Position{X: x, Y: y}
 }
 
 func (a *TouchControlsAdapter) screenTouchPosition(

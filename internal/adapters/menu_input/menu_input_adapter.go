@@ -45,6 +45,8 @@ type MenuInputAdapter struct {
 	side            int
 	confirmed, back bool
 	pause           bool
+	tapped          bool
+	tapPosition     types.Position
 
 	// Стики геймпадов: шаг меню — только при отклонении или смене
 	// направления, удержание не листает
@@ -116,6 +118,10 @@ func (a *MenuInputAdapter) PauseJustPressed() bool {
 	return a.pause
 }
 
+func (a *MenuInputAdapter) Tapped() (types.Position, bool) {
+	return a.tapPosition, a.tapped
+}
+
 // updateGamepads: крестовина и стик — шаги, A — выбор, B — назад,
 // Start — назад и пауза
 func (a *MenuInputAdapter) updateGamepads() {
@@ -167,8 +173,10 @@ func (a *MenuInputAdapter) applyStick(id ebiten.GamepadID) {
 	)
 }
 
-// updateTouch: крестовины и огонь обоих игроков, общая пауза
+// updateTouch: крестовины и огонь обоих игроков, общая пауза, тапы
+// по экранным кнопкам
 func (a *MenuInputAdapter) updateTouch() {
+	a.tapPosition, a.tapped = a.touchControls.TapJustPressed()
 	for _, player := range menuPlayers {
 		if direction, ok := a.touchControls.DPadJustPressed(player); ok {
 			a.applyDirection(
