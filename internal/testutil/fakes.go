@@ -4,6 +4,8 @@ package testutil
 import (
 	"fmt"
 	"image"
+	"sort"
+	"strings"
 
 	"github.com/shpaker/tnk9x/internal/interfaces"
 	"github.com/shpaker/tnk9x/internal/types"
@@ -343,6 +345,8 @@ type FakePlatform struct {
 	IntermissionCalls int
 	// Gameplay — значения SetGameplayActive по порядку
 	Gameplay []bool
+	// Language — язык площадки
+	Language string
 }
 
 var _ interfaces.IPlatformAdapter = (*FakePlatform)(nil)
@@ -352,6 +356,7 @@ func (f *FakePlatform) IsSuspended() bool     { return f.Suspended }
 func (f *FakePlatform) IsJustSuspended() bool { return f.JustSuspended }
 func (f *FakePlatform) Ready()                { f.ReadyCalls++ }
 func (f *FakePlatform) RequestIntermission()  { f.IntermissionCalls++ }
+func (f *FakePlatform) GetLanguage() string   { return f.Language }
 
 func (f *FakePlatform) SetGameplayActive(active bool) {
 	f.Gameplay = append(f.Gameplay, active)
@@ -408,4 +413,57 @@ func (f *FakeReward) PollReward() types.RewardStatus {
 		f.Status = types.RewardStatusNone
 	}
 	return status
+}
+
+// FakeTexts реализует interfaces.ITextsAdapter: текст — сам ключ,
+// параметры дописываются через пробел в порядке имён; языки
+// конфигурации — Languages, название языка — его код в верхнем регистре
+type FakeTexts struct {
+	Language  types.Language
+	Languages []types.Language
+}
+
+var _ interfaces.ITextsAdapter = (*FakeTexts)(nil)
+
+func (f *FakeTexts) GetLanguage() types.Language { return f.Language }
+
+func (f *FakeTexts) SetLanguage(language types.Language) error {
+	for _, supported := range f.Languages {
+		if supported == language {
+			f.Language = language
+			return nil
+		}
+	}
+	return fmt.Errorf("unsupported language %q", language)
+}
+
+func (f *FakeTexts) Get(key types.TextKey) string { return string(key) }
+
+func (f *FakeTexts) Format(key types.TextKey, args types.TextArgs) string {
+	names := make([]string, 0, len(args))
+	for name := range args {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	text := string(key)
+	for _, name := range names {
+		text += fmt.Sprintf(" %v", args[name])
+	}
+	return text
+}
+
+func (f *FakeTexts) Plural(
+	key types.TextKey,
+	count int,
+	args types.TextArgs,
+) string {
+	return f.Format(key, args) + fmt.Sprintf(" %d", count)
+}
+
+func (f *FakeTexts) GetOr(_ types.TextKey, fallback string) string {
+	return fallback
+}
+
+func (f *FakeTexts) GetLanguageName(language types.Language) string {
+	return strings.ToUpper(string(language))
 }

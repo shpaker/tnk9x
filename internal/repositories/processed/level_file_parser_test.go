@@ -178,7 +178,8 @@ func TestGetLevel_SectionedEntity(t *testing.T) {
 	}
 }
 
-// Без имени в файле уровень называется по номеру
+// Без имени в файле название пустое: рендер подписывает уровень
+// номером на языке интерфейса
 func TestGetLevel_DefaultName(t *testing.T) {
 	fileRepository := NewMockFileRepository()
 	fileRepository.AddFile("levels/7.bcmap", []byte("..\n.."))
@@ -192,8 +193,8 @@ func TestGetLevel_DefaultName(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetLevel: %v", err)
 	}
-	if level.GetName() != "STAGE 07" {
-		t.Errorf("name %q, want STAGE 07", level.GetName())
+	if level.GetName() != "" {
+		t.Errorf("name %q, want empty", level.GetName())
 	}
 }
 

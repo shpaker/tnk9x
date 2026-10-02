@@ -29,3 +29,29 @@ func TestPlatformAdapter_Desktop(t *testing.T) {
 		t.Errorf("PollReward %v, want None", got)
 	}
 }
+
+// Первая значимая переменная локали; C и POSIX языка не задают
+func TestLanguageFromEnv(t *testing.T) {
+	cases := []struct {
+		env  map[string]string
+		want string
+	}{
+		{map[string]string{}, ""},
+		{map[string]string{"LANG": "ru_RU.UTF-8"}, "ru_RU.UTF-8"},
+		{map[string]string{"LANG": "C"}, ""},
+		{
+			map[string]string{"LC_ALL": "tr_TR.UTF-8", "LANG": "en_US"},
+			"tr_TR.UTF-8",
+		},
+		{
+			map[string]string{"LC_ALL": "POSIX", "LC_MESSAGES": "kk_KZ"},
+			"kk_KZ",
+		},
+	}
+	for _, c := range cases {
+		lookup := func(name string) string { return c.env[name] }
+		if got := languageFromEnv(lookup); got != c.want {
+			t.Errorf("%v: %q, want %q", c.env, got, c.want)
+		}
+	}
+}

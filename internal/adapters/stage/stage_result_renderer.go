@@ -14,27 +14,27 @@ import (
 )
 
 // stageResultLabels — подписи пунктов меню итогов
-var stageResultLabels = map[types.StageResultItem]string{
-	types.StageResultItemNext:       "NEXT STAGE",
-	types.StageResultItemContinue:   "CONTINUE",
-	types.StageResultItemRetry:      "RETRY",
-	types.StageResultItemLevels:     "STAGES",
-	types.StageResultItemRevive:     "REVIVE",
-	types.StageResultItemBoostNext:  "NEXT + BOOST",
-	types.StageResultItemBoostRetry: "RETRY + BOOST",
+var stageResultLabels = map[types.StageResultItem]types.TextKey{
+	types.StageResultItemNext:       types.TextResultNextStage,
+	types.StageResultItemContinue:   types.TextResultContinue,
+	types.StageResultItemRetry:      types.TextResultRetry,
+	types.StageResultItemLevels:     types.TextResultStages,
+	types.StageResultItemRevive:     types.TextResultRevive,
+	types.StageResultItemBoostNext:  types.TextResultBoostNext,
+	types.StageResultItemBoostRetry: types.TextResultBoostRetry,
 }
 
 // resultCaption — пояснение под пунктом меню итогов: текст
 // и ряд звёзд за ним
 type resultCaption struct {
-	label string
+	label types.TextKey
 	stars uint
 }
 
 // boostCaption — пояснение усиленного переноса: прокачка и жизнь
 // сверху, потолок звёзд как у переноса
 var boostCaption = resultCaption{
-	label: "TANK UP & +1 LIFE, MAX",
+	label: types.TextResultBoostCaption,
 	stars: types.MaxCarryOverStars,
 }
 
@@ -43,7 +43,7 @@ var boostCaption = resultCaption{
 // BOOST — усилением и тем же потолком
 var stageResultCaptions = map[types.StageResultItem]resultCaption{
 	types.StageResultItemContinue: {
-		label: "KEEP LIVES & TANK, MAX",
+		label: types.TextResultKeepCaption,
 		stars: types.MaxCarryOverStars,
 	},
 	types.StageResultItemBoostNext:  boostCaption,
@@ -52,7 +52,6 @@ var stageResultCaptions = map[types.StageResultItem]resultCaption{
 
 // Метка пункта за рекламу: рамка с текстом справа от подписи
 const (
-	rewardBadgeLabel   = "AD"
 	rewardBadgeGap     = 6
 	rewardBadgePadding = 2
 )
@@ -104,9 +103,9 @@ func (r *StageRendererAdapter) DrawStageResult(
 	)
 
 	if reveal.Title > 0 {
-		title := "VICTORY"
+		title := r.texts.Get(types.TextResultVictory)
 		if !view.Won {
-			title = "DEFEAT"
+			title = r.texts.Get(types.TextResultDefeat)
 		}
 		titleWidth, _ := text.Measure(title, r.fontFace, 0)
 		titleOp := &text.DrawOptions{}
@@ -151,11 +150,13 @@ func (r *StageRendererAdapter) DrawStageResult(
 		}
 		if item.IsRewarded() {
 			r.drawRewardedResultLine(
-				screen, stageResultLabels[item], layout.rowTops[i], rowColor,
+				screen, r.texts.Get(stageResultLabels[item]),
+				layout.rowTops[i], rowColor,
 			)
 		} else {
 			r.drawResultLine(
-				screen, stageResultLabels[item], layout.rowTops[i], rowColor,
+				screen, r.texts.Get(stageResultLabels[item]),
+				layout.rowTops[i], rowColor,
 			)
 		}
 		if caption, ok := stageResultCaptions[item]; ok {
@@ -182,10 +183,10 @@ func (r *StageRendererAdapter) drawResultStats(
 	height, alpha float64,
 ) {
 	seconds := view.ElapsedTicks / 60
-	stats := fmt.Sprintf(
-		"TIME %d:%02d  LIVES LOST %d",
-		seconds/60, seconds%60, view.LivesLost,
-	)
+	stats := r.texts.Format(types.TextResultStats, types.TextArgs{
+		"Time":  fmt.Sprintf("%d:%02d", seconds/60, seconds%60),
+		"Lives": view.LivesLost,
+	})
 	r.drawResultLine(
 		screen, stats, height*resultStatsY, withAlpha(subtleTextColor, alpha),
 	)
@@ -193,14 +194,17 @@ func (r *StageRendererAdapter) drawResultStats(
 	noteTop := height*resultStatsY + lineStep
 	if view.NewBest {
 		r.drawResultLine(
-			screen, "NEW BEST", noteTop, withAlpha(newBestColor, alpha),
+			screen, r.texts.Get(types.TextResultNewBest), noteTop,
+			withAlpha(newBestColor, alpha),
 		)
 		noteTop += lineStep
 	}
 	if view.CarriedOver {
 		r.drawResultLine(
 			screen,
-			fmt.Sprintf("CARRY-OVER: MAX %d STARS", types.MaxCarryOverStars),
+			r.texts.Plural(
+				types.TextResultCarryOver, int(types.MaxCarryOverStars), nil,
+			),
 			noteTop, withAlpha(subtleTextColor, alpha),
 		)
 	}
@@ -322,7 +326,8 @@ func (r *StageRendererAdapter) drawResultCaption(
 	if scale <= 0 {
 		scale = 1
 	}
-	labelWidth, _ := text.Measure(caption.label, r.fontFace, 0)
+	label := r.texts.Get(caption.label)
+	labelWidth, _ := text.Measure(label, r.fontFace, 0)
 	labelWidth *= scale
 	starsWidth := float64(captionStarStep*(caption.stars-1)) +
 		2*captionStarRadius
@@ -333,7 +338,7 @@ func (r *StageRendererAdapter) drawResultCaption(
 	op.GeoM.Scale(scale, scale)
 	op.GeoM.Translate(left, top)
 	op.ColorScale.ScaleWithColor(captionColor)
-	text.Draw(screen, caption.label, r.fontFace, op)
+	text.Draw(screen, label, r.fontFace, op)
 
 	ui.DrawStarsRow(
 		screen,
@@ -358,8 +363,9 @@ func (r *StageRendererAdapter) drawRewardedResultLine(
 	}
 	labelWidth, _ := text.Measure(label, r.fontFace, 0)
 	labelWidth *= scale
+	badgeLabel := r.texts.Get(types.TextResultAd)
 	badgeTextWidth, badgeTextHeight := text.Measure(
-		rewardBadgeLabel, r.fontFace, 0,
+		badgeLabel, r.fontFace, 0,
 	)
 	badgeTextWidth *= scale
 	badgeTextHeight *= scale
@@ -384,7 +390,7 @@ func (r *StageRendererAdapter) drawRewardedResultLine(
 	badgeOp.GeoM.Scale(scale, scale)
 	badgeOp.GeoM.Translate(badgeLeft+rewardBadgePadding, top)
 	badgeOp.ColorScale.ScaleWithColor(newBestColor)
-	text.Draw(screen, rewardBadgeLabel, r.fontFace, badgeOp)
+	text.Draw(screen, badgeLabel, r.fontFace, badgeOp)
 }
 
 func (r *StageRendererAdapter) drawResultLine(

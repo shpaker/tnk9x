@@ -10,6 +10,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"github.com/shpaker/tnk9x/internal/adapters/ui"
+	"github.com/shpaker/tnk9x/internal/interfaces"
 	"github.com/shpaker/tnk9x/internal/types"
 )
 
@@ -31,6 +32,10 @@ const (
 	backPadding = 3
 	// packArrowHitWidth — ширина хита стрелок пачек от края экрана
 	packArrowHitWidth = 32
+	// Ряд звёзд рекорда: центр от начала подписи и наименьшее
+	// расстояние от конца подписи до центра ряда
+	bestStarsCenter = 56
+	bestStarsGap    = 24
 )
 
 // Цвета экрана выбора уровня
@@ -61,6 +66,7 @@ var enemyLetters = [types.EnemyLevelsCount]string{"B", "F", "P", "A"}
 // LevelSelectRendererAdapter рисует экран выбора уровня
 // и отвечает на хит-тесты тапов по последней отрисовке
 type LevelSelectRendererAdapter struct {
+	texts           interfaces.ITextsAdapter
 	fontFace        text.Face
 	titleFontSize   int
 	regularFontSize int
@@ -81,6 +87,7 @@ type LevelSelectRendererAdapter struct {
 // LevelSelectRendererDependencies — зависимости рендера экрана выбора
 // уровня; собирается composition root'ом, все поля обязательны
 type LevelSelectRendererDependencies struct {
+	Texts           interfaces.ITextsAdapter
 	FontFace        text.Face
 	TitleFontSize   int
 	RegularFontSize int
@@ -95,6 +102,7 @@ func NewLevelSelectRendererAdapter(
 	deps LevelSelectRendererDependencies,
 ) *LevelSelectRendererAdapter {
 	return &LevelSelectRendererAdapter{
+		texts:           deps.Texts,
 		fontFace:        deps.FontFace,
 		titleFontSize:   deps.TitleFontSize,
 		regularFontSize: deps.RegularFontSize,
@@ -126,8 +134,11 @@ func (r *LevelSelectRendererAdapter) drawHeader(
 	view types.LevelSelectViewData,
 	width float64,
 ) {
+	packName := r.texts.GetOr(
+		types.PackNameTextKey(view.PackIndex+1), view.PackName,
+	)
 	header := fmt.Sprintf(
-		"%d/%d %s", view.PackIndex+1, view.PacksCount, view.PackName,
+		"%d/%d %s", view.PackIndex+1, view.PacksCount, packName,
 	)
 	r.drawCentered(screen, header, headerY, width, textColor)
 
@@ -322,10 +333,16 @@ func (r *LevelSelectRendererAdapter) drawInfo(
 	y := float64(previewTop)
 
 	if !view.Pack.Unlocked {
-		r.drawText(screen, "LOCKED", infoLeft, y, lockedColor)
+		r.drawText(
+			screen, r.texts.Get(types.TextLevelSelectLocked),
+			infoLeft, y, lockedColor,
+		)
 		y += lineHeight * 1.5
 		if view.Pack.TotalStars < view.Pack.RequiredStars {
-			r.drawText(screen, "COLLECT", infoLeft, y, dimTextColor)
+			r.drawText(
+				screen, r.texts.Get(types.TextLevelSelectCollect),
+				infoLeft, y, dimTextColor,
+			)
 			y += lineHeight
 			r.drawStarCounterAt(
 				screen, infoLeft, y,
@@ -338,7 +355,9 @@ func (r *LevelSelectRendererAdapter) drawInfo(
 		if view.Pack.UnlockAfter > 0 {
 			r.drawText(
 				screen,
-				fmt.Sprintf("WIN STAGE %02d", view.Pack.UnlockAfter),
+				r.texts.Format(types.TextLevelSelectWinStage, types.TextArgs{
+					"Stage": fmt.Sprintf("%02d", view.Pack.UnlockAfter),
+				}),
 				infoLeft, y, dimTextColor,
 			)
 		}
@@ -349,10 +368,13 @@ func (r *LevelSelectRendererAdapter) drawInfo(
 		return
 	}
 
-	r.drawText(screen, view.Level.GetName(), infoLeft, y, textColor)
+	r.drawText(screen, r.levelName(view.Level), infoLeft, y, textColor)
 	y += lineHeight * 1.5
 
-	r.drawText(screen, "ENEMIES", infoLeft, y, dimTextColor)
+	r.drawText(
+		screen, r.texts.Get(types.TextLevelSelectEnemies),
+		infoLeft, y, dimTextColor,
+	)
 	y += lineHeight
 	for index, count := range view.EnemyCounts {
 		r.drawText(
@@ -378,23 +400,40 @@ func (r *LevelSelectRendererAdapter) drawInfo(
 	y += lineHeight * 1.5
 
 	if !view.LevelUnlocked {
-		r.drawText(screen, "WIN PREVIOUS", infoLeft, y, lockedColor)
+		r.drawText(
+			screen, r.texts.Get(types.TextLevelSelectWinPrevious),
+			infoLeft, y, lockedColor,
+		)
 		return
 	}
-	r.drawText(screen, "BEST", infoLeft, y, dimTextColor)
+	best := r.texts.Get(types.TextLevelSelectBest)
+	r.drawText(screen, best, infoLeft, y, dimTextColor)
+	// Звёзды рекорда — не ближе зазора к подписи любой длины
+	starsCenter := max(bestStarsCenter, r.textWidth(best)+bestStarsGap)
 	ui.DrawStarsRow(
 		screen,
-		float32(infoLeft+56), float32(y+4),
+		float32(infoLeft+starsCenter), float32(y+4),
 		4.5, 12,
 		view.LevelStars, types.MaxLevelStars,
 	)
 }
 
-// Подсказка клавиатуры и подпись тап-кнопки выхода
-const (
-	keyboardHint = "ARROWS SELECT  ESC BACK"
-	backLabel    = "MAIN MENU"
-)
+// levelName — название уровня на языке интерфейса: перевод
+// из локали, иначе название из файла карты, а у карты без
+// названия — номер
+func (r *LevelSelectRendererAdapter) levelName(
+	level *types.LevelEntity,
+) string {
+	name := r.texts.GetOr(
+		types.LevelNameTextKey(level.GetNumber()), level.GetName(),
+	)
+	if name != "" {
+		return name
+	}
+	return r.texts.Format(types.TextLevelSelectStageFallback, types.TextArgs{
+		"Stage": fmt.Sprintf("%02d", level.GetNumber()),
+	})
+}
 
 // HitBack — тап попал в кнопку выхода последней отрисовки
 func (r *LevelSelectRendererAdapter) HitBack(position types.Position) bool {
@@ -429,23 +468,24 @@ func (r *LevelSelectRendererAdapter) drawFooter(
 	width, height float64,
 ) {
 	r.backRect = image.Rectangle{}
-	button := "ENTER"
+	button := r.texts.Get(types.TextLevelSelectButtonEnter)
 	if view.TouchActive {
-		button = "FIRE"
+		button = r.texts.Get(types.TextLevelSelectButtonFire)
 	}
 	if view.TouchActive || view.PointerActive {
 		r.drawBackButton(screen, width, height-hintBottomGap)
 	} else {
 		r.drawCentered(
-			screen, keyboardHint, height-hintBottomGap, width, hintColor,
+			screen, r.texts.Get(types.TextLevelSelectKeyboardHint),
+			height-hintBottomGap, width, hintColor,
 		)
 	}
 	// Строка запуска показывает режим: один или двое игроков
-	mode := "1 PLAYER"
+	startKey := types.TextLevelSelectStartOne
 	if view.PlayerCount > 1 {
-		mode = fmt.Sprintf("%d PLAYERS", view.PlayerCount)
+		startKey = types.TextLevelSelectStartTwo
 	}
-	start := fmt.Sprintf("PRESS %s: %s", button, mode)
+	start := r.texts.Format(startKey, types.TextArgs{"Button": button})
 
 	startColor := textColor
 	if !view.LevelUnlocked {
@@ -460,6 +500,7 @@ func (r *LevelSelectRendererAdapter) drawBackButton(
 	screen *ebiten.Image,
 	width, top float64,
 ) {
+	backLabel := r.texts.Get(types.TextLevelSelectMainMenu)
 	labelWidth := r.textWidth(backLabel)
 	left := (width - labelWidth) / 2
 	r.backRect = image.Rect(

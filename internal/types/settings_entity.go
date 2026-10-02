@@ -10,17 +10,18 @@ const defaultVolumeLevel = 5
 const MaxPlayers = 2
 
 // SettingsEntity — пользовательские настройки: режим графики,
-// полный экран, громкость и число игроков; одна на приложение,
+// полный экран, громкость, язык и число игроков; одна на приложение,
 // сохраняется между запусками
 type SettingsEntity struct {
 	effects     bool
 	fullscreen  bool
 	volumeLevel int
+	language    Language
 	players     uint
 }
 
 // NewSettingsEntity — настройки первого запуска: обычная графика
-// с эффектами, полный экран, громкость 50%, один игрок
+// с эффектами, полный экран, громкость 50%, язык площадки, один игрок
 func NewSettingsEntity() *SettingsEntity {
 	return &SettingsEntity{
 		effects:     true,
@@ -73,4 +74,13 @@ func (s *SettingsEntity) SetVolumeLevel(level int) {
 // GetVolume — громкость для звукового движка, 0..1
 func (s *SettingsEntity) GetVolume() float64 {
 	return float64(s.volumeLevel) / MaxVolumeLevel
+}
+
+// GetLanguage — язык, выбранный вручную; LanguageAuto — язык площадки
+func (s *SettingsEntity) GetLanguage() Language {
+	return s.language
+}
+
+func (s *SettingsEntity) SetLanguage(language Language) {
+	s.language = language
 }

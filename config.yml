@@ -5,6 +5,13 @@ app:
   subtitle_font_size: 8
   regular_font_size: 8
   game_title: "TNK9X"
+  # Interface languages: a file assets/locales/<code>.yml for each,
+  # the order is the order of the LANGUAGE setting
+  languages: [en, ru, tr]
+  # Language when the platform language is not supported
+  default_language: en
+  # Platform languages shown in a supported language instead
+  language_fallbacks: {be: ru, kk: ru, uk: ru, uz: ru}
 
 game:
   enemy_spawners:

@@ -121,6 +121,7 @@ type menusEnv struct {
 	window          *fakeWindow
 	settings        *types.SettingsEntity
 	controls        *types.ControlsEntity
+	texts           *testutil.FakeTexts
 	controlsOverlay *states.ControlsOverlay
 	settingsOverlay *states.SettingsOverlay
 }
@@ -132,6 +133,7 @@ func newMenusEnv() *menusEnv {
 		window:   &fakeWindow{},
 		settings: types.NewSettingsEntity(),
 		controls: types.NewControlsEntity(),
+		texts:    &testutil.FakeTexts{Languages: testLanguageConfig.Languages},
 	}
 	env.controlsOverlay = states.NewControlsOverlay(
 		use_cases.NewControlsUseCases(memoryControlsRepository{}),
@@ -141,7 +143,10 @@ func newMenusEnv() *menusEnv {
 		env.controls,
 	)
 	env.settingsOverlay = states.NewSettingsOverlay(
-		use_cases.NewSettingsUseCases(memorySettingsRepository{}, true),
+		newSettingsUseCases(),
+		use_cases.NewLocalizationUseCases(
+			env.texts, testLanguageConfig, "",
+		),
 		nopSettingsRenderer{},
 		env.input,
 		&testutil.FakeSoundPlayer{},
@@ -150,6 +155,22 @@ func newMenusEnv() *menusEnv {
 		env.settings,
 	)
 	return env
+}
+
+// testLanguageConfig — языки интерфейса в тестах меню
+var testLanguageConfig = types.LanguageConfig{
+	Languages: []types.Language{"en", "ru"},
+	Default:   "en",
+}
+
+// newSettingsUseCases — use cases настроек с фейковыми текстами
+func newSettingsUseCases() *use_cases.SettingsUseCases {
+	return use_cases.NewSettingsUseCases(
+		memorySettingsRepository{},
+		&testutil.FakeTexts{Languages: testLanguageConfig.Languages},
+		true,
+		testLanguageConfig.Languages,
+	)
 }
 
 // frame — один кадр с заданным вводом
@@ -163,7 +184,7 @@ func TestHotkeysHandler(t *testing.T) {
 	env := newMenusEnv()
 	hotkeys := &fakeHotkeys{}
 	handler := states.NewHotkeysHandler(
-		use_cases.NewSettingsUseCases(memorySettingsRepository{}, true),
+		newSettingsUseCases(),
 		hotkeys,
 		env.window,
 		env.settingsOverlay,
@@ -340,15 +361,13 @@ func newMainMenu(
 	scene *countingScene,
 ) *states.MainMenuState {
 	return states.NewMainMenuState(states.MainMenuStateDependencies{
-		SettingsUseCases: use_cases.NewSettingsUseCases(
-			memorySettingsRepository{}, true,
-		),
-		Renderer:        nopMainMenuRenderer{},
-		MenuInput:       env.input,
-		Scene:           scene,
-		SettingsOverlay: env.settingsOverlay,
-		Settings:        env.settings,
-		QuitAvailable:   true,
+		SettingsUseCases: newSettingsUseCases(),
+		Renderer:         nopMainMenuRenderer{},
+		MenuInput:        env.input,
+		Scene:            scene,
+		SettingsOverlay:  env.settingsOverlay,
+		Settings:         env.settings,
+		QuitAvailable:    true,
 	})
 }
 
@@ -459,7 +478,7 @@ func TestSettingsOverlay_Mouse(t *testing.T) {
 	}
 
 	// Клик по CONTROLS открывает раскладку, правая кнопка закрывает
-	env.frame(env.settingsOverlay.Update, clickAt(3, 0))
+	env.frame(env.settingsOverlay.Update, clickAt(4, 0))
 	if !env.controlsOverlay.IsOpen() {
 		t.Fatal("клик по CONTROLS открывает раскладку")
 	}
@@ -473,6 +492,22 @@ func TestSettingsOverlay_Mouse(t *testing.T) {
 	)
 	if env.settingsOverlay.IsOpen() {
 		t.Error("назад закрывает раскладку, затем настройки")
+	}
+}
+
+// Смена языка в настройках сразу делает его активным
+func TestSettingsOverlay_Language(t *testing.T) {
+	env := newMenusEnv()
+	env.settingsOverlay.Open()
+
+	env.frame(env.settingsOverlay.Update, pointAt(3, 0))
+	env.frame(env.settingsOverlay.Update, testutil.FakeMenuInput{Side: 1})
+	env.frame(env.settingsOverlay.Update, testutil.FakeMenuInput{Side: 1})
+	if env.settings.GetLanguage() != "ru" || env.texts.GetLanguage() != "ru" {
+		t.Errorf(
+			"выбран %q, активен %q, ожидался ru",
+			env.settings.GetLanguage(), env.texts.GetLanguage(),
+		)
 	}
 }
 

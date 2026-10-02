@@ -4,9 +4,27 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/shpaker/tnk9x/internal/testutil"
 	"github.com/shpaker/tnk9x/internal/types"
 	"github.com/shpaker/tnk9x/internal/use_cases"
 )
+
+// testLanguages — языки конфигурации в тестах
+var testLanguages = []types.Language{"en", "ru", "tr"}
+
+// newSettingsUseCases — use cases настроек с фейковыми текстами:
+// значение — ключ текста
+func newSettingsUseCases(
+	repository *recordingSettingsRepository,
+	fullscreenAvailable bool,
+) *use_cases.SettingsUseCases {
+	return use_cases.NewSettingsUseCases(
+		repository,
+		&testutil.FakeTexts{Languages: testLanguages},
+		fullscreenAvailable,
+		testLanguages,
+	)
+}
 
 // recordingSettingsRepository считает сохранения настроек
 type recordingSettingsRepository struct {
@@ -30,7 +48,7 @@ func (r *recordingSettingsRepository) SaveSettings(
 
 func TestSettings_ChangeTogglesAndSaves(t *testing.T) {
 	repository := &recordingSettingsRepository{}
-	settingsUseCases := use_cases.NewSettingsUseCases(repository, true)
+	settingsUseCases := newSettingsUseCases(repository, true)
 	settings := types.NewSettingsEntity()
 
 	_ = settingsUseCases.Change(settings, types.SettingsItemGraphics, 1)
@@ -46,7 +64,7 @@ func TestSettings_ChangeTogglesAndSaves(t *testing.T) {
 
 func TestSettings_ChangeVolume(t *testing.T) {
 	repository := &recordingSettingsRepository{}
-	settingsUseCases := use_cases.NewSettingsUseCases(repository, true)
+	settingsUseCases := newSettingsUseCases(repository, true)
 	settings := types.NewSettingsEntity()
 
 	_ = settingsUseCases.Change(settings, types.SettingsItemVolume, 2)
@@ -64,7 +82,7 @@ func TestSettings_ChangeVolume(t *testing.T) {
 
 func TestSettings_ChangeBackAndSaveError(t *testing.T) {
 	repository := &recordingSettingsRepository{err: errors.New("disk full")}
-	settingsUseCases := use_cases.NewSettingsUseCases(repository, true)
+	settingsUseCases := newSettingsUseCases(repository, true)
 	settings := types.NewSettingsEntity()
 
 	for _, item := range []types.SettingsItem{
@@ -86,7 +104,7 @@ func TestSettings_ChangeBackAndSaveError(t *testing.T) {
 
 func TestSettings_SetPlayers(t *testing.T) {
 	repository := &recordingSettingsRepository{}
-	settingsUseCases := use_cases.NewSettingsUseCases(repository, true)
+	settingsUseCases := newSettingsUseCases(repository, true)
 	settings := types.NewSettingsEntity()
 
 	_ = settingsUseCases.SetPlayers(settings, 2)
@@ -101,12 +119,15 @@ func TestSettings_SetPlayers(t *testing.T) {
 	_ = settingsUseCases.SetPlayers(settings, 1)
 	_ = settingsUseCases.SetPlayers(settings, 0)
 	if settings.GetPlayers() != 1 || repository.saves != 2 {
-		t.Errorf("без смены режима хранилище не трогается: %d", repository.saves)
+		t.Errorf(
+			"без смены режима хранилище не трогается: %d",
+			repository.saves,
+		)
 	}
 }
 
 func TestSettings_BuildView(t *testing.T) {
-	settingsUseCases := use_cases.NewSettingsUseCases(
+	settingsUseCases := newSettingsUseCases(
 		&recordingSettingsRepository{}, true,
 	)
 	settings := types.NewSettingsEntity()
@@ -115,9 +136,10 @@ func TestSettings_BuildView(t *testing.T) {
 	view := settingsUseCases.BuildView(settings, 2)
 
 	want := []types.SettingsRow{
-		{Item: types.SettingsItemGraphics, Value: "CLASSIC"},
-		{Item: types.SettingsItemFullscreen, Value: "ON"},
-		{Item: types.SettingsItemVolume, Value: "50%"},
+		{Item: types.SettingsItemGraphics, Value: "settings.graphics_classic"},
+		{Item: types.SettingsItemFullscreen, Value: "settings.on"},
+		{Item: types.SettingsItemVolume, Value: "settings.volume_percent 50"},
+		{Item: types.SettingsItemLanguage, Value: "settings.language_auto"},
 		{Item: types.SettingsItemControls},
 		{Item: types.SettingsItemBack},
 	}
@@ -137,12 +159,51 @@ func TestSettings_BuildView(t *testing.T) {
 
 // В браузере полного экрана на старте нет — нет и строки
 func TestSettings_NoFullscreenItem(t *testing.T) {
-	settingsUseCases := use_cases.NewSettingsUseCases(
+	settingsUseCases := newSettingsUseCases(
 		&recordingSettingsRepository{}, false,
 	)
 	for _, item := range settingsUseCases.Items() {
 		if item == types.SettingsItemFullscreen {
 			t.Fatal("строки FULLSCREEN быть не должно")
 		}
+	}
+}
+
+// Язык идёт по кругу AUTO и языков конфигурации в обе стороны;
+// выбранный язык показывается своим названием
+func TestSettings_ChangeLanguage(t *testing.T) {
+	repository := &recordingSettingsRepository{}
+	settingsUseCases := newSettingsUseCases(repository, true)
+	settings := types.NewSettingsEntity()
+
+	for _, want := range []types.Language{"en", "ru", "tr", types.LanguageAuto} {
+		_ = settingsUseCases.Change(settings, types.SettingsItemLanguage, 1)
+		if settings.GetLanguage() != want {
+			t.Errorf("язык %q, ожидался %q", settings.GetLanguage(), want)
+		}
+	}
+	_ = settingsUseCases.Change(settings, types.SettingsItemLanguage, -1)
+	if settings.GetLanguage() != "tr" {
+		t.Errorf("назад от AUTO — %q, ожидался tr", settings.GetLanguage())
+	}
+	if repository.saves != 5 {
+		t.Errorf("сохранений %d, ожидалось 5", repository.saves)
+	}
+
+	view := settingsUseCases.BuildView(settings, 0)
+	for _, row := range view.Rows {
+		if row.Item == types.SettingsItemLanguage && row.Value != "TR" {
+			t.Errorf("значение языка %q, ожидалось TR", row.Value)
+		}
+	}
+
+	// Выбор, которого больше нет среди языков, — AUTO
+	settings.SetLanguage("de")
+	_ = settingsUseCases.Change(settings, types.SettingsItemLanguage, 1)
+	if settings.GetLanguage() != "en" {
+		t.Errorf(
+			"после неизвестного языка %q, ожидался en",
+			settings.GetLanguage(),
+		)
 	}
 }

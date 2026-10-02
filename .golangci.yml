@@ -92,6 +92,14 @@ linters-settings:
         deny:
           - pkg: syscall/js
             desc: браузер — только в internal/adapters/platform за IPlatformAdapter и в хранилище internal/repositories/raw
+      i18n-isolation:
+        files:
+          - "**/internal/**"
+          - "**/cmd/**"
+          - "!**/internal/adapters/texts/**"
+        deny:
+          - pkg: github.com/nicksnyder/go-i18n
+            desc: go-i18n — только в internal/adapters/texts за ITextsAdapter
       lua-isolation:
         files:
           - "**/internal/**"

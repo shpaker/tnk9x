@@ -9,15 +9,16 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
 
 	"github.com/shpaker/tnk9x/internal/adapters/ui"
+	"github.com/shpaker/tnk9x/internal/interfaces"
 	"github.com/shpaker/tnk9x/internal/types"
 )
 
 // mainMenuLabels — подписи пунктов главного меню
-var mainMenuLabels = map[types.MainMenuItem]string{
-	types.MainMenuItemOnePlayer:  "1 PLAYER",
-	types.MainMenuItemTwoPlayers: "2 PLAYERS",
-	types.MainMenuItemSettings:   "SETTINGS",
-	types.MainMenuItemQuit:       "QUIT",
+var mainMenuLabels = map[types.MainMenuItem]types.TextKey{
+	types.MainMenuItemOnePlayer:  types.TextMainMenuOnePlayer,
+	types.MainMenuItemTwoPlayers: types.TextMainMenuTwoPlayers,
+	types.MainMenuItemSettings:   types.TextMainMenuSettings,
+	types.MainMenuItemQuit:       types.TextMainMenuQuit,
 }
 
 // Раскладка меню в логических координатах 256x224: пункты под
@@ -52,17 +53,20 @@ var outlineOffsets = [][2]float64{
 // MainMenuRendererAdapter рисует главное меню без затемнения сцены:
 // текст с чёрной обводкой читается и поверх кирпича, и поверх танков
 type MainMenuRendererAdapter struct {
-	font ui.MenuFont
+	texts interfaces.ITextsAdapter
+	font  ui.MenuFont
 	// hits — пункты последней отрисовки для мыши и тапов
 	hits ui.HitAreas
 }
 
 func NewMainMenuRendererAdapter(
+	texts interfaces.ITextsAdapter,
 	fontFace text.Face,
 	titleFontSize int,
 	regularFontSize int,
 ) *MainMenuRendererAdapter {
 	return &MainMenuRendererAdapter{
+		texts: texts,
 		font: ui.MenuFont{
 			Face:            fontFace,
 			TitleFontSize:   titleFontSize,
@@ -81,7 +85,9 @@ func (r *MainMenuRendererAdapter) Draw(
 	// Хиты пунктов — полоса шириной в самый длинный пункт
 	var widest float64
 	for _, item := range view.Items {
-		widest = max(widest, r.font.TextWidth(mainMenuLabels[item]))
+		widest = max(
+			widest, r.font.TextWidth(r.texts.Get(mainMenuLabels[item])),
+		)
 	}
 	hitLeft := (width-widest)/2 - menuHitPadding
 	rowHeight := float64(r.font.RegularFontSize)
@@ -93,7 +99,7 @@ func (r *MainMenuRendererAdapter) Draw(
 			float64(menuTop+i*menuRowStep),
 			rowHeight, menuRowStep-rowHeight,
 		))
-		label := mainMenuLabels[item]
+		label := r.texts.Get(mainMenuLabels[item])
 		textColor := rowColor
 		if i == view.ActiveIndex {
 			textColor = activeRowColor

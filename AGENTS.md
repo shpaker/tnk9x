@@ -78,6 +78,7 @@ web/                # Браузерный слой: загрузчик wasm и 
 - Скрипты: `IScriptsRepository.GetScript("enemies")`
 - Карты: `IMapsDataRepository.GetLevel(1)`
 - Тайлсеты: `ITilesetRepository.GetImage("brick")`
+- Тексты интерфейса: `ITextsAdapter.Get(types.TextMainMenuQuit)` — только из `assets/locales/<язык>.yml`, ключи — константы `types.TextKey`; литералы на экран запрещены. Языки и правила выбора — `config.yml`; go-i18n — только в `internal/adapters/texts`. Новый текст добавляется во все локали сразу
 
 ## Запрещено
 

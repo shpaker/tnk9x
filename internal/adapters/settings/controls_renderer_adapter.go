@@ -9,18 +9,36 @@ import (
 
 	"github.com/shpaker/tnk9x/internal/adapters/bindings"
 	"github.com/shpaker/tnk9x/internal/adapters/ui"
+	"github.com/shpaker/tnk9x/internal/interfaces"
 	"github.com/shpaker/tnk9x/internal/types"
 )
 
 // Подписи экрана раскладки
 var (
-	controlsPageLabels = [types.ControlsPagesCount]string{
-		"PLAYER 1", "PLAYER 2", "HOTKEYS",
+	controlsPageLabels = [types.ControlsPagesCount]types.TextKey{
+		types.TextControlsPlayer1,
+		types.TextControlsPlayer2,
+		types.TextControlsHotkeys,
 	}
-	actionLabels = [types.InputActionsCount]string{
-		"UP", "DOWN", "LEFT", "RIGHT", "FIRE",
+	actionLabels = [types.InputActionsCount]types.TextKey{
+		types.TextControlsUp,
+		types.TextControlsDown,
+		types.TextControlsLeft,
+		types.TextControlsRight,
+		types.TextControlsFire,
 	}
-	hotkeyLabels = [types.HotkeysCount]string{"GRAPHICS", "FULLSCREEN"}
+	hotkeyLabels = [types.HotkeysCount]types.TextKey{
+		types.TextControlsHotkeyGraphics,
+		types.TextControlsHotkeyFullscreen,
+	}
+	// arrowKeyLabels — стрелки подписываются на языке интерфейса,
+	// остальные клавиши — как на клавиатуре
+	arrowKeyLabels = map[string]types.TextKey{
+		"ArrowUp":    types.TextKeysUp,
+		"ArrowDown":  types.TextKeysDown,
+		"ArrowLeft":  types.TextKeysLeft,
+		"ArrowRight": types.TextKeysRight,
+	}
 )
 
 // Раскладка таблицы в логических координатах 256x224
@@ -49,17 +67,20 @@ var (
 // ControlsRendererAdapter рисует экран раскладки: страница игрока
 // или хоткеев, колонки клавиатуры и геймпада
 type ControlsRendererAdapter struct {
-	font ui.MenuFont
+	texts interfaces.ITextsAdapter
+	font  ui.MenuFont
 	// hits — строки последней отрисовки для мыши и тапов
 	hits ui.HitAreas
 }
 
 func NewControlsRendererAdapter(
+	texts interfaces.ITextsAdapter,
 	fontFace text.Face,
 	titleFontSize int,
 	regularFontSize int,
 ) *ControlsRendererAdapter {
 	return &ControlsRendererAdapter{
+		texts: texts,
 		font: ui.MenuFont{
 			Face:            fontFace,
 			TitleFontSize:   titleFontSize,
@@ -74,7 +95,9 @@ func (r *ControlsRendererAdapter) Draw(
 ) {
 	// Заголовок на той же высоте, что у SETTINGS
 	titleTop := ui.MenuTitleTop(screen, r.font)
-	ui.DrawOverlay(screen, r.font, "CONTROLS", titleTop)
+	ui.DrawOverlay(
+		screen, r.font, r.texts.Get(types.TextControlsTitle), titleTop,
+	)
 	width := float64(screen.Bounds().Dx())
 	cursor := view.Cursor
 
@@ -95,14 +118,14 @@ func (r *ControlsRendererAdapter) Draw(
 		switch row.Kind {
 		case types.ControlsRowPage:
 			r.drawCentered(
-				screen, "< "+controlsPageLabels[cursor.Page]+" >",
+				screen, "< "+r.texts.Get(controlsPageLabels[cursor.Page])+" >",
 				top, width, rowColor,
 			)
 			top += controlsRowStep
 			// Шапка колонок под заголовком страницы
 			r.drawInColumn(
 				screen,
-				"KEY",
+				r.texts.Get(types.TextControlsKeyColumn),
 				keyColumnCenter,
 				top,
 				controlsHeaderColor,
@@ -110,7 +133,7 @@ func (r *ControlsRendererAdapter) Draw(
 			if isPlayerPage {
 				r.drawInColumn(
 					screen,
-					"PAD",
+					r.texts.Get(types.TextControlsPadColumn),
 					padColumnCenter,
 					top,
 					controlsHeaderColor,
@@ -119,29 +142,35 @@ func (r *ControlsRendererAdapter) Draw(
 		case types.ControlsRowAction:
 			r.font.Draw(
 				screen,
-				actionLabels[row.Action],
+				r.texts.Get(actionLabels[row.Action]),
 				controlsLabelLeft,
 				top,
 				rowColor,
 			)
 			r.drawCell(screen, view, active, types.ControlsDeviceKeyboard,
-				bindings.KeyLabel(row.Key), top)
+				r.keyLabel(row.Key), top)
 			r.drawCell(screen, view, active, types.ControlsDeviceGamepad,
 				row.Button, top)
 		case types.ControlsRowHotkey:
 			r.font.Draw(
 				screen,
-				hotkeyLabels[row.Hotkey],
+				r.texts.Get(hotkeyLabels[row.Hotkey]),
 				controlsLabelLeft,
 				top,
 				rowColor,
 			)
 			r.drawCell(screen, view, active, types.ControlsDeviceKeyboard,
-				bindings.KeyLabel(row.Key), top)
+				r.keyLabel(row.Key), top)
 		case types.ControlsRowReset:
-			r.drawCentered(screen, "RESET ALL", top, width, rowColor)
+			r.drawCentered(
+				screen, r.texts.Get(types.TextControlsResetAll),
+				top, width, rowColor,
+			)
 		case types.ControlsRowBack:
-			r.drawCentered(screen, "BACK", top, width, rowColor)
+			r.drawCentered(
+				screen, r.texts.Get(types.TextControlsBack),
+				top, width, rowColor,
+			)
 		}
 		top += controlsRowStep
 	}
@@ -210,16 +239,24 @@ func (r *ControlsRendererAdapter) drawHint(
 	if !cursor.Capturing {
 		return
 	}
-	hint := "PRESS A KEY  ESC CANCEL"
+	hint := r.texts.Get(types.TextControlsPressKey)
 	if cursor.Column == types.ControlsDeviceGamepad {
-		hint = "PRESS A BUTTON  ESC CANCEL"
+		hint = r.texts.Get(types.TextControlsPressButton)
 	}
 	hintColor := controlsHeaderColor
 	if cursor.Rejected {
-		hint = "ALREADY TAKEN"
+		hint = r.texts.Get(types.TextControlsAlreadyTaken)
 		hintColor = controlsRejectColor
 	}
 	r.drawCentered(screen, hint, controlsHintTop, width, hintColor)
+}
+
+// keyLabel — подпись клавиши в ячейке раскладки
+func (r *ControlsRendererAdapter) keyLabel(name string) string {
+	if key, ok := arrowKeyLabels[name]; ok {
+		return r.texts.Get(key)
+	}
+	return bindings.KeyLabel(name)
 }
 
 func (r *ControlsRendererAdapter) drawInColumn(
