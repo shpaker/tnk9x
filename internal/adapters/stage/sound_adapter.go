@@ -89,9 +89,9 @@ func (a *SoundAdapter) Play(soundID types.SoundID) error {
 		return fmt.Errorf("unknown sound '%s'", soundID)
 	}
 
-	// Закрываем предыдущий проигрыватель до создания нового
+	// Останавливаем предыдущий проигрыватель до создания нового
 	if oldPlayer, exists := a.players[soundID]; exists {
-		_ = oldPlayer.Close()
+		oldPlayer.PauseAndStopReading()
 		delete(a.players, soundID)
 	}
 
@@ -109,7 +109,7 @@ func (a *SoundAdapter) PlayLoop(soundID types.SoundID) error {
 		if player.IsPlaying() {
 			return nil
 		}
-		_ = player.Close()
+		player.PauseAndStopReading()
 		delete(a.loopPlayers, soundID)
 	}
 
@@ -139,12 +139,12 @@ func (a *SoundAdapter) PlayLoop(soundID types.SoundID) error {
 
 func (a *SoundAdapter) Stop(soundID types.SoundID) {
 	if player, exists := a.players[soundID]; exists {
-		_ = player.Close()
+		player.PauseAndStopReading()
 		delete(a.players, soundID)
 	}
 
 	if player, exists := a.loopPlayers[soundID]; exists {
-		_ = player.Close()
+		player.PauseAndStopReading()
 		delete(a.loopPlayers, soundID)
 	}
 }
@@ -152,14 +152,14 @@ func (a *SoundAdapter) Stop(soundID types.SoundID) {
 func (a *SoundAdapter) StopAll() {
 	for _, player := range a.players {
 		if player != nil {
-			_ = player.Close()
+			player.PauseAndStopReading()
 		}
 	}
 	a.players = make(map[types.SoundID]*audio.Player)
 
 	for _, player := range a.loopPlayers {
 		if player != nil {
-			_ = player.Close()
+			player.PauseAndStopReading()
 		}
 	}
 	a.loopPlayers = make(map[types.SoundID]*audio.Player)
@@ -181,14 +181,14 @@ func (a *SoundAdapter) Update() {
 	// Удаляем завершившиеся проигрыватели из обоих реестров
 	for soundID, player := range a.players {
 		if !player.IsPlaying() {
-			_ = player.Close()
+			player.PauseAndStopReading()
 			delete(a.players, soundID)
 		}
 	}
 
 	for soundID, player := range a.loopPlayers {
 		if !player.IsPlaying() {
-			_ = player.Close()
+			player.PauseAndStopReading()
 			delete(a.loopPlayers, soundID)
 		}
 	}
