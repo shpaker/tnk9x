@@ -81,7 +81,6 @@ type EffectsRendererAdapter struct {
 	lightColorsUniform []float32
 	lightConesUniform  []float32
 
-	frames int
 	// finalFrames — счётчик итоговых кадров для помех: CRT работает
 	// и в меню, где проход освещения не идёт
 	finalFrames int
@@ -160,7 +159,6 @@ func (a *EffectsRendererAdapter) DrawLighting(
 	lights []types.LightEntity,
 	shake image.Point,
 ) {
-	a.frames++
 	a.distortion = min(
 		1,
 		math.Hypot(float64(shake.X), float64(shake.Y))*distortionPerPixel,
@@ -201,7 +199,6 @@ func (a *EffectsRendererAdapter) DrawLighting(
 		"Ambient":     float32(lightingAmbient),
 		"Haze":        float32(lightingHaze),
 		"FieldRect":   fieldRect,
-		"Time":        float32(a.frames),
 	}
 	screen.DrawRectShader(size.X, size.Y, a.lightingShader, op)
 }
@@ -223,7 +220,7 @@ func (a *EffectsRendererAdapter) fillCone(i int, light types.LightEntity) {
 }
 
 // drawMask заливает маску материалов: R — непрозрачность,
-// G — отражательная способность, B — волнистость
+// G — отражательная способность, B — блики только на гребнях волн
 func (a *EffectsRendererAdapter) drawMask(surfaces []Surface) {
 	a.mask.Clear()
 	for _, surface := range surfaces {
