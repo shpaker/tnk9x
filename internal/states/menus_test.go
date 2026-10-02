@@ -271,11 +271,7 @@ func (s *countingScene) Update()            { s.updates++ }
 func (s *countingScene) Draw(*ebiten.Image) {}
 func (s *countingScene) StopSounds()        { s.stops++ }
 
-func newMainMenu(env *menusEnv) *states.MainMenuState {
-	return newMainMenuWithScene(env, &countingScene{})
-}
-
-func newMainMenuWithScene(
+func newMainMenu(
 	env *menusEnv,
 	scene *countingScene,
 ) *states.MainMenuState {
@@ -295,7 +291,7 @@ func newMainMenuWithScene(
 func TestMainMenuState_ModesAndQuit(t *testing.T) {
 	env := newMenusEnv()
 	scene := &countingScene{}
-	menu := newMainMenuWithScene(env, scene)
+	menu := newMainMenu(env, scene)
 
 	// 1 PLAYER -> 2 PLAYERS: выбор режима ведёт к выбору уровня
 	env.frame(func() { menu.Update() }, testutil.FakeMenuInput{Down: true})
@@ -311,12 +307,16 @@ func TestMainMenuState_ModesAndQuit(t *testing.T) {
 	}
 
 	// Курсор нового меню встаёт на последний режим; SETTINGS, QUIT
-	menu = newMainMenu(env)
+	scene = &countingScene{}
+	menu = newMainMenu(env, scene)
 	env.frame(func() { menu.Update() }, testutil.FakeMenuInput{Down: true})
 	env.frame(func() { menu.Update() }, testutil.FakeMenuInput{Down: true})
 	*env.input = testutil.FakeMenuInput{Confirm: true}
 	if transition := menu.Update(); transition.Target != types.TransitionToQuit {
 		t.Errorf("QUIT должен завершать игру, переход %v", transition.Target)
+	}
+	if scene.stops != 1 {
+		t.Errorf("выход глушит звуки сцены, заглушений %d", scene.stops)
 	}
 }
 

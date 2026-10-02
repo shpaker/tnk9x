@@ -17,7 +17,7 @@ A modern remake and tribute to the classic arcade game Battle City (NES, 1985), 
 **Playable now:**
 
 - Splash screen (SHPAKER logo from `assets/images/shpaker.png`, a text placeholder until it is drawn) with a real resource loading bar, fading through black into the main menu: 1 player, 2 players, settings, quit (desktop only)
-  - Behind the menu a live title scene (`assets/levels/demo/title.bcmap`): a one-line TNK9X (TNK in brick, 9X in steel) assembles block by block, then one enemy tank of each type roams the field under the real Lua AI and shoots; chipped title bricks slowly grow back one at a time; the tanks' shots and explosions are heard, the scene is not dimmed, the menu items are drawn with a black outline
+  - Behind the menu a live title scene (`assets/levels/demo/title.bcmap`): a one-line TNK9X (TNK in brick, 9X in steel) assembles block by block, then one enemy tank of each type roams the field under the real Lua AI and shoots; chipped title bricks slowly grow back one at a time; bullet hits on brick and steel are heard, the scene is not dimmed, the menu items are drawn with a black outline
 - Full game loop with HQ and a results screen that appears in stages: backdrop, result, stars one by one with a sound, time and lives lost, then the menu (any button skips the animation); next stage, retry or back to stage select
 - One or two players, chosen in the main menu, each mode with its own campaign progress; each player has a keyboard layout, a gamepad and touch controls at once
   - Default keys: P1 WASD and G to fire, P2 IJKL and ' to fire; rebind in settings
