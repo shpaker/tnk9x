@@ -15,6 +15,7 @@ import (
 	"github.com/shpaker/tnk9x/internal/adapters/level_select"
 	"github.com/shpaker/tnk9x/internal/adapters/main_menu"
 	"github.com/shpaker/tnk9x/internal/adapters/menu_input"
+	"github.com/shpaker/tnk9x/internal/adapters/platform"
 	"github.com/shpaker/tnk9x/internal/adapters/scripting"
 	"github.com/shpaker/tnk9x/internal/adapters/settings"
 	"github.com/shpaker/tnk9x/internal/adapters/splash"
@@ -68,6 +69,25 @@ type frameInput interface {
 	Update()
 }
 
+// Необязательные возможности состояния, определены у потребителя:
+// состояния сообщают факты, а площадке их передаёт App
+type (
+	// suspendable — состояние реагирует на приостановку игры
+	// площадкой (уровень уходит на паузу)
+	suspendable interface {
+		Suspend()
+	}
+	// gameplayReporter — состояние сообщает, идёт ли активный геймплей
+	gameplayReporter interface {
+		IsGameplayActive() bool
+	}
+)
+
+var (
+	_ suspendable      = (*states.StageState)(nil)
+	_ gameplayReporter = (*states.StageState)(nil)
+)
+
 // App — composition root. New собирает только то, что нужно сплешу;
 // остальной граф достраивают шаги загрузчика на сплеше, а стейты,
 // которым он нужен, собираются только после её завершения
@@ -98,6 +118,10 @@ type App struct {
 	menuInput          interfaces.IMenuInputAdapter
 	effectsRenderer    *effects.EffectsRendererAdapter
 	windowAdapter      interfaces.IWindowAdapter
+	// Площадка запуска: десктоп или браузер (страница, портал);
+	// один адаптер реализует оба контракта
+	platformAdapter interfaces.IPlatformAdapter
+	rewardAdapter   interfaces.IRewardAdapter
 
 	// Пользовательские настройки (графика, полный экран, громкость,
 	// режим) и раскладка управления
@@ -172,6 +196,7 @@ func New(cfg *Config) *App {
 		userSettings,
 	)
 	menuInput := menu_input.NewMenuInputAdapter(touchControls)
+	platformAdapter := platform.NewPlatformAdapter()
 
 	app := &App{
 		config:             cfg,
@@ -188,6 +213,8 @@ func New(cfg *Config) *App {
 		menuInput:          menuInput,
 		effectsRenderer:    effectsRenderer,
 		windowAdapter:      window.NewWindowAdapter(),
+		platformAdapter:    platformAdapter,
+		rewardAdapter:      platformAdapter,
 		settings:           userSettings,
 		controls:           userControls,
 	}
@@ -428,7 +455,7 @@ func loadCampaignLevels(
 
 // newStorageRepository — пользовательское хранилище прогресса,
 // настроек и раскладки: файлы в каталоге конфигурации ОС на десктопе,
-// localStorage в браузере
+// хранилище площадки (мост window.tnk9xPlatform) в браузере
 func newStorageRepository(cfg *Config) interfaces.IStorageRepository {
 	dir, err := raw.DefaultStorageDir(cfg.GetGameTitle())
 	if err != nil {
@@ -527,6 +554,21 @@ func (app *App) Update() error {
 		}
 	}
 
+	// Площадка опрашивается первой: пока она приостановила игру
+	// (реклама, скрытая вкладка), кадр пропускается целиком — ни
+	// ввода, ни обновления состояния. Начало приостановки отдаётся
+	// состоянию: уровень уходит на паузу
+	app.platformAdapter.Update()
+	if app.platformAdapter.IsJustSuspended() {
+		if state, ok := app.state.(suspendable); ok {
+			state.Suspend()
+		}
+	}
+	if app.platformAdapter.IsSuspended() {
+		app.platformAdapter.SetGameplayActive(false)
+		return nil
+	}
+
 	// Ввод опрашивается один раз на кадр до обновления состояния:
 	// тач — первым, меню собирает в том числе его события; затем
 	// глобальные хоткеи
@@ -535,13 +577,28 @@ func (app *App) Update() error {
 	}
 
 	transition := app.state.Update()
+	err := app.applyTransition(transition)
+	app.platformAdapter.SetGameplayActive(app.isGameplayActive())
 
-	return app.applyTransition(transition)
+	return err
+}
+
+// isGameplayActive — идёт ли в текущем состоянии активный геймплей
+func (app *App) isGameplayActive() bool {
+	state, ok := app.state.(gameplayReporter)
+	return ok && state.IsGameplayActive()
 }
 
 // applyTransition применяет запрошенный стейтом переход:
 // записывает параметры в сессию и собирает новое состояние
 func (app *App) applyTransition(transition types.StateTransition) error {
+	// Логическая пауза: площадка может показать рекламу до первого
+	// кадра нового состояния
+	if transition.Intermission {
+		app.platformAdapter.SetGameplayActive(false)
+		app.platformAdapter.RequestIntermission()
+	}
+
 	switch transition.Target {
 	case types.TransitionNone:
 		return nil
@@ -565,6 +622,9 @@ func (app *App) applyTransition(transition types.StateTransition) error {
 			return err
 		}
 		app.state = mainMenu
+		// Главное меню — первый экран, где игрок может играть:
+		// загрузка позади (повторные вызовы площадка игнорирует)
+		app.platformAdapter.Ready()
 	case types.TransitionToQuit:
 		// Пункт QUIT главного меню; в js-сборке выхода нет,
 		// поэтому переход возможен только на десктопе

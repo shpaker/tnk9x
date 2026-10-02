@@ -115,6 +115,7 @@ func (app *App) newStageState() (*states.StageState, error) {
 		Renderer:           graph.renderer,
 		SoundPlayerAdapter: app.soundAdapter,
 		MenuInput:          app.menuInput,
+		RewardAdapter:      app.rewardAdapter,
 		StageSession:       stageSession,
 		BonusesRepository:  graph.bonusesRepository,
 		SettingsOverlay:    app.settingsOverlay,

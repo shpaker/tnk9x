@@ -44,23 +44,66 @@ build-all: build-macos build-windows
     #!/bin/bash
     echo "macOS и Windows сборки готовы"
 
-build-wasm:
+# Файлы web/<target>/ кладутся поверх общих web/common/
+# Веб-сборка под площадку: pages (GitHub Pages) или yandex (Яндекс Игры)
+build-web target="pages":
     #!/bin/bash
     set -euo pipefail
-    out_dir="dist/web"
+    if [ ! -d "web/{{target}}" ]; then
+        echo "Unknown web target '{{target}}': web/{{target}}/ not found"
+        exit 1
+    fi
+    out_dir="dist/{{target}}"
     rm -rf "$out_dir"
     mkdir -p "$out_dir"
-    VERSION="dev-$(date -u +%Y-%m-%dT%H:%M)"
-    echo "Building WebAssembly (version $VERSION) -> $out_dir"
+    VERSION="${APP_VERSION:-dev-$(date -u +%Y%m%d-%H%M)}"
+    echo "Building web/{{target}} (version $VERSION) -> $out_dir"
     GOOS="js" GOARCH="wasm" {{gocmd}} build -trimpath -ldflags "-s -w -X github.com/shpaker/tnk9x/internal/app.Version=${VERSION}" -o "$out_dir/{{binary_name}}.wasm" ./cmd
     cp "$({{gocmd}} env GOROOT)/lib/wasm/wasm_exec.js" "$out_dir/"
-    cp web/index.html "$out_dir/"
-    echo "WASM build stored in $out_dir"
+    cp web/common/* "$out_dir/"
+    cp web/{{target}}/* "$out_dir/"
+    echo "Web build stored in $out_dir"
 
-serve-wasm: build-wasm
+# Локальный сервер веб-сборки площадки
+serve-web target="pages": (build-web target)
     #!/bin/bash
-    echo "Serving http://localhost:8000 ..."
-    python3 -m http.server 8000 -d dist/web
+    set -euo pipefail
+    py=python3
+    "$py" -c "" 2>/dev/null || py=python
+    echo "Serving dist/{{target}} at http://localhost:8000 ..."
+    "$py" -m http.server 8000 -d "dist/{{target}}"
+
+# Ключей и ID игры сборке не нужно: архив загружается в консоль вручную
+# Архив для консоли Яндекс Игр с index.html в корне
+package-yandex:
+    #!/bin/bash
+    set -euo pipefail
+    export APP_VERSION="${APP_VERSION:-dev-$(date -u +%Y%m%d-%H%M)}"
+    "{{just_executable()}}" build-web yandex
+    mkdir -p _build
+    archive="_build/{{binary_name}}_yandex_${APP_VERSION}.zip"
+    rm -f "$archive"
+    py=python3
+    "$py" -c "" 2>/dev/null || py=python
+    (cd dist/yandex && "$py" -m zipfile -c "../../$archive" *)
+    echo "Archive created: $archive"
+
+# ID игры не хранится в репозитории: YANDEX_APP_ID из окружения
+# или локального .env; без него — dev-режим с моками SDK
+# Запуск сборки Яндекса через sdk-dev-proxy (нужен Node.js)
+serve-yandex: (build-web "yandex")
+    #!/bin/bash
+    set -euo pipefail
+    if [ -f .env ]; then
+        set -a
+        . ./.env
+        set +a
+    fi
+    if [ -n "${YANDEX_APP_ID:-}" ]; then
+        npx @yandex-games/sdk-dev-proxy -p dist/yandex --app-id="$YANDEX_APP_ID"
+    else
+        npx @yandex-games/sdk-dev-proxy -p dist/yandex --dev-mode=true
+    fi
 
 package-macos:
     #!/bin/bash
@@ -174,6 +217,13 @@ lint:
     #!/bin/bash
     GOBIN_PATH="$({{gocmd}} env GOPATH)/bin"
     "$GOBIN_PATH/golangci-lint" run
+
+# Файлы с тегом js видны линтеру только при GOOS=js
+# Линтинг js/wasm-сборки
+lint-wasm:
+    #!/bin/bash
+    GOBIN_PATH="$({{gocmd}} env GOPATH)/bin"
+    GOOS=js GOARCH=wasm "$GOBIN_PATH/golangci-lint" run
 
 lint-notests:
     #!/bin/bash

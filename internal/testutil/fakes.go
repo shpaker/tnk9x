@@ -316,3 +316,56 @@ func (f *FakeTankCommonUseCases) SetMaxLevel(*types.TankEntity) {}
 func (f *FakeTankCommonUseCases) IsFrozen(*types.TankEntity) bool {
 	return f.Frozen
 }
+
+// FakePlatform реализует interfaces.IPlatformAdapter: приостановка
+// задаётся полями, вызовы записываются
+type FakePlatform struct {
+	Suspended         bool
+	JustSuspended     bool
+	ReadyCalls        int
+	IntermissionCalls int
+	// Gameplay — значения SetGameplayActive по порядку
+	Gameplay []bool
+}
+
+var _ interfaces.IPlatformAdapter = (*FakePlatform)(nil)
+
+func (f *FakePlatform) Update()               {}
+func (f *FakePlatform) IsSuspended() bool     { return f.Suspended }
+func (f *FakePlatform) IsJustSuspended() bool { return f.JustSuspended }
+func (f *FakePlatform) Ready()                { f.ReadyCalls++ }
+func (f *FakePlatform) RequestIntermission()  { f.IntermissionCalls++ }
+
+func (f *FakePlatform) SetGameplayActive(active bool) {
+	f.Gameplay = append(f.Gameplay, active)
+}
+
+// LastGameplay — последнее переданное значение разметки геймплея
+func (f *FakePlatform) LastGameplay() (bool, bool) {
+	if len(f.Gameplay) == 0 {
+		return false, false
+	}
+	return f.Gameplay[len(f.Gameplay)-1], true
+}
+
+// FakeReward реализует interfaces.IRewardAdapter: итоговый Status
+// отдаётся PollReward один раз, как у настоящей площадки
+type FakeReward struct {
+	Available bool
+	Requests  int
+	Status    types.RewardStatus
+}
+
+var _ interfaces.IRewardAdapter = (*FakeReward)(nil)
+
+func (f *FakeReward) IsRewardAvailable() bool { return f.Available }
+func (f *FakeReward) RequestReward()          { f.Requests++ }
+
+func (f *FakeReward) PollReward() types.RewardStatus {
+	status := f.Status
+	if status == types.RewardStatusGranted ||
+		status == types.RewardStatusDenied {
+		f.Status = types.RewardStatusNone
+	}
+	return status
+}

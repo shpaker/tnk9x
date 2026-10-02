@@ -43,14 +43,14 @@ A modern remake and tribute to the classic arcade game Battle City (NES, 1985), 
   - Pistol: the tank gets the top level at once, so it survives three hits
 - Enemies pick up bonuses too, as in Tank 1990 (`game.enemy_bonus_pickup`, on by default): the enemy nearest to a dropped bonus races for it; helmet and boat go to the enemy itself, star and pistol make it stronger, grenade blows up the players, timer freezes them, shovel strips the HQ walls, tank adds an enemy to the reserve
 - Campaign of 35 stages in 7 packs (`assets/levels/main.bccamp`): stage select screen with a minimap preview, enemy composition and 3-star time; stages open one after another, packs open for collected stars
-- Stars per stage: win, no lives lost, within the time limit; best results are saved per mode (OS config folder on desktop, localStorage in the browser)
+- Stars per stage: win, no lives lost, within the time limit; best results are saved per mode (OS config folder on desktop, the web platform's storage in the browser: localStorage, cloud saves on Yandex Games)
 - Continue after a win: carry lives (at least 3) and tank level to the next stage, capped at 2 stars; offered only when it gives an edge, with a caption under the menu item explaining the difference from the next stage
 - Pause menu on Esc, gamepad Start or the touch pause button (continue, restart, settings, exit to stage select)
 - Esc, B, Start or the touch pause button on the stage select goes back to the main menu; with touch controls the stage select also shows a tappable MAIN MENU button
 - Settings menu, shared by the main menu and the pause menu (keyboard, gamepad and touch):
   - Graphics (normal or classic), fullscreen (desktop only) and volume (0-100% in 10% steps), applied at once
   - Controls: keyboard keys and gamepad buttons of both players and the graphics and fullscreen hotkeys; press a key to assign it, a key already used elsewhere is refused; reset all to defaults
-  - Saved between launches next to the progress (OS config folder on desktop, localStorage in the browser); `config.yml` holds only the game's own settings
+  - Saved between launches next to the progress (OS config folder on desktop, the web platform's storage in the browser); `config.yml` holds only the game's own settings
 - Desktop starts fullscreen by default; toggle with F11 or in settings (the hotkey also works in the browser)
 - Sound effects and music
 - NES-style sidebar HUD (enemy reserve, player lives, stage flag) on an authentic 256x224 screen
@@ -67,6 +67,12 @@ A modern remake and tribute to the classic arcade game Battle City (NES, 1985), 
   - Muzzle flashes: a short light cone along the barrel with a smoke puff
   - Muzzle flashes with recoil, wall debris in the colors of the destroyed cells, steel and shield sparks, sparks and a flash when bullets collide, explosion embers and smoke, track dust, screen shake on hits and explosions (stronger for the player)
 - Runs natively and [in the browser](https://shpaker.github.io/tnk9x/) (WebAssembly, deployed to GitHub Pages on release tags)
+- Web platforms behind one neutral browser bridge, the same WebAssembly build everywhere; desktop builds are not affected:
+  - The game pauses while the platform suspends it (hidden tab, an ad, the portal's own pause): the frame loop stops, sound goes silent, and a running stage returns to its pause menu
+  - Yandex Games: SDK loading and gameplay markers, interstitial ads at natural breaks (leaving the results screen, restart or exit from the pause menu), cloud saves with migration of local saves, no external links; packaged by `just package-yandex` and uploaded to the developer console by hand
+  - Rewarded ads, only where the platform offers them, never as the default menu item:
+    - REVIVE on defeat by lost lives while the HQ is intact: one more tank for each player, the stage goes on (once per attempt, at most 1 star)
+    - NEXT + BOOST and RETRY + BOOST: the next or the same stage starts with one more life and a tank level up, capped at 2 stars like Continue
 
 **Under the hood:**
 
@@ -78,15 +84,16 @@ A modern remake and tribute to the classic arcade game Battle City (NES, 1985), 
 - Kage shader pipeline: lighting pass with omni and cone lights on the logical screen, bloom, phosphor afterglow and CRT in the final-screen pass; shaders loaded via repository and compiled fail-fast on startup
 - Visual effects driven by a per-frame event queue from gameplay use cases; particles, flashes and shake live in a per-stage repository
 - Section-based text formats for maps and campaigns, parsed and validated fail-fast on startup
-- User storage for progress, settings and controls behind repository interfaces (files on desktop, localStorage in WASM), ready for a platform save backend
+- User storage for progress, settings and controls behind repository interfaces (files on desktop, the platform bridge storage in WASM)
+- Platform abstraction: `IPlatformAdapter` (suspension, readiness, gameplay markers, ad breaks) and `IRewardAdapter`, one adapter per build target by build tags (no platform on desktop, `window.tnk9xPlatform` in the browser); portal specifics live only in `web/<platform>/` (see [web/README.md](web/README.md)); `syscall/js` is confined to the platform adapter and the storage by depguard
 - Input behind adapter interfaces: menu input (fixed keys, any gamepad, touch of either player), player input (rebindable keyboard, gamepad, touch) and hotkeys; states never poll input devices directly
 - Unit tests with a >=70% use-cases coverage gate
-- CI/CD (fmt, lint, test, build, release)
+- CI/CD (fmt, lint, test, build, release); desktop and js/wasm targets are both built and linted
 
 ### Roadmap
 - HQ: defeat screen, protection mechanics
 - UI: score
-- Yandex Games: SDK, cloud saves, ads
+- Localization (required by Yandex Games for non-English catalogs)
 - Test coverage >80% total, performance profiling
 
 ## Installation and Running
@@ -103,6 +110,11 @@ just run          # or go run cmd/main.go
 
 # Build binary
 just build        # binary will be in ./tnk9x
+
+# Web builds (WebAssembly)
+just serve-web            # GitHub Pages build at http://localhost:8000
+just package-yandex       # Yandex Games archive in _build/, upload it to the console
+just serve-yandex         # Yandex build via sdk-dev-proxy (Node.js; YANDEX_APP_ID from .env, dev mode without it)
 
 # Checks
 just fmt
@@ -131,6 +143,7 @@ The project follows **Clean Architecture** principles with clear separation of c
 │  │ StageSelect  │  │ Input                │             │
 │  │              │  │ Sound                │             │
 │  │              │  │ Scripting (Lua)      │             │
+│  │              │  │ Platform (web/none)  │             │
 │  └──────┬───────┘  └───────┬──────────────┘             │
 │         └─────────┬────────┘                            │
 │                   │ (depends on)                        │

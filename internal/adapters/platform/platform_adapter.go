@@ -1,0 +1,51 @@
+//go:build !js
+
+package platform
+
+import (
+	"github.com/shpaker/tnk9x/internal/interfaces"
+	"github.com/shpaker/tnk9x/internal/types"
+)
+
+var (
+	_ interfaces.IPlatformAdapter = (*PlatformAdapter)(nil)
+	_ interfaces.IRewardAdapter   = (*PlatformAdapter)(nil)
+)
+
+// PlatformAdapter — игра без площадки (десктоп): игру никто
+// не приостанавливает, рекламы нет, сообщать о готовности
+// и геймплее некому
+type PlatformAdapter struct{}
+
+func NewPlatformAdapter() *PlatformAdapter {
+	return &PlatformAdapter{}
+}
+
+// Update реализует IPlatformAdapter
+func (a *PlatformAdapter) Update() {}
+
+// IsSuspended реализует IPlatformAdapter
+func (a *PlatformAdapter) IsSuspended() bool { return false }
+
+// IsJustSuspended реализует IPlatformAdapter
+func (a *PlatformAdapter) IsJustSuspended() bool { return false }
+
+// Ready реализует IPlatformAdapter
+func (a *PlatformAdapter) Ready() {}
+
+// SetGameplayActive реализует IPlatformAdapter
+func (a *PlatformAdapter) SetGameplayActive(bool) {}
+
+// RequestIntermission реализует IPlatformAdapter
+func (a *PlatformAdapter) RequestIntermission() {}
+
+// IsRewardAvailable реализует IRewardAdapter
+func (a *PlatformAdapter) IsRewardAvailable() bool { return false }
+
+// RequestReward реализует IRewardAdapter
+func (a *PlatformAdapter) RequestReward() {}
+
+// PollReward реализует IRewardAdapter
+func (a *PlatformAdapter) PollReward() types.RewardStatus {
+	return types.RewardStatusNone
+}

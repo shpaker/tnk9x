@@ -39,6 +39,8 @@ type StageStateDependencies struct {
 	Renderer           StageRenderer
 	SoundPlayerAdapter interfaces.ISoundPlayerAdapter
 	MenuInput          interfaces.IMenuInputAdapter
+	// RewardAdapter — реклама за вознаграждение для пунктов итогов
+	RewardAdapter interfaces.IRewardAdapter
 
 	// Session & Repositories
 	StageSession      *session_entities.StageSessionEntity
@@ -68,6 +70,7 @@ type StageState struct {
 	renderer           StageRenderer
 	soundPlayerAdapter interfaces.ISoundPlayerAdapter
 	menuInput          interfaces.IMenuInputAdapter
+	rewardAdapter      interfaces.IRewardAdapter
 
 	// Session & Repositories
 	stageSession      *session_entities.StageSessionEntity
@@ -91,6 +94,10 @@ type StageState struct {
 	// resultTicks — тиков с начала появления экрана итогов
 	resultTicks uint
 	nextLevel   int
+	// Пункт итогов, за который показывается реклама; пока исход
+	// не получен, меню итогов ждёт
+	rewardItem    types.StageResultItem
+	rewardPending bool
 }
 
 func NewStageState(deps StageStateDependencies) *StageState {
@@ -109,6 +116,7 @@ func NewStageState(deps StageStateDependencies) *StageState {
 		renderer:              deps.Renderer,
 		soundPlayerAdapter:    deps.SoundPlayerAdapter,
 		menuInput:             deps.MenuInput,
+		rewardAdapter:         deps.RewardAdapter,
 		stageSession:          deps.StageSession,
 		bonusesRepository:     deps.BonusesRepository,
 		settingsOverlay:       deps.SettingsOverlay,
@@ -274,6 +282,24 @@ func (state *StageState) Update() types.StateTransition {
 	return transition
 }
 
+// Suspend — площадка приостановила игру (реклама, скрытая вкладка):
+// идущий бой уходит на паузу, чтобы после возврата игрок продолжил
+// из меню паузы, а не оказался сразу в бою
+func (state *StageState) Suspend() {
+	if !state.isSetUp ||
+		state.stageUseCases.IsStageFinished() ||
+		state.stageUseCases.IsPaused() {
+		return
+	}
+	state.stageUseCases.PauseStageState()
+}
+
+// IsGameplayActive — идёт бой: уровень запущен и не на паузе;
+// завершённый уровень всегда на паузе
+func (state *StageState) IsGameplayActive() bool {
+	return state.isSetUp && !state.stageUseCases.IsPaused()
+}
+
 // handlePauseMenu — единственная точка переключения паузы: Esc,
 // Start или тач-пауза; в открытом меню «назад» тоже возвращает
 // в игру. Меню — стрелки, крестовина или стик, выбор Enter, A
@@ -405,6 +431,9 @@ func (state *StageState) handleStageResult() types.StateTransition {
 	if state.revealResult() {
 		return types.StateTransition{}
 	}
+	if state.rewardPending {
+		return state.pollReward()
+	}
 
 	result := state.result
 	moveUp, moveDown := state.menuInput.Steps()
@@ -442,20 +471,19 @@ func (state *StageState) buildStageResult() {
 		}
 	}
 
-	items := []types.StageResultItem{
-		types.StageResultItemRetry,
-		types.StageResultItemLevels,
-	}
-	if next, unlocked := state.progressionUseCases.NextLevel(
-		levelNumber,
-	); result.Won && unlocked {
+	next, unlocked := state.progressionUseCases.NextLevel(levelNumber)
+	if result.Won && unlocked {
 		state.nextLevel = next
-		head := []types.StageResultItem{types.StageResultItemNext}
-		if state.stageSession.HasCarryOverAdvantage() {
-			head = append(head, types.StageResultItemContinue)
-		}
-		items = append(head, items...)
 	}
+	rewardAvailable := state.rewardAdapter.IsRewardAvailable()
+	items := stageResultMenu{
+		won:                result.Won,
+		nextUnlocked:       unlocked,
+		carryOverAdvantage: state.stageSession.HasCarryOverAdvantage(),
+		rewardAvailable:    rewardAvailable,
+		canRevive: rewardAvailable &&
+			state.stageUseCases.CanRevivePlayers(),
+	}.items()
 
 	state.result = &types.StageResultViewData{
 		Won:          result.Won,
@@ -508,20 +536,28 @@ func (state *StageState) revealResult() bool {
 func (state *StageState) applyStageResultItem(
 	item types.StageResultItem,
 ) types.StateTransition {
+	// Пункт за рекламу: экран итогов ждёт её исхода
+	if item.IsRewarded() {
+		state.requestReward(item)
+		return types.StateTransition{}
+	}
+
 	// Глушим звук завершения при уходе с экрана итогов
 	state.soundUseCases.RequestStopAll()
 
 	switch item {
 	case types.StageResultItemNext:
 		return types.StateTransition{
-			Target: types.TransitionToStage,
-			Level:  uint(state.nextLevel),
+			Target:       types.TransitionToStage,
+			Level:        uint(state.nextLevel),
+			Intermission: true,
 		}
 	case types.StageResultItemContinue:
 		return types.StateTransition{
-			Target:    types.TransitionToStage,
-			Level:     uint(state.nextLevel),
-			CarryOver: true,
+			Target:       types.TransitionToStage,
+			Level:        uint(state.nextLevel),
+			CarryOver:    true,
+			Intermission: true,
 		}
 	case types.StageResultItemRetry:
 		return state.restartTransition()
@@ -531,18 +567,21 @@ func (state *StageState) applyStageResultItem(
 }
 
 // restartTransition — этот же уровень заново, без переноса жизней
-// и прокачки
+// и прокачки; уход с уровня — логическая пауза
 func (state *StageState) restartTransition() types.StateTransition {
 	return types.StateTransition{
-		Target: types.TransitionToStage,
-		Level:  state.stageSession.GetStageNumber(),
+		Target:       types.TransitionToStage,
+		Level:        state.stageSession.GetStageNumber(),
+		Intermission: true,
 	}
 }
 
-// levelsTransition — выход на экран выбора с курсором на этом уровне
+// levelsTransition — выход на экран выбора с курсором на этом уровне;
+// уход с уровня — логическая пауза
 func (state *StageState) levelsTransition() types.StateTransition {
 	return types.StateTransition{
-		Target: types.TransitionToLevelSelect,
-		Level:  state.stageSession.GetStageNumber(),
+		Target:       types.TransitionToLevelSelect,
+		Level:        state.stageSession.GetStageNumber(),
+		Intermission: true,
 	}
 }

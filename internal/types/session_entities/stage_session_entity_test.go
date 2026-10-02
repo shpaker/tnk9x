@@ -301,3 +301,102 @@ func TestStageSessionEntity_CarryOver(t *testing.T) {
 		t.Error("carry-over enabled without snapshot")
 	}
 }
+
+// Второй шанс получают только выбывшие игроки текущего режима;
+// новая попытка уровня возвращает право на второй шанс
+func TestStageSessionEntity_RevivePlayers(t *testing.T) {
+	session := NewStageSessionEntity()
+	session.SetPlayerCount(1)
+	p1, p2 := types.PlayerTankNumPlayer1, types.PlayerTankNumPlayer2
+	session.SetPlayerLives(p1, 0)
+
+	session.RevivePlayers()
+
+	if got := session.GetPlayerLives(p1); got != reviveLives {
+		t.Errorf("player 1 lives %d, want %d", got, reviveLives)
+	}
+	if got := session.GetPlayerLives(p2); got != 0 {
+		t.Errorf("player 2 is out of the mode, lives %d, want 0", got)
+	}
+	if got := session.GetPlayerDeaths(); got != 0 {
+		t.Errorf("revive changed deaths: %d", got)
+	}
+	if !session.IsReviveUsed() {
+		t.Error("revive not marked as used")
+	}
+
+	session.Reset()
+	if session.IsReviveUsed() {
+		t.Error("a new attempt must restore the second chance")
+	}
+}
+
+func TestStageSessionEntity_RevivePlayers_TwoPlayers(t *testing.T) {
+	session := NewStageSessionEntity()
+	session.SetPlayerCount(2)
+	p1, p2 := types.PlayerTankNumPlayer1, types.PlayerTankNumPlayer2
+	session.SetPlayerLives(p1, 0)
+	session.SetPlayerLives(p2, 0)
+
+	session.RevivePlayers()
+
+	if session.GetPlayerLives(p1) != reviveLives ||
+		session.GetPlayerLives(p2) != reviveLives {
+		t.Errorf("lives %d and %d, want %d for both",
+			session.GetPlayerLives(p1), session.GetPlayerLives(p2), reviveLives)
+	}
+}
+
+// Усиленный перенос после победы — сверх снимка, с потолками
+func TestStageSessionEntity_BoostCarryOver(t *testing.T) {
+	session := NewStageSessionEntity()
+	p1 := types.PlayerTankNumPlayer1
+
+	session.SaveCarryOver(p1, 4, 2)
+	session.BoostCarryOver()
+	session.SetCarryOver(true)
+	session.Reset()
+
+	if got := session.GetPlayerLives(p1); got != 5 {
+		t.Errorf("lives %d, want 5", got)
+	}
+	if got := session.GetStartTier(p1); got != 3 {
+		t.Errorf("tier %d, want 3", got)
+	}
+
+	session.SaveCarryOver(p1, maxCarriedLives, types.MaxTankLevel)
+	session.BoostCarryOver()
+	session.SetCarryOver(true)
+	session.Reset()
+
+	if got := session.GetPlayerLives(p1); got != maxCarriedLives {
+		t.Errorf("lives %d, want cap %d", got, maxCarriedLives)
+	}
+	if got := session.GetStartTier(p1); got != types.MaxTankLevel {
+		t.Errorf("tier %d, want cap %d", got, types.MaxTankLevel)
+	}
+}
+
+// После поражения снимка нет: усиление — сверх начальных значений,
+// уровень запускается как с переносом
+func TestStageSessionEntity_BoostCarryOver_WithoutSnapshot(t *testing.T) {
+	session := NewStageSessionEntity()
+	p1 := types.PlayerTankNumPlayer1
+
+	session.BoostCarryOver()
+	if !session.HasCarryOverAdvantage() {
+		t.Error("boost must give a carry-over advantage")
+	}
+	session.SetCarryOver(true)
+	session.Reset()
+
+	if got := session.GetPlayerLives(p1); got != defaultStagePlayer1Lives+1 {
+		t.Errorf("lives %d, want %d", got, defaultStagePlayer1Lives+1)
+	}
+	if got := session.GetStartTier(p1); got != 1 {
+		t.Errorf("tier %d, want 1", got)
+	}
+	if !session.IsCarryOver() {
+		t.Error("boosted start must run as carry-over")
+	}
+}
