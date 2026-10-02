@@ -44,5 +44,5 @@ func Smoothstep(edge0, edge1, x float64) float64 {
 type SurfaceMaterial struct {
 	Opacity      float64 // 1 — непрозрачная стена, меньше — частичное затенение
 	Reflectivity float64 // Сила блика от источников света
-	Ripple       float64 // Волнистость: блик на поверхности мерцает рябью
+	Ripple       float64 // Блик только на светлых гребнях волн спрайта
 }
