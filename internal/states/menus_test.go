@@ -261,20 +261,31 @@ type nopMainMenuRenderer struct{}
 
 func (nopMainMenuRenderer) Draw(*ebiten.Image, types.MainMenuViewData) {}
 
-// countingScene — сцена за меню, считающая кадры
-type countingScene struct{ updates int }
+// countingScene — сцена за меню, считающая кадры и заглушения звука
+type countingScene struct {
+	updates int
+	stops   int
+}
 
 func (s *countingScene) Update()            { s.updates++ }
 func (s *countingScene) Draw(*ebiten.Image) {}
+func (s *countingScene) StopSounds()        { s.stops++ }
 
 func newMainMenu(env *menusEnv) *states.MainMenuState {
+	return newMainMenuWithScene(env, &countingScene{})
+}
+
+func newMainMenuWithScene(
+	env *menusEnv,
+	scene *countingScene,
+) *states.MainMenuState {
 	return states.NewMainMenuState(states.MainMenuStateDependencies{
 		SettingsUseCases: use_cases.NewSettingsUseCases(
 			memorySettingsRepository{}, true,
 		),
 		Renderer:        nopMainMenuRenderer{},
 		MenuInput:       env.input,
-		Scene:           &countingScene{},
+		Scene:           scene,
 		SettingsOverlay: env.settingsOverlay,
 		Settings:        env.settings,
 		QuitAvailable:   true,
@@ -283,7 +294,8 @@ func newMainMenu(env *menusEnv) *states.MainMenuState {
 
 func TestMainMenuState_ModesAndQuit(t *testing.T) {
 	env := newMenusEnv()
-	menu := newMainMenu(env)
+	scene := &countingScene{}
+	menu := newMainMenuWithScene(env, scene)
 
 	// 1 PLAYER -> 2 PLAYERS: выбор режима ведёт к выбору уровня
 	env.frame(func() { menu.Update() }, testutil.FakeMenuInput{Down: true})
@@ -293,6 +305,9 @@ func TestMainMenuState_ModesAndQuit(t *testing.T) {
 		env.settings.GetPlayers() != 2 {
 		t.Errorf("2 PLAYERS: переход %v, игроков %d",
 			transition.Target, env.settings.GetPlayers())
+	}
+	if scene.stops != 1 {
+		t.Errorf("уход из меню глушит звуки сцены, заглушений %d", scene.stops)
 	}
 
 	// Курсор нового меню встаёт на последний режим; SETTINGS, QUIT

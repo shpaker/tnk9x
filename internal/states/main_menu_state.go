@@ -23,6 +23,8 @@ type MainMenuRenderer interface {
 type MenuScene interface {
 	Update()
 	Draw(screen *ebiten.Image)
+	// StopSounds глушит звуки сцены при уходе из меню
+	StopSounds()
 }
 
 // MainMenuStateDependencies — готовый граф зависимостей главного
@@ -119,6 +121,7 @@ func (s *MainMenuState) Update() types.StateTransition {
 	case types.MainMenuItemSettings:
 		s.settingsOverlay.Open()
 	case types.MainMenuItemQuit:
+		s.scene.StopSounds()
 		return types.StateTransition{Target: types.TransitionToQuit}
 	}
 	return types.StateTransition{}
@@ -145,5 +148,6 @@ func (s *MainMenuState) play(players uint) types.StateTransition {
 	if err := s.settingsUseCases.SetPlayers(s.settings, players); err != nil {
 		log.Printf("save settings: %v", err)
 	}
+	s.scene.StopSounds()
 	return types.StateTransition{Target: types.TransitionToLevelSelect}
 }

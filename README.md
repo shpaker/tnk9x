@@ -17,7 +17,7 @@ A modern remake and tribute to the classic arcade game Battle City (NES, 1985), 
 **Playable now:**
 
 - Splash screen (SHPAKER logo from `assets/images/shpaker.png`, a text placeholder until it is drawn) with a real resource loading bar, fading through black into the main menu: 1 player, 2 players, settings, quit (desktop only)
-  - Behind the menu a live title scene (`assets/levels/demo/title.bcmap`): a one-line TNK9X (TNK in brick, 9X in steel) assembles block by block, then one enemy tank of each type roams the field under the real Lua AI and shoots; chipped title bricks grow back every few seconds; the scene is silent and not dimmed, the menu items are drawn with a black outline
+  - Behind the menu a live title scene (`assets/levels/demo/title.bcmap`): a one-line TNK9X (TNK in brick, 9X in steel) assembles block by block, then one enemy tank of each type roams the field under the real Lua AI and shoots; chipped title bricks slowly grow back one at a time; the tanks' shots and explosions are heard, the scene is not dimmed, the menu items are drawn with a black outline
 - Full game loop with HQ and a results screen that appears in stages: backdrop, result, stars one by one with a sound, time and lives lost, then the menu (any button skips the animation); next stage, retry or back to stage select
 - One or two players, chosen in the main menu, each mode with its own campaign progress; each player has a keyboard layout, a gamepad and touch controls at once
   - Default keys: P1 WASD and G to fire, P2 IJKL and ' to fire; rebind in settings
@@ -28,6 +28,7 @@ A modern remake and tribute to the classic arcade game Battle City (NES, 1985), 
 - All five surface types (brick, steel, forest, water, ice) with ice sliding and water blocking (a tank with a boat sails over it)
 - Lua-scripted enemies of four types; each map file sets its enemy waves (tank order, pause, start condition: now, left<=N, clear), bonus carriers and on-field limit, see [assets/levels/README.md](assets/levels/README.md)
   - The armored tank flashes between its normal and a tinted sprite as in the NES original; the tint shows the armor left (red, yellow, green)
+  - Bonus carriers flash red as in the NES original; an armored carrier flashes red too
 - Weighted enemy spawn point choice: blocked points are skipped, the last used point and points near a player are picked less often
 - Enemy AI with per-type personalities and difficulty scaling by stage:
   - NES-style targeting: roam, then hunt the player, then head for the HQ
@@ -59,6 +60,7 @@ A modern remake and tribute to the classic arcade game Battle City (NES, 1985), 
   - Bullets glow like tracers and light up the corridor they fly through
   - Materials: steel facades have a metallic sheen that blooms under bright light, brick is matte
   - The stage starts with the player tank already on the map; respawns after death keep the spawn animation
+  - Flashing objects glow in step with their flashing: a dropped bonus softly flares up and fades within each lit phase; a bonus carrier and an armored tank pulse with a wide outer glow like the force field, in their muted tint color, rising and fading with each color change
   - Invulnerability after spawning, as in the original: an animated force field over the tank in both graphics modes, pulsing with a flickering glow in normal graphics (also for the helmet bonus)
   - Tube TV look on every screen, menus included: a curved screen with rounded corners and faintly glowing glass that stays visible on dark menus, aperture grille, scanlines that widen on bright pixels, phosphor afterglow, R/B convergence drift towards the edges, light film grain, flicker, a rolling bar, and line tearing on strong hits
   - Bullet tracers: sparks trail behind a flying bullet, denser for fast bullets, blue-white for steel-piercing ones, which also glow blue-white

@@ -62,10 +62,11 @@ var (
 		color.NRGBA{R: 120, G: 220, B: 255, A: 255},
 		1.5,
 	}
+	// Мигающий бонус вспыхивает тёплым светом в видимой фазе
 	bonusLight = lightSpec{
-		28,
+		30,
 		color.NRGBA{R: 255, G: 240, B: 200, A: 255},
-		1.0,
+		1.2,
 	}
 	spawnLight = lightSpec{
 		30,
@@ -160,6 +161,9 @@ func (uc *LightingUseCases) GetLights() []types.LightEntity {
 		if ok {
 			buckets[priority] = append(buckets[priority], light)
 		}
+		if light, priority, ok := tankBlinkLightOf(tank); ok {
+			buckets[priority] = append(buckets[priority], light)
+		}
 	}
 
 	buckets[lightPriorityFlash] = append(
@@ -180,7 +184,12 @@ func (uc *LightingUseCases) GetLights() []types.LightEntity {
 	for _, bonus := range uc.bonusUseCases.VisibleBonuses() {
 		buckets[lightPriorityAccent] = append(
 			buckets[lightPriorityAccent],
-			newLight(bonus.GetPosition(), bonus.GetSize(), bonusLight),
+			blinkFlareLight(
+				bonus.GetPosition(),
+				bonus.GetSize(),
+				bonusLight,
+				bonus.GetBlinkProgress(),
+			),
 		)
 	}
 
@@ -282,6 +291,45 @@ func shieldLightOf(tank *types.TankEntity) types.LightEntity {
 		light.Radius *= shieldFlickerShrink
 	}
 	return light
+}
+
+// Радиус вспышки в начале и конце фазы — доля от пикового
+const blinkFlareMinRadius = 0.7
+
+// blinkFlareLight — свет во включённой фазе мигания: разгорается
+// от нуля к середине фазы и гаснет к её концу, без рывков
+func blinkFlareLight(
+	position types.Position,
+	size types.Size,
+	spec lightSpec,
+	progress float64,
+) types.LightEntity {
+	flare := math.Sin(math.Pi * progress)
+	light := newLight(position, size, spec)
+	light.Intensity *= flare
+	light.Radius *= blinkFlareMinRadius + (1-blinkFlareMinRadius)*flare
+	return light
+}
+
+// tankBlinkLightOf — сияние мигающего врага в цвете его тона, яркое
+// и широкое, как у силового поля: за тонированную фазу оно плавно
+// разгорается и гаснет — танк пульсирует в такт смене цвета. Красное
+// у врага с бонусом, цвета брони у тяжёлого; в обычной фазе не сияет
+func tankBlinkLightOf(tank *types.TankEntity) (types.LightEntity, int, bool) {
+	tintColor, ok := blinkTintColor(tank)
+	if !ok || !tank.IsActive() || !tank.GetBlinkFlag() {
+		return types.LightEntity{}, 0, false
+	}
+	priority := lightPriorityEnemy
+	if tank.GetWithBonus() {
+		priority = lightPriorityAccent
+	}
+	return blinkFlareLight(
+		tank.Position,
+		tank.Size,
+		lightSpec{shieldLight.radius, tintColor, shieldLight.intensity},
+		tank.GetBlinkProgress(),
+	), priority, true
 }
 
 // hqLightOf — свет штаба: целый слабо светится, взрывающийся даёт

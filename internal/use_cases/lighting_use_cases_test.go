@@ -1,6 +1,7 @@
 package use_cases_test
 
 import (
+	"image/color"
 	"math"
 	"testing"
 
@@ -428,5 +429,104 @@ func TestLightingUseCases_GetLights_ReinforcedBullet(t *testing.T) {
 	}
 	if lights[0].Color == lights[1].Color {
 		t.Error("reinforced bullet light matches the regular one")
+	}
+}
+
+// advanceBlink продвигает мигание сущности на заданное число тиков
+func advanceBlink(blink types.IBlink, ticks int) {
+	for i := 0; i < ticks; i++ {
+		blink.UpdateBlink()
+	}
+}
+
+// Свет бонуса в такт миганию: в начале видимой фазы не горит,
+// к середине фазы разгорается до пика
+func TestLightingUseCases_GetLights_BonusFlaresWithBlink(t *testing.T) {
+	env := newLightingTestEnv()
+	bonus := types.NewBonusEntity(
+		types.BonusTypeStar,
+		types.Position{},
+		types.Size{Width: 16, Height: 16},
+		nil,
+	)
+	env.bonuses.bonuses = []*types.BonusEntity{bonus}
+
+	start := env.lighting.GetLights()
+	advanceBlink(bonus, types.BlinkPhaseTicks/2)
+	middle := env.lighting.GetLights()
+
+	if len(start) != 1 || len(middle) != 1 {
+		t.Fatalf("источников %d и %d, ожидалось по 1", len(start), len(middle))
+	}
+	if start[0].Intensity != 0 {
+		t.Errorf("в начале фазы яркость %v, ожидалось 0", start[0].Intensity)
+	}
+	if middle[0].Intensity <= start[0].Intensity ||
+		middle[0].Radius <= start[0].Radius {
+		t.Error("к середине фазы свет бонуса должен разгореться")
+	}
+}
+
+// Враг с бонусом сияет красным только во включённой фазе мигания
+func TestLightingUseCases_GetLights_BonusCarrierFlaresRed(t *testing.T) {
+	env := newLightingTestEnv()
+	tank := newEnemyTankInState(types.TankStateMoving)
+	tank.SetWithBonus(true)
+	env.tankCommon.tanks = []*types.TankEntity{tank}
+	red := color.NRGBA{R: 235, G: 125, B: 115, A: 255}
+
+	hasRed := func() bool {
+		for _, light := range env.lighting.GetLights() {
+			if light.Color == red && light.Intensity > 0 {
+				return true
+			}
+		}
+		return false
+	}
+
+	advanceBlink(tank, types.BlinkPhaseTicks/2)
+	if hasRed() {
+		t.Error("в выключенной фазе красной вспышки быть не должно")
+	}
+	advanceBlink(tank, types.BlinkPhaseTicks)
+	if !hasRed() {
+		t.Error("во включённой фазе ожидалась красная вспышка")
+	}
+}
+
+// Тяжёлый враг сияет цветом брони во включённой фазе: сияние
+// разгорается к середине фазы
+func TestLightingUseCases_GetLights_HeavyTankGlowsArmorColor(t *testing.T) {
+	env := newLightingTestEnv()
+	tank := newEnemyTankInState(types.TankStateMoving)
+	tank.SetSpecs(types.NewSpecsEntity(3, 1, false, 1, 1))
+	tank.SetHitPoints(3)
+	env.tankCommon.tanks = []*types.TankEntity{tank}
+	yellow := color.NRGBA{R: 235, G: 215, B: 150, A: 255}
+
+	glow := func() (types.LightEntity, bool) {
+		for _, light := range env.lighting.GetLights() {
+			if light.Color == yellow {
+				return light, true
+			}
+		}
+		return types.LightEntity{}, false
+	}
+
+	if _, ok := glow(); ok {
+		t.Fatal("в обычной фазе сияния быть не должно")
+	}
+	advanceBlink(tank, types.BlinkPhaseTicks+1)
+	start, ok := glow()
+	if !ok {
+		t.Fatal("в тонированной фазе ожидалось сияние цвета брони")
+	}
+	advanceBlink(tank, types.BlinkPhaseTicks/2-1)
+	middle, ok := glow()
+	if !ok {
+		t.Fatal("сияние не должно гаснуть внутри фазы")
+	}
+	if middle.Intensity <= start.Intensity || middle.Radius <= start.Radius {
+		t.Error("к середине фазы сияние должно разгореться")
 	}
 }

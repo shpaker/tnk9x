@@ -85,9 +85,14 @@ func (b *BonusEntity) GetBlinkFlag() bool {
 	return b.blinkFlag
 }
 
+// GetBlinkProgress — пройденная доля текущей фазы мигания, [0, 1)
+func (b *BonusEntity) GetBlinkProgress() float64 {
+	return float64(b.blinkCounter) / BlinkPhaseTicks
+}
+
 func (b *BonusEntity) UpdateBlink() {
 	b.blinkCounter++
-	if b.blinkCounter >= 10 {
+	if b.blinkCounter >= BlinkPhaseTicks {
 		b.blinkCounter = 0
 		b.blinkFlag = !b.blinkFlag
 	}

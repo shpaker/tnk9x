@@ -154,10 +154,6 @@ func (r *StageRendererAdapter) drawTanks(screen *ebiten.Image) {
 			continue
 		}
 
-		if !r.renderUseCases.IsTankVisible(tank) {
-			continue
-		}
-
 		if tank.Image == nil {
 			continue
 		}
@@ -179,7 +175,7 @@ func (r *StageRendererAdapter) drawTanks(screen *ebiten.Image) {
 		if tank.HasBoat() {
 			r.drawBoat(screen, tank, x, y)
 		}
-		if tint, ok := r.renderUseCases.TankHealthTint(tank); ok {
+		if tint, ok := r.renderUseCases.TankTint(tank); ok {
 			drawTintedImage(screen, img, x, y, tint)
 		} else {
 			drawImage(screen, img, x, y)
