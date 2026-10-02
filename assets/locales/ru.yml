@@ -51,6 +51,19 @@ controls:
   press_button: "НАЖМИТЕ КНОПКУ  ESC ОТМЕНА"
   already_taken: "УЖЕ ЗАНЯТО"
 
+help:
+  title: "КАК ИГРАТЬ"
+  goal: "УНИЧТОЖЬ ВРАГОВ, ЗАЩИТИ ШТАБ"
+  move: "ДВИЖЕНИЕ"
+  pause: "ПАУЗА"
+  player_1: "P1"
+  player_2: "P2"
+  touch_column: "ЭКРАН"
+  touch_dpad: "КРЕСТ"
+  touch_fire: "КНОПКА"
+  touch_pause: "II"
+  start: "{{.Button}}: НАЧАТЬ"
+
 keys:
   up: "ВВЕРХ"
   down: "ВНИЗ"

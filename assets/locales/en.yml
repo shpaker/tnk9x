@@ -56,6 +56,22 @@ controls:
   press_button: "PRESS A BUTTON  ESC CANCEL"
   already_taken: "ALREADY TAKEN"
 
+help:
+  # Title: 10 characters
+  title: "BRIEFING"
+  goal: "DESTROY ENEMIES, GUARD THE HQ"
+  # Row labels end before the first column: 10 characters
+  move: "MOVE"
+  pause: "PAUSE"
+  # Column headers and cells: 7 characters
+  player_1: "P1"
+  player_2: "P2"
+  touch_column: "SCREEN"
+  touch_dpad: "D-PAD"
+  touch_fire: "BUTTON"
+  touch_pause: "II"
+  start: "PRESS {{.Button}} TO START"
+
 # Arrow key names in the key cells: 7 characters
 keys:
   up: "UP"

@@ -253,8 +253,14 @@ func (r *ControlsRendererAdapter) drawHint(
 
 // keyLabel — подпись клавиши в ячейке раскладки
 func (r *ControlsRendererAdapter) keyLabel(name string) string {
+	return keyLabel(r.texts, name)
+}
+
+// keyLabel — подпись клавиши: стрелки на языке интерфейса,
+// остальные — как на клавиатуре
+func keyLabel(texts interfaces.ITextsAdapter, name string) string {
 	if key, ok := arrowKeyLabels[name]; ok {
-		return r.texts.Get(key)
+		return texts.Get(key)
 	}
 	return bindings.KeyLabel(name)
 }

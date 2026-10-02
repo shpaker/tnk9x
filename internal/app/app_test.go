@@ -409,8 +409,12 @@ func lostStageWithRewards(
 	reward := &testutil.FakeReward{Available: true}
 	defaultMenuInput, defaultReward := app.menuInput, app.rewardAdapter
 	app.menuInput, app.rewardAdapter = menuInput, reward
+	helpShown := app.settings.IsHelpShown()
+	// Страница «Как играть» уже показана: тест начинает сразу с боя
+	app.settings.SetHelpShown(true)
 	t.Cleanup(func() {
 		app.menuInput, app.rewardAdapter = defaultMenuInput, defaultReward
+		app.settings.SetHelpShown(helpShown)
 	})
 
 	err := app.applyTransition(types.StateTransition{
@@ -531,5 +535,39 @@ func TestApp_Update_CursorHiddenInGameplay(t *testing.T) {
 	_ = app.Update()
 	if window.CursorHidden {
 		t.Error("на паузе и в меню курсор виден")
+	}
+}
+
+// Перед первым запуском уровня 1 открыта страница «Как играть»:
+// бой не начат, пока её не закроют
+func TestApp_FirstStageHelp_FullApp(t *testing.T) {
+	app := newFullApp(t)
+	for _, done := app.loader.Step(); !done; _, done = app.loader.Step() {
+	}
+	helpShown := app.settings.IsHelpShown()
+	app.settings.SetHelpShown(false)
+	t.Cleanup(func() { app.settings.SetHelpShown(helpShown) })
+
+	err := app.applyTransition(types.StateTransition{
+		Target: types.TransitionToStage,
+		Level:  1,
+	})
+	if err != nil {
+		t.Fatalf("переход на уровень: %v", err)
+	}
+	stage, ok := app.state.(*states.StageState)
+	if !ok {
+		t.Fatalf("состояние %T, ожидалось StageState", app.state)
+	}
+
+	stage.Update()
+	if stage.IsGameplayActive() {
+		t.Error("пока открыта страница «Как играть», бой не идёт")
+	}
+
+	app.settings.SetHelpShown(true)
+	stage.Update()
+	if !stage.IsGameplayActive() {
+		t.Error("после закрытия страницы бой начинается")
 	}
 }

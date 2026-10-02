@@ -68,6 +68,17 @@ func (uc *SettingsUseCases) SetPlayers(
 	return uc.settingsRepository.SaveSettings(settings)
 }
 
+// MarkHelpShown: повторно хранилище не трогается
+func (uc *SettingsUseCases) MarkHelpShown(
+	settings *types.SettingsEntity,
+) error {
+	if settings.IsHelpShown() {
+		return nil
+	}
+	settings.SetHelpShown(true)
+	return uc.settingsRepository.SaveSettings(settings)
+}
+
 // Change: флаги переключаются при любом направлении, громкость
 // сдвигается на step шагов в пределах шкалы, язык — по кругу
 // AUTO и языков конфигурации; без изменений настройки

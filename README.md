@@ -45,6 +45,7 @@ A modern remake and tribute to the classic arcade game Battle City (NES, 1985), 
 - Campaign of 35 stages in 7 packs (`assets/levels/main.bccamp`): stage select screen with a minimap preview, enemy composition and 3-star time; stages open one after another, packs open for collected stars
 - Stars per stage: win, no lives lost, within the time limit; best results are saved per mode (OS config folder on desktop, the web platform's storage in the browser: localStorage, cloud saves on Yandex Games)
 - Continue after a win: carry lives (at least 3) and tank level to the next stage, capped at 2 stars; offered only when it gives an edge, with a caption under the menu item explaining the difference from the next stage
+- Briefing page before the very first launch of stage 1: the goal and a controls table from the current layout (keyboard and gamepad; both players' keys in two-player mode; on-screen controls on touch devices); shown once, the flag is saved with the settings
 - Pause menu on Esc, gamepad Start or the touch pause button (continue, restart, settings, exit to stage select)
 - Esc, B, Start or the touch pause button on the stage select goes back to the main menu; with touch controls or a mouse the stage select also shows a tappable MAIN MENU button
 - Mouse in menus (main menu, settings, controls, stage select, pause, stage results): hover highlights an item, left click selects it, right click goes back, the wheel changes values; taps on menu items work the same way; the cursor is hidden during battle

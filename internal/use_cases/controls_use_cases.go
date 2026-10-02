@@ -101,6 +101,30 @@ func (uc *ControlsUseCases) BuildView(
 	}
 }
 
+// HelpRows: движение и огонь по раскладке игроков, геймпад — кнопки
+// первого игрока, пауза — зарезервированные Esc и Start
+func (uc *ControlsUseCases) HelpRows(
+	controls *types.ControlsEntity,
+) []types.HelpRow {
+	rows := make([]types.HelpRow, 0, types.InputActionsCount+1)
+	for action := range types.InputActionsCount {
+		rows = append(rows, types.HelpRow{
+			Kind:   types.HelpRowAction,
+			Action: action,
+			Keys: [types.MaxPlayers]string{
+				controls.GetKey(types.PlayerTankNumPlayer1, action),
+				controls.GetKey(types.PlayerTankNumPlayer2, action),
+			},
+			Button: controls.GetButton(types.PlayerTankNumPlayer1, action),
+		})
+	}
+	return append(rows, types.HelpRow{
+		Kind:   types.HelpRowPause,
+		Keys:   [types.MaxPlayers]string{types.ReservedKey, types.ReservedKey},
+		Button: types.ReservedButton,
+	})
+}
+
 // isTaken — имя зарезервировано или назначено другой ячейке
 func (uc *ControlsUseCases) isTaken(
 	controls *types.ControlsEntity,

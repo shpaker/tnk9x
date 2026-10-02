@@ -207,3 +207,22 @@ func TestSettings_ChangeLanguage(t *testing.T) {
 		)
 	}
 }
+
+func TestSettings_MarkHelpShown(t *testing.T) {
+	repository := &recordingSettingsRepository{}
+	useCases := newSettingsUseCases(repository, true)
+	settings := types.NewSettingsEntity()
+
+	if err := useCases.MarkHelpShown(settings); err != nil {
+		t.Fatalf("mark: %v", err)
+	}
+	if !settings.IsHelpShown() || repository.saves != 1 {
+		t.Errorf("флаг %v, сохранений %d", settings.IsHelpShown(), repository.saves)
+	}
+
+	// Повторная отметка хранилище не трогает
+	_ = useCases.MarkHelpShown(settings)
+	if repository.saves != 1 {
+		t.Errorf("повторно сохранений %d", repository.saves)
+	}
+}

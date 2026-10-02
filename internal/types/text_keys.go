@@ -68,6 +68,21 @@ const (
 	TextControlsAlreadyTaken     TextKey = "controls.already_taken"
 )
 
+// Страница «Как играть» перед первым запуском уровня 1
+const (
+	TextHelpTitle       TextKey = "help.title"
+	TextHelpGoal        TextKey = "help.goal"
+	TextHelpMove        TextKey = "help.move"
+	TextHelpPause       TextKey = "help.pause"
+	TextHelpPlayer1     TextKey = "help.player_1"
+	TextHelpPlayer2     TextKey = "help.player_2"
+	TextHelpTouchColumn TextKey = "help.touch_column"
+	TextHelpTouchDPad   TextKey = "help.touch_dpad"
+	TextHelpTouchFire   TextKey = "help.touch_fire"
+	TextHelpTouchPause  TextKey = "help.touch_pause"
+	TextHelpStart       TextKey = "help.start"
+)
+
 // Подписи клавиш-стрелок в ячейках раскладки
 const (
 	TextKeysUp    TextKey = "keys.up"
@@ -161,6 +176,18 @@ var TextKeys = []TextKey{
 	TextControlsPressKey,
 	TextControlsPressButton,
 	TextControlsAlreadyTaken,
+
+	TextHelpTitle,
+	TextHelpGoal,
+	TextHelpMove,
+	TextHelpPause,
+	TextHelpPlayer1,
+	TextHelpPlayer2,
+	TextHelpTouchColumn,
+	TextHelpTouchDPad,
+	TextHelpTouchFire,
+	TextHelpTouchPause,
+	TextHelpStart,
 
 	TextKeysUp,
 	TextKeysDown,
