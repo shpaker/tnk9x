@@ -281,7 +281,8 @@ func TestLightingUseCases_GetLights_LimitKeepsPriority(t *testing.T) {
 	}
 }
 
-// Кирпич и сталь бросают тень, вода и лёд дают блик, лес затеняет частично
+// Кирпич и сталь бросают тень, вода и лёд дают блик светлыми пикселями
+// спрайта, лес затеняет частично
 func TestLightingUseCases_GetMaterial(t *testing.T) {
 	lighting := newLightingTestEnv().lighting
 
@@ -289,12 +290,13 @@ func TestLightingUseCases_GetMaterial(t *testing.T) {
 		block      types.BlockType
 		opaque     bool
 		reflective bool
+		sparkling  bool
 	}{
-		{types.Brick, true, false},
-		{types.Steel, true, true},
-		{types.Forest, false, false},
-		{types.Water, false, true},
-		{types.Ice, false, true},
+		{types.Brick, true, false, false},
+		{types.Steel, true, true, false},
+		{types.Forest, false, false, false},
+		{types.Water, false, true, true},
+		{types.Ice, false, true, true},
 	}
 	for _, c := range cases {
 		material := lighting.GetMaterial(c.block)
@@ -304,12 +306,23 @@ func TestLightingUseCases_GetMaterial(t *testing.T) {
 		if (material.Reflectivity > 0) != c.reflective {
 			t.Errorf("%s: отражение %v", c.block, material.Reflectivity)
 		}
+		if (material.Sparkle > 0) != c.sparkling {
+			t.Errorf("%s: блик светлых пикселей %v", c.block, material.Sparkle)
+		}
 	}
 
 	// Сталь — металл: блестит сильнее матового кирпича
 	if lighting.GetMaterial(types.Steel).Reflectivity <=
 		lighting.GetMaterial(types.Brick).Reflectivity {
 		t.Error("сталь должна отражать свет сильнее кирпича")
+	}
+	// Светлый лёд приглушает свет фар, но не гасит его совсем
+	if ice := lighting.GetMaterial(types.Ice); ice.Dimming <= 0 ||
+		ice.Dimming >= 1 {
+		t.Errorf("лёд: приглушение %v", ice.Dimming)
+	}
+	if water := lighting.GetMaterial(types.Water); water.Dimming != 0 {
+		t.Errorf("вода: приглушение %v", water.Dimming)
 	}
 	if forest := lighting.GetMaterial(types.Forest); forest.Opacity <= 0 {
 		t.Error("лес должен частично затенять")
