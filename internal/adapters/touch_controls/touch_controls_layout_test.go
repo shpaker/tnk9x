@@ -163,8 +163,22 @@ func TestComputeControlsLayout_TwoPlayersLandscape(t *testing.T) {
 	if second.DPad.Min.X < game.Max.X || second.Fire.Min.X < game.Max.X {
 		t.Error("контроллы P2 — в правой полосе")
 	}
-	if first.Fire.Max.Y > first.DPad.Min.Y {
-		t.Error("огонь — над крестовиной")
+	for i, controls := range layout.Players {
+		if gap := controls.DPad.Min.Y - controls.Fire.Max.Y; gap < controlsGapDp*3 {
+			t.Errorf("P%d: огонь над крестовиной с зазором не меньше %d, а не %d",
+				i+1, controlsGapDp*3, gap)
+		}
+	}
+}
+
+func TestComputeControlsLayout_TwoPlayersLandscapeLowScreenKeepsGap(t *testing.T) {
+	layout, game := twoPlayersLayoutFor(t, 1600, 620, 2)
+	assertNoOverlaps(t, layout, game)
+	for i, controls := range layout.Players {
+		if gap := controls.DPad.Min.Y - controls.Fire.Max.Y; gap < controlsGapDp*2-1 {
+			t.Errorf("P%d: на низком экране зазор %d меньше %d",
+				i+1, gap, controlsGapDp*2)
+		}
 	}
 }
 

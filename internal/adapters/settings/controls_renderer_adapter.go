@@ -25,14 +25,14 @@ var (
 
 // Раскладка таблицы в логических координатах 256x224
 const (
-	controlsTitleTop  = 12
-	controlsTableTop  = 48
+	// controlsTitleGap — отступ таблицы от заголовка
+	controlsTitleGap  = 12
 	controlsRowStep   = 14
 	controlsLabelLeft = 24
 	keyColumnCenter   = 148
 	padColumnCenter   = 212
 	controlsCellWidth = 60
-	controlsHintTop   = 204
+	controlsHintTop   = 210
 	// controlsBlinkTicks — полупериод мигания ячейки в ожидании
 	controlsBlinkTicks = 20
 )
@@ -70,12 +70,14 @@ func (r *ControlsRendererAdapter) Draw(
 	screen *ebiten.Image,
 	view types.ControlsViewData,
 ) {
-	ui.DrawOverlay(screen, r.font, "CONTROLS", controlsTitleTop)
+	// Заголовок на той же высоте, что у SETTINGS
+	titleTop := ui.MenuTitleTop(screen, r.font)
+	ui.DrawOverlay(screen, r.font, "CONTROLS", titleTop)
 	width := float64(screen.Bounds().Dx())
 	cursor := view.Cursor
 
 	_, isPlayerPage := cursor.Page.Player()
-	top := float64(controlsTableTop)
+	top := titleTop + float64(r.font.TitleFontSize) + controlsTitleGap
 	for i, row := range view.Rows {
 		active := i == cursor.Row
 		rowColor := controlsRowColor

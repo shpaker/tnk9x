@@ -113,6 +113,8 @@ type FakeTouchControls struct {
 	DirectionJust [2]bool
 	FireJust      [2]bool
 	PauseJust     bool
+	Tap           types.Position
+	TapJust       bool
 }
 
 var _ interfaces.ITouchControlsAdapter = (*FakeTouchControls)(nil)
@@ -139,6 +141,10 @@ func (f *FakeTouchControls) FireJustPressed(player types.PlayerTankNum) bool {
 
 func (f *FakeTouchControls) PauseJustPressed() bool { return f.PauseJust }
 
+func (f *FakeTouchControls) TapJustPressed() (types.Position, bool) {
+	return f.Tap, f.TapJust
+}
+
 // FakeMenuInput реализует interfaces.IMenuInputAdapter: события
 // кадра задаются полями, Reset очищает их перед следующим кадром
 type FakeMenuInput struct {
@@ -148,17 +154,20 @@ type FakeMenuInput struct {
 	Confirm     bool
 	BackPressed bool
 	Pause       bool
+	TapPosition types.Position
+	TapPressed  bool
 }
 
 var _ interfaces.IMenuInputAdapter = (*FakeMenuInput)(nil)
 
-func (f *FakeMenuInput) Update()                {}
-func (f *FakeMenuInput) IsTouchActive() bool    { return f.TouchActive }
-func (f *FakeMenuInput) Steps() (bool, bool)    { return f.Up, f.Down }
-func (f *FakeMenuInput) SideStep() int          { return f.Side }
-func (f *FakeMenuInput) Confirmed() bool        { return f.Confirm }
-func (f *FakeMenuInput) Back() bool             { return f.BackPressed }
-func (f *FakeMenuInput) PauseJustPressed() bool { return f.Pause }
+func (f *FakeMenuInput) Update()                        {}
+func (f *FakeMenuInput) IsTouchActive() bool            { return f.TouchActive }
+func (f *FakeMenuInput) Steps() (bool, bool)            { return f.Up, f.Down }
+func (f *FakeMenuInput) SideStep() int                  { return f.Side }
+func (f *FakeMenuInput) Confirmed() bool                { return f.Confirm }
+func (f *FakeMenuInput) Back() bool                     { return f.BackPressed }
+func (f *FakeMenuInput) PauseJustPressed() bool         { return f.Pause }
+func (f *FakeMenuInput) Tapped() (types.Position, bool) { return f.TapPosition, f.TapPressed }
 
 // Reset — кадр без нажатий
 func (f *FakeMenuInput) Reset() {

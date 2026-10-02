@@ -11,8 +11,11 @@ import (
 const (
 	minTargetDp = 48
 	paddingDp   = 8
-	maxDPadDp   = 220
-	maxFireDp   = 120
+	// controlsGapDp — минимальный зазор между крестовиной и огнём
+	// одной колонки: палец с крестовины не задевает огонь
+	controlsGapDp = 24
+	maxDPadDp     = 220
+	maxFireDp     = 120
 
 	// Желаемые размеры — доли меньшей стороны экрана
 	dpadFraction = 0.42
@@ -41,7 +44,7 @@ type ControlsLayout struct {
 
 // controlsSizes — желаемые размеры контролов и отступ в пикселях
 type controlsSizes struct {
-	dpad, fire, pad, minTarget float64
+	dpad, fire, pad, gap, minTarget float64
 }
 
 // computeControlsLayout размещает контроллы в свободных полях вокруг
@@ -62,6 +65,7 @@ func computeControlsLayout(
 		dpad:      clampf(dpadFraction*minDim, 3*minTarget, maxDPadDp*dsf),
 		fire:      clampf(fireFraction*minDim, 1.5*minTarget, maxFireDp*dsf),
 		pad:       paddingDp * dsf,
+		gap:       controlsGapDp * dsf,
 		minTarget: minTarget,
 	}
 
@@ -185,8 +189,9 @@ func landscapeTwoPlayersLayout(
 }
 
 // landscapeColumn — контроллы одного игрока в боковой полосе:
-// крестовина у нижнего края, огонь над ней, сверху ряд паузы;
-// не помещаясь по высоте, оба уменьшаются пропорционально
+// крестовина у нижнего края, сверху ряд паузы, огонь по центру
+// между ними не ближе зазора к крестовине; не помещаясь по высоте,
+// оба уменьшаются пропорционально
 func landscapeColumn(
 	centerX, bandW float64,
 	screenH int,
@@ -194,14 +199,19 @@ func landscapeColumn(
 ) PlayerControls {
 	dpad := math.Min(sizes.dpad, bandW-2*sizes.pad)
 	fire := math.Min(sizes.fire, bandW-2*sizes.pad)
-	available := float64(screenH) - sizes.minTarget - 4*sizes.pad
+	pauseRow := 2*sizes.pad + sizes.minTarget
+	available := float64(screenH) - pauseRow - 2*sizes.pad - sizes.gap
 	if dpad+fire > available && dpad+fire > 0 {
 		shrink := available / (dpad + fire)
 		dpad *= shrink
 		fire *= shrink
 	}
 	dpadCenterY := float64(screenH) - sizes.pad - dpad/2
-	fireCenterY := dpadCenterY - dpad/2 - sizes.pad - fire/2
+	dpadTop := dpadCenterY - dpad/2
+	fireCenterY := math.Min(
+		(pauseRow+dpadTop)/2,
+		dpadTop-sizes.gap-fire/2,
+	)
 
 	return PlayerControls{
 		DPad: rectAround(centerX, dpadCenterY, dpad),

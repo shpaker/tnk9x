@@ -2,6 +2,7 @@ package level_select
 
 import (
 	"fmt"
+	"image"
 	"image/color"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -26,6 +27,8 @@ const (
 	infoLeft      = 132
 	hintBottomGap = 22
 	startBottom   = 10
+	// backPadding — поля рамки тап-кнопки вокруг подписи
+	backPadding = 3
 )
 
 // Цвета экрана выбора уровня
@@ -63,6 +66,9 @@ type LevelSelectRendererAdapter struct {
 	hqPosition      types.Position
 	spawnerPosition []types.Position
 	cellSizePx      float64
+	// backRect — кнопка выхода в главное меню последней отрисовки;
+	// пустая без тача
+	backRect image.Rectangle
 }
 
 // LevelSelectRendererDependencies — зависимости рендера экрана выбора
@@ -361,22 +367,31 @@ func (r *LevelSelectRendererAdapter) drawInfo(
 	)
 }
 
-// Подсказки управления: клавиатурная и сенсорная
+// Подсказка клавиатуры и подпись тап-кнопки выхода
 const (
 	keyboardHint = "ARROWS SELECT  ESC BACK"
-	touchHint    = "D-PAD SELECT  PAUSE BACK"
+	backLabel    = "MAIN MENU"
 )
+
+// HitBack — тап попал в кнопку выхода последней отрисовки
+func (r *LevelSelectRendererAdapter) HitBack(position types.Position) bool {
+	return image.Pt(int(position.X), int(position.Y)).In(r.backRect)
+}
 
 func (r *LevelSelectRendererAdapter) drawFooter(
 	screen *ebiten.Image,
 	view types.LevelSelectViewData,
 	width, height float64,
 ) {
-	hint := keyboardHint
+	r.backRect = image.Rectangle{}
 	button := "ENTER"
 	if view.TouchActive {
-		hint = touchHint
 		button = "FIRE"
+		r.drawBackButton(screen, width, height-hintBottomGap)
+	} else {
+		r.drawCentered(
+			screen, keyboardHint, height-hintBottomGap, width, hintColor,
+		)
 	}
 	// Строка запуска показывает режим: один или двое игроков
 	mode := "1 PLAYER"
@@ -384,13 +399,34 @@ func (r *LevelSelectRendererAdapter) drawFooter(
 		mode = fmt.Sprintf("%d PLAYERS", view.PlayerCount)
 	}
 	start := fmt.Sprintf("PRESS %s: %s", button, mode)
-	r.drawCentered(screen, hint, height-hintBottomGap, width, hintColor)
 
 	startColor := textColor
 	if !view.LevelUnlocked {
 		startColor = dimTextColor
 	}
 	r.drawCentered(screen, start, height-startBottom, width, startColor)
+}
+
+// drawBackButton — тап-кнопка выхода в главное меню в рамке, как
+// у ячеек уровней; запоминает прямоугольник для HitBack
+func (r *LevelSelectRendererAdapter) drawBackButton(
+	screen *ebiten.Image,
+	width, top float64,
+) {
+	labelWidth := r.textWidth(backLabel)
+	left := (width - labelWidth) / 2
+	r.backRect = image.Rect(
+		int(left-backPadding), int(top-backPadding),
+		int(left+labelWidth+backPadding),
+		int(top+float64(r.regularFontSize)+backPadding),
+	)
+	vector.StrokeRect(
+		screen,
+		float32(r.backRect.Min.X)+0.5, float32(r.backRect.Min.Y)+0.5,
+		float32(r.backRect.Dx()-1), float32(r.backRect.Dy()-1),
+		1, dimTextColor, false,
+	)
+	r.drawText(screen, backLabel, left, top, textColor)
 }
 
 // textScale — масштаб основного шрифта относительно шрифта заголовка
