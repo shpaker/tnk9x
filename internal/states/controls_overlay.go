@@ -18,6 +18,9 @@ const controlsRejectTicks = 30
 // определён у потребителя
 type ControlsRenderer interface {
 	Draw(screen *ebiten.Image, view types.ControlsViewData)
+	// HitCell — строка последней отрисовки под точкой и колонка
+	// клавиатуры или геймпада под ней
+	HitCell(position types.Position) (int, types.ControlsDevice, bool)
 }
 
 // ControlsOverlay — экран раскладки поверх настроек: страницы
@@ -73,7 +76,8 @@ func (o *ControlsOverlay) IsCapturing() bool {
 
 // Update: вверх-вниз — строки, на заголовке влево-вправо — страницы,
 // на действии — колонки клавиатуры и геймпада; выбор ячейки включает
-// ожидание нажатия
+// ожидание нажатия. Мышь: наведение выбирает строку и колонку, клик —
+// как выбор, на заголовке листает страницу вперёд
 func (o *ControlsOverlay) Update() {
 	o.cursor.Ticks++
 	if o.rejectTicks > 0 {
@@ -93,12 +97,16 @@ func (o *ControlsOverlay) Update() {
 	rows := o.controlsUseCases.Rows(o.cursor.Page)
 	moveUp, moveDown := o.menuInput.Steps()
 	o.cursor.Row = stepIndex(o.cursor.Row, len(rows), moveUp, moveDown)
+	clicked := o.applyPointer(rows)
 	row := rows[o.cursor.Row]
 	step := o.menuInput.SideStep()
-	confirmed := o.menuInput.Confirmed()
+	confirmed := o.menuInput.Confirmed() || clicked
 
 	switch row.Kind {
 	case types.ControlsRowPage:
+		if clicked {
+			step = 1
+		}
 		o.switchPage(step)
 	case types.ControlsRowAction:
 		if step < 0 {
@@ -130,6 +138,38 @@ func (o *ControlsOverlay) Draw(screen *ebiten.Image) {
 	)
 }
 
+// applyPointer переносит курсор на ячейку под мышью или тапом;
+// true — по ячейке кликнули
+func (o *ControlsOverlay) applyPointer(rows []types.ControlsRow) bool {
+	if position, pointed := o.menuInput.Pointed(); pointed {
+		o.pointAt(rows, position)
+	}
+	if position, tapped := o.menuInput.Tapped(); tapped {
+		return o.pointAt(rows, position)
+	}
+	return false
+}
+
+// pointAt ставит курсор на строку под точкой; колонка меняется
+// только на строках действий — у хоткеев она одна
+func (o *ControlsOverlay) pointAt(
+	rows []types.ControlsRow,
+	position types.Position,
+) bool {
+	row, column, ok := o.renderer.HitCell(position)
+	if !ok || row >= len(rows) {
+		return false
+	}
+	o.cursor.Row = row
+	switch rows[row].Kind {
+	case types.ControlsRowAction:
+		o.cursor.Column = column
+	case types.ControlsRowHotkey:
+		o.cursor.Column = types.ControlsDeviceKeyboard
+	}
+	return true
+}
+
 // switchPage листает страницы по кругу; строки страниц разной длины,
 // курсор остаётся на заголовке
 func (o *ControlsOverlay) switchPage(step int) {
@@ -144,10 +184,10 @@ func (o *ControlsOverlay) switchPage(step int) {
 }
 
 // updateCapture ждёт клавишу или кнопку для выбранной ячейки:
-// Esc, Start или тач-пауза отменяют, занятое имя отклоняется
-// с подсветкой, ожидание продолжается
+// Esc, Start, тач-пауза, тап или клик отменяют, занятое имя
+// отклоняется с подсветкой, ожидание продолжается
 func (o *ControlsOverlay) updateCapture() {
-	if o.menuInput.PauseJustPressed() {
+	if o.menuInput.PauseJustPressed() || tappedAnywhere(o.menuInput) {
 		o.cursor.Capturing = false
 		o.rejectTicks = 0
 		o.cursor.Rejected = false

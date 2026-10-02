@@ -254,19 +254,43 @@ func (a *TouchControlsAdapter) handleJustPressed() {
 	}
 }
 
-// handleTap переводит касание в логические координаты игрового
-// экрана; касания полей вне игры не действуют
+// handleTap — касание игрового экрана вне контролов; касания полей
+// вне игры не действуют
 func (a *TouchControlsAdapter) handleTap(sx, sy float64) {
-	if a.gameScale <= 0 {
+	position, ok := a.screenToGame(sx, sy)
+	if !ok {
 		return
+	}
+	a.tapJust = true
+	a.tapPosition = position
+}
+
+// GamePosition переводит координаты ebiten (тач, курсор мыши)
+// в логические координаты нарисованного игрового экрана
+func (a *TouchControlsAdapter) GamePosition(x, y int) (types.Position, bool) {
+	if a.screenW == 0 || a.screenH == 0 {
+		return types.Position{}, false
+	}
+	sx, sy := logicalToScreen(
+		x, y, a.logicalW, a.logicalH, a.screenW, a.screenH,
+	)
+	return a.screenToGame(sx, sy)
+}
+
+// screenToGame переводит пиксели финального экрана в логические
+// координаты игрового экрана; точки на полях — false
+func (a *TouchControlsAdapter) screenToGame(
+	sx, sy float64,
+) (types.Position, bool) {
+	if a.gameScale <= 0 {
+		return types.Position{}, false
 	}
 	x := (sx - float64(a.gameX)) / float64(a.gameScale)
 	y := (sy - float64(a.gameY)) / float64(a.gameScale)
 	if x < 0 || y < 0 || x >= float64(a.logicalW) || y >= float64(a.logicalH) {
-		return
+		return types.Position{}, false
 	}
-	a.tapJust = true
-	a.tapPosition = types.Position{X: x, Y: y}
+	return types.Position{X: x, Y: y}, true
 }
 
 func (a *TouchControlsAdapter) screenTouchPosition(

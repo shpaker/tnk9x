@@ -145,3 +145,91 @@ func TestMenuInput_TouchBothPlayers(t *testing.T) {
 		t.Error("тач-пауза — назад и пауза")
 	}
 }
+
+// fakeMouse — курсор, нажатые кнопки и колесо вместо ebiten-рантайма
+type fakeMouse struct {
+	x, y    int
+	buttons map[ebiten.MouseButton]bool
+	wheelY  float64
+}
+
+func newMouseAdapter() (*MenuInputAdapter, *fakeMouse) {
+	adapter, _, _ := newTestAdapter()
+	mouse := &fakeMouse{}
+	adapter.cursorPosition = func() (int, int) { return mouse.x, mouse.y }
+	adapter.isMouseJustPressed = func(button ebiten.MouseButton) bool {
+		return mouse.buttons[button]
+	}
+	adapter.wheel = func() (float64, float64) { return 0, mouse.wheelY }
+	return adapter, mouse
+}
+
+func TestMenuInput_MousePointAndClick(t *testing.T) {
+	adapter, mouse := newMouseAdapter()
+
+	// Первый кадр запоминает курсор: неподвижная мышь не наводит
+	mouse.x, mouse.y = 10, 20
+	adapter.Update()
+	if _, pointed := adapter.Pointed(); pointed || adapter.IsPointerActive() {
+		t.Error("неподвижный курсор не наводит и не включает мышь")
+	}
+
+	mouse.x = 30
+	adapter.Update()
+	position, pointed := adapter.Pointed()
+	if !pointed || position != (types.Position{X: 30, Y: 20}) ||
+		!adapter.IsPointerActive() {
+		t.Errorf(
+			"сдвиг курсора — наведение, получено %v, %v",
+			position,
+			pointed,
+		)
+	}
+
+	adapter.Update()
+	if _, pointed := adapter.Pointed(); pointed {
+		t.Error("наведение — только в кадре сдвига")
+	}
+
+	mouse.buttons = map[ebiten.MouseButton]bool{ebiten.MouseButtonLeft: true}
+	adapter.Update()
+	if position, tapped := adapter.Tapped(); !tapped ||
+		position != (types.Position{X: 30, Y: 20}) {
+		t.Errorf("левая кнопка — тап, получено %v, %v", position, tapped)
+	}
+}
+
+func TestMenuInput_MouseRightButtonIsBackNotPause(t *testing.T) {
+	adapter, mouse := newMouseAdapter()
+
+	mouse.buttons = map[ebiten.MouseButton]bool{ebiten.MouseButtonRight: true}
+	adapter.Update()
+	if !adapter.Back() || adapter.PauseJustPressed() {
+		t.Error("правая кнопка — назад, но не пауза")
+	}
+}
+
+func TestMenuInput_MouseWheel(t *testing.T) {
+	adapter, mouse := newMouseAdapter()
+
+	mouse.wheelY = 1
+	adapter.Update()
+	if adapter.SideStep() != 1 {
+		t.Errorf("колесо вверх — шаг вправо, получено %d", adapter.SideStep())
+	}
+
+	// Тачпад: мелкие сдвиги копятся до шага
+	mouse.wheelY = -0.4
+	adapter.Update()
+	adapter.Update()
+	if adapter.SideStep() != 0 {
+		t.Error("мелкая прокрутка не даёт шаг сразу")
+	}
+	adapter.Update()
+	if adapter.SideStep() != -1 {
+		t.Errorf(
+			"накопленная прокрутка даёт шаг, получено %d",
+			adapter.SideStep(),
+		)
+	}
+}

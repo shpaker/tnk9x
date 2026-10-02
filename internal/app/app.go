@@ -566,6 +566,7 @@ func (app *App) Update() error {
 	}
 	if app.platformAdapter.IsSuspended() {
 		app.platformAdapter.SetGameplayActive(false)
+		app.windowAdapter.SetCursorVisible(true)
 		return nil
 	}
 
@@ -578,7 +579,10 @@ func (app *App) Update() error {
 
 	transition := app.state.Update()
 	err := app.applyTransition(transition)
-	app.platformAdapter.SetGameplayActive(app.isGameplayActive())
+	gameplayActive := app.isGameplayActive()
+	app.platformAdapter.SetGameplayActive(gameplayActive)
+	// Мышь управляет только меню: в бою курсор спрятан
+	app.windowAdapter.SetCursorVisible(!gameplayActive)
 
 	return err
 }

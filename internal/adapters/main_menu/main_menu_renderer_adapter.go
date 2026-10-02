@@ -25,6 +25,9 @@ var mainMenuLabels = map[types.MainMenuItem]string{
 const (
 	menuTop     = 124
 	menuRowStep = 16
+	// menuHitPadding — запас хита пунктов по бокам от самого
+	// широкого пункта
+	menuHitPadding = 8
 )
 
 // Цвета меню
@@ -50,6 +53,8 @@ var outlineOffsets = [][2]float64{
 // текст с чёрной обводкой читается и поверх кирпича, и поверх танков
 type MainMenuRendererAdapter struct {
 	font ui.MenuFont
+	// hits — пункты последней отрисовки для мыши и тапов
+	hits ui.HitAreas
 }
 
 func NewMainMenuRendererAdapter(
@@ -73,7 +78,21 @@ func (r *MainMenuRendererAdapter) Draw(
 	bounds := screen.Bounds()
 	width := float64(bounds.Dx())
 
+	// Хиты пунктов — полоса шириной в самый длинный пункт
+	var widest float64
+	for _, item := range view.Items {
+		widest = max(widest, r.font.TextWidth(mainMenuLabels[item]))
+	}
+	hitLeft := (width-widest)/2 - menuHitPadding
+	rowHeight := float64(r.font.RegularFontSize)
+	r.hits.Reset()
+
 	for i, item := range view.Items {
+		r.hits.Add(ui.RowRect(
+			hitLeft, width-hitLeft,
+			float64(menuTop+i*menuRowStep),
+			rowHeight, menuRowStep-rowHeight,
+		))
 		label := mainMenuLabels[item]
 		textColor := rowColor
 		if i == view.ActiveIndex {
@@ -88,6 +107,11 @@ func (r *MainMenuRendererAdapter) Draw(
 	}
 
 	ui.DrawFade(screen, view.Fade)
+}
+
+// HitRow — пункт последней отрисовки под точкой
+func (r *MainMenuRendererAdapter) HitRow(position types.Position) (int, bool) {
+	return r.hits.Hit(position)
 }
 
 // drawOutlined — строка с чёрной обводкой в 1 px

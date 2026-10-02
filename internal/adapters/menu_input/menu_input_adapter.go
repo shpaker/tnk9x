@@ -1,5 +1,6 @@
 // Package menu_input собирает ввод меню и паузы из всех источников:
-// фиксированные клавиши, любой геймпад и тач-контроллы любого игрока.
+// фиксированные клавиши, любой геймпад, тач-контроллы любого игрока
+// и мышь.
 package menu_input
 
 import (
@@ -28,6 +29,10 @@ var menuPlayers = []types.PlayerTankNum{
 	types.PlayerTankNumPlayer1, types.PlayerTankNumPlayer2,
 }
 
+// wheelStepThreshold — накопленная прокрутка колеса на один шаг:
+// тачпад даёт много мелких сдвигов за жест
+const wheelStepThreshold = 1.0
+
 // stickState — направление левого стика геймпада в прошлом кадре
 type stickState struct {
 	direction types.Direction
@@ -47,6 +52,15 @@ type MenuInputAdapter struct {
 	pause           bool
 	tapped          bool
 	tapPosition     types.Position
+	pointed         bool
+	pointPosition   types.Position
+
+	// Мышь: последняя позиция курсора, защёлка «мышь замечена»
+	// и накопленная прокрутка колеса
+	cursorX, cursorY int
+	cursorKnown      bool
+	pointerSeen      bool
+	wheelAccumulated float64
 
 	// Стики геймпадов: шаг меню — только при отклонении или смене
 	// направления, удержание не листает
@@ -57,6 +71,9 @@ type MenuInputAdapter struct {
 	appendGamepads      func([]ebiten.GamepadID) []ebiten.GamepadID
 	isButtonJustPressed func(ebiten.GamepadID, ebiten.StandardGamepadButton) bool
 	axisValue           func(ebiten.GamepadID, ebiten.StandardGamepadAxis) float64
+	cursorPosition      func() (int, int)
+	isMouseJustPressed  func(ebiten.MouseButton) bool
+	wheel               func() (float64, float64)
 
 	// Переиспользуемый буфер опроса
 	gamepads []ebiten.GamepadID
@@ -72,10 +89,13 @@ func NewMenuInputAdapter(
 		appendGamepads:      bindings.StandardGamepads,
 		isButtonJustPressed: inpututil.IsStandardGamepadButtonJustPressed,
 		axisValue:           ebiten.StandardGamepadAxisValue,
+		cursorPosition:      ebiten.CursorPosition,
+		isMouseJustPressed:  inpututil.IsMouseButtonJustPressed,
+		wheel:               ebiten.Wheel,
 	}
 }
 
-// Update собирает события кадра из клавиатуры, геймпадов и тача
+// Update собирает события кадра из клавиатуры, геймпадов, тача и мыши
 func (a *MenuInputAdapter) Update() {
 	a.up = a.anyKey(upKeys)
 	a.down = a.anyKey(downKeys)
@@ -92,6 +112,7 @@ func (a *MenuInputAdapter) Update() {
 
 	a.updateGamepads()
 	a.updateTouch()
+	a.updateMouse()
 }
 
 func (a *MenuInputAdapter) IsTouchActive() bool {
@@ -120,6 +141,14 @@ func (a *MenuInputAdapter) PauseJustPressed() bool {
 
 func (a *MenuInputAdapter) Tapped() (types.Position, bool) {
 	return a.tapPosition, a.tapped
+}
+
+func (a *MenuInputAdapter) Pointed() (types.Position, bool) {
+	return a.pointPosition, a.pointed
+}
+
+func (a *MenuInputAdapter) IsPointerActive() bool {
+	return a.pointerSeen
 }
 
 // updateGamepads: крестовина и стик — шаги, A — выбор, B — назад,
@@ -192,6 +221,57 @@ func (a *MenuInputAdapter) updateTouch() {
 		a.pause = true
 		a.back = true
 	}
+}
+
+// updateMouse: сдвиг курсора — наведение, левая кнопка — тап,
+// правая — назад (не пауза: клик в бою игру не останавливает),
+// колесо — шаг влево-вправо
+func (a *MenuInputAdapter) updateMouse() {
+	x, y := a.cursorPosition()
+	moved := a.cursorKnown && (x != a.cursorX || y != a.cursorY)
+	a.cursorX, a.cursorY, a.cursorKnown = x, y, true
+
+	a.pointed = false
+	if moved {
+		a.pointerSeen = true
+		a.pointPosition, a.pointed = a.touchControls.GamePosition(x, y)
+	}
+
+	if a.isMouseJustPressed(ebiten.MouseButtonLeft) {
+		a.pointerSeen = true
+		// Тап этого кадра важнее: клик в той же точке его не дублирует
+		if !a.tapped {
+			a.tapPosition, a.tapped = a.touchControls.GamePosition(x, y)
+		}
+	}
+	if a.isMouseJustPressed(ebiten.MouseButtonRight) {
+		a.pointerSeen = true
+		a.back = true
+	}
+
+	a.updateWheel()
+}
+
+// updateWheel копит прокрутку и даёт не больше шага за кадр;
+// смена направления сбрасывает накопленное
+func (a *MenuInputAdapter) updateWheel() {
+	_, offset := a.wheel()
+	if offset == 0 {
+		return
+	}
+	if (offset > 0) != (a.wheelAccumulated > 0) {
+		a.wheelAccumulated = 0
+	}
+	a.wheelAccumulated += offset
+	switch {
+	case a.wheelAccumulated >= wheelStepThreshold:
+		a.side = 1
+	case a.wheelAccumulated <= -wheelStepThreshold:
+		a.side = -1
+	default:
+		return
+	}
+	a.wheelAccumulated = 0
 }
 
 func (a *MenuInputAdapter) applyDirection(up, down, left, right bool) {

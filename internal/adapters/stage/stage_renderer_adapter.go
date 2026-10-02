@@ -12,6 +12,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"github.com/shpaker/tnk9x/internal/adapters/effects"
+	"github.com/shpaker/tnk9x/internal/adapters/ui"
 	"github.com/shpaker/tnk9x/internal/interfaces"
 	"github.com/shpaker/tnk9x/internal/types"
 	image_providers "github.com/shpaker/tnk9x/internal/types/image_providers"
@@ -41,6 +42,10 @@ type StageRendererAdapter struct {
 
 	// Поверхности кадра для маски материалов; буфер переиспользуется
 	surfaces []effects.Surface
+
+	// Строки меню паузы и итогов последней отрисовки для мыши и тапов
+	pauseHits  ui.HitAreas
+	resultHits ui.HitAreas
 }
 
 // StageRendererDependencies — готовый граф зависимостей рендера уровня;

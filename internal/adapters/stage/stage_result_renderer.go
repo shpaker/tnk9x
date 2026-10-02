@@ -2,6 +2,7 @@ package stage
 
 import (
 	"fmt"
+	"image"
 	"image/color"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -114,7 +115,10 @@ func (r *StageRendererAdapter) DrawStageResult(
 			height*resultTitleY-resultTitleDrop*(1-reveal.Title),
 		)
 		titleOp.ColorScale.ScaleWithColor(
-			withAlpha(color.NRGBA{R: 255, G: 255, B: 255, A: 255}, reveal.Title),
+			withAlpha(
+				color.NRGBA{R: 255, G: 255, B: 255, A: 255},
+				reveal.Title,
+			),
 		)
 		text.Draw(screen, title, r.fontFace, titleOp)
 	}
@@ -131,11 +135,15 @@ func (r *StageRendererAdapter) DrawStageResult(
 	if reveal.Stats > 0 {
 		r.drawResultStats(screen, view, height, reveal.Stats)
 	}
+	r.resultHits.Reset()
 	if !reveal.Menu {
 		return
 	}
 
 	layout := r.resultMenuLayout(height, view.Items)
+	for _, rect := range layout.hitRects(width) {
+		r.resultHits.Add(rect)
+	}
 	for i, item := range view.Items {
 		rowColor := color.NRGBA{R: 150, G: 150, B: 150, A: 255}
 		if i == view.ActiveIndex {
@@ -156,6 +164,14 @@ func (r *StageRendererAdapter) DrawStageResult(
 			)
 		}
 	}
+}
+
+// HitResultRow — пункт меню итогов последней отрисовки под точкой;
+// до появления меню пунктов нет
+func (r *StageRendererAdapter) HitResultRow(
+	position types.Position,
+) (int, bool) {
+	return r.resultHits.Hit(position)
 }
 
 // drawResultStats — время, потерянные жизни и заметки с прозрачностью
@@ -200,8 +216,12 @@ func withAlpha(c color.NRGBA, alpha float64) color.NRGBA {
 // в логических координатах экрана
 type resultMenuLayout struct {
 	rowTops []float64
+	// rowBottoms — низ пункта вместе с пояснением
+	rowBottoms []float64
 	// captionOffset — сдвиг пояснения от верха его пункта
 	captionOffset float64
+	// edgeGap — зазор над первым и под последним пунктом для хитов
+	edgeGap float64
 }
 
 // resultMenuMetrics — размеры строк меню итогов в логических
@@ -254,18 +274,41 @@ func layoutResultMenu(
 	}
 
 	rowTops := make([]float64, len(items))
+	rowBottoms := make([]float64, len(items))
 	top := metrics.top
 	for i, item := range items {
 		rowTops[i] = top
-		top += metrics.rowHeight + gap
+		top += metrics.rowHeight
 		if _, ok := stageResultCaptions[item]; ok {
 			top += captionOffset
 		}
+		rowBottoms[i] = top
+		top += gap
 	}
 	return resultMenuLayout{
 		rowTops:       rowTops,
+		rowBottoms:    rowBottoms,
 		captionOffset: captionOffset,
+		edgeGap:       metrics.gap,
 	}
+}
+
+// hitRects — прямоугольники пунктов на всю ширину экрана: граница
+// между соседними пунктами посередине зазора, мёртвых зон нет
+func (l resultMenuLayout) hitRects(width float64) []image.Rectangle {
+	rects := make([]image.Rectangle, len(l.rowTops))
+	for i := range l.rowTops {
+		upper := l.rowTops[i] - l.edgeGap/2
+		if i > 0 {
+			upper = (l.rowBottoms[i-1] + l.rowTops[i]) / 2
+		}
+		lower := l.rowBottoms[i] + l.edgeGap/2
+		if i < len(l.rowTops)-1 {
+			lower = (l.rowBottoms[i] + l.rowTops[i+1]) / 2
+		}
+		rects[i] = image.Rect(0, int(upper), int(width), int(lower))
+	}
+	return rects
 }
 
 // drawResultCaption рисует пояснение пункта по центру: тусклый текст

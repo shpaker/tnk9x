@@ -16,6 +16,8 @@ const mainMenuFadeInTicks = 24
 // у потребителя
 type MainMenuRenderer interface {
 	Draw(screen *ebiten.Image, view types.MainMenuViewData)
+	// HitRow — пункт последней отрисовки под точкой
+	HitRow(position types.Position) (int, bool)
 }
 
 // MenuScene — живая сцена за главным меню; контракт определён
@@ -109,7 +111,11 @@ func (s *MainMenuState) Update() types.StateTransition {
 
 	moveUp, moveDown := s.menuInput.Steps()
 	s.activeIndex = stepIndex(s.activeIndex, len(s.items), moveUp, moveDown)
-	if !s.menuInput.Confirmed() {
+	activeIndex, clicked := pointerIndex(
+		s.menuInput, s.renderer.HitRow, s.activeIndex,
+	)
+	s.activeIndex = activeIndex
+	if !s.menuInput.Confirmed() && !clicked {
 		return types.StateTransition{}
 	}
 

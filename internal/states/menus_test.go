@@ -44,6 +44,8 @@ func (w *fakeWindow) SetFullscreen(
 	w.fullscreen = fullscreen
 }
 
+func (w *fakeWindow) SetCursorVisible(bool) {}
+
 // fakeCapture отдаёт заданное нажатие один раз
 type fakeCapture struct{ key, button string }
 
@@ -64,14 +66,53 @@ type fakeHotkeys struct{ pressed []types.HotkeyAction }
 
 func (h *fakeHotkeys) JustPressed() []types.HotkeyAction { return h.pressed }
 
-// nopRenderer — рендеры экранов без отрисовки
+// hitRowByY — хит-тест фейковых рендеров: строка под точкой равна
+// её Y
+func hitRowByY(position types.Position) (int, bool) {
+	return int(position.Y), true
+}
+
+// pointAt и clickAt — наведение и клик по строке row; x выбирает
+// колонку на экране раскладки
+func pointAt(row int, x float64) testutil.FakeMenuInput {
+	return testutil.FakeMenuInput{
+		PointPosition: types.Position{X: x, Y: float64(row)},
+		PointMoved:    true,
+		PointerActive: true,
+	}
+}
+
+func clickAt(row int, x float64) testutil.FakeMenuInput {
+	return testutil.FakeMenuInput{
+		TapPosition:   types.Position{X: x, Y: float64(row)},
+		TapPressed:    true,
+		PointerActive: true,
+	}
+}
+
+// nopRenderer — рендеры экранов без отрисовки; колонка геймпада
+// раскладки — при X >= 1
 type nopRenderer struct{}
 
 func (nopRenderer) Draw(*ebiten.Image, types.ControlsViewData) {}
 
+func (nopRenderer) HitCell(
+	position types.Position,
+) (int, types.ControlsDevice, bool) {
+	row, ok := hitRowByY(position)
+	if position.X >= 1 {
+		return row, types.ControlsDeviceGamepad, ok
+	}
+	return row, types.ControlsDeviceKeyboard, ok
+}
+
 type nopSettingsRenderer struct{}
 
 func (nopSettingsRenderer) Draw(*ebiten.Image, types.SettingsViewData) {}
+
+func (nopSettingsRenderer) HitRow(position types.Position) (int, bool) {
+	return hitRowByY(position)
+}
 
 // menusEnv — экраны настроек и раскладки на фейках
 type menusEnv struct {
@@ -263,9 +304,26 @@ func (nopLevelSelectRenderer) HitBack(position types.Position) bool {
 	return position.X < 10 && position.Y < 10
 }
 
+// HitLevel — ячейки уровней в полосе Y 20..30, позиция равна X/10
+func (nopLevelSelectRenderer) HitLevel(position types.Position) (int, bool) {
+	if position.Y < 20 || position.Y >= 30 {
+		return 0, false
+	}
+	return int(position.X) / 10, true
+}
+
+// HitPack — стрелка следующей пачки в полосе Y 40..50
+func (nopLevelSelectRenderer) HitPack(position types.Position) (int, bool) {
+	return 1, position.Y >= 40 && position.Y < 50
+}
+
 type nopMainMenuRenderer struct{}
 
 func (nopMainMenuRenderer) Draw(*ebiten.Image, types.MainMenuViewData) {}
+
+func (nopMainMenuRenderer) HitRow(position types.Position) (int, bool) {
+	return hitRowByY(position)
+}
 
 // countingScene — сцена за меню, считающая кадры и заглушения звука
 type countingScene struct {
@@ -337,7 +395,10 @@ func TestLevelSelectState_BackToMainMenu(t *testing.T) {
 
 	*env.input = testutil.FakeMenuInput{Confirm: true}
 	if transition := state.Update(); transition.Target != types.TransitionToStage {
-		t.Errorf("выбор открытого уровня запускает его, переход %v", transition.Target)
+		t.Errorf(
+			"выбор открытого уровня запускает его, переход %v",
+			transition.Target,
+		)
 	}
 	*env.input = testutil.FakeMenuInput{BackPressed: true}
 	if transition := state.Update(); transition.Target != types.TransitionToMainMenu {
@@ -349,13 +410,159 @@ func TestLevelSelectState_BackToMainMenu(t *testing.T) {
 		TapPosition: types.Position{X: 100, Y: 100}, TapPressed: true,
 	}
 	if transition := state.Update(); transition.Target != types.TransitionNone {
-		t.Errorf("тап мимо кнопки не должен уходить, переход %v", transition.Target)
+		t.Errorf(
+			"тап мимо кнопки не должен уходить, переход %v",
+			transition.Target,
+		)
 	}
 	*env.input = testutil.FakeMenuInput{
 		TapPosition: types.Position{X: 5, Y: 5}, TapPressed: true,
 	}
 	if transition := state.Update(); transition.Target != types.TransitionToMainMenu {
-		t.Errorf("тап по кнопке ведёт в главное меню, переход %v", transition.Target)
+		t.Errorf(
+			"тап по кнопке ведёт в главное меню, переход %v",
+			transition.Target,
+		)
+	}
+}
+
+func TestMainMenuState_Mouse(t *testing.T) {
+	env := newMenusEnv()
+	menu := newMainMenu(env, &countingScene{})
+
+	// Наведение на 2 PLAYERS только выделяет пункт
+	*env.input = pointAt(1, 0)
+	if transition := menu.Update(); transition.Target != types.TransitionNone {
+		t.Errorf("наведение не выбирает пункт, переход %v", transition.Target)
+	}
+
+	// Клик по QUIT выбирает его сразу
+	*env.input = clickAt(3, 0)
+	if transition := menu.Update(); transition.Target != types.TransitionToQuit {
+		t.Errorf("клик по QUIT завершает игру, переход %v", transition.Target)
+	}
+}
+
+func TestSettingsOverlay_Mouse(t *testing.T) {
+	env := newMenusEnv()
+	env.settingsOverlay.Open()
+	volume := env.settings.GetVolume()
+
+	// Наведение на VOLUME и колесо меняют громкость
+	env.frame(env.settingsOverlay.Update, pointAt(2, 0))
+	env.frame(env.settingsOverlay.Update, testutil.FakeMenuInput{Side: -1})
+	if env.settings.GetVolume() >= volume {
+		t.Errorf(
+			"колесо над VOLUME убавляет громкость: %v",
+			env.settings.GetVolume(),
+		)
+	}
+
+	// Клик по CONTROLS открывает раскладку, правая кнопка закрывает
+	env.frame(env.settingsOverlay.Update, clickAt(3, 0))
+	if !env.controlsOverlay.IsOpen() {
+		t.Fatal("клик по CONTROLS открывает раскладку")
+	}
+	env.frame(
+		env.settingsOverlay.Update,
+		testutil.FakeMenuInput{BackPressed: true},
+	)
+	env.frame(
+		env.settingsOverlay.Update,
+		testutil.FakeMenuInput{BackPressed: true},
+	)
+	if env.settingsOverlay.IsOpen() {
+		t.Error("назад закрывает раскладку, затем настройки")
+	}
+}
+
+func TestControlsOverlay_Mouse(t *testing.T) {
+	env := newMenusEnv()
+	env.controlsOverlay.Open()
+
+	// Клик по заголовку листает страницу: P2
+	env.frame(env.controlsOverlay.Update, clickAt(0, 0))
+
+	// Клик по ячейке PAD строки UP начинает ожидание кнопки
+	env.frame(env.controlsOverlay.Update, clickAt(1, 1))
+	if !env.controlsOverlay.IsCapturing() {
+		t.Fatal("клик по ячейке включает ожидание нажатия")
+	}
+	env.capture.button = "Y"
+	env.frame(env.controlsOverlay.Update, testutil.FakeMenuInput{})
+	if env.controls.GetButton(
+		types.PlayerTankNumPlayer2,
+		types.InputActionUp,
+	) != "Y" {
+		t.Error("кликнутая ячейка PAD P2 получает кнопку")
+	}
+
+	// Клик во время ожидания отменяет его
+	env.frame(env.controlsOverlay.Update, clickAt(2, 0))
+	env.frame(env.controlsOverlay.Update, clickAt(2, 0))
+	if env.controlsOverlay.IsCapturing() || !env.controlsOverlay.IsOpen() {
+		t.Error("клик отменяет ожидание и оставляет экран открытым")
+	}
+}
+
+// recordingLevelSelectUseCases — запоминает позицию и пачку
+type recordingLevelSelectUseCases struct {
+	stubLevelSelectUseCases
+	position, packSteps int
+}
+
+func (uc *recordingLevelSelectUseCases) SetPosition(
+	_ *types.LevelSelectorEntity,
+	position int,
+) {
+	uc.position = position
+}
+
+func (uc *recordingLevelSelectUseCases) MovePack(
+	_ *types.LevelSelectorEntity,
+	delta int,
+) {
+	uc.packSteps += delta
+}
+
+func TestLevelSelectState_Mouse(t *testing.T) {
+	env := newMenusEnv()
+	useCases := &recordingLevelSelectUseCases{}
+	state := states.NewLevelSelectState(states.LevelSelectStateDependencies{
+		LevelSelectUseCases: useCases,
+		Renderer:            nopLevelSelectRenderer{},
+		MenuInput:           env.input,
+		Settings:            env.settings,
+	})
+
+	// Наведение выбирает уровень, но не запускает
+	*env.input = testutil.FakeMenuInput{
+		PointPosition: types.Position{X: 25, Y: 25}, PointMoved: true,
+	}
+	if transition := state.Update(); transition.Target != types.TransitionNone ||
+		useCases.position != 2 {
+		t.Errorf("наведение: переход %v, позиция %d",
+			transition.Target, useCases.position)
+	}
+
+	// Клик по стрелке листает пачку
+	*env.input = testutil.FakeMenuInput{
+		TapPosition: types.Position{Y: 45}, TapPressed: true,
+	}
+	if transition := state.Update(); transition.Target != types.TransitionNone ||
+		useCases.packSteps != 1 {
+		t.Errorf("стрелка: переход %v, шагов пачки %d",
+			transition.Target, useCases.packSteps)
+	}
+
+	// Клик по ячейке запускает уровень
+	*env.input = testutil.FakeMenuInput{
+		TapPosition: types.Position{X: 15, Y: 25}, TapPressed: true,
+	}
+	if transition := state.Update(); transition.Target != types.TransitionToStage ||
+		useCases.position != 1 {
+		t.Errorf("клик по ячейке: переход %v, позиция %d",
+			transition.Target, useCases.position)
 	}
 }
 
@@ -372,7 +579,11 @@ type nopSplashRenderer struct{}
 func (nopSplashRenderer) Draw(*ebiten.Image, types.SplashViewData) {}
 
 // splashTicksToMenu — кадров до перехода в главное меню
-func splashTicksToMenu(splash *states.SplashState, input *testutil.FakeMenuInput, skip bool) int {
+func splashTicksToMenu(
+	splash *states.SplashState,
+	input *testutil.FakeMenuInput,
+	skip bool,
+) int {
 	for frame := 1; frame < 1000; frame++ {
 		*input = testutil.FakeMenuInput{Confirm: skip}
 		if splash.Update().Target == types.TransitionToMainMenu {
@@ -397,8 +608,13 @@ func TestSplashState_LoadsThenFades(t *testing.T) {
 
 	// После загрузки ожидание можно пропустить
 	input = &testutil.FakeMenuInput{}
-	skipped := states.NewSplashState(&fakeLoader{steps: 5}, nopSplashRenderer{}, input)
-	if frames := splashTicksToMenu(skipped, input, true); frames < 5 || frames > 60 {
+	skipped := states.NewSplashState(
+		&fakeLoader{steps: 5},
+		nopSplashRenderer{},
+		input,
+	)
+	if frames := splashTicksToMenu(skipped, input, true); frames < 5 ||
+		frames > 60 {
 		t.Errorf("пропуск: переход через %d кадров", frames)
 	}
 }

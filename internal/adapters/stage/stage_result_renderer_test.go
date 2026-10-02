@@ -25,7 +25,11 @@ func TestLayoutResultMenu_Rows(t *testing.T) {
 		t.Errorf("rowTops %v, want %v", layout.rowTops, want)
 	}
 	if layout.captionOffset != captionOffset {
-		t.Errorf("captionOffset %v, want %v", layout.captionOffset, captionOffset)
+		t.Errorf(
+			"captionOffset %v, want %v",
+			layout.captionOffset,
+			captionOffset,
+		)
 	}
 }
 
@@ -102,5 +106,29 @@ func TestLayoutResultMenu_LongMenuFits(t *testing.T) {
 	}
 	if step := layout.rowTops[1] - layout.rowTops[0]; step >= 16 {
 		t.Errorf("row step %v, want a tighter gap", step)
+	}
+}
+
+// Хиты пунктов итогов смыкаются посередине зазора: пояснение
+// CONTINUE принадлежит своему пункту
+func TestResultMenuLayout_HitRects(t *testing.T) {
+	metrics := resultMenuMetrics{top: 100, bottom: 220, rowHeight: 8, gap: 8}
+	layout := layoutResultMenu(metrics, []types.StageResultItem{
+		types.StageResultItemNext,
+		types.StageResultItemContinue,
+		types.StageResultItemLevels,
+	})
+
+	rects := layout.hitRects(256)
+	if rects[0].Min.Y != 96 || rects[0].Max.Y != rects[1].Min.Y ||
+		rects[1].Max.Y != rects[2].Min.Y {
+		t.Errorf("хиты должны смыкаться: %v", rects)
+	}
+	captionBottom := int(layout.rowBottoms[1])
+	if rects[1].Max.Y < captionBottom {
+		t.Errorf("пояснение CONTINUE вне его хита: %v", rects[1])
+	}
+	if rects[2].Dx() != 256 {
+		t.Errorf("хит на всю ширину: %v", rects[2])
 	}
 }
