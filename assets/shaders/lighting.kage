@@ -2,7 +2,8 @@
 
 // Динамический свет игрового поля с трассировкой теней.
 // Images[0] — сцена, Images[1] — маска материалов:
-// R — непрозрачность, G — отражательная способность, B — блики только на гребнях волн
+// R — непрозрачность, G — отражательная способность, B — блики только
+// на светлых пикселях спрайта, A — доля рассеянного света источников
 package main
 
 // Источники: xy — центр в пикселях экрана, z — радиус, w — яркость
@@ -50,13 +51,14 @@ const (
 // способности: спадает как сам свет и при ярком свете уходит в bloom
 const metalSheen = 0.9
 
-// Гребень волны — пиксель воды с зелёным выше crestLow: блик нарастает
-// до crestHigh и там усилен в crestGlint раз, основа воды не бликует.
-// Мерцание задаёт смена кадров спрайта, а не шейдер
+// Светлый пиксель спрайта — гребень волны или белый штрих льда —
+// с зелёным выше highlightLow: блик нарастает до highlightHigh и там
+// усилен в highlightGlint раз. Основа воды и серый лёд не бликуют.
+// Мерцание воды задаёт смена кадров спрайта, а не шейдер
 const (
-	crestLow   = 0.3
-	crestHigh  = 0.7
-	crestGlint = 1.8
+	highlightLow   = 0.8
+	highlightHigh  = 0.95
+	highlightGlint = 1.8
 )
 
 // Фара не слепит у самого танка: конус набирает силу на первых
@@ -119,10 +121,10 @@ func Fragment(dstPos vec4, srcPos vec2, color vec4) vec4 {
 
 	material := imageSrc1At(srcPos)
 	wall := material.r > 0.99
-	// Вода бликует только гребнями волн, нарисованными в спрайте:
-	// основа воды синяя без зелёного, гребни светлые
-	crest := smoothstep(crestLow, crestHigh, scene.g)
-	ripple := mix(1.0, crestGlint*crest, material.b)
+	// Вода и лёд бликуют только светлыми пикселями спрайта: гребнями
+	// волн на синей воде и белыми штрихами на сером льду
+	highlight := smoothstep(highlightLow, highlightHigh, scene.g)
+	sparkle := mix(1.0, highlightGlint*highlight, material.b)
 
 	light := vec3(0)
 	glow := vec3(0)
@@ -179,7 +181,9 @@ func Fragment(dstPos vec4, srcPos vec2, color vec4) vec4 {
 		}
 	}
 
-	lit := scene.rgb*(Ambient+light) +
-		glow*Haze + (glint*ripple+sheen*metalSheen)*material.g
+	// Светлая поверхность (лёд) под фарой выбеливается: свет источников
+	// на ней приглушён, общий свет остаётся прежним
+	lit := scene.rgb*(Ambient+light*material.a) +
+		glow*Haze + (glint*sparkle+sheen*metalSheen)*material.g
 	return vec4(lit, 1)
 }
