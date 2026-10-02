@@ -45,6 +45,15 @@ web/                # Браузерный слой: загрузчик wasm и 
 - Отрисовка — только через адаптеры рендера (`*renderer_adapter`).
 - Lua — только в `internal/adapters/scripting` за доменным `IAIScriptEngine`.
 
+## Скиллы Ebitengine
+
+Перед работой с движком читать и применять официальные скиллы из [ebiten/skills](https://github.com/hajimehoshi/ebiten/tree/main/skills):
+
+- [efficient-ebitengine-rendering](https://github.com/hajimehoshi/ebiten/tree/main/skills/efficient-ebitengine-rendering) — любой код отрисовки, offscreen-проходы, производительность рендера.
+- [avoiding-blurry-ebitengine-rendering](https://github.com/hajimehoshi/ebiten/tree/main/skills/avoiding-blurry-ebitengine-rendering) — layout, текст, UI, масштабирование и финальный вывод на экран.
+- [writing-kage-shaders](https://github.com/hajimehoshi/ebiten/tree/main/skills/writing-kage-shaders) — написание, ревью и отладка Kage-шейдеров.
+- [run-ebitengine-app-headless](https://github.com/hajimehoshi/ebiten/tree/main/skills/run-ebitengine-app-headless) — headless-запуск игры для тестов, отладки и скриншотов.
+
 ## Именование
 
 - Типы: `*Entity`, `*UseCases`, `*Service`, `*Repository`; интерфейсы — `I*` (`ITankCommonUseCases`).

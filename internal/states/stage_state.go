@@ -205,21 +205,6 @@ func (state *StageState) Update() types.StateTransition {
 	}
 
 	stageFinished := state.stageUseCases.IsStageFinished()
-	if stageFinished && !state.stageUseCases.IsPaused() {
-		state.stageUseCases.PauseStageState()
-	}
-	if stageFinished {
-		// Один раз глушим все звуки (в т.ч. луп двигателя) при завершении
-		// уровня; при поражении дополнительно проигрываем gameover
-		if !state.endSoundHandled {
-			state.soundUseCases.RequestStopAll()
-			if !state.stageUseCases.IsStageWon() {
-				state.soundUseCases.RequestSound(types.SoundIDGameOver, false)
-			}
-			state.endSoundHandled = true
-		}
-		transition = state.handleStageResult()
-	}
 
 	// Меню паузы работает только пока уровень не завершён:
 	// на экране итогов действует своё меню
@@ -243,11 +228,6 @@ func (state *StageState) Update() types.StateTransition {
 					keyboardAdapter.SetPlayerTank(respawned)
 				}
 			}
-		}
-
-		if state.stageUseCases.IsStageFinished() &&
-			!state.stageUseCases.IsPaused() {
-			state.stageUseCases.PauseStageState()
 		}
 
 		if spawned := state.stageUseCases.TrySpawnEnemy(); spawned != nil {
@@ -275,6 +255,12 @@ func (state *StageState) Update() types.StateTransition {
 		state.lightingUseCases.UpdateHeadlights()
 	}
 
+	// Завершение обрабатывается в том же кадре, где уровень закончился:
+	// к Draw итоги уже построены, и меню паузы не мелькает перед ними
+	if state.stageUseCases.IsStageFinished() {
+		transition = state.handleStageFinish()
+	}
+
 	// Эффекты продвигаются и на финальном оверлее: дым и тряска
 	// от взрыва штаба доигрывают, а не замирают; в меню паузы стоят
 	if !paused || stageFinished {
@@ -284,6 +270,23 @@ func (state *StageState) Update() types.StateTransition {
 	playSoundEvents(state.soundUseCases, state.soundPlayerAdapter)
 
 	return transition
+}
+
+// handleStageFinish ставит завершённый уровень на паузу, один раз
+// глушит все звуки (в т.ч. луп двигателя), при поражении проигрывает
+// gameover и ведёт экран итогов
+func (state *StageState) handleStageFinish() types.StateTransition {
+	if !state.stageUseCases.IsPaused() {
+		state.stageUseCases.PauseStageState()
+	}
+	if !state.endSoundHandled {
+		state.soundUseCases.RequestStopAll()
+		if !state.stageUseCases.IsStageWon() {
+			state.soundUseCases.RequestSound(types.SoundIDGameOver, false)
+		}
+		state.endSoundHandled = true
+	}
+	return state.handleStageResult()
 }
 
 // Suspend — площадка приостановила игру (реклама, скрытая вкладка):

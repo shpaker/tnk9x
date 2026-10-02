@@ -220,11 +220,14 @@ func (a *EffectsRendererAdapter) fillCone(i int, light types.LightEntity) {
 }
 
 // drawMask заливает маску материалов: R — непрозрачность,
-// G — отражательная способность, B — блики только на гребнях волн
+// G — отражательная способность, B — блики только на светлых
+// пикселях спрайта, A — доля рассеянного света источников.
+// Каналы независимы, а не цвет с альфой: пол без поверхностей
+// освещён полностью, поверхность копируется в маску без смешивания
 func (a *EffectsRendererAdapter) drawMask(surfaces []Surface) {
-	a.mask.Clear()
+	a.mask.Fill(color.Black)
 	for _, surface := range surfaces {
-		op := &ebiten.DrawImageOptions{}
+		op := &ebiten.DrawImageOptions{Blend: ebiten.BlendCopy}
 		op.GeoM.Scale(
 			float64(surface.Rect.Dx()),
 			float64(surface.Rect.Dy()),
@@ -236,8 +239,8 @@ func (a *EffectsRendererAdapter) drawMask(surfaces []Surface) {
 		op.ColorScale.Scale(
 			float32(surface.Material.Opacity),
 			float32(surface.Material.Reflectivity),
-			float32(surface.Material.Ripple),
-			1,
+			float32(surface.Material.Sparkle),
+			float32(1-surface.Material.Dimming),
 		)
 		a.mask.DrawImage(a.pixel, op)
 	}

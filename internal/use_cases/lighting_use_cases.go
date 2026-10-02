@@ -107,14 +107,16 @@ const (
 )
 
 // surfaceMaterials — свойства поверхностей: кирпич и сталь бросают
-// тень, лес затеняет частично, вода и лёд дают блики. Сталь — металл,
-// её освещённый фасад блестит; кирпич матовый
+// тень, лес затеняет частично, вода и лёд дают блики только светлыми
+// пикселями спрайта. Сталь — металл, её освещённый фасад блестит;
+// кирпич матовый. Светлый лёд приглушает свет источников, иначе
+// под фарой он выбеливается
 var surfaceMaterials = map[types.BlockType]types.SurfaceMaterial{
 	types.Brick:  {Opacity: 1},
 	types.Steel:  {Opacity: 1, Reflectivity: 1},
 	types.Forest: {Opacity: 0.35},
-	types.Water:  {Reflectivity: 1, Ripple: 1},
-	types.Ice:    {Reflectivity: 0.6},
+	types.Water:  {Reflectivity: 1, Sparkle: 1},
+	types.Ice:    {Reflectivity: 0.5, Sparkle: 1, Dimming: 0.4},
 }
 
 var _ interfaces.ILightingUseCases = (*LightingUseCases)(nil)
@@ -239,8 +241,7 @@ func headlightOf(tank *types.TankEntity) (types.LightEntity, int, bool) {
 	}
 	spec, halfAngle, priority := headlight, headlightHalfAngle, lightPriorityPlayer
 	if tank.IsEnemy() {
-		spec, halfAngle, priority =
-			enemyHeadlight, enemyHeadlightHalfAngle, lightPriorityEnemy
+		spec, halfAngle, priority = enemyHeadlight, enemyHeadlightHalfAngle, lightPriorityEnemy
 	}
 	angle := tank.GetHeadlightAngle()
 	direction := types.Position{X: math.Cos(angle), Y: math.Sin(angle)}
