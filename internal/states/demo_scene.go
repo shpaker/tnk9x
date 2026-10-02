@@ -12,9 +12,9 @@ const (
 	// demoBlocksPerTick — сколько блоков заголовка встаёт за кадр
 	// при сборке
 	demoBlocksPerTick = 1
-	// demoRepairTicks — как часто чинятся отколотые и снесённые
-	// кирпичи заголовка
-	demoRepairTicks = 180
+	// demoRepairTicks — как часто встаёт на место один разбитый
+	// кирпич названия: пробоины затягиваются медленно, по блоку
+	demoRepairTicks = 150
 	// demoTickSeconds — шаг симуляции: сцена идёт с постоянной
 	// скоростью независимо от реального TPS
 	demoTickSeconds = 1.0 / 60.0
@@ -42,8 +42,9 @@ type DemoSceneDependencies struct {
 	BulletUseCases        interfaces.IBulletUseCases
 
 	// Adapters
-	EnemyInputAdapter interfaces.IAiInputAdapter
-	Renderer          DemoSceneRenderer
+	EnemyInputAdapter  interfaces.IAiInputAdapter
+	SoundPlayerAdapter interfaces.ISoundPlayerAdapter
+	Renderer           DemoSceneRenderer
 
 	// Entities
 	// TitleBlocks — блоки названия игры в порядке сборки
@@ -52,8 +53,10 @@ type DemoSceneDependencies struct {
 
 // DemoScene — живая сцена за главным меню: название игры собирается
 // из блоков, затем по полю ездят и стреляют по танку каждого типа
-// врагов под управлением настоящего ИИ. Игроков и штаба нет,
-// звуков нет; разбитые кирпичи названия со временем встают на место
+// врагов под управлением настоящего ИИ. Игроков и штаба нет; звучат
+// попадания пуль в кирпич и сталь (выстрелы врагов беззвучны, а друг
+// друга враги не подбивают); разбитые кирпичи названия со временем
+// по одному встают на место
 type DemoScene struct {
 	// Use Cases
 	tankCommonUseCases    interfaces.ITankCommonUseCases
@@ -67,8 +70,9 @@ type DemoScene struct {
 	mapUseCases           interfaces.IMapUseCases
 	bulletUseCases        interfaces.IBulletUseCases
 	// Adapters
-	enemyInputAdapter interfaces.IAiInputAdapter
-	renderer          DemoSceneRenderer
+	enemyInputAdapter  interfaces.IAiInputAdapter
+	soundPlayerAdapter interfaces.ISoundPlayerAdapter
+	renderer           DemoSceneRenderer
 	// Entities
 	titleBlocks types.MapBlocks
 
@@ -95,6 +99,7 @@ func NewDemoScene(deps DemoSceneDependencies) *DemoScene {
 		mapUseCases:           deps.MapUseCases,
 		bulletUseCases:        deps.BulletUseCases,
 		enemyInputAdapter:     deps.EnemyInputAdapter,
+		soundPlayerAdapter:    deps.SoundPlayerAdapter,
 		renderer:              deps.Renderer,
 		titleBlocks:           deps.TitleBlocks,
 	}
@@ -121,10 +126,13 @@ func (s *DemoScene) Update() {
 	s.tilesUseCases.UpdateAnimations()
 	s.lightingUseCases.UpdateHeadlights()
 	s.visualEffectsUseCases.Update()
+	playSoundEvents(s.soundUseCases, s.soundPlayerAdapter)
+}
 
-	// Сцена за меню беззвучна: события звука копятся в очереди
-	// уровня, их нужно забирать каждый кадр
-	_ = s.soundUseCases.GetEvents()
+// StopSounds глушит звуки сцены при уходе из меню
+func (s *DemoScene) StopSounds() {
+	s.soundUseCases.RequestStopAll()
+	playSoundEvents(s.soundUseCases, s.soundPlayerAdapter)
 }
 
 func (s *DemoScene) Draw(screen *ebiten.Image) {
@@ -172,8 +180,8 @@ func (s *DemoScene) updateTanks() {
 	}
 }
 
-// repairTitle возвращает разбитые кирпичи названия на место, если
-// их клетку сейчас не занимают танк или пуля
+// repairTitle возвращает на место первый разбитый кирпич названия,
+// клетку которого сейчас не занимают танк или пуля
 func (s *DemoScene) repairTitle() {
 	var obstacles []types.IEntityCollider
 	for _, tank := range s.tankCommonUseCases.GetAllTanks() {
@@ -188,8 +196,9 @@ func (s *DemoScene) repairTitle() {
 	}
 
 	for _, block := range s.titleBlocks {
-		if !s.mapUseCases.IsBlockIntact(block) {
-			s.mapUseCases.RestoreBlock(block, obstacles)
+		if !s.mapUseCases.IsBlockIntact(block) &&
+			s.mapUseCases.RestoreBlock(block, obstacles) {
+			return
 		}
 	}
 }

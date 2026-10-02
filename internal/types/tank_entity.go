@@ -251,12 +251,20 @@ func (t *TankEntity) GetBlinkFlag() bool {
 	return t.blinkFlag
 }
 
+// GetBlinkProgress — пройденная доля текущей фазы мигания, [0, 1)
+func (t *TankEntity) GetBlinkProgress() float64 {
+	if t == nil {
+		return 0
+	}
+	return float64(t.blinkCounter) / BlinkPhaseTicks
+}
+
 func (t *TankEntity) UpdateBlink() {
 	if t == nil {
 		return
 	}
 	t.blinkCounter++
-	if t.blinkCounter >= 10 {
+	if t.blinkCounter >= BlinkPhaseTicks {
 		t.blinkCounter = 0
 		t.blinkFlag = !t.blinkFlag
 	}

@@ -261,72 +261,9 @@ func TestRenderUseCases_UpdateBlink(t *testing.T) {
 	}
 }
 
-// Вражеский танк с бонусом невидим в выключенной фазе мигания
-func TestRenderUseCases_IsTankVisible(t *testing.T) {
-	env := newRenderTestEnv()
-
-	newTank := func(
-		role types.TankRole,
-		withBonus bool,
-		blinkOn bool,
-	) *types.TankEntity {
-		tank := env.newTankInState(role, types.TankStateMoving)
-		tank.SetWithBonus(withBonus)
-		if blinkOn {
-			for i := 0; i < 10; i++ {
-				tank.UpdateBlink()
-			}
-		}
-		return tank
-	}
-	shielded := newTank(types.TankRolePlayer1, false, false)
-	shielded.ActivateShield(60)
-
-	tests := []struct {
-		name string
-		tank *types.TankEntity
-		want bool
-	}{
-		{"nil-танк", nil, false},
-		{
-			"враг с бонусом в тёмной фазе",
-			newTank(types.TankRoleEnemy, true, false),
-			false,
-		},
-		{
-			"враг с бонусом в видимой фазе",
-			newTank(types.TankRoleEnemy, true, true),
-			true,
-		},
-		{
-			"враг без бонуса",
-			newTank(types.TankRoleEnemy, false, false),
-			true,
-		},
-		{
-			"игрок с флагом бонуса",
-			newTank(types.TankRolePlayer1, true, false),
-			true,
-		},
-		{
-			"игрок под щитом не мигает — поверх мерцает поле",
-			shielded,
-			true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := env.render.IsTankVisible(tt.tank); got != tt.want {
-				t.Errorf("IsTankVisible = %v, ожидалось %v", got, tt.want)
-			}
-		})
-	}
-}
-
-// Тон здоровья даёт только тяжёлый вражеский танк с запасом здоровья
-// 2-4 и только во включённой фазе мигания
-func TestRenderUseCases_TankHealthTint(t *testing.T) {
+// Тон даёт только мигающий враг и только во включённой фазе: враг
+// с бонусом — красный, тяжёлый с запасом здоровья 2-4 — цвет брони
+func TestRenderUseCases_TankTint(t *testing.T) {
 	env := newRenderTestEnv()
 
 	newTank := func(
@@ -363,19 +300,19 @@ func TestRenderUseCases_TankHealthTint(t *testing.T) {
 		{
 			"4 HP — красный",
 			blinkOn(newTank(types.TankRoleEnemy, heavySpecs(), 4)),
-			color.NRGBA{R: 255, G: 90, B: 90, A: 255},
+			color.NRGBA{R: 240, G: 150, B: 140, A: 255},
 			true,
 		},
 		{
 			"3 HP — жёлтый",
 			blinkOn(newTank(types.TankRoleEnemy, heavySpecs(), 3)),
-			color.NRGBA{R: 255, G: 230, B: 100, A: 255},
+			color.NRGBA{R: 235, G: 215, B: 150, A: 255},
 			true,
 		},
 		{
 			"2 HP — зелёный",
 			blinkOn(newTank(types.TankRoleEnemy, heavySpecs(), 2)),
-			color.NRGBA{R: 120, G: 255, B: 120, A: 255},
+			color.NRGBA{R: 165, G: 220, B: 160, A: 255},
 			true,
 		},
 		{
@@ -385,10 +322,26 @@ func TestRenderUseCases_TankHealthTint(t *testing.T) {
 			false,
 		},
 		{
-			"с бонусом — тон в любой фазе",
-			withBonus(newTank(types.TankRoleEnemy, heavySpecs(), 4)),
-			color.NRGBA{R: 255, G: 90, B: 90, A: 255},
+			"враг с бонусом — красный",
+			blinkOn(withBonus(newTank(
+				types.TankRoleEnemy,
+				types.NewSpecsEntity(0, 1, false, 1, 1),
+				1,
+			))),
+			color.NRGBA{R: 235, G: 125, B: 115, A: 255},
 			true,
+		},
+		{
+			"тяжёлый с бонусом — красный бонуса, не цвет брони",
+			blinkOn(withBonus(newTank(types.TankRoleEnemy, heavySpecs(), 3))),
+			color.NRGBA{R: 235, G: 125, B: 115, A: 255},
+			true,
+		},
+		{
+			"враг с бонусом в выключенной фазе — без тона",
+			withBonus(newTank(types.TankRoleEnemy, heavySpecs(), 4)),
+			color.NRGBA{},
+			false,
 		},
 		{
 			"1 HP — без тона",
@@ -429,10 +382,10 @@ func TestRenderUseCases_TankHealthTint(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotColor, gotOK := env.render.TankHealthTint(tt.tank)
+			gotColor, gotOK := env.render.TankTint(tt.tank)
 			if gotOK != tt.wantOK || gotColor != tt.wantColor {
 				t.Errorf(
-					"TankHealthTint = (%v, %v), ожидалось (%v, %v)",
+					"TankTint = (%v, %v), ожидалось (%v, %v)",
 					gotColor,
 					gotOK,
 					tt.wantColor,

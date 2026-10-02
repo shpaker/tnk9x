@@ -269,12 +269,7 @@ func (state *StageState) Update() types.StateTransition {
 		state.visualEffectsUseCases.Update()
 	}
 
-	// Единственная точка контакта с звуковым адаптером: применяем
-	// накопленные события кадра в порядке добавления
-	for _, event := range state.soundUseCases.GetEvents() {
-		state.applySoundEvent(event)
-	}
-	state.soundPlayerAdapter.Update()
+	playSoundEvents(state.soundUseCases, state.soundPlayerAdapter)
 
 	return transition
 }
@@ -336,24 +331,6 @@ func (state *StageState) applyPauseMenuSelection(
 	}
 
 	return types.StateTransition{}
-}
-
-func (state *StageState) applySoundEvent(event types.SoundEntity) {
-	var err error
-	switch event.Action {
-	case types.SoundActionPlay:
-		err = state.soundPlayerAdapter.Play(event.SoundID)
-	case types.SoundActionPlayLoop:
-		err = state.soundPlayerAdapter.PlayLoop(event.SoundID)
-	case types.SoundActionStop:
-		state.soundPlayerAdapter.Stop(event.SoundID)
-	case types.SoundActionStopAll:
-		state.soundPlayerAdapter.StopAll()
-	}
-	// Ошибки воспроизведения не фатальны: логируем и продолжаем
-	if err != nil {
-		log.Printf("sound %q: %v", event.SoundID, err)
-	}
 }
 
 // updateBlinkObjects обновляет мигание бонусов, танков с бонусом

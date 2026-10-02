@@ -81,11 +81,11 @@ type IRenderUseCases interface {
 	UpdateTankAnimation(tank *types.TankEntity)
 	SyncTankAnimationWithState(tank *types.TankEntity)
 	UpdateBlink(blinkObjects []types.IBlink)
-	IsTankVisible(tank *types.TankEntity) bool
 	// IsTankBlinking — мигает ли танк (враг с бонусом или тяжёлый враг)
 	IsTankBlinking(tank *types.TankEntity) bool
-	// TankHealthTint — тон спрайта тяжёлого танка в текущем кадре
-	TankHealthTint(tank *types.TankEntity) (color.NRGBA, bool)
+	// TankTint — тон спрайта мигающего врага в текущем кадре: красный
+	// у врага с бонусом, цвет брони у тяжёлого
+	TankTint(tank *types.TankEntity) (color.NRGBA, bool)
 }
 
 type ITankLifecycleUseCases interface {

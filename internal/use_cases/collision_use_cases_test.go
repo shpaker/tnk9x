@@ -44,15 +44,11 @@ func (s *stubRenderUseCases) SyncTankAnimationWithState(
 
 func (s *stubRenderUseCases) UpdateBlink(blinkObjects []types.IBlink) {}
 
-func (s *stubRenderUseCases) IsTankVisible(tank *types.TankEntity) bool {
-	return true
-}
-
 func (s *stubRenderUseCases) IsTankBlinking(tank *types.TankEntity) bool {
 	return false
 }
 
-func (s *stubRenderUseCases) TankHealthTint(
+func (s *stubRenderUseCases) TankTint(
 	tank *types.TankEntity,
 ) (color.NRGBA, bool) {
 	return color.NRGBA{}, false

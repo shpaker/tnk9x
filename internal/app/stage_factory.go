@@ -157,6 +157,7 @@ func (app *App) newDemoScene() (*states.DemoScene, error) {
 		MapUseCases:           graph.mapUseCases,
 		BulletUseCases:        graph.bulletUseCases,
 		EnemyInputAdapter:     graph.enemyInputAdapter,
+		SoundPlayerAdapter:    app.soundAdapter,
 		Renderer:              graph.renderer,
 		TitleBlocks:           titleBlocks,
 	}), nil

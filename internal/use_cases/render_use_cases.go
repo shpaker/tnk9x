@@ -13,12 +13,15 @@ import (
 const heavyTankLevel = 3
 
 // tankHealthTintColors — мультипликатор цвета спрайта по оставшемуся
-// здоровью; каналы не обнулены, чтобы сохранить объём спрайта
+// здоровью; приглушённые тона не выбиваются из палитры уровня
 var tankHealthTintColors = map[uint]color.NRGBA{
-	4: {R: 255, G: 90, B: 90, A: 255},
-	3: {R: 255, G: 230, B: 100, A: 255},
-	2: {R: 120, G: 255, B: 120, A: 255},
+	4: {R: 240, G: 150, B: 140, A: 255},
+	3: {R: 235, G: 215, B: 150, A: 255},
+	2: {R: 165, G: 220, B: 160, A: 255},
 }
+
+// bonusCarrierTint — приглушённый красный тон мигающего врага с бонусом
+var bonusCarrierTint = color.NRGBA{R: 235, G: 125, B: 115, A: 255}
 
 var _ interfaces.IRenderUseCases = (*RenderUseCases)(nil)
 
@@ -114,43 +117,36 @@ func (uc *RenderUseCases) SyncTankAnimationWithState(
 	}
 }
 
-// IsTankVisible — false в выключенной фазе мигания вражеского танка
-// с бонусом; такой танк в этом кадре не отрисовывается. Танк под щитом
-// не мигает — поверх него мерцает силовое поле
-func (uc *RenderUseCases) IsTankVisible(tank *types.TankEntity) bool {
-	if tank == nil {
-		return false
-	}
-	return !(tank.IsEnemy() && tank.GetWithBonus() && !tank.GetBlinkFlag())
-}
-
 // IsTankBlinking — true для танка, который мигает: враг с бонусом
 // или тяжёлый враг с индикацией здоровья
 func (uc *RenderUseCases) IsTankBlinking(tank *types.TankEntity) bool {
-	if tank == nil || !tank.IsEnemy() {
-		return false
-	}
-	_, hasTint := healthTintColor(tank)
-	return tank.GetWithBonus() || hasTint
+	_, ok := blinkTintColor(tank)
+	return ok
 }
 
-// TankHealthTint возвращает тон спрайта тяжёлого танка в текущем кадре;
-// ok=false — спрайт рисуется без тона. Как в NES, танк чередует обычный
-// и тонированный спрайт; танк с бонусом и так пропадает в выключенной
-// фазе мигания, поэтому видимым он всегда тонирован
-func (uc *RenderUseCases) TankHealthTint(
+// TankTint возвращает тон спрайта танка в текущем кадре; ok=false —
+// спрайт рисуется без тона. Как в NES, мигающий враг чередует обычный
+// и тонированный спрайт: враг с бонусом — красный, тяжёлый — цвет брони
+func (uc *RenderUseCases) TankTint(
 	tank *types.TankEntity,
 ) (color.NRGBA, bool) {
-	tintColor, exists := healthTintColor(tank)
-	if !exists || !(tank.GetWithBonus() || tank.GetBlinkFlag()) {
+	tintColor, exists := blinkTintColor(tank)
+	if !exists || !tank.GetBlinkFlag() {
 		return color.NRGBA{}, false
 	}
 	return tintColor, true
 }
 
-// healthTintColor — цвет тона по здоровью тяжёлого вражеского танка
-func healthTintColor(tank *types.TankEntity) (color.NRGBA, bool) {
-	if tank == nil || !tank.IsEnemy() || tank.GetSpecs() == nil ||
+// blinkTintColor — цвет мигания вражеского танка без учёта фазы:
+// бонус важнее брони, поэтому тяжёлый враг с бонусом мигает красным
+func blinkTintColor(tank *types.TankEntity) (color.NRGBA, bool) {
+	if tank == nil || !tank.IsEnemy() {
+		return color.NRGBA{}, false
+	}
+	if tank.GetWithBonus() {
+		return bonusCarrierTint, true
+	}
+	if tank.GetSpecs() == nil ||
 		tank.GetSpecs().GetLevel() != heavyTankLevel {
 		return color.NRGBA{}, false
 	}
