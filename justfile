@@ -4,6 +4,17 @@ binary_name := "tnk9x"
 binary_unix := binary_name + "_unix"
 max_line_length := "80"
 
+# Версия сборки: APP_VERSION из CI или описание коммита от последнего тега
+version := env("APP_VERSION", `git describe --tags --always --dirty --exclude '*a*' 2>/dev/null || echo dev`)
+
+# Релизные теги — только MAJOR.MINOR; альфы вида 0.1a1 не учитываются
+release_tag := '^[0-9]+\.[0-9]+$'
+# Типы коммитов, поднимающие минорную версию, в порядке changelog
+release_types := "feat fix perf refactor"
+# Признаки ломающего изменения: `type!:` в теме или футер BREAKING CHANGE
+breaking_subject := '^[a-z]+(\([^)]*\))?!:'
+breaking_body := '^BREAKING[ -]CHANGE:'
+
 # Основные команды
 default:
     @just --list
@@ -11,7 +22,7 @@ default:
 build:
     #!/bin/bash
     set -euo pipefail
-    VERSION="dev-$(date -u +%Y-%m-%dT%H:%M)"
+    VERSION="{{version}}"
     echo "Building application (version $VERSION)..."
     {{gocmd}} build -ldflags "-X github.com/shpaker/tnk9x/internal/app.Version=${VERSION}" -o {{binary_name}} -v ./cmd
     echo "Build completed: {{binary_name}} (version $VERSION)"
@@ -22,7 +33,7 @@ build-macos:
     out_dir="_build/macos"
     rm -rf "$out_dir"
     mkdir -p "$out_dir"
-    VERSION="dev-$(date -u +%Y-%m-%dT%H:%M)"
+    VERSION="{{version}}"
     release_output="{{binary_name}}_darwin_arm64"
     echo "Building macOS (Apple Silicon) release $VERSION -> $out_dir/$release_output"
     GOOS="darwin" GOARCH="arm64" CGO_ENABLED=1 {{gocmd}} build -trimpath -ldflags "-s -w -X github.com/shpaker/tnk9x/internal/app.Version=${VERSION}" -o "$out_dir/$release_output" ./cmd
@@ -34,7 +45,7 @@ build-windows:
     out_dir="_build/windows"
     rm -rf "$out_dir"
     mkdir -p "$out_dir"
-    VERSION="dev-$(date -u +%Y-%m-%dT%H:%M)"
+    VERSION="{{version}}"
     release_output="{{binary_name}}_windows_amd64.exe"
     echo "Building Windows (x64) release $VERSION -> $out_dir/$release_output"
     GOOS="windows" GOARCH="amd64" CGO_ENABLED=0 {{gocmd}} build -trimpath -ldflags "-s -w -X github.com/shpaker/tnk9x/internal/app.Version=${VERSION}" -o "$out_dir/$release_output" ./cmd
@@ -56,7 +67,7 @@ build-web target="pages":
     out_dir="dist/{{target}}"
     rm -rf "$out_dir"
     mkdir -p "$out_dir"
-    VERSION="${APP_VERSION:-dev-$(date -u +%Y%m%d-%H%M)}"
+    VERSION="{{version}}"
     echo "Building web/{{target}} (version $VERSION) -> $out_dir"
     GOOS="js" GOARCH="wasm" {{gocmd}} build -trimpath -ldflags "-s -w -X github.com/shpaker/tnk9x/internal/app.Version=${VERSION}" -o "$out_dir/{{binary_name}}.wasm" ./cmd
     cp "$({{gocmd}} env GOROOT)/lib/wasm/wasm_exec.js" "$out_dir/"
@@ -78,7 +89,7 @@ serve-web target="pages": (build-web target)
 package-yandex:
     #!/bin/bash
     set -euo pipefail
-    export APP_VERSION="${APP_VERSION:-dev-$(date -u +%Y%m%d-%H%M)}"
+    export APP_VERSION="{{version}}"
     "{{just_executable()}}" build-web yandex
     mkdir -p _build
     archive="_build/{{binary_name}}_yandex_${APP_VERSION}.zip"
@@ -113,7 +124,7 @@ package-macos:
         echo "Error: macOS binary not found. Run 'just build-macos' first."
         exit 1
     fi
-    VERSION="dev-$(date -u +%Y-%m-%dT%H:%M)"
+    VERSION="{{version}}"
     archive_name="{{binary_name}}_darwin_arm64_${VERSION}.tar.gz"
     echo "Creating macOS archive: $archive_name"
     cd "$out_dir"
@@ -132,7 +143,7 @@ package-windows:
         echo "Error: Windows binary not found. Run 'just build-windows' first."
         exit 1
     fi
-    VERSION="dev-$(date -u +%Y-%m-%dT%H:%M)"
+    VERSION="{{version}}"
     archive_name="{{binary_name}}_windows_amd64_${VERSION}.zip"
     echo "Creating Windows archive: $archive_name"
     cd "$out_dir"
@@ -193,9 +204,48 @@ run: build
 dev:
     #!/bin/bash
     set -euo pipefail
-    VERSION="dev-$(date -u +%Y-%m-%dT%H:%M)"
+    VERSION="{{version}}"
     echo "Running in development mode (version $VERSION)..."
     {{gocmd}} run -ldflags "-X github.com/shpaker/tnk9x/internal/app.Version=${VERSION}" ./cmd
+
+# Версионирование по Conventional Commits
+# Пустой вывод — с последнего релиза нет релизных коммитов
+# Следующая версия MAJOR.MINOR по коммитам с последнего релизного тега
+next-version:
+    #!/bin/bash
+    set -euo pipefail
+    last=$(git tag --merged HEAD | grep -E '{{release_tag}}' | sort -V | tail -n1 || true)
+    range="${last:+$last..}HEAD"
+    subjects=$(git log --format='%s' "$range")
+    bodies=$(git log --format='%b' "$range")
+    types='{{release_types}}'
+    major="${last%%.*}"
+    minor="${last#*.}"
+    if [ -z "$last" ]; then
+        major=0
+        minor=0
+    fi
+    if grep -qE '{{breaking_subject}}' <<< "$subjects" \
+        || grep -qE '{{breaking_body}}' <<< "$bodies"; then
+        echo "$((major + 1)).0"
+    elif grep -qE "^(${types// /|})(\([^)]*\))?:" <<< "$subjects"; then
+        echo "${major}.$((minor + 1))"
+    fi
+
+# Только релизные коммиты: ломающие первыми, затем по типам
+# Changelog релиза ref относительно предыдущего релизного тега
+changelog ref="HEAD":
+    #!/bin/bash
+    set -euo pipefail
+    ref='{{ref}}'
+    last=$(git tag --merged "$ref" --no-contains "$ref" | grep -E '{{release_tag}}' | sort -V | tail -n1 || true)
+    subjects=$(git log --reverse --format='%s' "${last:+$last..}$ref")
+    {
+        grep -E '{{breaking_subject}}' <<< "$subjects" || true
+        for type in {{release_types}}; do
+            grep -E "^${type}(\([^)]*\))?:" <<< "$subjects" || true
+        done
+    } | sed 's/^/- /'
 
 # Форматирование
 fmt:

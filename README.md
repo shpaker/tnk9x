@@ -32,6 +32,7 @@ Tanks from the 90s — played not the way they really were, but the way we remem
 - Data-driven content: section-based map and campaign formats, locales in `assets/locales`, all validated fail-fast on startup
 - Platform specifics behind `IPlatformAdapter` and `IRewardAdapter`, one adapter per build target; portal bridges in `web/<platform>/` ([web/README.md](web/README.md))
 - Unit tests with a >=70% use-cases coverage gate; CI builds and lints both desktop and js/wasm
+- Automatic `MAJOR.MINOR` versioning by Conventional Commits: after a green CI on main CI tags the commit, builds the release with generated notes and deploys Pages
 
 ### Roadmap
 - HQ: defeat screen, protection mechanics

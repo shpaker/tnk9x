@@ -1,0 +1,77 @@
+name: Version
+
+# Версия MAJOR.MINOR считается по коммитам после зелёного CI на main
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+
+jobs:
+  tag:
+    name: Tag Release
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    concurrency:
+      group: version
+      cancel-in-progress: false
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    env:
+      HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+
+      - name: Setup Just
+        uses: extractions/setup-just@v3
+
+      - name: Compute version
+        id: version
+        run: |
+          # Коммит уже в релизе: ручной тег или запуск не по порядку
+          if [ -n "$(git tag --contains "$HEAD_SHA")" ]; then
+            echo "Commit $HEAD_SHA is already released"
+            exit 0
+          fi
+          version="$(just next-version)"
+          echo "Next version: ${version:-none}"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Push tag
+        if: steps.version.outputs.version != ''
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          git tag "$VERSION" "$HEAD_SHA"
+          git push origin "$VERSION"
+
+  # Тег от GITHUB_TOKEN не запускает воркфлоу по тегам — вызываем их явно
+  release:
+    name: Release
+    needs: [tag]
+    if: needs.tag.outputs.version != ''
+    uses: ./.github/workflows/release.yml
+    with:
+      version: ${{ needs.tag.outputs.version }}
+    permissions:
+      contents: write
+
+  pages:
+    name: Pages
+    needs: [tag]
+    if: needs.tag.outputs.version != ''
+    uses: ./.github/workflows/pages.yml
+    with:
+      version: ${{ needs.tag.outputs.version }}
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
