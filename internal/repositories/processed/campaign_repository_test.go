@@ -24,7 +24,7 @@ unlock_after = 3
 
 func TestGetCampaign(t *testing.T) {
 	fileRepository := NewMockFileRepository()
-	fileRepository.AddFile("levels/main.bccamp", []byte(testCampaign))
+	fileRepository.AddFile("levels/main.tnkcamp", []byte(testCampaign))
 
 	campaign, err := NewCampaignRepository(fileRepository).GetCampaign("main")
 	if err != nil {
@@ -78,7 +78,7 @@ func TestGetCampaign_Errors(t *testing.T) {
 	for name, data := range tests {
 		t.Run(name, func(t *testing.T) {
 			fileRepository := NewMockFileRepository()
-			fileRepository.AddFile("levels/main.bccamp", []byte(data))
+			fileRepository.AddFile("levels/main.tnkcamp", []byte(data))
 			_, err := NewCampaignRepository(fileRepository).GetCampaign("main")
 			if err == nil {
 				t.Error("expected an error")

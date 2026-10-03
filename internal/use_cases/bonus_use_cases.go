@@ -90,7 +90,7 @@ func (uc *BonusUseCases) Apply(
 		// Лодка: проезд по воде и одно поглощённое попадание
 		tank.SetBoat()
 	case types.BonusTypePistol:
-		// Пистолет, как в Tank 1990: сразу максимальный уровень —
+		// Пистолет: сразу максимальный уровень —
 		// игрок переживает три попадания, теряя по уровню
 		uc.tankCommonUseCases.SetMaxLevel(tank)
 	}
@@ -119,7 +119,7 @@ func (uc *BonusUseCases) UpdateEffects() {
 // выдерживает враг, получивший пистолет
 const armorHitPoints = 4
 
-// applyForEnemy — бонус, подобранный врагом, как в Tank 1990: каска
+// applyForEnemy — бонус, подобранный врагом: каска
 // и лодка достаются ему самому, звезда и пистолет усиливают его,
 // остальные бонусы бьют по игрокам
 func (uc *BonusUseCases) applyForEnemy(

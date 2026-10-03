@@ -165,7 +165,7 @@ func (uc *CollisionUseCases) checkTankBulletCollisions(
 					uc.requestBulletEffect(types.VisualEventShieldHit, bullet)
 					return
 				}
-				// Лодка поглощает попадание, как в Tank 1990: танк
+				// Лодка поглощает попадание: танк
 				// теряет лодку, но не уровень и не жизнь
 				if tank.HasBoat() {
 					tank.LoseBoat()

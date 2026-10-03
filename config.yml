@@ -1,6 +1,6 @@
 ---
 app:
-  screen_px: [768, 672]  # Window size in pixels [width, height], NES proportions (256x224 logical)
+  screen_px: [768, 672]  # Window size in pixels [width, height], 3x the 256x224 logical screen
   title_font_size: 24
   subtitle_font_size: 8
   regular_font_size: 8
@@ -31,14 +31,14 @@ game:
   # (in tank cells) make a spawner much less likely to be picked
   spawn_player_safe_radius: 4
 
-  # Campaign file: assets/levels/<campaign>.bccamp
+  # Campaign file: assets/levels/<campaign>.tnkcamp
   campaign: main
 
   # Reload pause between shots (0.2-0.5 s depending on the tank):
   # no point-blank fire every frame; false: only the bullets-in-flight limit
   shot_cooldown: true
 
-  # Enemies pick up bonuses too, as in Tank 1990, and the nearest one
+  # Enemies pick up bonuses too, and the nearest one
   # races for a dropped bonus; effects turn against the players (grenade
   # blows up players, timer freezes them, shovel strips the HQ walls,
   # tank adds an enemy); false: bonuses are for players only

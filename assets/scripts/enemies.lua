@@ -57,7 +57,7 @@ local DEMOLITION_RANGE = 80
 memory = {}
 
 -- Характеры по типу танка. targetRule — чередование целей:
---   nes     — бродит, потом охотится на игрока, потом идёт к штабу
+--   cycle   — бродит, потом охотится на игрока, потом идёт к штабу
 --   player  — бродит, потом охотится на игрока
 --   nearest — бродит, потом давит на ближайшую цель: игрока или штаб
 -- Разрушение окружения:
@@ -68,7 +68,7 @@ memory = {}
 PROFILES = {
     [BASIC] = {
         sightMul = 0.9,
-        targetRule = "nes",
+        targetRule = "cycle",
         roamTicks = 480,
         huntTicks = 600,
         brickCost = 2,
@@ -102,7 +102,7 @@ PROFILES = {
     },
     [POWER] = {
         sightMul = 1.0,
-        targetRule = "nes",
+        targetRule = "cycle",
         roamTicks = 180,
         huntTicks = 360,
         brickCost = 0,
@@ -331,7 +331,7 @@ local function currentMode(ctx, m, profile)
     local mode = "hq"
     if profile.targetRule == "player" then
         mode = "player"
-    elseif profile.targetRule == "nes" then
+    elseif profile.targetRule == "cycle" then
         if ctx.tick < m.huntUntil then
             mode = "player"
         end
@@ -366,7 +366,7 @@ local function startDetour(m, tick)
     m.breachDir = nil
 end
 
--- Бродит как в оригинале: едет прямо, изредка сворачивает,
+-- Бродит: едет прямо, изредка сворачивает,
 -- иногда пробивает кирпич перед собой
 local function roam(ctx, tank, m, profile)
     local forward = aheadBlock(ctx, tank, tank.dir)
@@ -593,7 +593,7 @@ local function navigate(ctx, tank, m, profile, diff, mode)
     return roam(ctx, tank, m, profile)
 end
 
--- Фоновая стрельба на ходу: по стенам по курсу и наугад, как в оригинале
+-- Фоновая стрельба на ходу: по стенам по курсу и наугад
 local function ambientFire(ctx, tank, m, profile, diff, decision)
     if not decision.move then
         return false

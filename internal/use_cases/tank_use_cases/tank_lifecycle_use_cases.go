@@ -203,7 +203,7 @@ func (uc *TankLifecycleUseCases) CompleteSpawn(tank *types.TankEntity) {
 }
 
 // spawnShieldDurationTicks — неуязвимость танка игрока после появления,
-// как в оригинале: и на старте уровня, и после гибели
+// и на старте уровня, и после гибели
 const spawnShieldDurationTicks = 3 * 60
 
 func (uc *TankLifecycleUseCases) finishSpawnAnimation(
