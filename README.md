@@ -93,6 +93,8 @@ A modern remake and tribute to the classic arcade game Battle City (NES, 1985), 
 - Input behind adapter interfaces: menu input (fixed keys, any gamepad, touch of either player, mouse), player input (rebindable keyboard, gamepad, touch) and hotkeys; states never poll input devices directly
 - Unit tests with a >=70% use-cases coverage gate
 - CI/CD (fmt, lint, test, build, release); desktop and js/wasm targets are both built and linted
+  - Automatic `MAJOR.MINOR` versioning by Conventional Commits: after a green CI on main, `feat`/`fix`/`perf`/`refactor` bump the minor version, `!` or `BREAKING CHANGE` bump the major; CI tags the commit, builds the release and deploys Pages
+  - Release notes are generated from the release commits since the previous tag (`just changelog`); `just next-version` previews the next version
 
 ### Roadmap
 - HQ: defeat screen, protection mechanics
