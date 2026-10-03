@@ -1,7 +1,8 @@
 // Мост Яндекс Игр поверх базового (web/common/bridge.js): SDK, язык
 // интерфейса Яндекс Игр, разметка загрузки и геймплея, межуровневая
 // реклама и реклама за награду, пауза площадки, облачные сохранения
-// и покупки.
+// и покупки. Межуровневая реклама — не чаще раза в 5 минут игрового
+// времени.
 // Вне Яндекса (SDK не загрузился) остаётся поведение базового моста.
 // Методы не бросают исключений
 (function () {
@@ -12,6 +13,11 @@
 
   // Задержка отправки облачных сохранений: серию записей шлём одной
   const cloudSaveDelayMs = 1000;
+
+  // Межуровневая реклама показывается, только если с запуска или
+  // с прошлой рекламы набрано столько игрового времени: карта длится
+  // 1–3 минуты, реклама — примерно раз в несколько карт
+  const intermissionIntervalMs = 5 * 60 * 1000;
 
   // Контекстное меню, выделение и перетаскивание на всей странице
   for (const type of ["contextmenu", "selectstart", "dragstart"]) {
@@ -26,6 +32,11 @@
   let readySent = false;
   let gameplayRequested = false;
   let gameplayMarked = false;
+
+  // Игровое время с прошлой рекламы: накопленное и начало текущего
+  // отрезка размеченного геймплея
+  let playedMs = 0;
+  let gameplayStartedAt = 0;
 
   // Облачные сохранения: ключ — строка игры; null — облака нет
   let player = null;
@@ -70,11 +81,29 @@
       return;
     }
     gameplayMarked = active;
+    if (active) {
+      gameplayStartedAt = performance.now();
+    } else {
+      playedMs += performance.now() - gameplayStartedAt;
+    }
     call(() => active
       ? ysdk.features.GameplayAPI.start()
       : ysdk.features.GameplayAPI.stop());
   }
   platform.addSuspendListener(syncGameplay);
+
+  // Игровое время с прошлой рекламы: меню, пауза и приостановка
+  // площадкой не считаются — разметка геймплея в них снята
+  function playedTime() {
+    const current = gameplayMarked ? performance.now() - gameplayStartedAt : 0;
+    return playedMs + current;
+  }
+
+  // Любая показанная реклама начинает отсчёт заново
+  function resetAdTimer() {
+    playedMs = 0;
+    gameplayStartedAt = performance.now();
+  }
 
   function saveCloud(flush) {
     clearTimeout(cloudSaveTimer);
@@ -172,14 +201,21 @@
   };
 
   platform.intermission = function () {
-    if (!ysdk) {
+    if (!ysdk || playedTime() < intermissionIntervalMs) {
       return;
     }
     platform.suspend("ad");
     const done = () => platform.resume("ad");
+    // Отсчёт заново — только если реклама была показана
+    const closed = (wasShown) => {
+      if (wasShown !== false) {
+        resetAdTimer();
+      }
+      done();
+    };
     try {
       ysdk.adv.showFullscreenAdv({
-        callbacks: { onClose: done, onError: done, onOffline: done },
+        callbacks: { onClose: closed, onError: done, onOffline: done },
       });
     } catch (_) {
       done();
@@ -199,12 +235,17 @@
       }
       platform.resume("ad");
     };
+    // Показанная реклама за награду тоже начинает отсчёт заново
+    const closed = () => {
+      resetAdTimer();
+      done();
+    };
     platform.suspend("ad");
     try {
       ysdk.adv.showRewardedVideo({
         callbacks: {
           onRewarded: () => { rewarded = true; },
-          onClose: done,
+          onClose: closed,
           onError: done,
         },
       });

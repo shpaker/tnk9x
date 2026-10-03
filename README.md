@@ -22,7 +22,7 @@ Tanks from the 90s — played not the way they really were, but the way we remem
 - Four enemy types scripted in Lua, waves set per map ([assets/levels/README.md](assets/levels/README.md)): roam, hunt the player, push to the HQ, aimed fire, pathfinding, wall demolition, bullet dodging
 - Lighting and effects: headlights, glowing tracers, lit explosions and bonuses with shadows from walls, metallic steel and matte brick, bloom, particles, screen shake, tube TV filter on every screen; F2 switches to classic graphics
 - Interface: splash with a loading bar, live title scene, pause menu, settings (graphics, fullscreen, volume, language, controls); English, Russian and Turkish with auto-detection
-- Desktop and one WebAssembly build for GitHub Pages and Yandex Games: pause on suspend, cloud saves, interstitial and rewarded ads
+- Desktop and one WebAssembly build for GitHub Pages and Yandex Games: pause on suspend, cloud saves, interstitial ads at most once per 5 minutes of gameplay, rewarded ads
 - In-game purchases where the platform sells them: SHOP in the main menu with no ads, stage packs and REVIVE/BOOST tokens that replace watching an ad
 
 **Under the hood:**
