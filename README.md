@@ -1,46 +1,69 @@
-# tnk9x
+# TNK9x: Night Battle
 
-Tanks from the 90s — played not the way they really were, but the way we remember them. Plus lighting no cartridge ever had: real-time 2D lights and shadows, bloom and a tube TV look. Built with Go and Ebitengine.
+**The tanks game from your childhood — but not a remake.** Childhood tanks, now with seriously upgraded lighting.
 
-**Play online:** [https://shpaker.github.io/tnk9x/](https://shpaker.github.io/tnk9x/)
+**▶ [Play in the browser](https://shpaker.github.io/tnk9x/)** · [Download for Windows, macOS and Linux](https://github.com/shpaker/tnk9x/releases)
 
-[![tnk9x gameplay with normal graphics](.github/screenshot-desktop.png)](https://shpaker.github.io/tnk9x/)
+[![TNK9x gameplay: headlights, tracers and lit walls on a tube TV](.github/screenshot-desktop.png)](https://shpaker.github.io/tnk9x/)
 
-*Stage 1 with normal graphics: headlights, bullet tracers, lit bricks and steel, tube TV filter.*
+TNK9x is the tanks game we all remember from childhood. Except in our version it suddenly got proper lighting: headlights cut through the night, tracers light up the corridors, explosions throw shadows off brick walls, and the whole picture glows on a curved tube TV.
 
-[![tnk9x running in a mobile browser](.github/screenshot-mobile.png)](https://shpaker.github.io/tnk9x/)
+It's simple: roll through levels, blow up enemy tanks, defend your HQ, grab power-ups and try not to take a shell to the side.
 
-*WebAssembly build in a mobile browser — touch controls are auto-detected.*
+## What's inside
 
-## Development Status
+- **35 levels in 7 sets.** Beat levels, earn stars, unlock new sets. Three stars per level: win, lose no lives, beat the clock.
+- **Play solo or with a friend** on the same screen.
+- **Brick, steel, water, ice and grass:** each terrain type behaves differently. Brick walls even crumble bit by bit, because why not.
+- **Four enemy types, each with its own behavior:** they roam, hunt you down, push for your HQ, dodge bullets and blast through walls. And they can grab power-ups too.
+- **Eight power-ups:** grenade, extra life, star, shield, enemy freeze, HQ fortification and weapon upgrades, plus a boat to cross the water.
+- **Keyboard, gamepad or on-screen controls**, and a mouse in the menus.
+- **And yes, there's that awesome lighting that somehow never existed in our memories:** headlights, glowing tracers, lit explosions with real shadows, bloom and a tube TV filter. Miss the old look? F2 switches to classic graphics.
+- **Runs everywhere:** desktop, the browser and mobile browsers; English, Russian and Turkish.
 
-**Playable now:**
+## How to play
 
-- Campaign of 35 stages in 7 packs: stage select with a minimap, 3 stars per stage (win, no lives lost, time), results screen, continue with carried lives, a briefing before stage 1
-- One or two players: rebindable keyboard, gamepads, touch controls in mobile browsers; mouse and taps in menus
-- Battlefield: brick chipped by half-tiles, steel, forest, water and ice; eight bonuses including boat and pistol; enemies race for bonuses too
-- Four enemy types scripted in Lua, waves set per map ([assets/levels/README.md](assets/levels/README.md)): roam, hunt the player, push to the HQ, aimed fire, pathfinding, wall demolition, bullet dodging
-- Lighting and effects: headlights, glowing tracers, lit explosions and bonuses with shadows from walls, metallic steel and matte brick, bloom, particles, screen shake, tube TV filter on every screen; F2 switches to classic graphics
-- Interface: splash with a loading bar, live title scene, pause menu, settings (graphics, fullscreen, volume, language, controls); English, Russian and Turkish with auto-detection
-- Desktop and one WebAssembly build for GitHub Pages and Yandex Games: pause on suspend, cloud saves, interstitial ads at most once per 5 minutes of gameplay, rewarded ads
-- In-game purchases where the platform sells them: SHOP in the main menu with no ads, stage packs and REVIVE/BOOST tokens that replace watching an ad
+The goal is simple: destroy all enemy tanks and don't let them destroy your HQ. Lose your HQ or run out of lives, and that's it: the level is lost.
+
+**Keyboard**
+
+|       | Player 1   | Player 2       |
+|-------|------------|----------------|
+| Move  | W, A, S, D | I, J, K, L     |
+| Fire  | G          | ' (apostrophe) |
+| Pause | Esc        | Esc            |
+
+**Gamepad.** D-pad or left stick to move, one button to fire, another to pause. The first gamepad controls player one, the second controls player two.
+
+**Touch.** On phones and tablets the D-pad, fire and pause buttons appear on screen by themselves; in two-player mode each player gets their own side of the device.
+
+**Power-ups.** Pick them up right on the field: they can upgrade your tank, give you an extra life, freeze enemies or stir up a little extra chaos.
+
+And you can remap all of this in the settings, because it's not the 1990s anymore.
+
+[![TNK9x in a mobile browser with on-screen controls](.github/screenshot-mobile.png)](https://shpaker.github.io/tnk9x/)
+
+## For developers
+
+Go + [Ebitengine](https://ebitengine.org/), one codebase for desktop and a single WebAssembly build for the web.
 
 **Under the hood:**
 
 - Clean Architecture with depguard-enforced layer boundaries, constructor-only DI from a composition root
 - Enemy behavior in Lua behind a domain-typed engine interface; Dijkstra pathfinding and line-of-fire queries exposed to scripts
-- Kage shader pipeline: lighting on the logical screen, bloom, phosphor afterglow and CRT on the final screen (see [Rendering Pipeline](#rendering-pipeline))
-- Data-driven content: section-based map and campaign formats, locales in `assets/locales`, all validated fail-fast on startup
-- Platform specifics behind `IPlatformAdapter`, `IRewardAdapter` and `IPurchaseAdapter`, one adapter per build target; portal bridges in `web/<platform>/` ([web/README.md](web/README.md))
+- Kage shader pipeline: lighting with wall shadows on the 256x224 logical screen, bloom, phosphor afterglow and CRT on the final screen
+- Data-driven content: section-based map and campaign formats ([assets/levels/README.md](assets/levels/README.md)), locales in `assets/locales`, all validated fail-fast on startup
+- Platform specifics behind `IPlatformAdapter`, `IRewardAdapter` and `IPurchaseAdapter`, one adapter per build target; portal bridges in `web/<platform>/` ([web/README.md](web/README.md)): pause on suspend, cloud saves, ads and in-game purchases where the platform offers them
 - Unit tests with a >=70% use-cases coverage gate; CI builds and lints both desktop and js/wasm (GitHub Pages and Yandex Games)
 - Automatic `MAJOR.MINOR` versioning by Conventional Commits: after a green CI on main CI tags the commit, builds the release (desktop and Yandex Games archives) with generated notes and deploys Pages
 
-### Roadmap
+**Roadmap:**
+
 - HQ: defeat screen, protection mechanics
 - UI: score
 - Test coverage >80% total, performance profiling
 
-## Installation and Running
+### Building and running
 
 **Requirements:** Go 1.25+, optionally — [Just](https://github.com/casey/just).
 
@@ -66,11 +89,9 @@ just lint
 just test
 ```
 
-## Architecture
+### Architecture
 
 The project follows **Clean Architecture** principles with clear separation of concerns. Dependencies point inward: outer layers depend on inner layers through interfaces. The composition root (`internal/app`) is the only place that assembles the object graph — all dependencies are injected via constructors, layer boundaries are enforced by depguard.
-
-### Dependency Flow
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -126,54 +147,6 @@ The project follows **Clean Architecture** principles with clear separation of c
 │  └──────────────┘  └──────────────┘                     │
 └─────────────────────────────────────────────────────────┘
 ```
-
-### Rendering Pipeline
-
-Each frame goes through two passes: the game draws a 256x224 logical screen, then Ebitengine's final-screen hook scales it to the window. Effects (lighting, bloom, CRT) are switched by the graphics setting; with classic graphics both passes skip the shaders.
-
-```
- UPDATE (every tick)                                      internal/states
- ┌──────────────────────────────────────────────────────────────────────┐
- │ gameplay use cases ──RequestEffect──▶ visual events queue            │
- │ VisualEffectsUseCases.Update ──▶ particles · flashes · screen shake  │
- │ LightingUseCases.UpdateHeadlights ──▶ headlight cones follow tanks   │
- └──────────────────────────────────┬───────────────────────────────────┘
-                                    │ per-stage state (repositories/game)
- DRAW → logical screen 256x224      ▼          App.Draw → State.Draw
- ┌──────────────────────────────────────────────────────────────────────┐
- │ StageState / DemoScene → StageRendererAdapter.DrawAll                │
- │                                                                      │
- │   drawField → scene buffer (EffectsRendererAdapter.BeginScene)       │
- │     background · ground and surface blocks · HQ · tanks · bullets    │
- │     · bonuses · explosions · particles · forest on top               │
- │   buildSurfaces → material mask                                      │
- │     R opacity · G reflectivity · B sparkle · A dimming               │
- │   buildLights → LightingUseCases.GetLights                           │
- │     headlights · tracers · flashes (up to MaxLights)                 │
- │                                                                      │
- │   lighting.kage (scene + mask + lights, shadows cast by walls)       │
- │     + screen shake ──▶ logical screen                                │
- │                                                                      │
- │ then on top: sidebar HUD, pause / results / settings / briefing      │
- │ menus and overlays draw straight to the logical screen               │
- └──────────────────────────────────┬───────────────────────────────────┘
-                                    │ offscreen image
- FINAL SCREEN → window              ▼          App.DrawFinalScreen
- ┌──────────────────────────────────────────────────────────────────────┐
- │ GameRect (touch controls adapter): integer scale, centered           │
- │                                                                      │
- │   bloom.kage     bright pass + horizontal blur → vertical blur       │
- │   phosphor.kage  frame + previous frame (ping-pong) → afterglow      │
- │   crt.kage       afterglow + bloom: curvature, scanlines, aperture   │
- │                  grille, convergence, grain, flicker, line tearing   │
- │                                                    ──▶ window        │
- │ touch controls drawn in the letterbox                                │
- └──────────────────────────────────────────────────────────────────────┘
-```
-
-- Shaders are loaded through `IShadersRepository` and compiled fail-fast at startup.
-- All offscreen buffers live in `EffectsRendererAdapter` (`internal/adapters/effects`) for the whole app lifetime and are recreated only when the screen size changes.
-- Classic graphics: the field is drawn straight to the logical screen and upscaled with nearest-neighbor filtering.
 
 ## License
 
