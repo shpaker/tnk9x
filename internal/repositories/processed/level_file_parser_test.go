@@ -153,7 +153,7 @@ func TestParseLevelDefaults(t *testing.T) {
 
 func TestGetLevel_SectionedEntity(t *testing.T) {
 	fileRepository := NewMockFileRepository()
-	fileRepository.AddFile("levels/3.bcmap", []byte(sectionedLevel))
+	fileRepository.AddFile("levels/3.tnkmap", []byte(sectionedLevel))
 	repository := NewMapsDataRepository(
 		fileRepository,
 		&testutil.FakeTilesetRegistry{},
@@ -182,7 +182,7 @@ func TestGetLevel_SectionedEntity(t *testing.T) {
 // номером на языке интерфейса
 func TestGetLevel_DefaultName(t *testing.T) {
 	fileRepository := NewMockFileRepository()
-	fileRepository.AddFile("levels/7.bcmap", []byte("..\n.."))
+	fileRepository.AddFile("levels/7.tnkmap", []byte("..\n.."))
 	repository := NewMapsDataRepository(
 		fileRepository,
 		&testutil.FakeTilesetRegistry{},

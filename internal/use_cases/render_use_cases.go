@@ -125,7 +125,7 @@ func (uc *RenderUseCases) IsTankBlinking(tank *types.TankEntity) bool {
 }
 
 // TankTint возвращает тон спрайта танка в текущем кадре; ok=false —
-// спрайт рисуется без тона. Как в NES, мигающий враг чередует обычный
+// спрайт рисуется без тона. Мигающий враг чередует обычный
 // и тонированный спрайт: враг с бонусом — красный, тяжёлый — цвет брони
 func (uc *RenderUseCases) TankTint(
 	tank *types.TankEntity,

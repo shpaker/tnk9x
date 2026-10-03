@@ -479,7 +479,7 @@ func TestTankLifecycleUseCases_CompleteSpawn(t *testing.T) {
 	}
 }
 
-// После появления неуязвим только игрок, как в оригинале
+// После появления неуязвим только игрок
 func TestTankLifecycleUseCases_SpawnShieldOnlyForPlayer(t *testing.T) {
 	env := newLifecycleTestEnv()
 	env.render.spawnFinished = true

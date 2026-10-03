@@ -13,7 +13,7 @@ var _ interfaces.IStageUseCases = (*StageUseCases)(nil)
 const initialEnemiesCount = 3
 
 // coopExtraActiveEnemies — прибавка к лимиту активных врагов
-// при игре вдвоём, как в NES
+// при игре вдвоём
 const coopExtraActiveEnemies = 2
 
 type StageUseCases struct {
@@ -136,7 +136,7 @@ func (uc *StageUseCases) PlacePlayerTank(
 }
 
 // SpawnInitialEnemyTanks выводит первых врагов сценария сразу
-// на разные спаунеры по порядку, как в NES
+// на разные спаунеры по порядку
 func (uc *StageUseCases) SpawnInitialEnemyTanks() []*types.TankEntity {
 	if uc.stageSession == nil {
 		return nil

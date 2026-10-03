@@ -86,7 +86,7 @@ func TestGetLevel_Success(t *testing.T) {
 ...........#..#...........
 ...........#..#...........`)
 
-	mockFileRepo.AddFile("levels/1.bcmap", levelData)
+	mockFileRepo.AddFile("levels/1.tnkmap", levelData)
 
 	mockTilesetRegistry := &testutil.FakeTilesetRegistry{}
 
@@ -115,7 +115,7 @@ func TestGetLevel_Success(t *testing.T) {
 // Вода анимируется и остаётся на SURFACE, лёд уходит на GROUND
 func TestGetLevel_WaterAndIceBlocks(t *testing.T) {
 	mockFileRepo := NewMockFileRepository()
-	mockFileRepo.AddFile("levels/1.bcmap", []byte("~-#.\n...."))
+	mockFileRepo.AddFile("levels/1.tnkmap", []byte("~-#.\n...."))
 
 	mapsService := NewMapsDataRepository(
 		mockFileRepo,
@@ -168,7 +168,7 @@ func TestGetLevel_WaterAndIceBlocks(t *testing.T) {
 // '=' больше не маппится на лёд
 func TestGetLevel_UnknownEqualsChar(t *testing.T) {
 	mockFileRepo := NewMockFileRepository()
-	mockFileRepo.AddFile("levels/1.bcmap", []byte("=.\n.."))
+	mockFileRepo.AddFile("levels/1.tnkmap", []byte("=.\n.."))
 
 	mapsService := NewMapsDataRepository(
 		mockFileRepo,
@@ -210,7 +210,7 @@ func TestGetLevel_InvalidSize(t *testing.T) {
 ..##..##...####...##..##..
 ...........#..#`)
 
-	mockFileRepo.AddFile("levels/1.bcmap", levelData)
+	mockFileRepo.AddFile("levels/1.tnkmap", levelData)
 
 	mockTilesetRegistry := &testutil.FakeTilesetRegistry{}
 

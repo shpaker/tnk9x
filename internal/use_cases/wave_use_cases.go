@@ -30,7 +30,7 @@ func (uc *WaveUseCases) NextTank(
 
 	tank := waves[waveIndex].Tanks[tankIndex]
 	if !session.GetLevel().HasExplicitBonuses() {
-		tank.HasBonus = isClassicBonusNumber(session.GetSpawnedEnemies() + 1)
+		tank.HasBonus = isBonusCarrierNumber(session.GetSpawnedEnemies() + 1)
 	}
 	return tank, true
 }
@@ -127,10 +127,10 @@ func isWaveStarted(
 	}
 }
 
-// isClassicBonusNumber — классическая нумерация носителей бонусов
+// isBonusCarrierNumber — нумерация носителей бонусов по умолчанию
 // для уровней без явной разметки: 4, 9, 15, 22, …
 // (каждый следующий интервал на единицу длиннее предыдущего)
-func isClassicBonusNumber(enemyNumber uint) bool {
+func isBonusCarrierNumber(enemyNumber uint) bool {
 	bonusNumber := uint(4)
 	step := uint(5)
 	for bonusNumber < enemyNumber {
