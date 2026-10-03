@@ -55,7 +55,8 @@ build-all: build-macos build-windows
     #!/bin/bash
     echo "macOS и Windows сборки готовы"
 
-# Файлы web/<target>/ кладутся поверх общих web/common/
+# Файлы web/<target>/ кладутся поверх общих web/common/; подкаталоги
+# (материалы для консоли площадки) в сборку не попадают
 # Веб-сборка под площадку: pages (GitHub Pages) или yandex (Яндекс Игры)
 build-web target="pages":
     #!/bin/bash
@@ -72,7 +73,7 @@ build-web target="pages":
     GOOS="js" GOARCH="wasm" {{gocmd}} build -trimpath -ldflags "-s -w -X github.com/shpaker/tnk9x/internal/app.Version=${VERSION}" -o "$out_dir/{{binary_name}}.wasm" ./cmd
     cp "$({{gocmd}} env GOROOT)/lib/wasm/wasm_exec.js" "$out_dir/"
     cp web/common/* "$out_dir/"
-    cp web/{{target}}/* "$out_dir/"
+    find "web/{{target}}" -maxdepth 1 -type f -exec cp {} "$out_dir/" \;
     echo "Web build stored in $out_dir"
 
 # Локальный сервер веб-сборки площадки

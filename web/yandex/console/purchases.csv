@@ -1,0 +1,12 @@
+id,price,title_en,title_ru,description_en,description_ru
+no_ads,99,No ads,Без рекламы,Removes ads between stages for good. Revive and Boost still cost an ad or a token.,Отключает рекламу между уровнями навсегда. Возрождение и усиление — по-прежнему за рекламу или жетон.
+all_levels,129,All stages,Все уровни,"Opens all 35 campaign stages at once, no stars or conditions needed.","Сразу открывает все 35 уровней кампании, без звёзд и условий."
+pack_2,29,Pack: First Contact,Пачка «Первый контакт»,"Opens stages 6–10 at once, no stars or conditions needed.","Сразу открывает уровни 6–10, без звёзд и условий."
+pack_3,29,Pack: Hard Line,Пачка «Жёсткая линия»,"Opens stages 11–15 at once, no stars or conditions needed.","Сразу открывает уровни 11–15, без звёзд и условий."
+pack_4,29,Pack: Iron Storm,Пачка «Стальная буря»,"Opens stages 16–20 at once, no stars or conditions needed.","Сразу открывает уровни 16–20, без звёзд и условий."
+pack_5,29,Pack: Cold Front,Пачка «Холодный фронт»,"Opens stages 21–25 at once, no stars or conditions needed.","Сразу открывает уровни 21–25, без звёзд и условий."
+pack_6,29,Pack: Deep Strike,Пачка «Глубокий удар»,"Opens stages 26–30 at once, no stars or conditions needed.","Сразу открывает уровни 26–30, без звёзд и условий."
+pack_7,29,Pack: Last Stand,Пачка «Последний рубеж»,"Opens stages 31–35 at once, no stars or conditions needed.","Сразу открывает уровни 31–35, без звёзд и условий."
+tokens_5,19,5 tokens,5 жетонов,A token replaces watching an ad: Revive or Boost on the stage results screen.,Жетон заменяет просмотр рекламы: возрождение или усиление на экране итогов уровня.
+tokens_15,49,15 tokens,15 жетонов,A token replaces watching an ad: Revive or Boost on the stage results screen.,Жетон заменяет просмотр рекламы: возрождение или усиление на экране итогов уровня.
+tokens_40,99,40 tokens,40 жетонов,A token replaces watching an ad: Revive or Boost on the stage results screen.,Жетон заменяет просмотр рекламы: возрождение или усиление на экране итогов уровня.

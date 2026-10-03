@@ -1,10 +1,23 @@
 package app
 
 import (
+	"bytes"
+	"encoding/csv"
+	"os"
+	"slices"
+	"strconv"
 	"testing"
+	"unicode/utf8"
 
 	"github.com/shpaker/tnk9x/internal/types"
 )
+
+// yandexPurchasesFile — товары для загрузки в консоль Яндекс Игр;
+// путь от корня репозитория (TestMain переходит туда)
+const yandexPurchasesFile = "web/yandex/console/purchases.csv"
+
+// yandexDescriptionLimit — длина описания товара в консоли
+const yandexDescriptionLimit = 200
 
 // Языки конфигурации: без списка — английский, язык по умолчанию
 // и замены — только из списка
@@ -99,5 +112,55 @@ func TestLoadConfig_Products(t *testing.T) {
 	}
 	if err := validateProductPacks(missing, campaign); err == nil {
 		t.Error("missing pack must be refused")
+	}
+}
+
+// Товары консоли Яндекса совпадают с товарами config.yml: ID те же
+// и в том же порядке, у каждого названия, описания в пределах лимита
+// и цена — целое положительное число
+func TestYandexPurchasesFile(t *testing.T) {
+	cfg, err := LoadConfig()
+	if err != nil {
+		t.Fatalf("LoadConfig: %v", err)
+	}
+	data, err := os.ReadFile(yandexPurchasesFile)
+	if err != nil {
+		t.Fatalf("read: %v", err)
+	}
+	records, err := csv.NewReader(bytes.NewReader(data)).ReadAll()
+	if err != nil || len(records) == 0 {
+		t.Fatalf("read: %v", err)
+	}
+
+	header := []string{
+		"id", "price", "title_en", "title_ru",
+		"description_en", "description_ru",
+	}
+	if !slices.Equal(records[0], header) {
+		t.Fatalf("header %v, want %v", records[0], header)
+	}
+
+	var ids []string
+	for _, record := range records[1:] {
+		ids = append(ids, record[0])
+		if price, err := strconv.Atoi(record[1]); err != nil || price <= 0 {
+			t.Errorf("%s: price %q", record[0], record[1])
+		}
+		if record[2] == "" || record[3] == "" {
+			t.Errorf("%s: title required", record[0])
+		}
+		for _, description := range record[4:] {
+			if utf8.RuneCountInString(description) > yandexDescriptionLimit {
+				t.Errorf("%s: description too long", record[0])
+			}
+		}
+	}
+
+	var want []string
+	for _, product := range cfg.Products {
+		want = append(want, product.ID)
+	}
+	if !slices.Equal(ids, want) {
+		t.Errorf("purchases.csv ids %v, config.yml %v", ids, want)
 	}
 }
