@@ -32,8 +32,8 @@ Tanks from the 90s — played not the way they really were, but the way we remem
 - Kage shader pipeline: lighting on the logical screen, bloom, phosphor afterglow and CRT on the final screen (see [Rendering Pipeline](#rendering-pipeline))
 - Data-driven content: section-based map and campaign formats, locales in `assets/locales`, all validated fail-fast on startup
 - Platform specifics behind `IPlatformAdapter`, `IRewardAdapter` and `IPurchaseAdapter`, one adapter per build target; portal bridges in `web/<platform>/` ([web/README.md](web/README.md))
-- Unit tests with a >=70% use-cases coverage gate; CI builds and lints both desktop and js/wasm
-- Automatic `MAJOR.MINOR` versioning by Conventional Commits: after a green CI on main CI tags the commit, builds the release with generated notes and deploys Pages
+- Unit tests with a >=70% use-cases coverage gate; CI builds and lints both desktop and js/wasm (GitHub Pages and Yandex Games)
+- Automatic `MAJOR.MINOR` versioning by Conventional Commits: after a green CI on main CI tags the commit, builds the release (desktop and Yandex Games archives) with generated notes and deploys Pages
 
 ### Roadmap
 - HQ: defeat screen, protection mechanics
@@ -57,7 +57,7 @@ just build        # binary will be in ./tnk9x
 
 # Web builds (WebAssembly)
 just serve-web            # GitHub Pages build at http://localhost:8000
-just package-yandex       # Yandex Games archive in _build/, upload it to the console
+just package-yandex       # Yandex Games archive in _build/ (also attached to releases), upload it to the console
 just serve-yandex         # Yandex build via sdk-dev-proxy (Node.js; YANDEX_APP_ID from .env, dev mode without it)
 
 # Checks

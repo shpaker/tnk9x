@@ -285,5 +285,8 @@ jobs:
       - name: Build application
         run: just build
 
-      - name: Build web (js/wasm)
+      - name: Build web for GitHub Pages (js/wasm)
         run: just build-web pages
+
+      - name: Build web for Yandex Games (js/wasm)
+        run: just build-web yandex
