@@ -464,9 +464,18 @@ func (state *StageState) isHelpOpen() bool {
 		state.helpOverlay.IsDue(state.stageSession.GetStageNumber())
 }
 
-// handleStageResult считает итог уровня при первом кадре после
-// завершения и обрабатывает меню итогов
+// handleStageResult обрабатывает экран итогов; уход с итогов
+// выигранного уровня помечается как победа
 func (state *StageState) handleStageResult() types.StateTransition {
+	transition := state.updateStageResult()
+	transition.Victory = transition.Target != types.TransitionNone &&
+		state.result != nil && state.result.Won
+	return transition
+}
+
+// updateStageResult считает итог уровня при первом кадре после
+// завершения и обрабатывает меню итогов
+func (state *StageState) updateStageResult() types.StateTransition {
 	if state.result == nil {
 		state.buildStageResult()
 		return types.StateTransition{}

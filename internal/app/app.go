@@ -722,6 +722,15 @@ func (app *App) applyTransition(transition types.StateTransition) error {
 			app.platformAdapter.RequestIntermission()
 		}
 	}
+	// Победа: после нескольких за сессию площадка может попросить
+	// оценить игру
+	if transition.Victory {
+		app.session.AddVictory()
+		after := app.config.RatingAfterVictories
+		if after > 0 && app.session.GetVictories() >= after {
+			app.platformAdapter.RequestRating()
+		}
+	}
 
 	switch transition.Target {
 	case types.TransitionNone:

@@ -52,6 +52,9 @@ func (a *PlatformAdapter) GetLanguage() string {
 	return osLanguage()
 }
 
+// RequestRating реализует IPlatformAdapter
+func (a *PlatformAdapter) RequestRating() {}
+
 // IsRewardAvailable реализует IRewardAdapter
 func (a *PlatformAdapter) IsRewardAvailable() bool { return false }
 

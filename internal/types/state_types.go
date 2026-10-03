@@ -23,4 +23,6 @@ type StateTransition struct {
 	// Intermission — переход проходит через логическую паузу игры:
 	// площадка может показать в ней межуровневую рекламу
 	Intermission bool
+	// Victory — переход уходит с экрана итогов выигранного уровня
+	Victory bool
 }

@@ -49,6 +49,8 @@ type appConfigSchema struct {
 	Languages         []string          `yaml:"languages"`
 	DefaultLanguage   string            `yaml:"default_language"`
 	LanguageFallbacks map[string]string `yaml:"language_fallbacks"`
+
+	RatingAfterVictories uint `yaml:"rating_after_victories"`
 }
 
 type gameConfigSchema struct {
@@ -84,6 +86,10 @@ type Config struct {
 	GameTitle        string
 
 	Languages types.LanguageConfig
+
+	// RatingAfterVictories — с какой победы за сессию площадка может
+	// попросить оценить игру; 0 — не просить
+	RatingAfterVictories uint
 
 	EnemySpawners          []types.Position
 	Player1Spawn           types.Position
@@ -129,12 +135,13 @@ func LoadConfig() (*Config, error) {
 			Width:  int(schema.App.ScreenPx[0]),
 			Height: int(schema.App.ScreenPx[1]),
 		},
-		TitleFontSize:    schema.App.TitleFontSize,
-		SubtitleFontSize: schema.App.SubtitleFontSize,
-		RegularFontSize:  schema.App.RegularFontSize,
-		GameTitle:        schema.App.GameTitle,
-		ShotCooldown:     true, // Значение по умолчанию
-		EnemyBonusPickup: true, // Значение по умолчанию
+		TitleFontSize:        schema.App.TitleFontSize,
+		SubtitleFontSize:     schema.App.SubtitleFontSize,
+		RegularFontSize:      schema.App.RegularFontSize,
+		GameTitle:            schema.App.GameTitle,
+		RatingAfterVictories: schema.App.RatingAfterVictories,
+		ShotCooldown:         true, // Значение по умолчанию
+		EnemyBonusPickup:     true, // Значение по умолчанию
 		EnemySpawners: convertCoordsToPositions(
 			schema.Game.EnemySpawners,
 		),

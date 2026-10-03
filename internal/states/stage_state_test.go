@@ -369,3 +369,29 @@ func TestStageState_TokensHint(t *testing.T) {
 		})
 	}
 }
+
+// Уход с итогов выигранного уровня — победа, с проигранного — нет
+func TestStageState_ResultTransitionVictory(t *testing.T) {
+	for _, won := range []bool{true, false} {
+		input := &testutil.FakeMenuInput{}
+		state := newResultStageState(
+			&testutil.FakeInventory{}, &testutil.FakeReward{}, false, input,
+		)
+		state.result = &types.StageResultViewData{
+			Won:   won,
+			Items: []types.StageResultItem{types.StageResultItemLevels},
+		}
+		// Экран итогов уже появился целиком
+		state.resultTicks = resultRevealLength(0)
+
+		if transition := state.handleStageResult(); transition.Victory {
+			t.Errorf("won %v: no choice yet, no victory", won)
+		}
+		input.BackPressed = true
+		transition := state.handleStageResult()
+		if transition.Target != types.TransitionToLevelSelect ||
+			transition.Victory != won {
+			t.Errorf("won %v: transition %+v", won, transition)
+		}
+	}
+}

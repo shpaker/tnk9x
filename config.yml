@@ -12,6 +12,9 @@ app:
   default_language: en
   # Platform languages shown in a supported language instead
   language_fallbacks: {be: ru, kk: ru, uk: ru, uz: ru}
+  # From which won stage of a session the platform may ask to rate
+  # the game (it asks at most once per session); 0 - never
+  rating_after_victories: 3
 
 game:
   enemy_spawners:
