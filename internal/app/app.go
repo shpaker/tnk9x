@@ -40,7 +40,7 @@ const audioSampleRate = 44100
 // нарисованы сеткой 8x8, целый размер даёт чёткие пиксели без фильтрации
 const hudFontSize = 8
 
-// screenScaleFactor — во сколько раз окно крупнее логического экрана NES
+// screenScaleFactor — во сколько раз окно крупнее логического экрана
 // (768x672 -> 256x224)
 const screenScaleFactor = 3
 

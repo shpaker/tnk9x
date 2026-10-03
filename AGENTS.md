@@ -1,6 +1,6 @@
 # Правила для AI-агентов
 
-Ремейк Battle City на Go + Ebiten v2. Clean Architecture, модуль `github.com/shpaker/tnk9x`.
+Танчики из 90-х — не такие, какими они были, а такие, какими мы их помним, плюс 2D-освещение. Go + Ebiten v2, Clean Architecture, модуль `github.com/shpaker/tnk9x`.
 
 ## Архитектура
 

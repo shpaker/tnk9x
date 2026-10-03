@@ -17,7 +17,7 @@ import (
 	tank_use_cases "github.com/shpaker/tnk9x/internal/use_cases/tank_use_cases"
 )
 
-// Раскладка экрана уровня как в NES: поле 208x208 со смещением (16,8),
+// Раскладка экрана уровня: поле 208x208 со смещением (16,8),
 // справа остаётся панель HUD шириной 32px
 const (
 	stageMapOffsetX = 16
@@ -28,7 +28,7 @@ const (
 const hqSizePx = 16
 
 // demoSceneLevel — карта демо-сцены главного меню:
-// levels/demo/title.bcmap, вне кампании
+// levels/demo/title.tnkmap, вне кампании
 const demoSceneLevel = "demo/title"
 
 // stageFactoryRequiredSprites перечисляет спрайты, запрашиваемые

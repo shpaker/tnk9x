@@ -1,13 +1,13 @@
 # Levels and campaign
 
-This folder holds the maps (`N.bcmap`) and the campaign (`main.bccamp`).
+This folder holds the maps (`N.tnkmap`) and the campaign (`main.tnkcamp`).
 Both are plain text files. The game reads them at startup. If any
 level in the campaign has an error, the game refuses to start and the
 message names the file and the line.
 
-## Map file: `N.bcmap`
+## Map file: `N.tnkmap`
 
-`N` is the level number (`1.bcmap`, `2.bcmap`, …). A map file has
+`N` is the level number (`1.tnkmap`, `2.tnkmap`, …). A map file has
 three sections:
 
 ```
@@ -58,7 +58,7 @@ Each line is one wave: `tanks [delay] [start]`.
 
 A **lowercase** letter (`b`, `f`, `p`, `a`) is a bonus carrier. It
 flashes, and destroying it drops a power-up. If no wave contains
-a lowercase letter, carriers follow the classic numbering: enemies
+a lowercase letter, carriers follow the default numbering: enemies
 number 4, 9, 15 and 22.
 
 The level's enemy total is the sum of the tanks in all waves. The
@@ -140,11 +140,11 @@ The best result per level is saved: in the OS config folder on
 desktop, in `localStorage` in the browser. Losing a level never lowers
 the saved stars.
 
-## Campaign file: `main.bccamp`
+## Campaign file: `main.tnkcamp`
 
 The campaign groups levels into packs and sets how packs unlock.
 `config.yml` → `game.campaign` names the file (`main` →
-`main.bccamp`).
+`main.tnkcamp`).
 
 ```
 [campaign]
@@ -180,7 +180,7 @@ open.
 
 Checks at startup:
 
-- every listed level has a `.bcmap` file that parses;
+- every listed level has a `.tnkmap` file that parses;
 - no level appears in two packs;
 - `unlock_after` points to a level in an earlier pack.
 
@@ -202,8 +202,8 @@ everywhere is not enough to get far.
 
 ## Adding a level
 
-1. Create `N.bcmap` with the three sections.
-2. Add `N` to a pack in `main.bccamp`.
+1. Create `N.tnkmap` with the three sections.
+2. Add `N` to a pack in `main.tnkcamp`.
 3. Start the game. A parse error stops startup and names the line.
    The stage select screen shows the minimap, the enemy count per type
    and the 3-star time.
