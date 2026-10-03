@@ -101,6 +101,11 @@ func (a *PlatformAdapter) RequestIntermission() {
 	a.bridge.Call("intermission")
 }
 
+// RequestRating реализует IPlatformAdapter
+func (a *PlatformAdapter) RequestRating() {
+	a.bridge.Call("rating")
+}
+
 // GetLanguage реализует IPlatformAdapter: язык, который мост
 // узнал у площадки (SDK портала или браузер)
 func (a *PlatformAdapter) GetLanguage() string {

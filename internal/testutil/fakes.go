@@ -343,6 +343,7 @@ type FakePlatform struct {
 	JustSuspended     bool
 	ReadyCalls        int
 	IntermissionCalls int
+	RatingCalls       int
 	// Gameplay — значения SetGameplayActive по порядку
 	Gameplay []bool
 	// Language — язык площадки
@@ -356,6 +357,7 @@ func (f *FakePlatform) IsSuspended() bool     { return f.Suspended }
 func (f *FakePlatform) IsJustSuspended() bool { return f.JustSuspended }
 func (f *FakePlatform) Ready()                { f.ReadyCalls++ }
 func (f *FakePlatform) RequestIntermission()  { f.IntermissionCalls++ }
+func (f *FakePlatform) RequestRating()        { f.RatingCalls++ }
 func (f *FakePlatform) GetLanguage() string   { return f.Language }
 
 func (f *FakePlatform) SetGameplayActive(active bool) {

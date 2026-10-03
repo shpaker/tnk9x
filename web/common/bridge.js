@@ -110,6 +110,7 @@
     ready() {},
     gameplay() {},
     intermission() {},
+    rating() {},
     requestReward() {},
     rewardStatus() {
       return "";

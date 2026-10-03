@@ -153,6 +153,9 @@ type IPlatformAdapter interface {
 	// RequestIntermission — логическая пауза игры: площадка может
 	// показать межуровневую рекламу и на это время приостановить игру
 	RequestIntermission()
+	// RequestRating — удачный момент попросить оценить игру: площадка
+	// сама решает, спрашивать ли и как часто
+	RequestRating()
 	// GetLanguage — язык интерфейса площадки как его отдаёт площадка
 	// ("ru", "ru-RU", "ru_RU.UTF-8"); пустая строка — неизвестен
 	GetLanguage() string

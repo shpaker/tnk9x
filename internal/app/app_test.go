@@ -362,6 +362,54 @@ func TestApp_ApplyTransition_Intermission(t *testing.T) {
 	}
 }
 
+// Оценку площадка может попросить с заданной победы за сессию;
+// переходы без победы победы не считают
+func TestApp_ApplyTransition_RatingAfterVictories(t *testing.T) {
+	app, _ := newAppTestEnv()
+	fakePlatform := &testutil.FakePlatform{}
+	app.platformAdapter = fakePlatform
+	app.config.RatingAfterVictories = 2
+
+	victory := types.StateTransition{
+		Target:  types.TransitionToStage,
+		Level:   1,
+		Victory: true,
+	}
+	_ = app.applyTransition(victory)
+	_ = app.applyTransition(types.StateTransition{
+		Target: types.TransitionToStage,
+		Level:  1,
+	})
+	if fakePlatform.RatingCalls != 0 {
+		t.Fatalf("rating after one victory: %d calls", fakePlatform.RatingCalls)
+	}
+	_ = app.applyTransition(victory)
+	_ = app.applyTransition(victory)
+	if fakePlatform.RatingCalls != 2 {
+		t.Errorf("rating calls %d, want 2 from the 2nd victory on",
+			fakePlatform.RatingCalls)
+	}
+}
+
+// Без порога оценку не просим
+func TestApp_ApplyTransition_RatingDisabled(t *testing.T) {
+	app, _ := newAppTestEnv()
+	fakePlatform := &testutil.FakePlatform{}
+	app.platformAdapter = fakePlatform
+	app.config.RatingAfterVictories = 0
+
+	for range 5 {
+		_ = app.applyTransition(types.StateTransition{
+			Target:  types.TransitionToStage,
+			Level:   1,
+			Victory: true,
+		})
+	}
+	if fakePlatform.RatingCalls != 0 {
+		t.Errorf("rating calls %d, want 0", fakePlatform.RatingCalls)
+	}
+}
+
 // Купленное «без рекламы»: логическая пауза есть, рекламы нет
 func TestApp_ApplyTransition_NoAdsPurchased(t *testing.T) {
 	app, _ := newAppTestEnv()
