@@ -239,6 +239,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          # Теги нужны для версии архива из git describe
+          fetch-depth: 0
 
       - name: Set up Go
         uses: actions/setup-go@v4
@@ -288,5 +291,14 @@ jobs:
       - name: Build web for GitHub Pages (js/wasm)
         run: just build-web pages
 
-      - name: Build web for Yandex Games (js/wasm)
-        run: just build-web yandex
+      - name: Package Yandex Games archive (js/wasm)
+        run: just package-yandex
+
+      # Архив для ручной загрузки в консоль Яндекс Игр без релиза,
+      # в том числе из PR — для проверки черновика до мержа
+      - name: Upload Yandex Games archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: tnk9x-yandex
+          path: _build/tnk9x_yandex_*.zip
+          if-no-files-found: error
