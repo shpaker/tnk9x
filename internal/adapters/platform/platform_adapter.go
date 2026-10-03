@@ -12,10 +12,11 @@ import (
 var (
 	_ interfaces.IPlatformAdapter = (*PlatformAdapter)(nil)
 	_ interfaces.IRewardAdapter   = (*PlatformAdapter)(nil)
+	_ interfaces.IPurchaseAdapter = (*PlatformAdapter)(nil)
 )
 
 // PlatformAdapter — игра без площадки (десктоп): игру никто
-// не приостанавливает, рекламы нет, сообщать о готовности
+// не приостанавливает, рекламы и покупок нет, сообщать о готовности
 // и геймплее некому; язык — язык ОС
 type PlatformAdapter struct{}
 
@@ -61,3 +62,23 @@ func (a *PlatformAdapter) RequestReward() {}
 func (a *PlatformAdapter) PollReward() types.RewardStatus {
 	return types.RewardStatusNone
 }
+
+// IsPurchaseAvailable реализует IPurchaseAdapter
+func (a *PlatformAdapter) IsPurchaseAvailable() bool { return false }
+
+// GetCatalog реализует IPurchaseAdapter
+func (a *PlatformAdapter) GetCatalog() []types.ProductOffer { return nil }
+
+// RequestPurchase реализует IPurchaseAdapter
+func (a *PlatformAdapter) RequestPurchase(string) {}
+
+// PollPurchase реализует IPurchaseAdapter
+func (a *PlatformAdapter) PollPurchase() types.PurchaseStatus {
+	return types.PurchaseStatusNone
+}
+
+// GetPurchases реализует IPurchaseAdapter
+func (a *PlatformAdapter) GetPurchases() []types.Purchase { return nil }
+
+// ConsumePurchase реализует IPurchaseAdapter
+func (a *PlatformAdapter) ConsumePurchase(string) {}

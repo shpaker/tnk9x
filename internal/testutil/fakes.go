@@ -415,6 +415,92 @@ func (f *FakeReward) PollReward() types.RewardStatus {
 	return status
 }
 
+// FakePurchase реализует interfaces.IPurchaseAdapter: каталог
+// и покупки задаются полями, итоговый Status отдаётся PollPurchase
+// один раз, списанные покупки уходят из Purchases
+type FakePurchase struct {
+	Available bool
+	Catalog   []types.ProductOffer
+	Purchases []types.Purchase
+	Status    types.PurchaseStatus
+	// Requests — ID товаров запросов покупки по порядку
+	Requests []string
+	// Consumed — токены списанных покупок по порядку
+	Consumed []string
+}
+
+var _ interfaces.IPurchaseAdapter = (*FakePurchase)(nil)
+
+func (f *FakePurchase) IsPurchaseAvailable() bool        { return f.Available }
+func (f *FakePurchase) GetCatalog() []types.ProductOffer { return f.Catalog }
+func (f *FakePurchase) GetPurchases() []types.Purchase   { return f.Purchases }
+
+func (f *FakePurchase) RequestPurchase(
+	productID string,
+) {
+	f.Requests = append(f.Requests, productID)
+}
+
+func (f *FakePurchase) PollPurchase() types.PurchaseStatus {
+	status := f.Status
+	if status == types.PurchaseStatusGranted ||
+		status == types.PurchaseStatusDenied {
+		f.Status = types.PurchaseStatusNone
+	}
+	return status
+}
+
+func (f *FakePurchase) ConsumePurchase(token string) {
+	f.Consumed = append(f.Consumed, token)
+	kept := f.Purchases[:0]
+	for _, purchase := range f.Purchases {
+		if purchase.Token != token {
+			kept = append(kept, purchase)
+		}
+	}
+	f.Purchases = kept
+}
+
+// FakeInventory реализует interfaces.IInventoryUseCases: жетоны
+// и отключённая реклама — в полях
+type FakeInventory struct {
+	NoAds  bool
+	Tokens uint
+}
+
+var _ interfaces.IInventoryUseCases = (*FakeInventory)(nil)
+
+func (f *FakeInventory) HasNoAds() bool  { return f.NoAds }
+func (f *FakeInventory) GetTokens() uint { return f.Tokens }
+
+func (f *FakeInventory) SpendToken() (bool, error) {
+	if f.Tokens == 0 {
+		return false, nil
+	}
+	f.Tokens--
+	return true, nil
+}
+
+// MemoryInventoryRepository реализует interfaces.IInventoryRepository
+// в памяти: считает сохранения, Err — ошибка сохранения
+type MemoryInventoryRepository struct {
+	Saves int
+	Err   error
+}
+
+var _ interfaces.IInventoryRepository = (*MemoryInventoryRepository)(nil)
+
+func (r *MemoryInventoryRepository) GetInventory() (*types.InventoryEntity, error) {
+	return types.NewInventoryEntity(), nil
+}
+
+func (r *MemoryInventoryRepository) SaveInventory(
+	*types.InventoryEntity,
+) error {
+	r.Saves++
+	return r.Err
+}
+
 // FakeTexts реализует interfaces.ITextsAdapter: текст — сам ключ,
 // параметры дописываются через пробел в порядке имён; языки
 // конфигурации — Languages, название языка — его код в верхнем регистре

@@ -6,6 +6,7 @@ language:
 main_menu:
   one_player: "1 OYUNCU"
   two_players: "2 OYUNCU"
+  shop: "MAĞAZA"
   settings: "AYARLAR"
   quit: "ÇIKIŞ"
 
@@ -98,11 +99,32 @@ result:
   keep_caption: "CAN VE TANK KALIR, EN ÇOK"
   boost_caption: "GÜÇLÜ TANK, +1 CAN, EN ÇOK"
   ad: "REKLAM"
+  token: "JETON"
   stats: "SÜRE {{.Time}}  KAYIP CAN {{.Lives}}"
   new_best: "YENİ REKOR"
   carry_over:
     one: "AKTARIM: EN FAZLA {{.Count}} YILDIZ"
     other: "AKTARIM: EN FAZLA {{.Count}} YILDIZ"
+
+shop:
+  title: "MAĞAZA"
+  no_ads: "REKLAMSIZ"
+  all_levels: "TÜM BÖLÜMLER"
+  tokens:
+    one: "{{.Count}} JETON"
+    other: "{{.Count}} JETON"
+  owned: "SATIN ALINDI"
+  pending: "ÖDEME BEKLENİYOR..."
+  back: "GERİ"
+  desc_no_ads: "BÖLÜMLER ARASI REKLAM YOK"
+  desc_no_ads_rewarded: "CANLAN, GÜÇ: REKLAM VEYA JETON"
+  desc_pack: "PAKET: BÖLÜM {{.From}}-{{.To}}"
+  desc_pack_all: "TÜM BÖLÜMLER HEMEN AÇILIR"
+  desc_all_levels: "KAMPANYANIN {{.Count}} BÖLÜMÜ"
+  desc_all_levels_at_once: "HEMEN, YILDIZ GEREKMEZ"
+  desc_tokens: "CANLANMA VEYA GÜÇ İÇİN"
+  desc_tokens_no_ad: "REKLAM İZLEMEK YERİNE"
+  desc_balance: "JETONUN: {{.Count}}"
 
 levels:
   "1": "İLK KAN"

@@ -1,7 +1,7 @@
 // Базовый мост площадки window.tnk9xPlatform (контракт — web/README.md).
 // Это поведение обычной веб-страницы: игра приостанавливается на скрытой
 // вкладке, звук молчит, пока игра приостановлена, сохранения лежат
-// в localStorage, язык — язык браузера, рекламы нет. Мост портала (web/<портал>/platform.js)
+// в localStorage, язык — язык браузера, рекламы и покупок нет. Мост портала (web/<портал>/platform.js)
 // подключается после этого файла и переопределяет нужные части.
 // Методы моста не бросают исключений: syscall/js превращает их в panic
 (function () {
@@ -99,6 +99,7 @@
     suspended: false,
     suspensions: 0,
     rewardAvailable: false,
+    purchasesAvailable: false,
     // Язык интерфейса площадки; игра читает его один раз при запуске
     language: "",
 
@@ -113,6 +114,17 @@
     rewardStatus() {
       return "";
     },
+    catalog() {
+      return [];
+    },
+    purchases() {
+      return [];
+    },
+    requestPurchase() {},
+    purchaseStatus() {
+      return "";
+    },
+    consumePurchase() {},
 
     storage: {
       getItem(key) {

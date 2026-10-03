@@ -107,6 +107,7 @@ func (app *App) newStageState() (*states.StageState, error) {
 		LightingUseCases:      graph.lightingUseCases,
 		VisualEffectsUseCases: graph.visualEffectsUseCases,
 		ProgressionUseCases:   app.progressionUseCases[app.mode()],
+		InventoryUseCases:     app.inventoryUseCases,
 		InputAdapters: [2]interfaces.IInputAdapter{
 			playerInput(types.PlayerTankNumPlayer1),
 			playerInput(types.PlayerTankNumPlayer2),

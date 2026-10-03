@@ -9,7 +9,8 @@ type stageResultMenu struct {
 	nextUnlocked bool
 	// carryOverAdvantage — перенос жизней и прокачки даёт преимущество
 	carryOverAdvantage bool
-	// rewardAvailable — площадка умеет рекламу за вознаграждение
+	// rewardAvailable — пункты за рекламу можно оплатить: площадка
+	// умеет рекламу за вознаграждение или у игрока есть жетоны
 	rewardAvailable bool
 	// canRevive — уровень проигран, но второй шанс возможен
 	canRevive bool
@@ -18,7 +19,7 @@ type stageResultMenu struct {
 // items — пункты меню итогов по порядку. Первым и выбранным идёт
 // бесплатный пункт: NEXT после победы с открытым следующим уровнем,
 // иначе RETRY — реклама не запускается случайным подтверждением.
-// Пункты за рекламу — только если площадка её умеет, сразу после
+// Пункты за рекламу — только если их можно оплатить, сразу после
 // своего бесплатного; последним — STAGES
 func (m stageResultMenu) items() []types.StageResultItem {
 	if m.won && m.nextUnlocked {
