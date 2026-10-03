@@ -111,7 +111,8 @@ result:
   keep_caption: "KEEP LIVES & TANK, MAX"
   boost_caption: "TANK UP & +1 LIFE, MAX"
   ad: "AD"
-  token: "TOKEN"
+  token: "TOKEN ×{{.Count}}"
+  tokens_hint: "TOKENS SKIP ADS: SEE SHOP"
   stats: "TIME {{.Time}}  LIVES LOST {{.Lives}}"
   new_best: "NEW BEST"
   carry_over:

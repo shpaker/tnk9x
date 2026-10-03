@@ -75,6 +75,16 @@ func (uc *ShopUseCases) GetRows() []types.ShopRow {
 	return rows
 }
 
+// IsOnSale реализует IShopUseCases
+func (uc *ShopUseCases) IsOnSale(kind types.ProductKind) bool {
+	for _, row := range uc.GetRows() {
+		if row.Kind == kind {
+			return true
+		}
+	}
+	return false
+}
+
 // RequestPurchase реализует IShopUseCases
 func (uc *ShopUseCases) RequestPurchase(productID string) {
 	uc.purchaseAdapter.RequestPurchase(productID)

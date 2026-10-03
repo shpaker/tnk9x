@@ -126,6 +126,7 @@ const (
 	TextResultBoostCaption TextKey = "result.boost_caption"
 	TextResultAd           TextKey = "result.ad"
 	TextResultToken        TextKey = "result.token"
+	TextResultTokensHint   TextKey = "result.tokens_hint"
 	TextResultStats        TextKey = "result.stats"
 	TextResultNewBest      TextKey = "result.new_best"
 	TextResultCarryOver    TextKey = "result.carry_over"
@@ -247,6 +248,7 @@ var TextKeys = []TextKey{
 	TextResultBoostCaption,
 	TextResultAd,
 	TextResultToken,
+	TextResultTokensHint,
 	TextResultStats,
 	TextResultNewBest,
 	TextResultCarryOver,

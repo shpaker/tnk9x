@@ -286,7 +286,7 @@ func TestStageState_TokensPayForReward(t *testing.T) {
 	state.isSetUp = true
 	state.Update()
 
-	if !state.result.UseTokens ||
+	if state.result.Tokens != 1 ||
 		!slices.Contains(state.result.Items, types.StageResultItemBoostRetry) {
 		t.Fatalf("result %+v must offer BOOST for a token", state.result)
 	}
@@ -299,5 +299,73 @@ func TestStageState_TokensPayForReward(t *testing.T) {
 		stageUseCases.boosts != 1 {
 		t.Errorf("tokens %d, ad requests %d, boosts %d",
 			inventory.Tokens, reward.Requests, stageUseCases.boosts)
+	}
+}
+
+// newResultStageState — уровень, завершающийся поражением в первом
+// же кадре, с заданными жетонами и продажей жетонов
+func newResultStageState(
+	inventory *testutil.FakeInventory,
+	reward *testutil.FakeReward,
+	tokensOnSale bool,
+	input *testutil.FakeMenuInput,
+) *StageState {
+	world := fakeStageWorld{}
+	state := NewStageState(StageStateDependencies{
+		InventoryUseCases:     inventory,
+		TankCommonUseCases:    &testutil.FakeTankCommonUseCases{},
+		TankLifecycleUseCases: world,
+		TilesUseCases:         world,
+		StageUseCases:         &fakeFinishingStageUseCases{},
+		SoundUseCases:         &fakeSoundUseCases{},
+		LightingUseCases:      world,
+		VisualEffectsUseCases: &testutil.FakeVisualEffectsUseCases{},
+		ProgressionUseCases:   world,
+		EnemyInputAdapter:     world,
+		Renderer:              fakeStageRenderer{},
+		SoundPlayerAdapter:    &testutil.FakeSoundPlayer{},
+		MenuInput:             input,
+		RewardAdapter:         reward,
+		TokensOnSale:          tokensOnSale,
+		StageSession:          session_entities.NewStageSessionEntity(),
+		BonusesRepository:     world,
+		SettingsOverlay:       &SettingsOverlay{},
+	})
+	state.isSetUp = true
+	return state
+}
+
+// Подсказка про жетоны — только когда их нет, площадка их продаёт
+// и в меню есть пункты за рекламу
+func TestStageState_TokensHint(t *testing.T) {
+	tests := []struct {
+		name         string
+		tokens       uint
+		adAvailable  bool
+		tokensOnSale bool
+		want         bool
+	}{
+		{"нет жетонов, продаются", 0, true, true, true},
+		{"жетоны есть", 2, true, true, false},
+		{"жетоны не продаются", 0, true, false, false},
+		{"нет пунктов за рекламу", 0, false, true, false},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			state := newResultStageState(
+				&testutil.FakeInventory{Tokens: test.tokens},
+				&testutil.FakeReward{Available: test.adAvailable},
+				test.tokensOnSale,
+				&testutil.FakeMenuInput{},
+			)
+			state.Update()
+
+			if state.result.TokensHint != test.want {
+				t.Errorf("hint %v, want %v", state.result.TokensHint, test.want)
+			}
+			if state.result.Tokens != test.tokens {
+				t.Errorf("tokens %d, want %d", state.result.Tokens, test.tokens)
+			}
+		})
 	}
 }

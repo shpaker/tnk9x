@@ -61,9 +61,12 @@ type StageResultViewData struct {
 	CarriedOver bool
 	// NewBest — результат лучше прежнего
 	NewBest bool
-	// UseTokens — пункты за рекламу оплачиваются жетоном игрока,
-	// а не просмотром рекламы
-	UseTokens   bool
+	// Tokens — жетоны игрока: если они есть, пункты за рекламу
+	// оплачиваются жетоном, а не просмотром рекламы
+	Tokens uint
+	// TokensHint — жетонов нет, но площадка их продаёт, а в меню
+	// есть пункты за рекламу: подсказка про магазин
+	TokensHint  bool
 	Items       []StageResultItem
 	ActiveIndex int
 	// Reveal — насколько экран уже появился
