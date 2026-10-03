@@ -117,6 +117,7 @@ func (app *App) newStageState() (*states.StageState, error) {
 		SoundPlayerAdapter: app.soundAdapter,
 		MenuInput:          app.menuInput,
 		RewardAdapter:      app.rewardAdapter,
+		TokensOnSale:       app.shopUseCases.IsOnSale(types.ProductKindTokens),
 		StageSession:       stageSession,
 		BonusesRepository:  graph.bonusesRepository,
 		SettingsOverlay:    app.settingsOverlay,

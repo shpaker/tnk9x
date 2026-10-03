@@ -2,6 +2,7 @@ package states
 
 import (
 	"log"
+	"slices"
 
 	"github.com/hajimehoshi/ebiten/v2"
 
@@ -47,6 +48,9 @@ type StageStateDependencies struct {
 	MenuInput          interfaces.IMenuInputAdapter
 	// RewardAdapter — реклама за вознаграждение для пунктов итогов
 	RewardAdapter interfaces.IRewardAdapter
+	// TokensOnSale — площадка продаёт жетоны: без жетонов экран
+	// итогов подсказывает про магазин
+	TokensOnSale bool
 
 	// Session & Repositories
 	StageSession      *session_entities.StageSessionEntity
@@ -80,6 +84,7 @@ type StageState struct {
 	soundPlayerAdapter interfaces.ISoundPlayerAdapter
 	menuInput          interfaces.IMenuInputAdapter
 	rewardAdapter      interfaces.IRewardAdapter
+	tokensOnSale       bool
 
 	// Session & Repositories
 	stageSession      *session_entities.StageSessionEntity
@@ -128,6 +133,7 @@ func NewStageState(deps StageStateDependencies) *StageState {
 		soundPlayerAdapter:    deps.SoundPlayerAdapter,
 		menuInput:             deps.MenuInput,
 		rewardAdapter:         deps.RewardAdapter,
+		tokensOnSale:          deps.TokensOnSale,
 		stageSession:          deps.StageSession,
 		bonusesRepository:     deps.BonusesRepository,
 		settingsOverlay:       deps.SettingsOverlay,
@@ -518,8 +524,8 @@ func (state *StageState) buildStageResult() {
 	}
 	// Пункты за рекламу оплачиваются и жетонами: с жетонами они есть
 	// и там, где площадка рекламу не умеет
-	useTokens := state.inventoryUseCases.GetTokens() > 0
-	rewardAvailable := useTokens || state.rewardAdapter.IsRewardAvailable()
+	tokens := state.inventoryUseCases.GetTokens()
+	rewardAvailable := tokens > 0 || state.rewardAdapter.IsRewardAvailable()
 	items := stageResultMenu{
 		won:                result.Won,
 		nextUnlocked:       unlocked,
@@ -536,8 +542,10 @@ func (state *StageState) buildStageResult() {
 		LivesLost:    result.LivesLost,
 		CarriedOver:  result.CarriedOver,
 		NewBest:      newBest,
-		UseTokens:    useTokens,
-		Items:        items,
+		Tokens:       tokens,
+		TokensHint: tokens == 0 && state.tokensOnSale &&
+			slices.ContainsFunc(items, types.StageResultItem.IsRewarded),
+		Items: items,
 	}
 	state.resultTicks = 0
 }

@@ -99,7 +99,8 @@ result:
   keep_caption: "CAN VE TANK KALIR, EN ÇOK"
   boost_caption: "GÜÇLÜ TANK, +1 CAN, EN ÇOK"
   ad: "REKLAM"
-  token: "JETON"
+  token: "JETON ×{{.Count}}"
+  tokens_hint: "REKLAMSIZ JETONLAR MAĞAZADA"
   stats: "SÜRE {{.Time}}  KAYIP CAN {{.Lives}}"
   new_best: "YENİ REKOR"
   carry_over:

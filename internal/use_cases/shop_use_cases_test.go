@@ -3,6 +3,7 @@ package use_cases_test
 import (
 	"errors"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/shpaker/tnk9x/internal/interfaces"
@@ -134,6 +135,26 @@ func TestShop_IsAvailable(t *testing.T) {
 	env.purchase.Available = false
 	if env.shop.IsAvailable() {
 		t.Error("no purchases — no shop")
+	}
+}
+
+// Вид товара в продаже, только пока площадка продаёт его товары
+func TestShop_IsOnSale(t *testing.T) {
+	env := newShopEnv()
+	if !env.shop.IsOnSale(types.ProductKindTokens) {
+		t.Error("tokens must be on sale")
+	}
+	env.purchase.Catalog = slices.DeleteFunc(
+		env.purchase.Catalog,
+		func(offer types.ProductOffer) bool {
+			return strings.HasPrefix(offer.ID, "tokens")
+		},
+	)
+	if env.shop.IsOnSale(types.ProductKindTokens) {
+		t.Error("tokens are not in the catalog")
+	}
+	if !env.shop.IsOnSale(types.ProductKindNoAds) {
+		t.Error("no_ads must stay on sale")
 	}
 }
 

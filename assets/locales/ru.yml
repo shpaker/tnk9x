@@ -99,7 +99,8 @@ result:
   keep_caption: "ЖИЗНИ И ТАНК С СОБОЙ, ДО"
   boost_caption: "СИЛЬНЕЕ И +1 ЖИЗНЬ, ДО"
   ad: "РЕКЛАМА"
-  token: "ЖЕТОН"
+  token: "ЖЕТОН ×{{.Count}}"
+  tokens_hint: "ЖЕТОНЫ ВМЕСТО РЕКЛАМЫ: МАГАЗИН"
   stats: "ВРЕМЯ {{.Time}}  ПОТЕРИ {{.Lives}}"
   new_best: "НОВЫЙ РЕКОРД"
   carry_over:

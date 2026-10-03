@@ -346,6 +346,8 @@ type IShopUseCases interface {
 	// уже открытые во всех режимах, и пачки после покупки всех
 	// уровней не продаются
 	GetRows() []types.ShopRow
+	// IsOnSale — в магазине есть товары вида kind
+	IsOnSale(kind types.ProductKind) bool
 	// RequestPurchase открывает окно оплаты товара площадки
 	RequestPurchase(productID string)
 	// PollPurchase — исход покупки; оплаченное сразу зачисляется

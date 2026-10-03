@@ -73,6 +73,16 @@ const (
 )
 
 // resultMenuBottomMargin — отступ меню итогов от низа экрана
+// resultNotesMax — сколько заметок помещается между статистикой
+// и меню итогов
+const resultNotesMax = 2
+
+// resultNote — заметка под статистикой итогов
+type resultNote struct {
+	text  string
+	color color.NRGBA
+}
+
 const resultMenuBottomMargin = 4
 
 // Цвета экрана итогов
@@ -192,22 +202,39 @@ func (r *StageRendererAdapter) drawResultStats(
 	)
 	lineStep := float64(r.regularFontSize) + 4
 	noteTop := height*resultStatsY + lineStep
-	if view.NewBest {
-		r.drawResultLine(
-			screen, r.texts.Get(types.TextResultNewBest), noteTop,
-			withAlpha(newBestColor, alpha),
-		)
+	for _, note := range r.resultNotes(view) {
+		r.drawResultLine(screen, note.text, noteTop, withAlpha(note.color, alpha))
 		noteTop += lineStep
 	}
+}
+
+// resultNotes — заметки итогов по приоритету: рекорд, перенос
+// и подсказка про жетоны, если для неё осталось место
+func (r *StageRendererAdapter) resultNotes(
+	view types.StageResultViewData,
+) []resultNote {
+	var notes []resultNote
+	if view.NewBest {
+		notes = append(notes, resultNote{
+			text:  r.texts.Get(types.TextResultNewBest),
+			color: newBestColor,
+		})
+	}
 	if view.CarriedOver {
-		r.drawResultLine(
-			screen,
-			r.texts.Plural(
+		notes = append(notes, resultNote{
+			text: r.texts.Plural(
 				types.TextResultCarryOver, int(types.MaxCarryOverStars), nil,
 			),
-			noteTop, withAlpha(subtleTextColor, alpha),
-		)
+			color: subtleTextColor,
+		})
 	}
+	if view.TokensHint && len(notes) < resultNotesMax {
+		notes = append(notes, resultNote{
+			text:  r.texts.Get(types.TextResultTokensHint),
+			color: captionColor,
+		})
+	}
+	return notes
 }
 
 // withAlpha — цвет с прозрачностью, умноженной на alpha 0..1
@@ -353,8 +380,10 @@ func (r *StageRendererAdapter) drawResultCaption(
 func (r *StageRendererAdapter) rewardBadge(
 	view types.StageResultViewData,
 ) string {
-	if view.UseTokens {
-		return r.texts.Get(types.TextResultToken)
+	if view.Tokens > 0 {
+		return r.texts.Format(types.TextResultToken, types.TextArgs{
+			"Count": view.Tokens,
+		})
 	}
 	return r.texts.Get(types.TextResultAd)
 }
