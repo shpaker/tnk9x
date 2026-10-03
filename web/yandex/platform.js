@@ -1,6 +1,8 @@
 // Мост Яндекс Игр поверх базового (web/common/bridge.js): SDK, язык
 // интерфейса Яндекс Игр, разметка загрузки и геймплея, межуровневая
-// реклама и реклама за награду, пауза площадки и облачные сохранения.
+// реклама и реклама за награду, пауза площадки, облачные сохранения
+// и покупки. Межуровневая реклама — не чаще раза в 5 минут игрового
+// времени.
 // Вне Яндекса (SDK не загрузился) остаётся поведение базового моста.
 // Методы не бросают исключений
 (function () {
@@ -11,6 +13,11 @@
 
   // Задержка отправки облачных сохранений: серию записей шлём одной
   const cloudSaveDelayMs = 1000;
+
+  // Межуровневая реклама показывается, только если с запуска или
+  // с прошлой рекламы набрано столько игрового времени: карта длится
+  // 1–3 минуты, реклама — примерно раз в несколько карт
+  const intermissionIntervalMs = 5 * 60 * 1000;
 
   // Контекстное меню, выделение и перетаскивание на всей странице
   for (const type of ["contextmenu", "selectstart", "dragstart"]) {
@@ -26,6 +33,11 @@
   let gameplayRequested = false;
   let gameplayMarked = false;
 
+  // Игровое время с прошлой рекламы: накопленное и начало текущего
+  // отрезка размеченного геймплея
+  let playedMs = 0;
+  let gameplayStartedAt = 0;
+
   // Облачные сохранения: ключ — строка игры; null — облака нет
   let player = null;
   let cloud = null;
@@ -34,6 +46,13 @@
 
   // Исход рекламы за награду в контракте моста
   let rewardStatus = "";
+
+  // Покупки: каталог { id, price }, покупки игрока { id, token }
+  // и исход последней покупки в контракте моста
+  let payments = null;
+  let catalog = [];
+  let purchases = [];
+  let purchaseStatus = "";
 
   function call(fn) {
     try {
@@ -62,11 +81,29 @@
       return;
     }
     gameplayMarked = active;
+    if (active) {
+      gameplayStartedAt = performance.now();
+    } else {
+      playedMs += performance.now() - gameplayStartedAt;
+    }
     call(() => active
       ? ysdk.features.GameplayAPI.start()
       : ysdk.features.GameplayAPI.stop());
   }
   platform.addSuspendListener(syncGameplay);
+
+  // Игровое время с прошлой рекламы: меню, пауза и приостановка
+  // площадкой не считаются — разметка геймплея в них снята
+  function playedTime() {
+    const current = gameplayMarked ? performance.now() - gameplayStartedAt : 0;
+    return playedMs + current;
+  }
+
+  // Любая показанная реклама начинает отсчёт заново
+  function resetAdTimer() {
+    playedMs = 0;
+    gameplayStartedAt = performance.now();
+  }
 
   function saveCloud(flush) {
     clearTimeout(cloudSaveTimer);
@@ -105,6 +142,33 @@
     }
   }
 
+  function toPurchase(purchase) {
+    return {
+      id: String(purchase.productID),
+      token: String(purchase.purchaseToken),
+    };
+  }
+
+  // Каталог и покупки игрока — до запуска игры: игра зачисляет
+  // покупки, не списанные в прошлых запусках
+  async function loadPayments() {
+    try {
+      const loaded = await ysdk.getPayments({ signed: false });
+      const products = await loaded.getCatalog();
+      const owned = await loaded.getPurchases();
+      catalog = Array.from(products, (product) => ({
+        id: String(product.id),
+        price: String(product.price),
+      }));
+      purchases = Array.from(owned, toPurchase);
+      payments = loaded;
+      platform.purchasesAvailable = catalog.length > 0;
+    } catch (_) {
+      payments = null;
+      platform.purchasesAvailable = false;
+    }
+  }
+
   platform.init = async function () {
     if (!window.YaGames) {
       return;
@@ -120,7 +184,7 @@
     call(() => ysdk.on("game_api_pause", () => platform.suspend("portal")));
     call(() => ysdk.on("game_api_resume", () => platform.resume("portal")));
     platform.rewardAvailable = true;
-    await loadCloud();
+    await Promise.all([loadCloud(), loadPayments()]);
     // Игра могла стартовать раньше, чем SDK ответил
     sendReady();
     syncGameplay();
@@ -137,14 +201,21 @@
   };
 
   platform.intermission = function () {
-    if (!ysdk) {
+    if (!ysdk || playedTime() < intermissionIntervalMs) {
       return;
     }
     platform.suspend("ad");
     const done = () => platform.resume("ad");
+    // Отсчёт заново — только если реклама была показана
+    const closed = (wasShown) => {
+      if (wasShown !== false) {
+        resetAdTimer();
+      }
+      done();
+    };
     try {
       ysdk.adv.showFullscreenAdv({
-        callbacks: { onClose: done, onError: done, onOffline: done },
+        callbacks: { onClose: closed, onError: done, onOffline: done },
       });
     } catch (_) {
       done();
@@ -164,12 +235,17 @@
       }
       platform.resume("ad");
     };
+    // Показанная реклама за награду тоже начинает отсчёт заново
+    const closed = () => {
+      resetAdTimer();
+      done();
+    };
     platform.suspend("ad");
     try {
       ysdk.adv.showRewardedVideo({
         callbacks: {
           onRewarded: () => { rewarded = true; },
-          onClose: done,
+          onClose: closed,
           onError: done,
         },
       });
@@ -185,6 +261,56 @@
       rewardStatus = "";
     }
     return status;
+  };
+
+  platform.catalog = function () {
+    return catalog;
+  };
+
+  platform.purchases = function () {
+    return purchases;
+  };
+
+  // Окно оплаты Яндекса поверх игры: игра стоит, пока оно открыто
+  platform.requestPurchase = function (id) {
+    if (!payments) {
+      purchaseStatus = "denied";
+      return;
+    }
+    purchaseStatus = "pending";
+    platform.suspend("purchase");
+    const done = (status) => {
+      purchaseStatus = status;
+      platform.resume("purchase");
+    };
+    try {
+      payments.purchase({ id: String(id) }).then(
+        (purchase) => {
+          purchases = purchases.concat(toPurchase(purchase));
+          done("granted");
+        },
+        () => done("denied"),
+      );
+    } catch (_) {
+      done("denied");
+    }
+  };
+
+  // Итоговый исход отдаётся один раз
+  platform.purchaseStatus = function () {
+    const status = purchaseStatus;
+    if (status === "granted" || status === "denied") {
+      purchaseStatus = "";
+    }
+    return status;
+  };
+
+  // Расходуемая покупка зачислена игрой: у Яндекса её больше нет
+  platform.consumePurchase = function (token) {
+    purchases = purchases.filter((purchase) => purchase.token !== token);
+    if (payments) {
+      call(() => payments.consumePurchase(String(token)));
+    }
   };
 
   // Облако главнее: локальные сохранения переносятся в него

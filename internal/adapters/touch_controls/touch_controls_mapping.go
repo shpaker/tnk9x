@@ -19,7 +19,7 @@ func logicalToScreen(
 }
 
 // gameRect повторяет integer-floor масштабирование DrawFinalScreen:
-// чёткие пиксели NES, центрирование, чёрные поля; shrink уменьшает
+// чёткие пиксели, центрирование, чёрные поля; shrink уменьшает
 // масштаб на шаг, освобождая поля под экранные контроллы
 func gameRect(
 	logicalW, logicalH, screenW, screenH int,

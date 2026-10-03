@@ -14,6 +14,29 @@ import (
 type configSchema struct {
 	App  appConfigSchema  `yaml:"app"`
 	Game gameConfigSchema `yaml:"game"`
+	Shop shopConfigSchema `yaml:"shop"`
+}
+
+// shopConfigSchema — товары магазина по порядку показа
+type shopConfigSchema struct {
+	Products []productConfigSchema `yaml:"products"`
+}
+
+// productConfigSchema — товар: ID в каталоге площадки, вид, пачка
+// (для пачки) и число жетонов (для жетонов)
+type productConfigSchema struct {
+	ID     string `yaml:"id"`
+	Kind   string `yaml:"kind"`
+	Pack   int    `yaml:"pack"`
+	Amount uint   `yaml:"amount"`
+}
+
+// productKinds — виды товаров в конфигурации
+var productKinds = map[string]types.ProductKind{
+	"no_ads":     types.ProductKindNoAds,
+	"all_levels": types.ProductKindAllLevels,
+	"pack":       types.ProductKindPack,
+	"tokens":     types.ProductKindTokens,
 }
 
 type appConfigSchema struct {
@@ -79,6 +102,10 @@ type Config struct {
 
 	ShotCooldown     bool
 	EnemyBonusPickup bool
+
+	// Products — товары магазина; пачки сверяются с кампанией
+	// при её загрузке
+	Products []types.ProductSpec
 }
 
 func LoadConfig() (*Config, error) {
@@ -180,7 +207,64 @@ func LoadConfig() (*Config, error) {
 		cfg.EnemyBonusPickup = *schema.Game.EnemyBonusPickup
 	}
 
+	products, err := parseProducts(schema.Shop)
+	if err != nil {
+		return nil, fmt.Errorf("invalid shop in config: %w", err)
+	}
+	cfg.Products = products
+
 	return cfg, nil
+}
+
+// parseProducts — товары магазина: ID уникальны, вид известен,
+// у пачки есть номер, у жетонов — количество
+func parseProducts(schema shopConfigSchema) ([]types.ProductSpec, error) {
+	products := make([]types.ProductSpec, 0, len(schema.Products))
+	seen := make(map[string]bool)
+	for _, product := range schema.Products {
+		kind, ok := productKinds[product.Kind]
+		switch {
+		case product.ID == "":
+			return nil, fmt.Errorf("product without id")
+		case seen[product.ID]:
+			return nil, fmt.Errorf("duplicate product %q", product.ID)
+		case !ok:
+			return nil, fmt.Errorf(
+				"product %q: unknown kind %q", product.ID, product.Kind,
+			)
+		case kind == types.ProductKindPack && product.Pack < 1:
+			return nil, fmt.Errorf("product %q: pack required", product.ID)
+		case kind == types.ProductKindTokens && product.Amount == 0:
+			return nil, fmt.Errorf("product %q: amount required", product.ID)
+		}
+		seen[product.ID] = true
+		products = append(products, types.ProductSpec{
+			ID:     product.ID,
+			Kind:   kind,
+			Pack:   product.Pack,
+			Amount: product.Amount,
+		})
+	}
+	return products, nil
+}
+
+// validateProductPacks — пачки товаров есть в кампании
+func validateProductPacks(
+	products []types.ProductSpec,
+	campaign *types.CampaignEntity,
+) error {
+	for _, product := range products {
+		if product.Kind != types.ProductKindPack {
+			continue
+		}
+		if product.Pack > len(campaign.GetPacks()) {
+			return fmt.Errorf(
+				"product %q: no pack %d in campaign %s",
+				product.ID, product.Pack, campaign.GetName(),
+			)
+		}
+	}
+	return nil
 }
 
 // parseLanguageConfig — языки интерфейса: без списка — только

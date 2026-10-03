@@ -44,10 +44,18 @@ func newProgression() (
 	*use_cases.ProgressionUseCases,
 	*recordingProgressRepository,
 ) {
+	return newProgressionWithInventory(types.NewInventoryEntity())
+}
+
+func newProgressionWithInventory(inventory *types.InventoryEntity) (
+	*use_cases.ProgressionUseCases,
+	*recordingProgressRepository,
+) {
 	repository := &recordingProgressRepository{}
 	return use_cases.NewProgressionUseCases(
 		testCampaign(),
 		types.NewProgressEntity(),
+		inventory,
 		repository,
 	), repository
 }
@@ -162,5 +170,36 @@ func TestProgression_NextLevel(t *testing.T) {
 	}
 	if _, unlocked := progression.NextLevel(5); unlocked {
 		t.Error("the last level has no next level")
+	}
+}
+
+// Купленная пачка открыта целиком без звёзд и условий, даже
+// с порядком прохождения по одному
+func TestProgression_PurchasedPack(t *testing.T) {
+	inventory := types.NewInventoryEntity()
+	inventory.SetPackOwned(1)
+	inventory.SetPackOwned(2)
+	progression, _ := newProgressionWithInventory(inventory)
+
+	for _, level := range []int{1, 2, 3, 4, 5} {
+		if !progression.IsLevelUnlocked(level) {
+			t.Errorf("level %d must be unlocked", level)
+		}
+	}
+	if !progression.GetPackStatus(1).Unlocked {
+		t.Error("purchased pack must be unlocked")
+	}
+}
+
+// Все уровни открыты покупкой всех уровней
+func TestProgression_AllLevelsPurchased(t *testing.T) {
+	inventory := types.NewInventoryEntity()
+	inventory.SetAllLevels(true)
+	progression, _ := newProgressionWithInventory(inventory)
+
+	for _, level := range []int{1, 2, 3, 4, 5} {
+		if !progression.IsLevelUnlocked(level) {
+			t.Errorf("level %d must be unlocked", level)
+		}
 	}
 }

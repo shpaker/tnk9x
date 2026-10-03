@@ -4,28 +4,36 @@ on:
   push:
     tags:
       - '*'
+  # Вызов из Version: тег, запушенный GITHUB_TOKEN, не запускает этот триггер
+  workflow_call:
+    inputs:
+      version:
+        description: Релизный тег
+        required: true
+        type: string
 
 permissions:
   contents: read
   pages: write
   id-token: write
 
-concurrency:
-  group: pages
-  cancel-in-progress: false
-
 jobs:
   deploy:
     name: Build and Deploy WASM
     # Альфа-теги (содержат 'a') на Pages не публикуем
-    if: ${{ !contains(github.ref_name, 'a') }}
+    if: ${{ !contains(inputs.version || github.ref_name, 'a') }}
     runs-on: ubuntu-latest
+    concurrency:
+      group: pages
+      cancel-in-progress: false
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.version || github.ref }}
 
       - name: Set up Go
         uses: actions/setup-go@v4
@@ -37,7 +45,7 @@ jobs:
 
       - name: Build WASM bundle
         env:
-          APP_VERSION: ${{ github.ref_name }}
+          APP_VERSION: ${{ inputs.version || github.ref_name }}
         run: just build-web pages
 
       - name: Upload Pages artifact

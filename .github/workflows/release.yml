@@ -4,13 +4,20 @@ on:
   push:
     tags:
       - '*'
+  # Вызов из Version: тег, запушенный GITHUB_TOKEN, не запускает этот триггер
+  workflow_call:
+    inputs:
+      version:
+        description: Релизный тег
+        required: true
+        type: string
 
 jobs:
   build:
     name: Build ${{ matrix.os }}
     runs-on: ${{ matrix.runner }}
     env:
-      APP_VERSION: ${{ github.ref_name }}
+      APP_VERSION: ${{ inputs.version || github.ref_name }}
     strategy:
       matrix:
         os: [windows, linux, macos]
@@ -31,6 +38,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.version || github.ref }}
 
       - name: Set up Go
         uses: actions/setup-go@v4
@@ -75,7 +84,6 @@ jobs:
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
-          APP_VERSION: ${{ github.ref_name }}
         run: |
           export CGO_ENABLED=1
           go build -trimpath -ldflags "-s -w -X github.com/shpaker/tnk9x/internal/app.Version=$APP_VERSION" -o dist/tnk9x ./cmd
@@ -86,7 +94,6 @@ jobs:
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
-          APP_VERSION: ${{ github.ref_name }}
         run: |
           export CGO_ENABLED=1
           go build -trimpath -ldflags "-s -w -X github.com/shpaker/tnk9x/internal/app.Version=$APP_VERSION" -o dist/tnk9x ./cmd
@@ -95,8 +102,7 @@ jobs:
         shell: pwsh
         if: matrix.os == 'windows'
         run: |
-          $tag = "${{ github.ref_name }}"
-          $zipName = "tnk9x_windows_$tag.zip"
+          $zipName = "tnk9x_windows_$($env:APP_VERSION).zip"
 
           New-Item -ItemType Directory -Force -Path package | Out-Null
           Copy-Item dist/tnk9x.exe package/
@@ -111,10 +117,8 @@ jobs:
       - name: Package artifacts (Linux)
         if: matrix.os == 'linux'
         shell: bash
-        env:
-          TAG_NAME: ${{ github.ref_name }}
         run: |
-          zip_name="tnk9x_linux_${TAG_NAME}.zip"
+          zip_name="tnk9x_linux_${APP_VERSION}.zip"
 
           mkdir -p package/assets
           cp dist/tnk9x package/
@@ -128,10 +132,8 @@ jobs:
       - name: Package artifacts (macOS)
         if: matrix.os == 'macos'
         shell: bash
-        env:
-          TAG_NAME: ${{ github.ref_name }}
         run: |
-          zip_name="tnk9x_macos_${TAG_NAME}.zip"
+          zip_name="tnk9x_macos_${APP_VERSION}.zip"
 
           mkdir -p package/assets
           cp dist/tnk9x package/
@@ -152,10 +154,12 @@ jobs:
     name: Build yandex
     runs-on: ubuntu-latest
     env:
-      APP_VERSION: ${{ github.ref_name }}
+      APP_VERSION: ${{ inputs.version || github.ref_name }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.version || github.ref }}
 
       - name: Set up Go
         uses: actions/setup-go@v4
@@ -173,7 +177,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: build-yandex
-          path: _build/tnk9x_yandex_${{ github.ref_name }}.zip
+          path: _build/tnk9x_yandex_${{ env.APP_VERSION }}.zip
 
   release:
     name: Create Release
@@ -181,26 +185,33 @@ jobs:
     needs: [build, build-yandex]
     permissions:
       contents: write
+    env:
+      APP_VERSION: ${{ inputs.version || github.ref_name }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.version || github.ref }}
+          fetch-depth: 0
 
-      - name: Download all artifacts
+      - name: Setup Just
+        uses: extractions/setup-just@v3
+
+      # Только сборки: при вызове из Version в том же запуске есть артефакт Pages
+      - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
+          pattern: build-*
           path: artifacts
 
-      - name: Extract Development Status from README
-        run: |
-          # Извлекаем секцию Development Status из README.md
-          # Используем awk для извлечения текста между "## Development Status" и следующим заголовком "##"
-          awk '/^## Development Status$/{flag=1;next} /^## [^#]/{flag=0} flag' README.md > release_body.md
+      - name: Generate changelog
+        run: just changelog "$APP_VERSION" > release_body.md
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_name }}
-          name: Release ${{ github.ref_name }}
+          tag_name: ${{ env.APP_VERSION }}
+          name: Release ${{ env.APP_VERSION }}
           body_path: release_body.md
           files: artifacts/**/*
           # generate_release_notes: true

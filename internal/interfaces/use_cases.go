@@ -325,3 +325,32 @@ type IControlsUseCases interface {
 	// по текущей раскладке
 	HelpRows(controls *types.ControlsEntity) []types.HelpRow
 }
+
+// IInventoryUseCases — купленное игроком: отключённая реклама
+// и жетоны вместо рекламы за вознаграждение
+type IInventoryUseCases interface {
+	// HasNoAds — межуровневая реклама отключена покупкой
+	HasNoAds() bool
+	GetTokens() uint
+	// SpendToken списывает жетон и сохраняет инвентарь; false —
+	// жетонов нет. Ошибка сохранения жетон не возвращает
+	SpendToken() (bool, error)
+}
+
+// IShopUseCases — магазин: товары конфигурации, которые есть
+// в каталоге площадки, покупка и зачисление купленного
+type IShopUseCases interface {
+	// IsAvailable — площадка умеет покупки и продаёт хоть что-то
+	IsAvailable() bool
+	// GetRows — строки магазина по порядку конфигурации; пачки,
+	// уже открытые во всех режимах, и пачки после покупки всех
+	// уровней не продаются
+	GetRows() []types.ShopRow
+	// RequestPurchase открывает окно оплаты товара площадки
+	RequestPurchase(productID string)
+	// PollPurchase — исход покупки; оплаченное сразу зачисляется
+	PollPurchase() (types.PurchaseStatus, error)
+	// Sync зачисляет покупки площадки: разовые — в инвентарь,
+	// расходуемые — один раз, затем списывает их у площадки
+	Sync() error
+}

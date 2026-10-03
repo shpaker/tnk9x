@@ -5,15 +5,26 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 
+	"github.com/shpaker/tnk9x/internal/interfaces"
 	"github.com/shpaker/tnk9x/internal/states"
 	"github.com/shpaker/tnk9x/internal/testutil"
 	"github.com/shpaker/tnk9x/internal/types"
 	"github.com/shpaker/tnk9x/internal/use_cases"
 )
 
-// memorySettingsRepository и memoryControlsRepository — хранилища
-// без диска
+// memorySettingsRepository, memoryControlsRepository
+// и memoryProgressRepository — хранилища без диска
 type memorySettingsRepository struct{}
+
+type memoryProgressRepository struct{}
+
+func (memoryProgressRepository) GetProgress() (*types.ProgressEntity, error) {
+	return types.NewProgressEntity(), nil
+}
+
+func (memoryProgressRepository) SaveProgress(*types.ProgressEntity) error {
+	return nil
+}
 
 func (memorySettingsRepository) GetSettings() (*types.SettingsEntity, error) {
 	return types.NewSettingsEntity(), nil
@@ -124,6 +135,9 @@ type menusEnv struct {
 	texts           *testutil.FakeTexts
 	controlsOverlay *states.ControlsOverlay
 	settingsOverlay *states.SettingsOverlay
+	purchase        *testutil.FakePurchase
+	inventory       *types.InventoryEntity
+	shopOverlay     *states.ShopOverlay
 }
 
 func newMenusEnv() *menusEnv {
@@ -153,6 +167,30 @@ func newMenusEnv() *menusEnv {
 		env.window,
 		env.controlsOverlay,
 		env.settings,
+	)
+	env.purchase = &testutil.FakePurchase{}
+	env.inventory = types.NewInventoryEntity()
+	repository := &testutil.MemoryInventoryRepository{}
+	campaign := testShopCampaign()
+	progression := use_cases.NewProgressionUseCases(
+		campaign,
+		types.NewProgressEntity(),
+		env.inventory,
+		memoryProgressRepository{},
+	)
+	env.shopOverlay = states.NewShopOverlay(
+		use_cases.NewShopUseCases(
+			testShopProducts,
+			campaign,
+			env.inventory,
+			[]interfaces.IProgressionUseCases{progression},
+			env.purchase,
+			repository,
+		),
+		use_cases.NewInventoryUseCases(env.inventory, repository),
+		nopShopRenderer{},
+		env.input,
+		&testutil.FakeSoundPlayer{},
 	)
 	return env
 }
@@ -366,6 +404,7 @@ func newMainMenu(
 		MenuInput:        env.input,
 		Scene:            scene,
 		SettingsOverlay:  env.settingsOverlay,
+		ShopOverlay:      env.shopOverlay,
 		Settings:         env.settings,
 		QuitAvailable:    true,
 	})

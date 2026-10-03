@@ -43,6 +43,7 @@ type MainMenuStateDependencies struct {
 	// Scene — сцена за меню: название из блоков и танки с ИИ
 	Scene           MenuScene
 	SettingsOverlay *SettingsOverlay
+	ShopOverlay     *ShopOverlay
 
 	// Entities
 	Settings *types.SettingsEntity
@@ -50,11 +51,14 @@ type MainMenuStateDependencies struct {
 	// QuitAvailable — выход из игры есть только там, где приложение
 	// может завершиться (десктоп)
 	QuitAvailable bool
+	// ShopAvailable — магазин есть только там, где площадка умеет
+	// покупки и продаёт хоть что-то
+	ShopAvailable bool
 }
 
 // MainMenuState — главное меню: выбор режима на одного или двоих
-// (у каждого своё прохождение), настройки и выход; появляется из
-// чёрного
+// (у каждого своё прохождение), магазин, настройки и выход;
+// появляется из чёрного
 type MainMenuState struct {
 	// Use Cases
 	settingsUseCases interfaces.ISettingsUseCases
@@ -64,6 +68,7 @@ type MainMenuState struct {
 	// Presentation
 	scene           MenuScene
 	settingsOverlay *SettingsOverlay
+	shopOverlay     *ShopOverlay
 	// Entities
 	settings *types.SettingsEntity
 
@@ -76,8 +81,11 @@ func NewMainMenuState(deps MainMenuStateDependencies) *MainMenuState {
 	items := []types.MainMenuItem{
 		types.MainMenuItemOnePlayer,
 		types.MainMenuItemTwoPlayers,
-		types.MainMenuItemSettings,
 	}
+	if deps.ShopAvailable {
+		items = append(items, types.MainMenuItemShop)
+	}
+	items = append(items, types.MainMenuItemSettings)
 	if deps.QuitAvailable {
 		items = append(items, types.MainMenuItemQuit)
 	}
@@ -94,6 +102,7 @@ func NewMainMenuState(deps MainMenuStateDependencies) *MainMenuState {
 		menuInput:        deps.MenuInput,
 		scene:            deps.Scene,
 		settingsOverlay:  deps.SettingsOverlay,
+		shopOverlay:      deps.ShopOverlay,
 		settings:         deps.Settings,
 		items:            items,
 		activeIndex:      activeIndex,
@@ -101,11 +110,15 @@ func NewMainMenuState(deps MainMenuStateDependencies) *MainMenuState {
 }
 
 func (s *MainMenuState) Update() types.StateTransition {
-	// Сцена живёт и под открытыми настройками
+	// Сцена живёт и под открытыми настройками и магазином
 	s.scene.Update()
 	s.ticks++
 	if s.settingsOverlay.IsOpen() {
 		s.settingsOverlay.Update()
+		return types.StateTransition{}
+	}
+	if s.shopOverlay.IsOpen() {
+		s.shopOverlay.Update()
 		return types.StateTransition{}
 	}
 
@@ -124,6 +137,8 @@ func (s *MainMenuState) Update() types.StateTransition {
 		return s.play(1)
 	case types.MainMenuItemTwoPlayers:
 		return s.play(2)
+	case types.MainMenuItemShop:
+		s.shopOverlay.Open()
 	case types.MainMenuItemSettings:
 		s.settingsOverlay.Open()
 	case types.MainMenuItemQuit:
@@ -146,6 +161,9 @@ func (s *MainMenuState) Draw(screen *ebiten.Image) {
 	})
 	if s.settingsOverlay.IsOpen() {
 		s.settingsOverlay.Draw(screen)
+	}
+	if s.shopOverlay.IsOpen() {
+		s.shopOverlay.Draw(screen)
 	}
 }
 

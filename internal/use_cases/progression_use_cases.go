@@ -8,11 +8,13 @@ import (
 var _ interfaces.IProgressionUseCases = (*ProgressionUseCases)(nil)
 
 // ProgressionUseCases — звёзды за уровни и открытие пачек кампании;
-// прогресс единственный на приложение, сохраняется при улучшении
+// прогресс единственный на режим, сохраняется при улучшении. Купленные
+// пачки и все уровни открываются целиком, без звёзд и условий
 type ProgressionUseCases struct {
 	// Entities
-	campaign *types.CampaignEntity
-	progress *types.ProgressEntity
+	campaign  *types.CampaignEntity
+	progress  *types.ProgressEntity
+	inventory *types.InventoryEntity
 	// Repositories
 	progressRepository interfaces.IProgressRepository
 }
@@ -20,11 +22,13 @@ type ProgressionUseCases struct {
 func NewProgressionUseCases(
 	campaign *types.CampaignEntity,
 	progress *types.ProgressEntity,
+	inventory *types.InventoryEntity,
 	progressRepository interfaces.IProgressRepository,
 ) *ProgressionUseCases {
 	return &ProgressionUseCases{
 		campaign:           campaign,
 		progress:           progress,
+		inventory:          inventory,
 		progressRepository: progressRepository,
 	}
 }
@@ -76,14 +80,16 @@ func (uc *ProgressionUseCases) GetLevelStars(level int) uint {
 }
 
 // IsLevelUnlocked: пачка открыта и уровень первый в ней, пачка
-// открывается целиком или пройден предыдущий уровень пачки
+// открывается целиком (в том числе купленная) или пройден предыдущий
+// уровень пачки
 func (uc *ProgressionUseCases) IsLevelUnlocked(level int) bool {
 	packIndex, position, ok := uc.campaign.FindLevel(level)
 	if !ok || !uc.isPackUnlocked(packIndex) {
 		return false
 	}
 	pack := uc.campaign.GetPacks()[packIndex]
-	if position == 0 || pack.Order == types.PackOrderAny {
+	if position == 0 || pack.Order == types.PackOrderAny ||
+		uc.isPackPurchased(packIndex) {
 		return true
 	}
 	return uc.progress.IsCompleted(pack.Levels[position-1])
@@ -119,13 +125,24 @@ func (uc *ProgressionUseCases) NextLevel(level int) (int, bool) {
 	return next, uc.IsLevelUnlocked(next)
 }
 
-// isPackUnlocked: набран порог звёзд и пройден уровень-условие
+// isPackUnlocked: пачка куплена или набран порог звёзд и пройден
+// уровень-условие
 func (uc *ProgressionUseCases) isPackUnlocked(packIndex int) bool {
+	if uc.isPackPurchased(packIndex) {
+		return true
+	}
 	pack := uc.campaign.GetPacks()[packIndex]
 	if uc.totalCampaignStars() < pack.UnlockStars {
 		return false
 	}
 	return pack.UnlockAfter == 0 || uc.progress.IsCompleted(pack.UnlockAfter)
+}
+
+// isPackPurchased — куплена пачка или все уровни; номер пачки
+// в покупках — порядковый с 1
+func (uc *ProgressionUseCases) isPackPurchased(packIndex int) bool {
+	return uc.inventory.HasAllLevels() ||
+		uc.inventory.IsPackOwned(packIndex+1)
 }
 
 // totalCampaignStars — звёзды только за уровни кампании

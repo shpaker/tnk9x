@@ -17,6 +17,7 @@ import (
 var mainMenuLabels = map[types.MainMenuItem]types.TextKey{
 	types.MainMenuItemOnePlayer:  types.TextMainMenuOnePlayer,
 	types.MainMenuItemTwoPlayers: types.TextMainMenuTwoPlayers,
+	types.MainMenuItemShop:       types.TextMainMenuShop,
 	types.MainMenuItemSettings:   types.TextMainMenuSettings,
 	types.MainMenuItemQuit:       types.TextMainMenuQuit,
 }
