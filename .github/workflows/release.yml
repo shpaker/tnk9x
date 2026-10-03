@@ -148,10 +148,37 @@ jobs:
           name: build-${{ matrix.os }}
           path: ${{ env.PACKAGE_NAME }}
 
+  build-yandex:
+    name: Build yandex
+    runs-on: ubuntu-latest
+    env:
+      APP_VERSION: ${{ github.ref_name }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.25.0'
+
+      - name: Setup Just
+        uses: extractions/setup-just@v3
+
+      # Архив загружается в консоль Яндекс Игр вручную
+      - name: Package Yandex Games archive
+        run: just package-yandex
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-yandex
+          path: _build/tnk9x_yandex_${{ github.ref_name }}.zip
+
   release:
     name: Create Release
     runs-on: ubuntu-latest
-    needs: [build]
+    needs: [build, build-yandex]
     permissions:
       contents: write
     steps:

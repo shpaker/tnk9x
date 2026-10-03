@@ -72,7 +72,7 @@ A modern remake and tribute to the classic arcade game Battle City (NES, 1985), 
 - Runs natively and [in the browser](https://shpaker.github.io/tnk9x/) (WebAssembly, deployed to GitHub Pages on release tags)
 - Web platforms behind one neutral browser bridge, the same WebAssembly build everywhere; desktop builds are not affected:
   - The game pauses while the platform suspends it (hidden tab, an ad, the portal's own pause): the frame loop stops, sound goes silent, and a running stage returns to its pause menu
-  - Yandex Games: interface language from the SDK at launch, SDK loading and gameplay markers, interstitial ads at natural breaks (leaving the results screen, restart or exit from the pause menu), cloud saves with migration of local saves, no external links; packaged by `just package-yandex` and uploaded to the developer console by hand
+  - Yandex Games: interface language from the SDK at launch, SDK loading and gameplay markers, interstitial ads at natural breaks (leaving the results screen, restart or exit from the pause menu), cloud saves with migration of local saves, no external links; packaged by `just package-yandex` (the archive is attached to release builds) and uploaded to the developer console by hand
   - Rewarded ads, only where the platform offers them, never as the default menu item:
     - REVIVE on defeat by lost lives while the HQ is intact: one more tank for each player, the stage goes on (once per attempt, at most 1 star)
     - NEXT + BOOST and RETRY + BOOST: the next or the same stage starts with one more life and a tank level up, capped at 2 stars like Continue
@@ -92,7 +92,7 @@ A modern remake and tribute to the classic arcade game Battle City (NES, 1985), 
 - Platform abstraction: `IPlatformAdapter` (suspension, readiness, gameplay markers, ad breaks) and `IRewardAdapter`, one adapter per build target by build tags (no platform on desktop, `window.tnk9xPlatform` in the browser); portal specifics live only in `web/<platform>/` (see [web/README.md](web/README.md)); `syscall/js` is confined to the platform adapter and the storage by depguard
 - Input behind adapter interfaces: menu input (fixed keys, any gamepad, touch of either player, mouse), player input (rebindable keyboard, gamepad, touch) and hotkeys; states never poll input devices directly
 - Unit tests with a >=70% use-cases coverage gate
-- CI/CD (fmt, lint, test, build, release); desktop and js/wasm targets are both built and linted
+- CI/CD (fmt, lint, test, build, release); desktop and js/wasm targets (GitHub Pages and Yandex Games) are both built and linted
 
 ### Roadmap
 - HQ: defeat screen, protection mechanics
