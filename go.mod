@@ -21,6 +21,7 @@ require (
 	github.com/jfreymuth/oggvorbis v1.0.5 // indirect
 	github.com/jfreymuth/pulse v0.1.3 // indirect
 	github.com/jfreymuth/vorbis v1.0.2 // indirect
+	github.com/shpaker/kinescope v0.1.0
 	github.com/srwiley/rasterx v0.0.0-20220730225603-2ab79fcdd4ef // indirect
 	golang.org/x/sync v0.22.0 // indirect
 )

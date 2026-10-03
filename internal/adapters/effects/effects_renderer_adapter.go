@@ -7,37 +7,24 @@ import (
 	"math"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/shpaker/kinescope"
+	"github.com/shpaker/kinescope/ebitengine"
 
 	"github.com/shpaker/tnk9x/internal/interfaces"
 	"github.com/shpaker/tnk9x/internal/types"
 )
 
-// Параметры освещения и постобработки
+// Параметры освещения и телевизора
 const (
 	// lightingAmbient — освещённость поля без источников: всё поле
 	// видно, но свет фар и выстрелов заметно ярче
 	lightingAmbient = 0.4
 	lightingHaze    = 0.16 // видимость света на чёрном полу
-	bloomThreshold  = 0.65 // яркость, с которой начинается свечение
-	bloomStrength   = 0.9
-	scanlineDepth   = 0.3
-	// scanlinesMinScale — меньший масштаб не вмещает сканлайн
-	// в логический пиксель, линии превращаются в муар
-	scanlinesMinScale = 3
-	// Ламповый телевизор: доля яркости послесвечения за кадр, сила
-	// апертурной маски, расхождение лучей R и B у края в логических
-	// пикселях, сила зерна, сила мерцания и бегущей полосы
-	phosphorDecay = 0.6
-	maskStrength  = 0.3
-	convergence   = 0.45
-	grainStrength = 0.05
-	// glassLevel — свечение стекла кинескопа на чёрном: экран
-	// отличим от полей и в тёмных меню
-	glassLevel    = 0.045
-	noiseStrength = 0.025
 	// distortionPerPixel — срыв строк на пиксель тряски кадра: полный
 	// срыв при тряске в 4 пикселя
 	distortionPerPixel = 0.25
+	// shakeSignal — сигнал телевизора о тряске кадра уровня
+	shakeSignal = "shake"
 )
 
 // Surface — прямоугольник поверхности на экране и её материал
@@ -47,31 +34,22 @@ type Surface struct {
 }
 
 // EffectsRendererAdapter рисует графические эффекты: свет с тенями
-// на логическом экране, bloom и CRT в проходе итогового экрана;
-// живёт всё время работы приложения
+// на логическом экране и ламповый телевизор (kinescope) в проходе
+// итогового экрана; живёт всё время работы приложения
 type EffectsRendererAdapter struct {
-	// Шейдеры
+	// Свет
 	lightingShader *ebiten.Shader
-	bloomShader    *ebiten.Shader
-	phosphorShader *ebiten.Shader
-	crtShader      *ebiten.Shader
 
 	// Буферы размера логического экрана, пересоздаются при его смене
-	scene       *ebiten.Image
-	mask        *ebiten.Image
-	bloomBuffer *ebiten.Image
-	bloom       *ebiten.Image
+	scene *ebiten.Image
+	mask  *ebiten.Image
 
-	// Послесвечение люминофора: прошлый и текущий итоговый кадр,
-	// меняются местами каждый кадр; сбрасываются при включении эффектов
-	phosphorPrevious *ebiten.Image
-	phosphorCurrent  *ebiten.Image
+	// Телевизор: вид «Горизонта», сигнал тряски и его отрисовка
+	tv       *kinescope.TV
+	shake    *kinescope.Level
+	renderer *ebitengine.Renderer
 	// effectsWereEnabled — эффекты были включены в прошлом кадре
 	effectsWereEnabled bool
-
-	// distortion — срыв строк от тряски кадра уровня, от 0 до 1;
-	// гаснет после каждого итогового кадра, вне уровня нулевой
-	distortion float64
 
 	// Белый пиксель для заливки маски материалов
 	pixel *ebiten.Image
@@ -80,10 +58,6 @@ type EffectsRendererAdapter struct {
 	lightsUniform      []float32
 	lightColorsUniform []float32
 	lightConesUniform  []float32
-
-	// finalFrames — счётчик итоговых кадров для помех: CRT работает
-	// и в меню, где проход освещения не идёт
-	finalFrames int
 }
 
 func NewEffectsRendererAdapter(
@@ -93,16 +67,17 @@ func NewEffectsRendererAdapter(
 	if err != nil {
 		return nil, err
 	}
-	bloomShader, err := loadShader(shadersRepository, "bloom")
+	tv, shake, err := newTV()
 	if err != nil {
 		return nil, err
 	}
-	phosphorShader, err := loadShader(shadersRepository, "phosphor")
+	renderer, err := ebitengine.NewRenderer()
 	if err != nil {
 		return nil, err
 	}
-	crtShader, err := loadShader(shadersRepository, "crt")
-	if err != nil {
+	// Шейдер телевизора собирается сразу: ошибка останавливает
+	// запуск до открытия окна
+	if err := renderer.Prepare(tv); err != nil {
 		return nil, err
 	}
 
@@ -111,14 +86,33 @@ func NewEffectsRendererAdapter(
 
 	return &EffectsRendererAdapter{
 		lightingShader:     lightingShader,
-		bloomShader:        bloomShader,
-		phosphorShader:     phosphorShader,
-		crtShader:          crtShader,
+		tv:                 tv,
+		shake:              shake,
+		renderer:           renderer,
 		pixel:              pixel,
 		lightsUniform:      make([]float32, types.MaxLights*4),
 		lightColorsUniform: make([]float32, types.MaxLights*4),
 		lightConesUniform:  make([]float32, types.MaxLights*4),
 	}, nil
+}
+
+// newTV собирает телевизор «Горизонт»: тряска кадра уровня срывает
+// строки
+func newTV() (*kinescope.TV, *kinescope.Level, error) {
+	setup := kinescope.Gorizont()
+	setup.Sources = map[string]kinescope.Source{shakeSignal: kinescope.Signal{}}
+	setup.Drives = []kinescope.Drive{
+		{From: shakeSignal, To: kinescope.TearStrength, Weight: 1},
+	}
+	tv, err := kinescope.NewTV(setup)
+	if err != nil {
+		return nil, nil, err
+	}
+	shake, err := tv.Signal(shakeSignal)
+	if err != nil {
+		return nil, nil, err
+	}
+	return tv, shake, nil
 }
 
 // loadShader компилирует шейдер из репозитория; ошибка компиляции
@@ -159,10 +153,10 @@ func (a *EffectsRendererAdapter) DrawLighting(
 	lights []types.LightEntity,
 	shake image.Point,
 ) {
-	a.distortion = min(
+	a.shake.Set(float32(min(
 		1,
 		math.Hypot(float64(shake.X), float64(shake.Y))*distortionPerPixel,
-	)
+	)))
 	a.drawMask(surfaces)
 
 	count := min(len(lights), types.MaxLights)
@@ -249,7 +243,7 @@ func (a *EffectsRendererAdapter) drawMask(surfaces []Surface) {
 // Итоговый экран
 
 // DrawFinal масштабирует логический экран целым множителем scale
-// в позицию (x, y); с эффектами добавляет bloom и CRT
+// в позицию (x, y); с эффектами показывает его через телевизор
 func (a *EffectsRendererAdapter) DrawFinal(
 	screen ebiten.FinalScreen,
 	offscreen *ebiten.Image,
@@ -260,93 +254,28 @@ func (a *EffectsRendererAdapter) DrawFinal(
 ) {
 	wereEnabled := a.effectsWereEnabled
 	a.effectsWereEnabled = enabled
-	if !enabled {
-		op := &ebiten.DrawImageOptions{} // Filter по умолчанию — Nearest
-		op.GeoM.Scale(float64(scale), float64(scale))
-		op.GeoM.Translate(float64(x), float64(y))
-		screen.DrawImage(offscreen, op)
-		return
+	if enabled {
+		// Включённые заново эффекты начинают без послесвечения:
+		// старый кадр не проступает призраком
+		if !wereEnabled {
+			a.tv.Reset()
+		}
+		// Часы телевизора идут по итоговым кадрам с эффектами: помехи
+		// работают и в меню, где проход освещения не идёт
+		a.tv.Update(1 / float64(ebiten.TPS()))
+		err := a.renderer.Draw(screen, offscreen, a.tv, x, y, scale)
+		// Срыв строк гаснет после каждого итогового кадра: вне уровня
+		// тряски нет
+		a.shake.Set(0)
+		if err == nil {
+			return
+		}
 	}
 
-	a.finalFrames++
-	size := offscreen.Bounds().Size()
-	a.drawBloom(offscreen, size)
-	a.drawPhosphor(offscreen, size, !wereEnabled)
-
-	// Мелкий масштаб не вмещает сканлайн и триаду маски
-	// в логический пиксель: без них нет муара
-	depth, mask := float32(0), float32(0)
-	if scale >= scanlinesMinScale {
-		depth, mask = scanlineDepth, maskStrength
-	}
-
-	op := &ebiten.DrawRectShaderOptions{}
-	op.Images[0] = a.phosphorCurrent
-	op.Images[1] = a.bloom
+	op := &ebiten.DrawImageOptions{} // Filter по умолчанию — Nearest
 	op.GeoM.Scale(float64(scale), float64(scale))
 	op.GeoM.Translate(float64(x), float64(y))
-	op.Uniforms = map[string]any{
-		"BloomStrength": float32(bloomStrength),
-		"ScanlineDepth": depth,
-		"MaskStrength":  mask,
-		"Convergence":   float32(convergence),
-		"Grain":         float32(grainStrength),
-		"Glass":         float32(glassLevel),
-		"Noise":         float32(noiseStrength),
-		"Distortion":    float32(a.distortion),
-		"Time":          float32(a.finalFrames),
-	}
-	screen.DrawRectShader(size.X, size.Y, a.crtShader, op)
-	a.distortion = 0
-}
-
-// drawPhosphor накладывает кадр на гаснущую историю прошлых кадров;
-// reset стирает историю — старый кадр не проступает призраком
-func (a *EffectsRendererAdapter) drawPhosphor(
-	offscreen *ebiten.Image,
-	size image.Point,
-	reset bool,
-) {
-	a.phosphorPrevious = ensureImage(a.phosphorPrevious, size)
-	a.phosphorCurrent = ensureImage(a.phosphorCurrent, size)
-	a.phosphorPrevious, a.phosphorCurrent = a.phosphorCurrent, a.phosphorPrevious
-	if reset {
-		a.phosphorPrevious.Clear()
-	}
-
-	op := &ebiten.DrawRectShaderOptions{Blend: ebiten.BlendCopy}
-	op.Images[0] = offscreen
-	op.Images[1] = a.phosphorPrevious
-	op.Uniforms = map[string]any{
-		"Decay": float32(phosphorDecay),
-	}
-	a.phosphorCurrent.DrawRectShader(size.X, size.Y, a.phosphorShader, op)
-}
-
-// drawBloom выделяет яркие участки кадра и размывает их
-// двумя проходами: по горизонтали, затем по вертикали
-func (a *EffectsRendererAdapter) drawBloom(
-	offscreen *ebiten.Image,
-	size image.Point,
-) {
-	a.bloomBuffer = ensureImage(a.bloomBuffer, size)
-	a.bloom = ensureImage(a.bloom, size)
-
-	horizontal := &ebiten.DrawRectShaderOptions{Blend: ebiten.BlendCopy}
-	horizontal.Images[0] = offscreen
-	horizontal.Uniforms = map[string]any{
-		"Direction": []float32{1, 0},
-		"Threshold": float32(bloomThreshold),
-	}
-	a.bloomBuffer.DrawRectShader(size.X, size.Y, a.bloomShader, horizontal)
-
-	vertical := &ebiten.DrawRectShaderOptions{Blend: ebiten.BlendCopy}
-	vertical.Images[0] = a.bloomBuffer
-	vertical.Uniforms = map[string]any{
-		"Direction": []float32{0, 1},
-		"Threshold": float32(0),
-	}
-	a.bloom.DrawRectShader(size.X, size.Y, a.bloomShader, vertical)
+	screen.DrawImage(offscreen, op)
 }
 
 // ensureImage возвращает изображение нужного размера, пересоздавая
