@@ -72,7 +72,7 @@ A modern remake and tribute to the classic arcade game Battle City (NES, 1985), 
 - Runs natively and [in the browser](https://shpaker.github.io/tnk9x/) (WebAssembly, deployed to GitHub Pages on release tags)
 - Web platforms behind one neutral browser bridge, the same WebAssembly build everywhere; desktop builds are not affected:
   - The game pauses while the platform suspends it (hidden tab, an ad, the portal's own pause): the frame loop stops, sound goes silent, and a running stage returns to its pause menu
-  - Yandex Games: interface language from the SDK at launch, SDK loading and gameplay markers, interstitial ads at natural breaks (leaving the results screen, restart or exit from the pause menu), cloud saves with migration of local saves, no external links; packaged by `just package-yandex` and uploaded to the developer console by hand
+  - Yandex Games: interface language from the SDK at launch, SDK loading and gameplay markers, interstitial ads at natural breaks (leaving the results screen, restart or exit from the pause menu) at most once per 5 minutes of gameplay (menus and pauses do not count, any ad restarts the count), cloud saves with migration of local saves, no external links; packaged by `just package-yandex` and uploaded to the developer console by hand
   - Rewarded ads, only where the platform offers them, never as the default menu item:
     - REVIVE on defeat by lost lives while the HQ is intact: one more tank for each player, the stage goes on (once per attempt, at most 1 star)
     - NEXT + BOOST and RETRY + BOOST: the next or the same stage starts with one more life and a tank level up, capped at 2 stars like Continue
