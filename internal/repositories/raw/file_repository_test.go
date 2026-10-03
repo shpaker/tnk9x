@@ -75,17 +75,17 @@ func TestReadImage(t *testing.T) {
 
 func TestCountFiles(t *testing.T) {
 	fsys := fstest.MapFS{
-		"levels/1.bcmap":      &fstest.MapFile{},
-		"levels/2.bcmap":      &fstest.MapFile{},
+		"levels/1.tnkmap":     &fstest.MapFile{},
+		"levels/2.tnkmap":     &fstest.MapFile{},
 		"levels/readme.txt":   &fstest.MapFile{},
-		"levels/sub/3.bcmap":  &fstest.MapFile{},
+		"levels/sub/3.tnkmap": &fstest.MapFile{},
 		"sounds/shot.ogg":     &fstest.MapFile{},
 		"levels/nested/x.txt": &fstest.MapFile{},
 	}
 
 	repo := NewFileRepository(fsys)
 
-	count, err := repo.CountFiles("levels", "*.bcmap")
+	count, err := repo.CountFiles("levels", "*.tnkmap")
 	if err != nil {
 		t.Fatalf("неожиданная ошибка: %v", err)
 	}
@@ -95,7 +95,7 @@ func TestCountFiles(t *testing.T) {
 		t.Errorf("ожидалось 2 файла, получено %d", count)
 	}
 
-	if _, err := repo.CountFiles("missing", "*.bcmap"); err == nil {
+	if _, err := repo.CountFiles("missing", "*.tnkmap"); err == nil {
 		t.Error("ожидалась ошибка для несуществующего каталога")
 	}
 }

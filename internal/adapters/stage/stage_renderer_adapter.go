@@ -532,7 +532,7 @@ func (r *StageRendererAdapter) drawParticles(screen *ebiten.Image) {
 	}
 }
 
-// Раскладка боковой панели HUD (как в NES Battle City): колонка справа
+// Раскладка боковой панели HUD: колонка справа
 // от поля, все координаты на сетке 8px
 const (
 	hudEnemyIconSize    = 8
@@ -684,8 +684,8 @@ func (r *StageRendererAdapter) drawHUDText(
 	text.Draw(screen, message, r.hudFontFace, op)
 }
 
-// nesBorderGray — серый рамки NES, совпадает с фоном спрайтов HUD
-var nesBorderGray = color.RGBA{R: 109, G: 109, B: 109, A: 255}
+// borderGray — серый рамки экрана, совпадает с фоном спрайтов HUD
+var borderGray = color.RGBA{R: 109, G: 109, B: 109, A: 255}
 
 func (r *StageRendererAdapter) drawScreenBackground(screen *ebiten.Image) {
 	vector.FillRect(
@@ -694,7 +694,7 @@ func (r *StageRendererAdapter) drawScreenBackground(screen *ebiten.Image) {
 		0,
 		float32(screen.Bounds().Dx()),
 		float32(screen.Bounds().Dy()),
-		nesBorderGray,
+		borderGray,
 		false,
 	)
 }

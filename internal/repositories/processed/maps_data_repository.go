@@ -42,9 +42,9 @@ func NewMapsDataRepository(
 	}
 }
 
-// levelPath — файл уровня levels/<name>.bcmap
+// levelPath — файл уровня levels/<name>.tnkmap
 func levelPath(name string) string {
-	return "levels/" + name + ".bcmap"
+	return "levels/" + name + ".tnkmap"
 }
 
 func (mdr *MapsDataRepository) createBlockFromChar(
@@ -183,7 +183,7 @@ func (mdr *MapsDataRepository) GetLevel(
 }
 
 // GetSceneLevel читает карту вне кампании (например, демо-сцену
-// главного меню) из levels/<name>.bcmap; номер уровня у неё 0
+// главного меню) из levels/<name>.tnkmap; номер уровня у неё 0
 func (mdr *MapsDataRepository) GetSceneLevel(
 	name string,
 	tileBaseSize int,
@@ -242,5 +242,5 @@ func (mdr *MapsDataRepository) HasLevel(levelNumber int) bool {
 }
 
 func (mdr *MapsDataRepository) GetLevelsCount() (int, error) {
-	return mdr.fileRepository.CountFiles("levels", "*.bcmap")
+	return mdr.fileRepository.CountFiles("levels", "*.tnkmap")
 }

@@ -11,7 +11,7 @@ import (
 
 var _ interfaces.ICampaignRepository = (*CampaignRepository)(nil)
 
-// CampaignRepository читает кампании из levels/<name>.bccamp
+// CampaignRepository читает кампании из levels/<name>.tnkcamp
 type CampaignRepository struct {
 	fileRepository interfaces.IFileRepository
 }
@@ -29,7 +29,7 @@ func NewCampaignRepository(
 func (cr *CampaignRepository) GetCampaign(
 	name string,
 ) (*types.CampaignEntity, error) {
-	fileName := "levels/" + name + ".bccamp"
+	fileName := "levels/" + name + ".tnkcamp"
 	data, err := cr.fileRepository.ReadFile(fileName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read campaign %q: %w", name, err)

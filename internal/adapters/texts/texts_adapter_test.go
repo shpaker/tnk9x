@@ -206,7 +206,7 @@ func TestLocales_CampaignNames(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read en.yml: %v", err)
 	}
-	maps, err := filepath.Glob("../../../assets/levels/*.bcmap")
+	maps, err := filepath.Glob("../../../assets/levels/*.tnkmap")
 	if err != nil || len(maps) == 0 {
 		t.Fatalf("no maps: %v", err)
 	}
