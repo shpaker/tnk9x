@@ -51,7 +51,7 @@ Go + [Ebitengine](https://ebitengine.org/), one codebase for desktop and a singl
 
 - Clean Architecture with depguard-enforced layer boundaries, constructor-only DI from a composition root
 - Enemy behavior in Lua behind a domain-typed engine interface; Dijkstra pathfinding and line-of-fire queries exposed to scripts
-- Kage shader pipeline: lighting with wall shadows on the 256x224 logical screen, bloom, phosphor afterglow and CRT on the final screen
+- Kage shader pipeline: lighting with wall shadows on the 256x224 logical screen; the tube TV on the final screen — afterglow, glow, scanlines, mask, curvature and noise — comes from [kinescope](https://github.com/shpaker/kinescope)
 - Data-driven content: section-based map and campaign formats ([assets/levels/README.md](assets/levels/README.md)), locales in `assets/locales`, all validated fail-fast on startup
 - Platform specifics behind `IPlatformAdapter`, `IRewardAdapter` and `IPurchaseAdapter`, one adapter per build target; portal bridges in `web/<platform>/` ([web/README.md](web/README.md)): pause on suspend, cloud saves, ads, in-game purchases and rating requests where the platform offers them
 - Unit tests with a >=70% use-cases coverage gate; CI builds and lints both desktop and js/wasm (GitHub Pages and Yandex Games)

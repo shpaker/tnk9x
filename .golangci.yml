@@ -100,6 +100,14 @@ linters-settings:
         deny:
           - pkg: github.com/nicksnyder/go-i18n
             desc: go-i18n — только в internal/adapters/texts за ITextsAdapter
+      kinescope-isolation:
+        files:
+          - "**/internal/**"
+          - "**/cmd/**"
+          - "!**/internal/adapters/effects/**"
+        deny:
+          - pkg: github.com/shpaker/kinescope
+            desc: ламповый телевизор — только в internal/adapters/effects за EffectsRendererAdapter
       lua-isolation:
         files:
           - "**/internal/**"
