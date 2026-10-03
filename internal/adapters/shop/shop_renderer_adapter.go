@@ -14,11 +14,12 @@ import (
 	"github.com/shpaker/tnk9x/internal/types"
 )
 
-// Раскладка магазина в логических координатах 256x224: заголовок,
-// строки товаров и под ними описание выбранного товара
+// Раскладка магазина в логических координатах 256x224: заголовок
+// на высоте заголовка SETTINGS, под ним строки товаров и описание
+// выбранного товара
 const (
-	titleTop = 24
-	rowsTop  = 64
+	// titleGap — зазор между заголовком и первой строкой, как у CONTROLS
+	titleGap = 12
 	rowStep  = 16
 	// descriptionGap — отступ описания от последней строки
 	descriptionGap  = 12
@@ -71,7 +72,9 @@ func (r *ShopRendererAdapter) Draw(
 	view types.ShopViewData,
 ) {
 	width := float64(screen.Bounds().Dx())
+	titleTop := ui.MenuTitleTop(screen, r.font)
 	ui.DrawOverlay(screen, r.font, r.texts.Get(types.TextShopTitle), titleTop)
+	rowsTop := titleTop + float64(r.font.TitleFontSize) + titleGap
 
 	lines := make([]shopLine, len(view.Rows))
 	var labelsWidth, valuesWidth float64
@@ -91,7 +94,7 @@ func (r *ShopRendererAdapter) Draw(
 	rowHeight := float64(r.font.RegularFontSize)
 	r.hits.Reset()
 	for i, line := range lines {
-		top := float64(rowsTop + i*rowStep)
+		top := rowsTop + float64(i*rowStep)
 		textColor := rowColor
 		if i == view.ActiveIndex {
 			textColor = activeRowColor
@@ -124,7 +127,7 @@ func (r *ShopRendererAdapter) Draw(
 		)
 	}
 
-	top := float64(rowsTop+(len(lines)-1)*rowStep) + rowHeight +
+	top := rowsTop + float64((len(lines)-1)*rowStep) + rowHeight +
 		descriptionGap
 	for i, description := range r.description(view) {
 		r.font.Draw(
