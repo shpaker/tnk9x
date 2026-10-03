@@ -216,7 +216,7 @@ jobs:
           files: artifacts/**/*
           # generate_release_notes: true
           draft: false
-          prerelease: true
+          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
