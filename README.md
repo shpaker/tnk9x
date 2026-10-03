@@ -80,7 +80,7 @@ just build        # binary will be in ./tnk9x
 
 # Web builds (WebAssembly)
 just serve-web            # GitHub Pages build at http://localhost:8000
-just package-yandex       # Yandex Games archive in _build/ (also in releases and CI runs on main), upload it to the console
+just package-yandex       # Yandex Games archive in _build/ (also in releases and CI runs), upload it to the console
 just serve-yandex         # Yandex build via sdk-dev-proxy (Node.js; YANDEX_APP_ID from .env, dev mode without it)
 
 # Checks
