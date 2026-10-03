@@ -1,11 +1,25 @@
 package states
 
-import "github.com/shpaker/tnk9x/internal/types"
+import (
+	"log"
 
-// Награды экрана итогов: пункты REVIVE и BOOST оплачиваются рекламой
-// площадки, а сами механики доменные — второй шанс и усиленный
-// перенос. Пока реклама показывается, площадка приостанавливает
-// игру; исход разбирается в первом кадре после неё
+	"github.com/shpaker/tnk9x/internal/types"
+)
+
+// Награды экрана итогов: пункты REVIVE и BOOST оплачиваются жетоном
+// игрока или рекламой площадки, а сами механики доменные — второй
+// шанс и усиленный перенос. Пока реклама показывается, площадка
+// приостанавливает игру; исход разбирается в первом кадре после неё
+
+// spendToken оплачивает пункт жетоном; false — жетонов нет.
+// Ошибка сохранения награду не отменяет
+func (state *StageState) spendToken() bool {
+	spent, err := state.inventoryUseCases.SpendToken()
+	if err != nil {
+		log.Printf("save inventory: %v", err)
+	}
+	return spent
+}
 
 // requestReward показывает рекламу за пункт item
 func (state *StageState) requestReward(item types.StageResultItem) {

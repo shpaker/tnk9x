@@ -72,10 +72,14 @@ A modern remake and tribute to the classic arcade game Battle City (NES, 1985), 
 - Runs natively and [in the browser](https://shpaker.github.io/tnk9x/) (WebAssembly, deployed to GitHub Pages on release tags)
 - Web platforms behind one neutral browser bridge, the same WebAssembly build everywhere; desktop builds are not affected:
   - The game pauses while the platform suspends it (hidden tab, an ad, the portal's own pause): the frame loop stops, sound goes silent, and a running stage returns to its pause menu
-  - Yandex Games: interface language from the SDK at launch, SDK loading and gameplay markers, interstitial ads at natural breaks (leaving the results screen, restart or exit from the pause menu), cloud saves with migration of local saves, no external links; packaged by `just package-yandex` and uploaded to the developer console by hand
+  - Yandex Games: interface language from the SDK at launch, SDK loading and gameplay markers, interstitial ads at natural breaks (leaving the results screen, restart or exit from the pause menu), cloud saves with migration of local saves, in-game purchases, no external links; packaged by `just package-yandex` and uploaded to the developer console by hand
   - Rewarded ads, only where the platform offers them, never as the default menu item:
     - REVIVE on defeat by lost lives while the HQ is intact: one more tank for each player, the stage goes on (once per attempt, at most 1 star)
     - NEXT + BOOST and RETRY + BOOST: the next or the same stage starts with one more life and a tank level up, capped at 2 stars like Continue
+  - In-game purchases, only where the platform sells them: SHOP in the main menu with platform prices and a description of what the selected product gives; products and token bundles in `config.yml`, purchases shared by both modes and saved with the progress
+    - No ads: no interstitial ads between stages (rewarded items stay)
+    - Stage packs (2-7) and all stages: every stage of the pack or the campaign opens at once, with no stars or conditions
+    - REVIVE/BOOST tokens in bundles of 5, 15 and 40: a token pays for a rewarded item instead of watching an ad, the item shows TOKEN instead of AD; paid purchases are credited once and consumed at the platform only after they are saved
 
 **Under the hood:**
 
@@ -88,8 +92,8 @@ A modern remake and tribute to the classic arcade game Battle City (NES, 1985), 
 - Visual effects driven by a per-frame event queue from gameplay use cases; particles, flashes and shake live in a per-stage repository
 - Section-based text formats for maps and campaigns, parsed and validated fail-fast on startup
 - Localization: interface texts in `assets/locales/<language>.yml` (go-i18n: CLDR plurals, named placeholders, fallback to the default language) behind `ITextsAdapter`, typed `TextKey` constants, a test that keeps every locale complete; languages and the platform-language rules in `config.yml`; the platform language comes through `IPlatformAdapter`
-- User storage for progress, settings and controls behind repository interfaces (files on desktop, the platform bridge storage in WASM)
-- Platform abstraction: `IPlatformAdapter` (suspension, readiness, gameplay markers, ad breaks) and `IRewardAdapter`, one adapter per build target by build tags (no platform on desktop, `window.tnk9xPlatform` in the browser); portal specifics live only in `web/<platform>/` (see [web/README.md](web/README.md)); `syscall/js` is confined to the platform adapter and the storage by depguard
+- User storage for progress, settings, controls and purchases behind repository interfaces (files on desktop, the platform bridge storage in WASM)
+- Platform abstraction: `IPlatformAdapter` (suspension, readiness, gameplay markers, ad breaks), `IRewardAdapter` and `IPurchaseAdapter` (catalog, purchase, consumption), one adapter per build target by build tags (no platform on desktop, `window.tnk9xPlatform` in the browser); portal specifics live only in `web/<platform>/` (see [web/README.md](web/README.md)); `syscall/js` is confined to the platform adapter and the storage by depguard
 - Input behind adapter interfaces: menu input (fixed keys, any gamepad, touch of either player, mouse), player input (rebindable keyboard, gamepad, touch) and hotkeys; states never poll input devices directly
 - Unit tests with a >=70% use-cases coverage gate
 - CI/CD (fmt, lint, test, build, release); desktop and js/wasm targets are both built and linted

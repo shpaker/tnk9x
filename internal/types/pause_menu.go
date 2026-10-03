@@ -60,7 +60,10 @@ type StageResultViewData struct {
 	// CarriedOver — уровень начат с переносом: звёзд не больше двух
 	CarriedOver bool
 	// NewBest — результат лучше прежнего
-	NewBest     bool
+	NewBest bool
+	// UseTokens — пункты за рекламу оплачиваются жетоном игрока,
+	// а не просмотром рекламы
+	UseTokens   bool
 	Items       []StageResultItem
 	ActiveIndex int
 	// Reveal — насколько экран уже появился

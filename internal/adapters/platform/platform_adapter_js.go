@@ -12,6 +12,7 @@ import (
 var (
 	_ interfaces.IPlatformAdapter = (*PlatformAdapter)(nil)
 	_ interfaces.IRewardAdapter   = (*PlatformAdapter)(nil)
+	_ interfaces.IPurchaseAdapter = (*PlatformAdapter)(nil)
 )
 
 // bridgeName — глобальный объект моста площадки; контракт описан
@@ -23,6 +24,13 @@ const (
 	bridgeRewardPending = "pending"
 	bridgeRewardGranted = "granted"
 	bridgeRewardDenied  = "denied"
+)
+
+// Исходы покупки в контракте моста
+const (
+	bridgePurchasePending = "pending"
+	bridgePurchaseGranted = "granted"
+	bridgePurchaseDenied  = "denied"
 )
 
 // PlatformAdapter — площадка браузера за нейтральным мостом
@@ -125,4 +133,85 @@ func (a *PlatformAdapter) PollReward() types.RewardStatus {
 	default:
 		return types.RewardStatusNone
 	}
+}
+
+// IsPurchaseAvailable реализует IPurchaseAdapter
+func (a *PlatformAdapter) IsPurchaseAvailable() bool {
+	return a.bridge.Get("purchasesAvailable").Bool()
+}
+
+// GetCatalog реализует IPurchaseAdapter: массив { id, price } моста
+func (a *PlatformAdapter) GetCatalog() []types.ProductOffer {
+	items := a.bridgeArray("catalog")
+	offers := make([]types.ProductOffer, 0, len(items))
+	for _, item := range items {
+		offers = append(offers, types.ProductOffer{
+			ID:    stringField(item, "id"),
+			Price: stringField(item, "price"),
+		})
+	}
+	return offers
+}
+
+// RequestPurchase реализует IPurchaseAdapter
+func (a *PlatformAdapter) RequestPurchase(productID string) {
+	a.bridge.Call("requestPurchase", productID)
+}
+
+// PollPurchase реализует IPurchaseAdapter
+func (a *PlatformAdapter) PollPurchase() types.PurchaseStatus {
+	switch a.bridge.Call("purchaseStatus").String() {
+	case bridgePurchasePending:
+		return types.PurchaseStatusPending
+	case bridgePurchaseGranted:
+		return types.PurchaseStatusGranted
+	case bridgePurchaseDenied:
+		return types.PurchaseStatusDenied
+	default:
+		return types.PurchaseStatusNone
+	}
+}
+
+// GetPurchases реализует IPurchaseAdapter: массив { id, token } моста
+func (a *PlatformAdapter) GetPurchases() []types.Purchase {
+	items := a.bridgeArray("purchases")
+	purchases := make([]types.Purchase, 0, len(items))
+	for _, item := range items {
+		purchases = append(purchases, types.Purchase{
+			ProductID: stringField(item, "id"),
+			Token:     stringField(item, "token"),
+		})
+	}
+	return purchases
+}
+
+// ConsumePurchase реализует IPurchaseAdapter
+func (a *PlatformAdapter) ConsumePurchase(token string) {
+	a.bridge.Call("consumePurchase", token)
+}
+
+// bridgeArray — элементы массива, который возвращает метод моста;
+// не массив — пусто
+func (a *PlatformAdapter) bridgeArray(method string) []js.Value {
+	array := a.bridge.Call(method)
+	if !array.InstanceOf(js.Global().Get("Array")) {
+		return nil
+	}
+	items := make([]js.Value, array.Length())
+	for i := range items {
+		items[i] = array.Index(i)
+	}
+	return items
+}
+
+// stringField — строковое поле объекта моста; иначе пустая строка
+func stringField(object js.Value, name string) string {
+	if object.Type() != js.TypeObject {
+		return ""
+	}
+	value := object.Get(name)
+	if value.Type() != js.TypeString {
+		return ""
+	}
+	return value.String()
 }

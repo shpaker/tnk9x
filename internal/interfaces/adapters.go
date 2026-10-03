@@ -170,6 +170,29 @@ type IRewardAdapter interface {
 	PollReward() types.RewardStatus
 }
 
+// IPurchaseAdapter — покупки у площадки по действию игрока. Чего
+// площадка не умеет, то её адаптер не делает: без покупок
+// IsPurchaseAvailable — false, каталог и покупки пусты
+type IPurchaseAdapter interface {
+	// IsPurchaseAvailable — площадка умеет покупки
+	IsPurchaseAvailable() bool
+	// GetCatalog — товары площадки с ценами
+	GetCatalog() []types.ProductOffer
+	// RequestPurchase открывает окно оплаты товара; исход —
+	// через PollPurchase
+	RequestPurchase(productID string)
+	// PollPurchase — исход последнего запроса: Pending, пока окно
+	// оплаты открыто, итоговый Granted/Denied отдаётся один раз,
+	// дальше — None
+	PollPurchase() types.PurchaseStatus
+	// GetPurchases — покупки игрока: разовые и ещё не списанные
+	// расходуемые
+	GetPurchases() []types.Purchase
+	// ConsumePurchase списывает расходуемую покупку: товар зачислен
+	// игроку, у площадки покупки больше нет
+	ConsumePurchase(token string)
+}
+
 // ITextsAdapter — тексты интерфейса на активном языке из файлов
 // локалей. Ключа нет в языке — текст языка по умолчанию, нет нигде —
 // сам ключ: пропуск виден на экране

@@ -107,6 +107,13 @@ type IProgressRepository interface {
 	SaveProgress(progress *types.ProgressEntity) error
 }
 
+// IInventoryRepository — купленное игроком: разовые покупки и жетоны
+type IInventoryRepository interface {
+	// GetInventory возвращает пустой инвентарь, если сохранения ещё нет
+	GetInventory() (*types.InventoryEntity, error)
+	SaveInventory(inventory *types.InventoryEntity) error
+}
+
 // ISettingsRepository — пользовательские настройки (графика,
 // полный экран, громкость)
 type ISettingsRepository interface {

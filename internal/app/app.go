@@ -18,6 +18,7 @@ import (
 	"github.com/shpaker/tnk9x/internal/adapters/platform"
 	"github.com/shpaker/tnk9x/internal/adapters/scripting"
 	"github.com/shpaker/tnk9x/internal/adapters/settings"
+	"github.com/shpaker/tnk9x/internal/adapters/shop"
 	"github.com/shpaker/tnk9x/internal/adapters/splash"
 	"github.com/shpaker/tnk9x/internal/adapters/stage"
 	"github.com/shpaker/tnk9x/internal/adapters/texts"
@@ -120,9 +121,15 @@ type App struct {
 	effectsRenderer    *effects.EffectsRendererAdapter
 	windowAdapter      interfaces.IWindowAdapter
 	// Площадка запуска: десктоп или браузер (страница, портал);
-	// один адаптер реализует оба контракта
+	// один адаптер реализует все три контракта
 	platformAdapter interfaces.IPlatformAdapter
 	rewardAdapter   interfaces.IRewardAdapter
+	purchaseAdapter interfaces.IPurchaseAdapter
+
+	// Купленное игроком: общее для всех режимов
+	inventory           *types.InventoryEntity
+	inventoryRepository interfaces.IInventoryRepository
+	inventoryUseCases   interfaces.IInventoryUseCases
 
 	// Пользовательские настройки (графика, полный экран, громкость,
 	// язык, режим) и раскладка управления
@@ -147,7 +154,11 @@ type App struct {
 	settingsUseCases interfaces.ISettingsUseCases
 	settingsOverlay  *states.SettingsOverlay
 	helpOverlay      *states.HelpOverlay
-	hotkeysHandler   *states.HotkeysHandler
+
+	// Магазин главного меню
+	shopUseCases   interfaces.IShopUseCases
+	shopOverlay    *states.ShopOverlay
+	hotkeysHandler *states.HotkeysHandler
 
 	// Кампания; уровни для превью экрана выбора не мутируются —
 	// для игры уровень каждый раз читается заново
@@ -182,6 +193,8 @@ func New(cfg *Config) *App {
 	userSettings := loadSettings(settingsRepository)
 	controlsRepository := processed.NewControlsRepository(storageRepository)
 	userControls := loadControls(controlsRepository)
+	inventoryRepository := processed.NewInventoryRepository(storageRepository)
+	inventory := loadInventory(inventoryRepository)
 
 	// Шейдеры нужны финальному экрану с первого кадра: ошибка
 	// в исходнике останавливает запуск до открытия окна
@@ -235,11 +248,18 @@ func New(cfg *Config) *App {
 		windowAdapter:      window.NewWindowAdapter(),
 		platformAdapter:    platformAdapter,
 		rewardAdapter:      platformAdapter,
+		purchaseAdapter:    platformAdapter,
 		settings:           userSettings,
 		controls:           userControls,
 
 		texts:                textsAdapter,
 		localizationUseCases: localizationUseCases,
+
+		inventory:           inventory,
+		inventoryRepository: inventoryRepository,
+		inventoryUseCases: use_cases.NewInventoryUseCases(
+			inventory, inventoryRepository,
+		),
 	}
 
 	app.loader = newBootLoader(
@@ -327,6 +347,10 @@ func (app *App) loadCampaign() {
 		int(app.config.GetTileBaseSize()),
 	)
 	mustLoad("loading campaign levels", err)
+	mustLoad(
+		"validating shop products",
+		validateProductPacks(app.config.Products, campaign),
+	)
 
 	app.campaign = campaign
 	app.campaignLevels = campaignLevels
@@ -342,6 +366,7 @@ func (app *App) loadProgress() {
 		progression := use_cases.NewProgressionUseCases(
 			app.campaign,
 			loadProgress(repository),
+			app.inventory,
 			repository,
 		)
 		app.progressionUseCases[mode] = progression
@@ -475,6 +500,36 @@ func (app *App) assembleGame() {
 		int(cfg.GetTitleFontSize()),
 		int(cfg.GetRegularFontSize()),
 	)
+	app.assembleShop()
+}
+
+// assembleShop — магазин главного меню и зачисление покупок,
+// сделанных до запуска (в том числе не списанных площадкой)
+func (app *App) assembleShop() {
+	cfg := app.config
+	app.shopUseCases = use_cases.NewShopUseCases(
+		cfg.Products,
+		app.campaign,
+		app.inventory,
+		app.progressionUseCases[:],
+		app.purchaseAdapter,
+		app.inventoryRepository,
+	)
+	if err := app.shopUseCases.Sync(); err != nil {
+		log.Printf("sync purchases: %v", err)
+	}
+	app.shopOverlay = states.NewShopOverlay(
+		app.shopUseCases,
+		app.inventoryUseCases,
+		shop.NewShopRendererAdapter(
+			app.texts,
+			app.textFace,
+			int(cfg.GetTitleFontSize()),
+			int(cfg.GetRegularFontSize()),
+		),
+		app.menuInput,
+		app.soundAdapter,
+	)
 }
 
 // loadCampaignLevels читает все уровни кампании: ошибка в любом
@@ -534,6 +589,18 @@ func loadControls(
 	return controls
 }
 
+// loadInventory читает купленное; повреждённое сохранение
+// не мешает игре, покупки площадки зачислятся при синхронизации
+func loadInventory(
+	repository interfaces.IInventoryRepository,
+) *types.InventoryEntity {
+	inventory, err := repository.GetInventory()
+	if err != nil {
+		log.Printf("load inventory: %v", err)
+	}
+	return inventory
+}
+
 // loadProgress читает прогресс; повреждённое или недоступное
 // сохранение не мешает игре — начинаем с чистого прогресса
 func loadProgress(
@@ -553,11 +620,16 @@ func (app *App) mode() int {
 
 // newMainMenuState собирает главное меню над живой сценой с названием
 // из блоков; в браузере ebiten.Termination заморозил бы canvas,
-// поэтому выход есть только на десктопе
+// поэтому выход есть только на десктопе, а магазин — только там,
+// где площадка продаёт товары
 func (app *App) newMainMenuState() (*states.MainMenuState, error) {
 	scene, err := app.newDemoScene()
 	if err != nil {
 		return nil, err
+	}
+	// Площадка могла ответить о покупках позже запуска игры
+	if err := app.shopUseCases.Sync(); err != nil {
+		log.Printf("sync purchases: %v", err)
 	}
 
 	return states.NewMainMenuState(states.MainMenuStateDependencies{
@@ -566,8 +638,10 @@ func (app *App) newMainMenuState() (*states.MainMenuState, error) {
 		MenuInput:        app.menuInput,
 		Scene:            scene,
 		SettingsOverlay:  app.settingsOverlay,
+		ShopOverlay:      app.shopOverlay,
 		Settings:         app.settings,
 		QuitAvailable:    runtime.GOOS != "js",
+		ShopAvailable:    app.shopUseCases.IsAvailable(),
 	}), nil
 }
 
@@ -641,10 +715,12 @@ func (app *App) isGameplayActive() bool {
 // записывает параметры в сессию и собирает новое состояние
 func (app *App) applyTransition(transition types.StateTransition) error {
 	// Логическая пауза: площадка может показать рекламу до первого
-	// кадра нового состояния
+	// кадра нового состояния; купленное «без рекламы» её отключает
 	if transition.Intermission {
 		app.platformAdapter.SetGameplayActive(false)
-		app.platformAdapter.RequestIntermission()
+		if !app.inventoryUseCases.HasNoAds() {
+			app.platformAdapter.RequestIntermission()
+		}
 	}
 
 	switch transition.Target {
