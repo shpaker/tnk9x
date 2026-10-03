@@ -252,6 +252,10 @@ func (a *EffectsRendererAdapter) DrawFinal(
 	scale int,
 	enabled bool,
 ) {
+	var geoM ebiten.GeoM
+	geoM.Scale(float64(scale), float64(scale))
+	geoM.Translate(float64(x), float64(y))
+
 	wereEnabled := a.effectsWereEnabled
 	a.effectsWereEnabled = enabled
 	if enabled {
@@ -263,7 +267,8 @@ func (a *EffectsRendererAdapter) DrawFinal(
 		// Часы телевизора идут по итоговым кадрам с эффектами: помехи
 		// работают и в меню, где проход освещения не идёт
 		a.tv.Update(1 / float64(ebiten.TPS()))
-		err := a.renderer.Draw(screen, offscreen, a.tv, x, y, scale)
+		// Телевизор рисует весь экран: картинку и чёрные поля вокруг
+		err := a.renderer.Draw(screen, offscreen, a.tv, geoM)
 		// Срыв строк гаснет после каждого итогового кадра: вне уровня
 		// тряски нет
 		a.shake.Set(0)
@@ -272,9 +277,7 @@ func (a *EffectsRendererAdapter) DrawFinal(
 		}
 	}
 
-	op := &ebiten.DrawImageOptions{} // Filter по умолчанию — Nearest
-	op.GeoM.Scale(float64(scale), float64(scale))
-	op.GeoM.Translate(float64(x), float64(y))
+	op := &ebiten.DrawImageOptions{GeoM: geoM} // Filter по умолчанию — Nearest
 	screen.DrawImage(offscreen, op)
 }
 
