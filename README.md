@@ -55,7 +55,7 @@ Go + [Ebitengine](https://ebitengine.org/), one codebase for desktop and a singl
 - Data-driven content: section-based map and campaign formats ([assets/levels/README.md](assets/levels/README.md)), locales in `assets/locales`, all validated fail-fast on startup
 - Platform specifics behind `IPlatformAdapter`, `IRewardAdapter` and `IPurchaseAdapter`, one adapter per build target; portal bridges in `web/<platform>/` ([web/README.md](web/README.md)): pause on suspend, cloud saves, ads and in-game purchases where the platform offers them
 - Unit tests with a >=70% use-cases coverage gate; CI builds and lints both desktop and js/wasm (GitHub Pages and Yandex Games)
-- Automatic `MAJOR.MINOR` versioning by Conventional Commits: after a green CI on main CI tags the commit, builds the release (desktop and Yandex Games archives) with generated notes and deploys Pages
+- Automatic `MAJOR.MINOR` versioning by Conventional Commits: changes pile up on main, and a manual run of the Version workflow tags a commit with a green CI, builds the release (desktop and Yandex Games archives) with generated notes and deploys Pages
 
 **Roadmap:**
 

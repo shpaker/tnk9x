@@ -1,48 +1,60 @@
 name: Version
 
-# Версия MAJOR.MINOR считается по коммитам после зелёного CI на main
+# Релиз вручную: версия MAJOR.MINOR по коммитам, накопленным с последнего тега
 on:
-  workflow_run:
-    workflows: [CI]
-    types: [completed]
-    branches: [main]
+  workflow_dispatch:
 
 jobs:
   tag:
     name: Tag Release
-    if: >-
-      github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.event == 'push'
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      actions: read
     concurrency:
       group: version
       cancel-in-progress: false
     outputs:
       version: ${{ steps.version.outputs.version }}
     env:
-      HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+      HEAD_SHA: ${{ github.sha }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
+          ref: ${{ github.sha }}
           fetch-depth: 0
 
       - name: Setup Just
         uses: extractions/setup-just@v3
 
+      # Релиз только с коммита, на котором CI зелёный
+      - name: Check CI
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          conclusion="$(gh run list --workflow ci.yml --commit "$HEAD_SHA" \
+            --event push --json conclusion --jq '.[0].conclusion')"
+          if [ "$conclusion" != "success" ]; then
+            echo "::error::CI for $HEAD_SHA is not green: ${conclusion:-not found}"
+            exit 1
+          fi
+
       - name: Compute version
         id: version
         run: |
-          # Коммит уже в релизе: ручной тег или запуск не по порядку
+          # Коммит уже в релизе: ручной тег или повторный запуск
           if [ -n "$(git tag --contains "$HEAD_SHA")" ]; then
-            echo "Commit $HEAD_SHA is already released"
+            echo "::notice::Commit $HEAD_SHA is already released"
             exit 0
           fi
           version="$(just next-version)"
-          echo "Next version: ${version:-none}"
+          if [ -z "$version" ]; then
+            echo "::notice::Nothing to release since the last tag"
+            exit 0
+          fi
+          echo "Next version: $version"
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
       - name: Push tag
