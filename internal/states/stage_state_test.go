@@ -1,6 +1,7 @@
 package states
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/shpaker/tnk9x/internal/interfaces"
@@ -27,11 +28,17 @@ type fakeFinishingStageUseCases struct {
 	finished bool
 }
 
-func (f *fakeFinishingStageUseCases) UpdateGameObjects(float64) { f.finished = true }
-func (f *fakeFinishingStageUseCases) IsStageFinished() bool     { return f.finished }
-func (f *fakeFinishingStageUseCases) IsStageWon() bool          { return false }
-func (f *fakeFinishingStageUseCases) PauseStageState()          { f.paused = true }
-func (f *fakeFinishingStageUseCases) CanRevivePlayers() bool    { return false }
+func (f *fakeFinishingStageUseCases) UpdateGameObjects(
+	float64,
+) {
+	f.finished = true
+}
+
+func (f *fakeFinishingStageUseCases) IsStageFinished() bool { return f.finished }
+func (f *fakeFinishingStageUseCases) IsStageWon() bool      { return false }
+
+func (f *fakeFinishingStageUseCases) PauseStageState()       { f.paused = true }
+func (f *fakeFinishingStageUseCases) CanRevivePlayers() bool { return false }
 
 func (f *fakeFinishingStageUseCases) TryRespawnPlayersTanks() (
 	*types.TankEntity, *types.TankEntity,
@@ -58,14 +65,31 @@ type fakeStageWorld struct {
 	interfaces.IProgressionUseCases
 }
 
-func (fakeStageWorld) UpdateAllTanksLifecycle() error                       { return nil }
-func (fakeStageWorld) UpdateAnimations()                                    {}
-func (fakeStageWorld) UpdateHeadlights()                                    {}
-func (fakeStageWorld) Update(float64)                                       {}
-func (fakeStageWorld) GetAllBonuses() []*types.BonusEntity                  { return nil }
-func (fakeStageWorld) CalcStars(types.StageResult, *types.LevelEntity) uint { return 0 }
-func (fakeStageWorld) GetLevelStars(int) uint                               { return 0 }
-func (fakeStageWorld) NextLevel(level int) (int, bool)                      { return level + 1, false }
+func (fakeStageWorld) UpdateAllTanksLifecycle() error { return nil }
+func (fakeStageWorld) UpdateAnimations()              {}
+func (fakeStageWorld) UpdateHeadlights()              {}
+func (fakeStageWorld) Update(float64)                 {}
+
+func (fakeStageWorld) GetAllBonuses() []*types.BonusEntity { return nil }
+
+func (fakeStageWorld) CalcStars(
+	types.StageResult,
+	*types.LevelEntity,
+) uint {
+	return 0
+}
+
+func (fakeStageWorld) GetLevelStars(
+	int,
+) uint {
+	return 0
+}
+
+func (fakeStageWorld) NextLevel(
+	level int,
+) (int, bool) {
+	return level + 1, false
+}
 
 // Итоги строятся в том же кадре, где уровень завершился: иначе Draw
 // видит паузу без итогов и на кадр рисует меню паузы
@@ -73,6 +97,7 @@ func TestStageState_FinishBuildsResultSameFrame(t *testing.T) {
 	stageUseCases := &fakeFinishingStageUseCases{}
 	world := fakeStageWorld{}
 	state := NewStageState(StageStateDependencies{
+		InventoryUseCases:     &testutil.FakeInventory{},
 		TankCommonUseCases:    &testutil.FakeTankCommonUseCases{},
 		TankLifecycleUseCases: world,
 		TilesUseCases:         world,
@@ -134,10 +159,11 @@ func TestStageState_PauseStopsEngine(t *testing.T) {
 	soundUseCases := &fakeSoundUseCases{}
 	input := &testutil.FakeMenuInput{}
 	state := NewStageState(StageStateDependencies{
-		StageUseCases: stageUseCases,
-		SoundUseCases: soundUseCases,
-		Renderer:      fakeStageRenderer{},
-		MenuInput:     input,
+		InventoryUseCases: &testutil.FakeInventory{},
+		StageUseCases:     stageUseCases,
+		SoundUseCases:     soundUseCases,
+		Renderer:          fakeStageRenderer{},
+		MenuInput:         input,
 	})
 	frame := func(pressed testutil.FakeMenuInput) {
 		*input = pressed
@@ -190,10 +216,11 @@ func TestStageState_PauseMenuMouse(t *testing.T) {
 	stageUseCases := &fakeStageUseCases{}
 	input := &testutil.FakeMenuInput{}
 	state := NewStageState(StageStateDependencies{
-		StageUseCases: stageUseCases,
-		SoundUseCases: &fakeSoundUseCases{},
-		Renderer:      fakeStageRenderer{},
-		MenuInput:     input,
+		InventoryUseCases: &testutil.FakeInventory{},
+		StageUseCases:     stageUseCases,
+		SoundUseCases:     &fakeSoundUseCases{},
+		Renderer:          fakeStageRenderer{},
+		MenuInput:         input,
 	})
 	frame := func(pressed testutil.FakeMenuInput) {
 		*input = pressed
@@ -220,5 +247,57 @@ func TestStageState_PauseMenuMouse(t *testing.T) {
 	})
 	if stageUseCases.paused {
 		t.Error("клик по CONTINUE снимает паузу")
+	}
+}
+
+// fakeBoostingStageUseCases — поражение с усиленным переносом
+type fakeBoostingStageUseCases struct {
+	fakeFinishingStageUseCases
+	boosts int
+}
+
+func (f *fakeBoostingStageUseCases) BoostCarryOver() { f.boosts++ }
+
+// С жетонами пункты за рекламу есть и без рекламы площадки,
+// а выбор пункта тратит жетон вместо показа рекламы
+func TestStageState_TokensPayForReward(t *testing.T) {
+	stageUseCases := &fakeBoostingStageUseCases{}
+	inventory := &testutil.FakeInventory{Tokens: 1}
+	reward := &testutil.FakeReward{}
+	world := fakeStageWorld{}
+	state := NewStageState(StageStateDependencies{
+		InventoryUseCases:     inventory,
+		TankCommonUseCases:    &testutil.FakeTankCommonUseCases{},
+		TankLifecycleUseCases: world,
+		TilesUseCases:         world,
+		StageUseCases:         stageUseCases,
+		SoundUseCases:         &fakeSoundUseCases{},
+		LightingUseCases:      world,
+		VisualEffectsUseCases: &testutil.FakeVisualEffectsUseCases{},
+		ProgressionUseCases:   world,
+		EnemyInputAdapter:     world,
+		SoundPlayerAdapter:    &testutil.FakeSoundPlayer{},
+		MenuInput:             &testutil.FakeMenuInput{},
+		RewardAdapter:         reward,
+		StageSession:          session_entities.NewStageSessionEntity(),
+		BonusesRepository:     world,
+		SettingsOverlay:       &SettingsOverlay{},
+	})
+	state.isSetUp = true
+	state.Update()
+
+	if !state.result.UseTokens ||
+		!slices.Contains(state.result.Items, types.StageResultItemBoostRetry) {
+		t.Fatalf("result %+v must offer BOOST for a token", state.result)
+	}
+
+	transition := state.applyStageResultItem(types.StageResultItemBoostRetry)
+	if transition.Target != types.TransitionToStage || !transition.CarryOver {
+		t.Errorf("transition %+v, want boosted retry", transition)
+	}
+	if inventory.Tokens != 0 || reward.Requests != 0 ||
+		stageUseCases.boosts != 1 {
+		t.Errorf("tokens %d, ad requests %d, boosts %d",
+			inventory.Tokens, reward.Requests, stageUseCases.boosts)
 	}
 }

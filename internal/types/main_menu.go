@@ -8,6 +8,8 @@ const (
 	// у каждого своё прохождение кампании
 	MainMenuItemOnePlayer MainMenuItem = iota
 	MainMenuItemTwoPlayers
+	// MainMenuItemShop — магазин, только если площадка умеет покупки
+	MainMenuItemShop
 	MainMenuItemSettings
 	// MainMenuItemQuit — выход из игры, только на десктопе
 	MainMenuItemQuit

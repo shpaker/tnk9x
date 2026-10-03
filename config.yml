@@ -52,3 +52,25 @@ game:
     waves:
       - "BBBBBBBBBB 120 now"
       - "BBBBFFFFPA 120 now"
+
+# In-game purchases where the platform supports them (SHOP in the main
+# menu). The id is the product id in the platform catalog, set up there
+# by hand; the order here is the order in the shop. Products of the same
+# kind share a row: packs and token bundles are picked with left/right.
+# Kinds: no_ads - no ads between stages (rewarded ads stay);
+# all_levels - every campaign stage; pack - every stage of a campaign
+# pack (its order number from 1); tokens - tokens spent instead of
+# watching a rewarded ad (REVIVE, BOOST).
+shop:
+  products:
+    - {id: no_ads, kind: no_ads}
+    - {id: all_levels, kind: all_levels}
+    - {id: pack_2, kind: pack, pack: 2}
+    - {id: pack_3, kind: pack, pack: 3}
+    - {id: pack_4, kind: pack, pack: 4}
+    - {id: pack_5, kind: pack, pack: 5}
+    - {id: pack_6, kind: pack, pack: 6}
+    - {id: pack_7, kind: pack, pack: 7}
+    - {id: tokens_5, kind: tokens, amount: 5}
+    - {id: tokens_15, kind: tokens, amount: 15}
+    - {id: tokens_40, kind: tokens, amount: 40}

@@ -36,6 +36,8 @@ type StageStateDependencies struct {
 	LightingUseCases      interfaces.ILightingUseCases
 	VisualEffectsUseCases interfaces.IVisualEffectsUseCases
 	ProgressionUseCases   interfaces.IProgressionUseCases
+	// InventoryUseCases — жетоны вместо рекламы для пунктов итогов
+	InventoryUseCases interfaces.IInventoryUseCases
 
 	// Adapters
 	InputAdapters      [2]interfaces.IInputAdapter
@@ -69,6 +71,7 @@ type StageState struct {
 	lightingUseCases      interfaces.ILightingUseCases
 	visualEffectsUseCases interfaces.IVisualEffectsUseCases
 	progressionUseCases   interfaces.IProgressionUseCases
+	inventoryUseCases     interfaces.IInventoryUseCases
 
 	// Adapters
 	inputAdapters      [2]interfaces.IInputAdapter
@@ -118,6 +121,7 @@ func NewStageState(deps StageStateDependencies) *StageState {
 		lightingUseCases:      deps.LightingUseCases,
 		visualEffectsUseCases: deps.VisualEffectsUseCases,
 		progressionUseCases:   deps.ProgressionUseCases,
+		inventoryUseCases:     deps.InventoryUseCases,
 		inputAdapters:         deps.InputAdapters,
 		enemyInputAdapter:     deps.EnemyInputAdapter,
 		renderer:              deps.Renderer,
@@ -512,7 +516,10 @@ func (state *StageState) buildStageResult() {
 	if result.Won && unlocked {
 		state.nextLevel = next
 	}
-	rewardAvailable := state.rewardAdapter.IsRewardAvailable()
+	// Пункты за рекламу оплачиваются и жетонами: с жетонами они есть
+	// и там, где площадка рекламу не умеет
+	useTokens := state.inventoryUseCases.GetTokens() > 0
+	rewardAvailable := useTokens || state.rewardAdapter.IsRewardAvailable()
 	items := stageResultMenu{
 		won:                result.Won,
 		nextUnlocked:       unlocked,
@@ -529,6 +536,7 @@ func (state *StageState) buildStageResult() {
 		LivesLost:    result.LivesLost,
 		CarriedOver:  result.CarriedOver,
 		NewBest:      newBest,
+		UseTokens:    useTokens,
 		Items:        items,
 	}
 	state.resultTicks = 0
@@ -574,8 +582,12 @@ func (state *StageState) revealResult() bool {
 func (state *StageState) applyStageResultItem(
 	item types.StageResultItem,
 ) types.StateTransition {
-	// Пункт за рекламу: экран итогов ждёт её исхода
+	// Пункт за рекламу: жетон оплачивает его сразу, иначе экран
+	// итогов ждёт исхода рекламы
 	if item.IsRewarded() {
+		if state.spendToken() {
+			return state.grantReward(item)
+		}
 		state.requestReward(item)
 		return types.StateTransition{}
 	}

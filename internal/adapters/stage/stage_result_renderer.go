@@ -151,7 +151,7 @@ func (r *StageRendererAdapter) DrawStageResult(
 		if item.IsRewarded() {
 			r.drawRewardedResultLine(
 				screen, r.texts.Get(stageResultLabels[item]),
-				layout.rowTops[i], rowColor,
+				r.rewardBadge(view), layout.rowTops[i], rowColor,
 			)
 		} else {
 			r.drawResultLine(
@@ -349,11 +349,22 @@ func (r *StageRendererAdapter) drawResultCaption(
 	)
 }
 
+// rewardBadge — метка пунктов за рекламу: чем они оплачиваются
+func (r *StageRendererAdapter) rewardBadge(
+	view types.StageResultViewData,
+) string {
+	if view.UseTokens {
+		return r.texts.Get(types.TextResultToken)
+	}
+	return r.texts.Get(types.TextResultAd)
+}
+
 // drawRewardedResultLine рисует пункт за рекламу: подпись и метку
-// AD справа от неё, вместе по центру
+// оплаты (реклама или жетон) справа от неё, вместе по центру
 func (r *StageRendererAdapter) drawRewardedResultLine(
 	screen *ebiten.Image,
 	label string,
+	badgeLabel string,
 	top float64,
 	lineColor color.NRGBA,
 ) {
@@ -363,7 +374,6 @@ func (r *StageRendererAdapter) drawRewardedResultLine(
 	}
 	labelWidth, _ := text.Measure(label, r.fontFace, 0)
 	labelWidth *= scale
-	badgeLabel := r.texts.Get(types.TextResultAd)
 	badgeTextWidth, badgeTextHeight := text.Measure(
 		badgeLabel, r.fontFace, 0,
 	)

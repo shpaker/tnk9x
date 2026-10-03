@@ -6,6 +6,7 @@ language:
 main_menu:
   one_player: "1 ИГРОК"
   two_players: "2 ИГРОКА"
+  shop: "МАГАЗИН"
   settings: "НАСТРОЙКИ"
   quit: "ВЫХОД"
 
@@ -98,6 +99,7 @@ result:
   keep_caption: "ЖИЗНИ И ТАНК С СОБОЙ, ДО"
   boost_caption: "СИЛЬНЕЕ И +1 ЖИЗНЬ, ДО"
   ad: "РЕКЛАМА"
+  token: "ЖЕТОН"
   stats: "ВРЕМЯ {{.Time}}  ПОТЕРИ {{.Lives}}"
   new_best: "НОВЫЙ РЕКОРД"
   carry_over:
@@ -105,6 +107,28 @@ result:
     few: "ПЕРЕНОС: ДО {{.Count}} ЗВЁЗД"
     many: "ПЕРЕНОС: ДО {{.Count}} ЗВЁЗД"
     other: "ПЕРЕНОС: ДО {{.Count}} ЗВЕЗДЫ"
+
+shop:
+  title: "МАГАЗИН"
+  no_ads: "БЕЗ РЕКЛАМЫ"
+  all_levels: "ВСЕ УРОВНИ"
+  tokens:
+    one: "{{.Count}} ЖЕТОН"
+    few: "{{.Count}} ЖЕТОНА"
+    many: "{{.Count}} ЖЕТОНОВ"
+    other: "{{.Count}} ЖЕТОНА"
+  owned: "КУПЛЕНО"
+  pending: "ОЖИДАНИЕ ОПЛАТЫ..."
+  back: "НАЗАД"
+  desc_no_ads: "БЕЗ РЕКЛАМЫ МЕЖДУ УРОВНЯМИ"
+  desc_no_ads_rewarded: "ВОЗРОЖДЕНИЕ, УСИЛЕНИЕ: КАК БЫЛО"
+  desc_pack: "ПАЧКА: УРОВНИ {{.From}}-{{.To}}"
+  desc_pack_all: "ВСЕ УРОВНИ ОТКРЫВАЮТСЯ СРАЗУ"
+  desc_all_levels: "ВСЕ {{.Count}} УРОВНЕЙ КАМПАНИИ"
+  desc_all_levels_at_once: "СРАЗУ, БЕЗ ЗВЁЗД И УСЛОВИЙ"
+  desc_tokens: "ДЛЯ ВОЗРОЖДЕНИЯ И УСИЛЕНИЯ"
+  desc_tokens_no_ad: "ВМЕСТО ПРОСМОТРА РЕКЛАМЫ"
+  desc_balance: "У ВАС: {{.Count}}"
 
 levels:
   "1": "ПЕРВАЯ КРОВЬ"

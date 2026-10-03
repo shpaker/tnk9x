@@ -23,6 +23,7 @@ Tanks from the 90s — played not the way they really were, but the way we remem
 - Lighting and effects: headlights, glowing tracers, lit explosions and bonuses with shadows from walls, metallic steel and matte brick, bloom, particles, screen shake, tube TV filter on every screen; F2 switches to classic graphics
 - Interface: splash with a loading bar, live title scene, pause menu, settings (graphics, fullscreen, volume, language, controls); English, Russian and Turkish with auto-detection
 - Desktop and one WebAssembly build for GitHub Pages and Yandex Games: pause on suspend, cloud saves, interstitial ads at most once per 5 minutes of gameplay, rewarded ads
+- In-game purchases where the platform sells them: SHOP in the main menu with no ads, stage packs and REVIVE/BOOST tokens that replace watching an ad
 
 **Under the hood:**
 
@@ -30,7 +31,7 @@ Tanks from the 90s — played not the way they really were, but the way we remem
 - Enemy behavior in Lua behind a domain-typed engine interface; Dijkstra pathfinding and line-of-fire queries exposed to scripts
 - Kage shader pipeline: lighting on the logical screen, bloom, phosphor afterglow and CRT on the final screen (see [Rendering Pipeline](#rendering-pipeline))
 - Data-driven content: section-based map and campaign formats, locales in `assets/locales`, all validated fail-fast on startup
-- Platform specifics behind `IPlatformAdapter` and `IRewardAdapter`, one adapter per build target; portal bridges in `web/<platform>/` ([web/README.md](web/README.md))
+- Platform specifics behind `IPlatformAdapter`, `IRewardAdapter` and `IPurchaseAdapter`, one adapter per build target; portal bridges in `web/<platform>/` ([web/README.md](web/README.md))
 - Unit tests with a >=70% use-cases coverage gate; CI builds and lints both desktop and js/wasm
 - Automatic `MAJOR.MINOR` versioning by Conventional Commits: after a green CI on main CI tags the commit, builds the release with generated notes and deploys Pages
 

@@ -9,6 +9,7 @@ language:
 main_menu:
   one_player: "1 PLAYER"
   two_players: "2 PLAYERS"
+  shop: "SHOP"
   settings: "SETTINGS"
   quit: "QUIT"
 
@@ -110,11 +111,34 @@ result:
   keep_caption: "KEEP LIVES & TANK, MAX"
   boost_caption: "TANK UP & +1 LIFE, MAX"
   ad: "AD"
+  token: "TOKEN"
   stats: "TIME {{.Time}}  LIVES LOST {{.Lives}}"
   new_best: "NEW BEST"
   carry_over:
     one: "CARRY-OVER: MAX {{.Count}} STAR"
     other: "CARRY-OVER: MAX {{.Count}} STARS"
+
+# Shop: rows fit 32 characters with the price; descriptions of the
+# selected product are lines of 32 characters
+shop:
+  title: "SHOP"
+  no_ads: "NO ADS"
+  all_levels: "ALL STAGES"
+  tokens:
+    one: "{{.Count}} TOKEN"
+    other: "{{.Count}} TOKENS"
+  owned: "OWNED"
+  pending: "WAITING FOR PAYMENT..."
+  back: "BACK"
+  desc_no_ads: "NO ADS BETWEEN STAGES"
+  desc_no_ads_rewarded: "REVIVE, BOOST: AD OR TOKEN"
+  desc_pack: "STAGE PACK: STAGES {{.From}}-{{.To}}"
+  desc_pack_all: "ALL STAGES OPEN AT ONCE"
+  desc_all_levels: "ALL {{.Count}} CAMPAIGN STAGES"
+  desc_all_levels_at_once: "OPEN AT ONCE, NO STARS NEEDED"
+  desc_tokens: "SPEND ON REVIVE OR BOOST"
+  desc_tokens_no_ad: "INSTEAD OF WATCHING AN AD"
+  desc_balance: "YOU HAVE: {{.Count}}"
 
 # Campaign stage names by number: 15 characters
 levels:

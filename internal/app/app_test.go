@@ -90,7 +90,10 @@ func newAppTestEnv() (*App, *stubGameState) {
 		mapsRepository:  &failingMapsRepo{},
 		platformAdapter: platformAdapter,
 		rewardAdapter:   platformAdapter,
+		purchaseAdapter: platformAdapter,
 		windowAdapter:   &testutil.FakeWindow{},
+
+		inventoryUseCases: &testutil.FakeInventory{},
 	}
 	return app, state
 }
@@ -356,6 +359,27 @@ func TestApp_ApplyTransition_Intermission(t *testing.T) {
 	}
 	if active, ok := fakePlatform.LastGameplay(); !ok || active {
 		t.Error("gameplay must stop before the intermission")
+	}
+}
+
+// Купленное «без рекламы»: логическая пауза есть, рекламы нет
+func TestApp_ApplyTransition_NoAdsPurchased(t *testing.T) {
+	app, _ := newAppTestEnv()
+	fakePlatform := &testutil.FakePlatform{}
+	app.platformAdapter = fakePlatform
+	app.inventoryUseCases = &testutil.FakeInventory{NoAds: true}
+
+	_ = app.applyTransition(types.StateTransition{
+		Target:       types.TransitionToStage,
+		Level:        1,
+		Intermission: true,
+	})
+
+	if fakePlatform.IntermissionCalls != 0 {
+		t.Errorf("intermissions %d, want 0", fakePlatform.IntermissionCalls)
+	}
+	if active, ok := fakePlatform.LastGameplay(); !ok || active {
+		t.Error("gameplay must stop on the logical pause")
 	}
 }
 

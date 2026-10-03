@@ -16,6 +16,7 @@ const TextLanguageName TextKey = "language.name"
 const (
 	TextMainMenuOnePlayer  TextKey = "main_menu.one_player"
 	TextMainMenuTwoPlayers TextKey = "main_menu.two_players"
+	TextMainMenuShop       TextKey = "main_menu.shop"
 	TextMainMenuSettings   TextKey = "main_menu.settings"
 	TextMainMenuQuit       TextKey = "main_menu.quit"
 )
@@ -124,9 +125,33 @@ const (
 	TextResultKeepCaption  TextKey = "result.keep_caption"
 	TextResultBoostCaption TextKey = "result.boost_caption"
 	TextResultAd           TextKey = "result.ad"
+	TextResultToken        TextKey = "result.token"
 	TextResultStats        TextKey = "result.stats"
 	TextResultNewBest      TextKey = "result.new_best"
 	TextResultCarryOver    TextKey = "result.carry_over"
+)
+
+// Магазин. Строка пачки — её название; TextShopTokens — {{.Count}},
+// множественное число. Описание выбранного товара под списком:
+// TextShopDescPack — {{.From}} и {{.To}}, TextShopDescAllLevels
+// и TextShopDescBalance — {{.Count}}
+const (
+	TextShopTitle               TextKey = "shop.title"
+	TextShopNoAds               TextKey = "shop.no_ads"
+	TextShopAllLevels           TextKey = "shop.all_levels"
+	TextShopTokens              TextKey = "shop.tokens"
+	TextShopOwned               TextKey = "shop.owned"
+	TextShopPending             TextKey = "shop.pending"
+	TextShopBack                TextKey = "shop.back"
+	TextShopDescNoAds           TextKey = "shop.desc_no_ads"
+	TextShopDescNoAdsRewarded   TextKey = "shop.desc_no_ads_rewarded"
+	TextShopDescPack            TextKey = "shop.desc_pack"
+	TextShopDescPackAll         TextKey = "shop.desc_pack_all"
+	TextShopDescAllLevels       TextKey = "shop.desc_all_levels"
+	TextShopDescAllLevelsAtOnce TextKey = "shop.desc_all_levels_at_once"
+	TextShopDescTokens          TextKey = "shop.desc_tokens"
+	TextShopDescTokensNoAd      TextKey = "shop.desc_tokens_no_ad"
+	TextShopDescBalance         TextKey = "shop.desc_balance"
 )
 
 // TextKeys — все постоянные ключи: каждый файл локали содержит их все
@@ -135,6 +160,7 @@ var TextKeys = []TextKey{
 
 	TextMainMenuOnePlayer,
 	TextMainMenuTwoPlayers,
+	TextMainMenuShop,
 	TextMainMenuSettings,
 	TextMainMenuQuit,
 
@@ -220,9 +246,27 @@ var TextKeys = []TextKey{
 	TextResultKeepCaption,
 	TextResultBoostCaption,
 	TextResultAd,
+	TextResultToken,
 	TextResultStats,
 	TextResultNewBest,
 	TextResultCarryOver,
+
+	TextShopTitle,
+	TextShopNoAds,
+	TextShopAllLevels,
+	TextShopTokens,
+	TextShopOwned,
+	TextShopPending,
+	TextShopBack,
+	TextShopDescNoAds,
+	TextShopDescNoAdsRewarded,
+	TextShopDescPack,
+	TextShopDescPackAll,
+	TextShopDescAllLevels,
+	TextShopDescAllLevelsAtOnce,
+	TextShopDescTokens,
+	TextShopDescTokensNoAd,
+	TextShopDescBalance,
 }
 
 // LevelNameTextKey — перевод названия уровня кампании: levels.<номер>;
