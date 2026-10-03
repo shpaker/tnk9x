@@ -232,7 +232,8 @@ next-version:
         echo "${major}.$((minor + 1))"
     fi
 
-# Только релизные коммиты: ломающие первыми, затем по типам
+# Только релизные коммиты: ломающие первыми, затем по типам;
+# у ручного релиза без них — все коммиты
 # Changelog релиза ref относительно предыдущего релизного тега
 changelog ref="HEAD":
     #!/bin/bash
@@ -240,12 +241,13 @@ changelog ref="HEAD":
     ref='{{ref}}'
     last=$(git tag --merged "$ref" --no-contains "$ref" | grep -E '{{release_tag}}' | sort -V | tail -n1 || true)
     subjects=$(git log --reverse --format='%s' "${last:+$last..}$ref")
-    {
+    changes=$(
         grep -E '{{breaking_subject}}' <<< "$subjects" || true
         for type in {{release_types}}; do
             grep -E "^${type}(\([^)]*\))?:" <<< "$subjects" || true
         done
-    } | sed 's/^/- /'
+    )
+    sed '/^$/d; s/^/- /' <<< "${changes:-$subjects}"
 
 # Форматирование
 fmt:
