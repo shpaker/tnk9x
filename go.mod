@@ -12,7 +12,7 @@ require (
 	gopkg.in/yaml.v3 v3.0.1
 )
 
-require github.com/shpaker/koleya v0.0.0-20261004101442-36ffe086a436
+require github.com/shpaker/koleya v0.1.0
 
 require (
 	github.com/ebitengine/gomobile v0.0.0-20260820040257-d11f821a26a6 // indirect
