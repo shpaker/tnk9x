@@ -59,7 +59,7 @@ func newPlayerAt(x, y float64) *types.TankEntity {
 	tank := &tankValue
 	tank.Position = types.Position{X: x, Y: y}
 	tank.Size = types.Size{Width: 16, Height: 16}
-	tank.State = types.TankStateStopped
+	tank.State = types.TankStateActive
 	return tank
 }
 

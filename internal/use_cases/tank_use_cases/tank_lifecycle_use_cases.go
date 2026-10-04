@@ -210,7 +210,7 @@ func (uc *TankLifecycleUseCases) finishSpawnAnimation(
 	tank *types.TankEntity,
 ) {
 	uc.renderUseCases.UpdateTankAnimation(tank)
-	tank.State = types.TankStateStopped
+	tank.State = types.TankStateActive
 	if !tank.IsEnemy() {
 		tank.ActivateShield(spawnShieldDurationTicks)
 	}

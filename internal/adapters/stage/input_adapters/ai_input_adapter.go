@@ -1,7 +1,7 @@
 package input_adapters
 
 import (
-	"math"
+	"github.com/shpaker/koleya"
 
 	"github.com/shpaker/tnk9x/internal/interfaces"
 	"github.com/shpaker/tnk9x/internal/types"
@@ -39,8 +39,8 @@ func (a *AiInputAdapter) Update(dt float64) {
 			continue
 		}
 
-		if tank.State == types.TankStateMoving {
-			a.checkAndSetBraking(tank)
+		if tank.IsDriving() {
+			a.releaseNearTurn(tank)
 		}
 
 		if tank.IsStopped() {
@@ -64,28 +64,21 @@ func (a *AiInputAdapter) updateAI(tank *types.TankEntity) {
 	}
 }
 
-func (a *AiInputAdapter) checkAndSetBraking(tank *types.TankEntity) {
-	if tank == nil {
-		return
-	}
+// aiTurnLattice — сетка, у узлов которой AI принимает решения: танк
+// отпускает газ в пределах aiTurnTolerance от кратной 8 и докатывает
+// до узла, после чего скрипт решает, куда дальше
+var aiTurnLattice = koleya.Lattice{Step: 8}
 
-	var coord float64
-	switch tank.Direction {
-	case types.DirectionUp, types.DirectionDown:
-		coord = tank.Position.Y
-	case types.DirectionLeft, types.DirectionRight:
+const aiTurnTolerance = 2
+
+func (a *AiInputAdapter) releaseNearTurn(tank *types.TankEntity) {
+	coord := tank.Position.Y
+	if tank.Direction == types.DirectionLeft ||
+		tank.Direction == types.DirectionRight {
 		coord = tank.Position.X
-	default:
-		return
 	}
-
-	remainder := math.Mod(coord, 8)
-	if remainder < 0 {
-		remainder += 8
-	}
-
-	if remainder <= 2 || remainder >= 6 {
-		tank.State = types.TankStateBraking
+	if aiTurnLattice.Near(coord, aiTurnTolerance) {
+		a.tankActions.Stop(tank, false)
 	}
 }
 

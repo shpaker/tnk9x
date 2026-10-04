@@ -315,7 +315,7 @@ func (uc *VisualEffectsUseCases) updateTanks() {
 			continue
 		}
 		tank.TickRecoil()
-		if tank.State != types.TankStateMoving || rand.IntN(dustChance) != 0 {
+		if !tank.IsDriving() || rand.IntN(dustChance) != 0 {
 			continue
 		}
 		direction := tank.Direction.Vector()

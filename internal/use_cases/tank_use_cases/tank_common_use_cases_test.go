@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	game "github.com/shpaker/tnk9x/internal/repositories/game"
-	"github.com/shpaker/tnk9x/internal/services"
+	"github.com/shpaker/tnk9x/internal/testutil"
 	"github.com/shpaker/tnk9x/internal/types"
 	"github.com/shpaker/tnk9x/internal/types/session_entities"
 	"github.com/shpaker/tnk9x/internal/use_cases"
@@ -24,7 +24,6 @@ func newCommonTestEnv() *commonTestEnv {
 	specsUC := use_cases.NewSpecsUseCases()
 	session := session_entities.NewStageSessionEntity()
 	common := tank_use_cases.NewTankCommonUseCases(
-		services.NewTankBrakingService(),
 		&stubRenderUseCases{},
 		tanksRepo,
 		specsUC,
@@ -84,12 +83,12 @@ func TestTankCommonUseCases_Update_Movement(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			env := newCommonTestEnv()
-			tank := env.newTank(
+			tank := testutil.MovingTank(env.newTank(
 				tt.role,
 				tt.direction,
-				types.TankStateMoving,
+				types.TankStateActive,
 				tt.level,
-			)
+			))
 
 			if err := env.common.Update(tank, 0.25); err != nil {
 				t.Fatalf("обновление: %v", err)
@@ -112,12 +111,12 @@ func TestTankCommonUseCases_Update_Movement(t *testing.T) {
 // Без спецификаций используется скорость по умолчанию 32
 func TestTankCommonUseCases_Update_DefaultSpeedWithoutSpecs(t *testing.T) {
 	env := newCommonTestEnv()
-	tank := env.newTank(
+	tank := testutil.MovingTank(env.newTank(
 		types.TankRolePlayer1,
 		types.DirectionRight,
-		types.TankStateMoving,
+		types.TankStateActive,
 		0,
-	)
+	))
 	tank.SetSpecs(nil)
 
 	if err := env.common.Update(tank, 0.25); err != nil {
@@ -133,7 +132,7 @@ func TestTankCommonUseCases_Update_StoppedTankDoesNotMove(t *testing.T) {
 	tank := env.newTank(
 		types.TankRolePlayer1,
 		types.DirectionRight,
-		types.TankStateStopped,
+		types.TankStateActive,
 		0,
 	)
 
@@ -165,16 +164,17 @@ func TestTankCommonUseCases_Update_InactiveTankError(t *testing.T) {
 	}
 }
 
-// Торможение делегируется реальному сервису: танк доезжает до сетки 4px
-func TestTankCommonUseCases_Update_BrakingSnapsToGrid(t *testing.T) {
+// Отпущенный танк докатывает до узла сетки 4px
+func TestTankCommonUseCases_Update_DockingSnapsToGrid(t *testing.T) {
 	env := newCommonTestEnv()
 	tank := env.newTank(
 		types.TankRolePlayer1,
 		types.DirectionRight,
-		types.TankStateBraking,
+		types.TankStateActive,
 		0,
 	)
 	tank.Position.X = 101
+	testutil.DockingTank(tank)
 
 	// Большой dt: сразу достигает 104 и останавливается
 	if err := env.common.Update(tank, 1.0); err != nil {
@@ -183,20 +183,22 @@ func TestTankCommonUseCases_Update_BrakingSnapsToGrid(t *testing.T) {
 	if tank.Position.X != 104 {
 		t.Errorf("X = %v, ожидалось 104", tank.Position.X)
 	}
-	if tank.State != types.TankStateStopped {
-		t.Errorf("состояние %v, ожидалось Stopped", tank.State)
+	if !tank.IsStopped() {
+		t.Error("танк должен стоять")
 	}
 }
 
-func TestTankCommonUseCases_Update_BrakingPartialStep(t *testing.T) {
+// Докатывание идёт на полной скорости, как в оригинале
+func TestTankCommonUseCases_Update_DockingPartialStep(t *testing.T) {
 	env := newCommonTestEnv()
 	tank := env.newTank(
 		types.TankRolePlayer1,
 		types.DirectionRight,
-		types.TankStateBraking,
+		types.TankStateActive,
 		0,
 	)
 	tank.Position.X = 101
+	testutil.DockingTank(tank)
 
 	if err := env.common.Update(tank, 1.0/60.0); err != nil {
 		t.Fatalf("обновление: %v", err)
@@ -206,72 +208,86 @@ func TestTankCommonUseCases_Update_BrakingPartialStep(t *testing.T) {
 	if math.Abs(tank.Position.X-want) > 1e-9 {
 		t.Errorf("X = %v, ожидалось %v", tank.Position.X, want)
 	}
-	if tank.State != types.TankStateBraking {
-		t.Errorf("состояние %v, ожидалось Braking", tank.State)
+	if !tank.IsDocking() {
+		t.Error("танк должен докатывать")
 	}
 }
 
-// Торможение на льду: танк доскальзывает +4px за обычной точкой остановки
-func TestTankCommonUseCases_Update_BrakingSlidesOnIce(t *testing.T) {
-	tanksRepo := game.NewTanksRepository()
-	specsUC := use_cases.NewSpecsUseCases()
-
-	// Лёд (104,104)-(112,112) накрывает центр танка (109,108)
-	ice := types.NewBlockEntity("ice", 104, 104, 8, nil)
-	mapEntity := types.NewMapEntity(
-		types.Size{Width: 208, Height: 208},
-		types.MapBlocks{ice},
-		nil,
-	)
-	common := tank_use_cases.NewTankCommonUseCases(
-		services.NewTankBrakingService(),
-		&stubRenderUseCases{},
-		tanksRepo,
-		specsUC,
-		use_cases.NewMapUseCases(mapEntity),
-		session_entities.NewStageSessionEntity(),
-	)
-
-	tankValue := types.NewDefaultTankEntity(
-		types.TankRolePlayer1,
-		types.DirectionRight,
-	)
-	tank := &tankValue
-	tank.Position = types.Position{X: 101, Y: 100}
-	tank.State = types.TankStateBraking
-	tank.SetSpecs(specsUC.GetTankSpecs(false, 0))
-
-	if err := common.Update(tank, 1.0); err != nil {
-		t.Fatalf("обновление: %v", err)
+// На льду танк проскальзывает по инерции дальше обычного узла, быстрый —
+// дальше медленного, и всё равно встаёт на узел сетки
+func TestTankCommonUseCases_Update_DockingSlidesOnIce(t *testing.T) {
+	tests := []struct {
+		name  string
+		enemy bool
+		level uint
+		wantX float64
+	}{
+		// Скорость 32: тормозной путь 4px, обычная остановка на 104
+		{"базовый танк", false, 0, 108},
+		// Скорость 48: тормозной путь 9px
+		{"быстрый танк", true, 1, 112},
 	}
 
-	// Обычная остановка на 104, на льду — 108
-	if tank.Position.X != 108 {
-		t.Errorf("X = %v, ожидалось 108", tank.Position.X)
-	}
-	if tank.State != types.TankStateStopped {
-		t.Errorf("состояние %v, ожидалось Stopped", tank.State)
-	}
-	if tank.SlideTarget != nil {
-		t.Errorf("SlideTarget не сброшен: %v", *tank.SlideTarget)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			specsUC := use_cases.NewSpecsUseCases()
+
+			// Лёд (104,104)-(112,112) накрывает центр танка (109,108)
+			ice := types.NewBlockEntity("ice", 104, 104, 8, nil)
+			mapEntity := types.NewMapEntity(
+				types.Size{Width: 208, Height: 208},
+				types.MapBlocks{ice},
+				nil,
+			)
+			common := tank_use_cases.NewTankCommonUseCases(
+				&stubRenderUseCases{},
+				game.NewTanksRepository(),
+				specsUC,
+				use_cases.NewMapUseCases(mapEntity),
+				session_entities.NewStageSessionEntity(),
+			)
+
+			tankValue := types.NewDefaultTankEntity(
+				types.TankRolePlayer1,
+				types.DirectionRight,
+			)
+			tank := &tankValue
+			tank.Position = types.Position{X: 101, Y: 100}
+			tank.SetSpecs(specsUC.GetTankSpecs(tt.enemy, tt.level))
+			testutil.MovingTank(tank)
+			tank.Release()
+
+			for range 120 {
+				if err := common.Update(tank, 1.0/60); err != nil {
+					t.Fatalf("обновление: %v", err)
+				}
+			}
+
+			if tank.Position.X != tt.wantX {
+				t.Errorf("X = %v, ожидалось %v", tank.Position.X, tt.wantX)
+			}
+			if !tank.IsStopped() {
+				t.Error("танк должен стоять")
+			}
+		})
 	}
 }
 
 // При заморозке враг стоит на месте, танк игрока продолжает движение
 func TestTankCommonUseCases_Update_FrozenEnemyDoesNotMove(t *testing.T) {
 	env := newCommonTestEnv()
-	enemy := env.newTank(
+	enemy := testutil.MovingTank(env.newTank(
 		types.TankRoleEnemy,
 		types.DirectionRight,
-		types.TankStateMoving,
+		types.TankStateActive,
 		0,
-	)
-	player := env.newTank(
+	))
+	player := testutil.MovingTank(env.newTank(
 		types.TankRolePlayer1,
 		types.DirectionRight,
-		types.TankStateMoving,
+		types.TankStateActive,
 		0,
-	)
+	))
 
 	env.session.FreezeEnemies(600)
 
@@ -290,48 +306,48 @@ func TestTankCommonUseCases_Update_FrozenEnemyDoesNotMove(t *testing.T) {
 	}
 }
 
-// После торможения с NextDirection танк продолжает движение в новую сторону
-func TestTankCommonUseCases_Update_BrakingWithNextDirection(t *testing.T) {
+// Поворот на ходу: танк докатывает до узла, затем едет в новую сторону
+func TestTankCommonUseCases_Update_TurnsAfterDocking(t *testing.T) {
 	env := newCommonTestEnv()
 	tank := env.newTank(
 		types.TankRolePlayer1,
 		types.DirectionRight,
-		types.TankStateBraking,
+		types.TankStateActive,
 		0,
 	)
 	tank.Position.X = 101
-	next := types.DirectionUp
-	tank.NextDirection = &next
+	testutil.MovingTank(tank)
+	tank.Drive(types.DirectionUp)
 
 	if err := env.common.Update(tank, 1.0); err != nil {
 		t.Fatalf("обновление: %v", err)
 	}
+	if tank.Position.X != 104 {
+		t.Errorf("X = %v, ожидалось 104", tank.Position.X)
+	}
 	if tank.Direction != types.DirectionUp {
 		t.Errorf("направление %v, ожидалось Up", tank.Direction)
 	}
-	if tank.State != types.TankStateMoving {
-		t.Errorf("состояние %v, ожидалось Moving", tank.State)
-	}
-	if tank.NextDirection != nil {
-		t.Errorf("NextDirection не сброшен")
+	if !tank.IsMoving() || tank.HasPendingTurn() {
+		t.Error("танк должен ехать вверх без отложенного поворота")
 	}
 }
 
 // UpdateAllTanks обходит все танки репозитория, ошибки глотаются
 func TestTankCommonUseCases_UpdateAllTanks(t *testing.T) {
 	env := newCommonTestEnv()
-	player := env.newTank(
+	player := testutil.MovingTank(env.newTank(
 		types.TankRolePlayer1,
 		types.DirectionRight,
-		types.TankStateMoving,
+		types.TankStateActive,
 		0,
-	)
-	enemy := env.newTank(
+	))
+	enemy := testutil.MovingTank(env.newTank(
 		types.TankRoleEnemy,
 		types.DirectionDown,
-		types.TankStateMoving,
+		types.TankStateActive,
 		0,
-	)
+	))
 	exploded := env.newTank(
 		types.TankRoleEnemy,
 		types.DirectionUp,
@@ -365,7 +381,7 @@ func TestTankCommonUseCases_IsAnyPlayerTankMoving(t *testing.T) {
 	player := env.newTank(
 		types.TankRolePlayer1,
 		types.DirectionUp,
-		types.TankStateStopped,
+		types.TankStateActive,
 		0,
 	)
 	env.tanksRepo.SetPlayer(types.PlayerTankNumPlayer1, player)
@@ -374,18 +390,18 @@ func TestTankCommonUseCases_IsAnyPlayerTankMoving(t *testing.T) {
 	}
 
 	// Движущийся враг не учитывается
-	enemy := env.newTank(
+	enemy := testutil.MovingTank(env.newTank(
 		types.TankRoleEnemy,
 		types.DirectionUp,
-		types.TankStateMoving,
+		types.TankStateActive,
 		0,
-	)
+	))
 	env.tanksRepo.AddEnemy(enemy)
 	if env.common.IsAnyPlayerTankMoving() {
 		t.Error("движется только враг: ожидалось false")
 	}
 
-	player.State = types.TankStateMoving
+	testutil.MovingTank(player)
 	if !env.common.IsAnyPlayerTankMoving() {
 		t.Error("движущийся игрок: ожидалось true")
 	}
@@ -397,7 +413,7 @@ func TestTankCommonUseCases_LevelUpDownClamping(t *testing.T) {
 	tank := env.newTank(
 		types.TankRolePlayer1,
 		types.DirectionUp,
-		types.TankStateStopped,
+		types.TankStateActive,
 		0,
 	)
 
@@ -424,7 +440,7 @@ func TestTankCommonUseCases_LevelUpDownClamping(t *testing.T) {
 	bare := env.newTank(
 		types.TankRolePlayer1,
 		types.DirectionUp,
-		types.TankStateStopped,
+		types.TankStateActive,
 		0,
 	)
 	bare.SetSpecs(nil)
@@ -448,7 +464,7 @@ func TestTankEntity_AnimationName(t *testing.T) {
 			env.newTank(
 				types.TankRolePlayer1,
 				types.DirectionUp,
-				types.TankStateStopped,
+				types.TankStateActive,
 				0,
 			),
 			"player1_level1_tank_up",
@@ -458,7 +474,7 @@ func TestTankEntity_AnimationName(t *testing.T) {
 			env.newTank(
 				types.TankRolePlayer1,
 				types.DirectionRight,
-				types.TankStateStopped,
+				types.TankStateActive,
 				1,
 			),
 			"player1_level2_tank_right",
@@ -468,7 +484,7 @@ func TestTankEntity_AnimationName(t *testing.T) {
 			env.newTank(
 				types.TankRolePlayer2,
 				types.DirectionLeft,
-				types.TankStateStopped,
+				types.TankStateActive,
 				2,
 			),
 			"player2_level3_tank_left",
@@ -478,7 +494,7 @@ func TestTankEntity_AnimationName(t *testing.T) {
 			env.newTank(
 				types.TankRoleEnemy,
 				types.DirectionDown,
-				types.TankStateStopped,
+				types.TankStateActive,
 				3,
 			),
 			"enemy_level4_tank_down",
@@ -501,7 +517,7 @@ func TestTankEntity_AnimationName_Fallbacks(t *testing.T) {
 	noSpecs := env.newTank(
 		types.TankRoleEnemy,
 		types.DirectionUp,
-		types.TankStateStopped,
+		types.TankStateActive,
 		0,
 	)
 	noSpecs.SetSpecs(nil)
@@ -512,7 +528,7 @@ func TestTankEntity_AnimationName_Fallbacks(t *testing.T) {
 	emptyRole := env.newTank(
 		types.TankRole(""),
 		types.DirectionUp,
-		types.TankStateStopped,
+		types.TankStateActive,
 		0,
 	)
 	if got := emptyRole.AnimationName(); got != "player1_level1_tank_up" {
@@ -523,7 +539,7 @@ func TestTankEntity_AnimationName_Fallbacks(t *testing.T) {
 	weird := env.newTank(
 		types.TankRolePlayer1,
 		types.Direction(99),
-		types.TankStateStopped,
+		types.TankStateActive,
 		0,
 	)
 	weird.SetSpecs(types.NewSpecsEntity(7, 32, false, 120, 1))
@@ -536,17 +552,19 @@ func TestTankEntity_AnimationName_Fallbacks(t *testing.T) {
 func TestTankCommonUseCases_Update_PlayersFrozen(t *testing.T) {
 	env := newCommonTestEnv()
 	player := env.newTank(
-		types.TankRolePlayer1, types.DirectionRight, types.TankStateMoving, 0,
+		types.TankRolePlayer1, types.DirectionRight, types.TankStateActive, 0,
 	)
+	testutil.MovingTank(player)
 	player.Freeze(60)
 	enemy := env.newTank(
-		types.TankRoleEnemy, types.DirectionRight, types.TankStateMoving, 0,
+		types.TankRoleEnemy, types.DirectionRight, types.TankStateActive, 0,
 	)
+	testutil.MovingTank(enemy)
 
 	_ = env.common.Update(player, 0.25)
 	_ = env.common.Update(enemy, 0.25)
 
-	if player.Position.X != 100 || player.State != types.TankStateStopped {
+	if player.Position.X != 100 || !player.IsStopped() {
 		t.Errorf("замороженный игрок сдвинулся: X=%v", player.Position.X)
 	}
 	if enemy.Position.X == 100 {

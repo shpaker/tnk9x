@@ -86,7 +86,7 @@ func (r *fakeAIBulletsRepository) RemoveBullet(*types.BulletEntity) error {
 func newTestTank(role types.TankRole, x, y float64) *types.TankEntity {
 	tank := types.NewDefaultTankEntity(role, types.DirectionUp)
 	tank.Position = types.Position{X: x, Y: y}
-	tank.State = types.TankStateStopped
+	tank.State = types.TankStateActive
 	return &tank
 }
 

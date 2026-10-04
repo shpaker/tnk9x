@@ -166,7 +166,7 @@ func TestVisualEffectsUseCases_DustOnlyWhenMoving(t *testing.T) {
 
 	// Пыль случайна и недолговечна: считаем, появлялась ли она
 	// хоть раз за время движения, а не только в последнем кадре
-	tank.State = types.TankStateMoving
+	testutil.MovingTank(tank)
 	dusted := false
 	for range 120 {
 		env.effects.Update()

@@ -198,7 +198,7 @@ func (env *bonusTestEnv) newBonus(
 func newPlayerTank(role types.TankRole) *types.TankEntity {
 	tankValue := types.NewDefaultTankEntity(role, types.DirectionUp)
 	tank := &tankValue
-	tank.State = types.TankStateStopped
+	tank.State = types.TankStateActive
 	return tank
 }
 
@@ -239,8 +239,8 @@ func TestBonusUseCases_Apply_Grenade(t *testing.T) {
 	env := newBonusTestEnv()
 	bonus := env.newBonus(types.BonusTypeGrenade)
 
-	activeEnemy1 := newEnemyTankInState(types.TankStateStopped)
-	activeEnemy2 := newEnemyTankInState(types.TankStateMoving)
+	activeEnemy1 := newEnemyTankInState(types.TankStateActive)
+	activeEnemy2 := newEnemyTankInState(types.TankStateActive)
 	explodedEnemy := newEnemyTankInState(types.TankStateExploded)
 	player := newPlayerTank(types.TankRolePlayer1)
 	env.tankCommon.tanks = []*types.TankEntity{
@@ -656,7 +656,7 @@ func TestBonusUseCases_Apply_Pistol(t *testing.T) {
 // Граната врага взрывает игроков без щита, врагов не трогает
 func TestBonusUseCases_EnemyGrenade(t *testing.T) {
 	env := newBonusTestEnv()
-	enemy := newEnemyTankInState(types.TankStateMoving)
+	enemy := newEnemyTankInState(types.TankStateActive)
 	player := newPlayerTank(types.TankRolePlayer1)
 	shielded := newPlayerTank(types.TankRolePlayer2)
 	shielded.ActivateShield(600)
@@ -674,7 +674,7 @@ func TestBonusUseCases_EnemyGrenade(t *testing.T) {
 // игрок — новый танк, без заморозки
 func TestBonusUseCases_EnemyTimer(t *testing.T) {
 	env := newBonusTestEnv()
-	enemy := newEnemyTankInState(types.TankStateMoving)
+	enemy := newEnemyTankInState(types.TankStateActive)
 	player := newPlayerTank(types.TankRolePlayer1)
 	env.tankCommon.tanks = []*types.TankEntity{enemy, player}
 
@@ -709,7 +709,7 @@ func TestBonusUseCases_UpdateEffects_PlayerFreezeCountdown(t *testing.T) {
 // Танк врага добавляет врага в резерв, жизни игроков не меняются
 func TestBonusUseCases_EnemyTank(t *testing.T) {
 	env := newBonusTestEnv()
-	enemy := newEnemyTankInState(types.TankStateMoving)
+	enemy := newEnemyTankInState(types.TankStateActive)
 	total := env.session.GetTotalEnemies()
 
 	env.bonusUC.Apply(env.newBonus(types.BonusTypeTank), enemy)
@@ -727,7 +727,7 @@ func TestBonusUseCases_EnemyTank(t *testing.T) {
 // пистолет делает его тяжёлым танком
 func TestBonusUseCases_EnemyStarAndPistol(t *testing.T) {
 	env := newBonusTestEnv()
-	enemy := newEnemyTankInState(types.TankStateMoving)
+	enemy := newEnemyTankInState(types.TankStateActive)
 	enemy.SetHitPoints(1)
 
 	env.bonusUC.Apply(env.newBonus(types.BonusTypeStar), enemy)
@@ -757,7 +757,7 @@ func TestBonusUseCases_EnemyShovel(t *testing.T) {
 
 	env.bonusUC.Apply(
 		env.newBonus(types.BonusTypeShovel),
-		newEnemyTankInState(types.TankStateMoving),
+		newEnemyTankInState(types.TankStateActive),
 	)
 
 	if env.mapEntity.IsHQFortified() {

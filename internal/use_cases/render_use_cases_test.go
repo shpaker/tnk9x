@@ -51,7 +51,7 @@ func (env *renderTestEnv) newTankInState(
 // новая регистрируется и синхронизируется с состоянием
 func TestRenderUseCases_UpdateTankAnimation(t *testing.T) {
 	env := newRenderTestEnv()
-	tank := env.newTankInState(types.TankRolePlayer1, types.TankStateMoving)
+	tank := testutil.MovingTank(env.newTankInState(types.TankRolePlayer1, types.TankStateActive))
 	previous := image_providers.NewAnimationProvider(
 		types.AnimationData{{Image: "old", Duration: 1}},
 	)
@@ -86,7 +86,7 @@ func TestRenderUseCases_UpdateTankAnimation(t *testing.T) {
 // Вражеский танк получает анимацию из тайлсета enemy
 func TestRenderUseCases_UpdateTankAnimation_Enemy(t *testing.T) {
 	env := newRenderTestEnv()
-	tank := env.newTankInState(types.TankRoleEnemy, types.TankStateStopped)
+	tank := env.newTankInState(types.TankRoleEnemy, types.TankStateActive)
 
 	env.render.UpdateTankAnimation(tank)
 
@@ -119,7 +119,7 @@ func TestRenderUseCases_UpdateTankAnimation_NilTank(t *testing.T) {
 func TestRenderUseCases_UpdateTankAnimation_TileError(t *testing.T) {
 	env := newRenderTestEnv()
 	env.tileService.Err = errTileNotFound
-	tank := env.newTankInState(types.TankRolePlayer1, types.TankStateMoving)
+	tank := testutil.MovingTank(env.newTankInState(types.TankRolePlayer1, types.TankStateActive))
 	previous := image_providers.NewAnimationProvider(
 		types.AnimationData{{Image: "old", Duration: 1}},
 	)
@@ -143,25 +143,25 @@ func TestRenderUseCases_SyncTankAnimationWithState(t *testing.T) {
 	tests := []struct {
 		name          string
 		state         types.TankState
+		motion        func(*types.TankEntity) *types.TankEntity
 		wasAnimating  bool
 		wantAnimating bool
 	}{
-		{"остановка прекращает анимацию", types.TankStateStopped, true, false},
-		{"движение запускает анимацию", types.TankStateMoving, false, true},
-		{"торможение запускает анимацию", types.TankStateBraking, false, true},
-		{"взрыв останавливает анимацию", types.TankStateExploding, true, false},
-		{
-			"спавн не запускает анимацию",
-			types.TankStateSpawning,
-			false,
-			false,
-		},
+		{"остановка прекращает анимацию", types.TankStateActive, nil, true, false},
+		{"движение запускает анимацию", types.TankStateActive, testutil.MovingTank, false, true},
+		{"докатывание запускает анимацию", types.TankStateActive, testutil.DockingTank, false, true},
+		{"взрыв останавливает анимацию", types.TankStateExploding, nil, true, false},
+		{"спавн не запускает анимацию", types.TankStateSpawning, nil, false, false},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			env := newRenderTestEnv()
 			tank := env.newTankInState(types.TankRolePlayer1, tt.state)
+			tank.Position.Y = 101 // вне узла сетки: есть куда докатывать
+			if tt.motion != nil {
+				tt.motion(tank)
+			}
 			animation := image_providers.NewAnimationProvider(
 				types.AnimationData{{Image: "frame", Duration: 1}},
 			)
@@ -186,7 +186,7 @@ func TestRenderUseCases_SyncTankAnimationWithState_NonAnimation(
 	t *testing.T,
 ) {
 	env := newRenderTestEnv()
-	tank := env.newTankInState(types.TankRolePlayer1, types.TankStateMoving)
+	tank := testutil.MovingTank(env.newTankInState(types.TankRolePlayer1, types.TankStateActive))
 	tank.Image = nil
 	env.render.SyncTankAnimationWithState(tank)
 
@@ -242,8 +242,8 @@ func TestRenderUseCases_IsTankAnimationFinished(t *testing.T) {
 // Мигание обновляется у каждого объекта, nil-элементы пропускаются
 func TestRenderUseCases_UpdateBlink(t *testing.T) {
 	env := newRenderTestEnv()
-	first := env.newTankInState(types.TankRolePlayer1, types.TankStateStopped)
-	second := env.newTankInState(types.TankRoleEnemy, types.TankStateStopped)
+	first := env.newTankInState(types.TankRolePlayer1, types.TankStateActive)
+	second := env.newTankInState(types.TankRoleEnemy, types.TankStateActive)
 
 	env.render.UpdateBlink(nil) // nil-список не приводит к панике
 
@@ -271,7 +271,7 @@ func TestRenderUseCases_TankTint(t *testing.T) {
 		specs *types.SpecsEntity,
 		hitPoints uint,
 	) *types.TankEntity {
-		tank := env.newTankInState(role, types.TankStateMoving)
+		tank := testutil.MovingTank(env.newTankInState(role, types.TankStateActive))
 		tank.SetSpecs(specs)
 		tank.SetHitPoints(hitPoints)
 		return tank
@@ -406,7 +406,7 @@ func TestRenderUseCases_IsTankBlinking(t *testing.T) {
 		hitPoints uint,
 		withBonus bool,
 	) *types.TankEntity {
-		tank := env.newTankInState(role, types.TankStateMoving)
+		tank := testutil.MovingTank(env.newTankInState(role, types.TankStateActive))
 		tank.SetSpecs(types.NewSpecsEntity(level, 1, false, 1, 1))
 		tank.SetHitPoints(hitPoints)
 		tank.SetWithBonus(withBonus)

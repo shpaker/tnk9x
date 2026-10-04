@@ -100,15 +100,14 @@ func (uc *RenderUseCases) SyncTankAnimationWithState(
 		return
 	}
 
-	if tank.State == types.TankStateStopped {
+	if tank.IsStopped() {
 		if anim.IsAnimating {
 			uc.tilesUseCases.StopAnimation(anim)
 		}
 		return
 	}
 
-	shouldAnimate := tank.State == types.TankStateMoving ||
-		tank.State == types.TankStateBraking
+	shouldAnimate := tank.IsMoving()
 
 	if shouldAnimate && !anim.IsAnimating {
 		uc.tilesUseCases.StartAnimation(anim)

@@ -174,7 +174,6 @@ type App struct {
 	wallCollisionService     interfaces.IWallCollisionService
 	bulletCollisionService   interfaces.IBulletCollisionService
 	spawnCollisionService    interfaces.ISpawnCollisionService
-	tankBrakingService       interfaces.ITankBrakingService
 
 	// Use Cases; прогресс и выбор уровня — свои у каждого режима
 	specsUseCases       interfaces.ISpecsUseCases
@@ -419,7 +418,6 @@ func (app *App) assembleGame() {
 	app.spawnCollisionService = collision_services.NewSpawnCollisionService(
 		entitiesCollisionService,
 	)
-	app.tankBrakingService = services.NewTankBrakingService()
 	app.randomService = services.NewRandomService()
 	app.specsUseCases = use_cases.NewSpecsUseCases()
 	app.waveUseCases = use_cases.NewWaveUseCases()

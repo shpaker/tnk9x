@@ -250,7 +250,7 @@ func TestLightingUseCases_GetLights_LimitKeepsPriority(t *testing.T) {
 	for range types.MaxLights {
 		env.tankCommon.tanks = append(
 			env.tankCommon.tanks,
-			newEnemyTankInState(types.TankStateMoving),
+			newEnemyTankInState(types.TankStateActive),
 		)
 	}
 	env.tankCommon.tanks = append(
@@ -360,7 +360,7 @@ func TestLightingUseCases_GetLights_PlayerFirst(t *testing.T) {
 func TestLightingUseCases_GetLights_EnemyHeadlight(t *testing.T) {
 	env := newLightingTestEnv()
 	env.tankCommon.tanks = []*types.TankEntity{
-		newEnemyTankInState(types.TankStateMoving),
+		newEnemyTankInState(types.TankStateActive),
 		newPlayerTank(types.TankRolePlayer1),
 	}
 	env.bullets.bullets = []*types.BulletEntity{newBullet(0, 0)}
@@ -386,7 +386,7 @@ func TestLightingUseCases_GetLights_EnemyHeadlight(t *testing.T) {
 // Фара врага доворачивается за стволом так же, как у игрока
 func TestLightingUseCases_UpdateHeadlights_TurnsEnemy(t *testing.T) {
 	env := newLightingTestEnv()
-	enemy := newEnemyTankInState(types.TankStateMoving)
+	enemy := newEnemyTankInState(types.TankStateActive)
 	env.tankCommon.tanks = []*types.TankEntity{enemy}
 	env.lighting.UpdateHeadlights()
 	start := enemy.GetHeadlightAngle()
@@ -483,7 +483,7 @@ func TestLightingUseCases_GetLights_BonusFlaresWithBlink(t *testing.T) {
 // Враг с бонусом сияет красным только во включённой фазе мигания
 func TestLightingUseCases_GetLights_BonusCarrierFlaresRed(t *testing.T) {
 	env := newLightingTestEnv()
-	tank := newEnemyTankInState(types.TankStateMoving)
+	tank := newEnemyTankInState(types.TankStateActive)
 	tank.SetWithBonus(true)
 	env.tankCommon.tanks = []*types.TankEntity{tank}
 	red := color.NRGBA{R: 235, G: 125, B: 115, A: 255}
@@ -511,7 +511,7 @@ func TestLightingUseCases_GetLights_BonusCarrierFlaresRed(t *testing.T) {
 // разгорается к середине фазы
 func TestLightingUseCases_GetLights_HeavyTankGlowsArmorColor(t *testing.T) {
 	env := newLightingTestEnv()
-	tank := newEnemyTankInState(types.TankStateMoving)
+	tank := newEnemyTankInState(types.TankStateActive)
 	tank.SetSpecs(types.NewSpecsEntity(3, 1, false, 1, 1))
 	tank.SetHitPoints(3)
 	env.tankCommon.tanks = []*types.TankEntity{tank}

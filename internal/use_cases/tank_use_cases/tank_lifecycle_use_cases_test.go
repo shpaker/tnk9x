@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	game "github.com/shpaker/tnk9x/internal/repositories/game"
-	"github.com/shpaker/tnk9x/internal/services"
 	"github.com/shpaker/tnk9x/internal/testutil"
 	"github.com/shpaker/tnk9x/internal/types"
 	image_providers "github.com/shpaker/tnk9x/internal/types/image_providers"
@@ -118,7 +117,6 @@ func newLifecycleTestEnv() *lifecycleTestEnv {
 	specs := &forcedLevelSpecs{real: use_cases.NewSpecsUseCases()}
 	render := &stubRenderUseCases{}
 	common := tank_use_cases.NewTankCommonUseCases(
-		services.NewTankBrakingService(),
 		render,
 		tanksRepo,
 		specs,
@@ -363,11 +361,11 @@ func TestTankLifecycleUseCases_TileServiceError(t *testing.T) {
 		types.DirectionUp,
 	)
 	tank := &tankValue
-	tank.State = types.TankStateStopped
+	tank.State = types.TankStateActive
 	if err := env.lifecycle.Explode(tank); err == nil {
 		t.Error("ожидалась ошибка взрыва")
 	}
-	if tank.State != types.TankStateStopped {
+	if tank.State != types.TankStateActive {
 		t.Errorf("состояние изменилось при ошибке: %v", tank.State)
 	}
 }
@@ -392,7 +390,7 @@ func TestTankLifecycleUseCases_UpdateLifecycle_SpawnToStopped(t *testing.T) {
 	if err := env.lifecycle.UpdateAllTanksLifecycle(); err != nil {
 		t.Fatalf("обновление: %v", err)
 	}
-	if tank.State != types.TankStateStopped {
+	if tank.State != types.TankStateActive {
 		t.Errorf("состояние %v, ожидалось Stopped", tank.State)
 	}
 	if len(env.render.updatedAnimations) != 1 ||
@@ -462,7 +460,7 @@ func TestTankLifecycleUseCases_CompleteSpawn(t *testing.T) {
 
 	env.lifecycle.CompleteSpawn(tank)
 
-	if tank.State != types.TankStateStopped {
+	if tank.State != types.TankStateActive {
 		t.Errorf("состояние %v, ожидалось Stopped", tank.State)
 	}
 	if got := len(env.render.updatedAnimations); got != 1 {
@@ -472,9 +470,9 @@ func TestTankLifecycleUseCases_CompleteSpawn(t *testing.T) {
 		t.Error("появившийся игрок без неуязвимости")
 	}
 
-	tank.State = types.TankStateMoving
+	testutil.MovingTank(tank)
 	env.lifecycle.CompleteSpawn(tank)
-	if tank.State != types.TankStateMoving {
+	if !tank.IsMoving() {
 		t.Error("активный танк не должен меняться")
 	}
 }

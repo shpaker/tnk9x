@@ -3,6 +3,7 @@ package input_adapters
 import (
 	"testing"
 
+	"github.com/shpaker/tnk9x/internal/testutil"
 	"github.com/shpaker/tnk9x/internal/types"
 )
 
@@ -24,7 +25,7 @@ func (s *stubAIUseCases) ExecuteAI(
 
 func newStoppedEnemy() *types.TankEntity {
 	tank := types.NewDefaultTankEntity(types.TankRoleEnemy, types.DirectionDown)
-	tank.State = types.TankStateStopped
+	tank.State = types.TankStateActive
 	return &tank
 }
 
@@ -63,10 +64,38 @@ func TestAiInputAdapterSkipsInactiveAndRemovedTanks(t *testing.T) {
 		t.Fatal("inactive tank must not be asked")
 	}
 
-	tank.State = types.TankStateStopped
+	tank.State = types.TankStateActive
 	adapter.RemoveTank(tank)
 	adapter.Update(0)
 	if ai.calls != 0 {
 		t.Fatal("removed tank must not be asked")
+	}
+}
+
+// Едущий враг отпускает газ только у узла сетки 8px: там скрипт решает,
+// куда дальше
+func TestAiInputAdapterReleasesNearTurn(t *testing.T) {
+	tests := []struct {
+		name      string
+		y         float64
+		wantStops int
+	}{
+		{"у узла", 97, 1},
+		{"между узлами", 100, 0},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actions := &recordingTankActions{}
+			adapter := NewAiInputAdapter(actions, &stubAIUseCases{})
+			tank := newStoppedEnemy()
+			tank.Position.Y = tt.y
+			testutil.MovingTank(tank)
+			adapter.AddTank(tank)
+
+			adapter.Update(0)
+			if actions.stops != tt.wantStops {
+				t.Fatalf("stops = %d, want %d", actions.stops, tt.wantStops)
+			}
+		})
 	}
 }
