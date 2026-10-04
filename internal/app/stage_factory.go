@@ -208,7 +208,6 @@ func (app *App) buildStageGraph(
 	mapUseCases := use_cases.NewMapUseCases(mapEntity)
 
 	tankCommonUseCases := tank_use_cases.NewTankCommonUseCases(
-		app.tankBrakingService,
 		renderUseCases,
 		gameRepositories.GetTanksRepository(),
 		app.specsUseCases,
@@ -245,7 +244,6 @@ func (app *App) buildStageGraph(
 	)
 
 	tankActionsUseCases := tank_use_cases.NewTankActionsUseCases(
-		app.tankBrakingService,
 		bulletUseCases,
 		tankCommonUseCases,
 		renderUseCases,

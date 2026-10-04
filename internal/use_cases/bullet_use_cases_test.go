@@ -51,7 +51,7 @@ func (env *bulletTestEnv) newShooter(
 	tankValue := types.NewDefaultTankEntity(types.TankRolePlayer1, direction)
 	tank := &tankValue
 	tank.Position = types.Position{X: x, Y: y}
-	tank.State = types.TankStateStopped
+	tank.State = types.TankStateActive
 	tank.SetSpecs(env.specsUC.GetTankSpecs(false, level))
 	return tank
 }
@@ -247,7 +247,6 @@ func TestTankActionsUseCases_Shoot_NoEffectsWhileBulletFlies(t *testing.T) {
 	soundUC := use_cases.NewSoundUseCases(game.NewSoundEventsRepository())
 	effects := &testutil.FakeVisualEffectsUseCases{}
 	tankActions := tank_use_cases.NewTankActionsUseCases(
-		nil,
 		env.bulletUC,
 		&testutil.FakeTankCommonUseCases{},
 		nil,

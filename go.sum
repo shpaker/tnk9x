@@ -28,6 +28,8 @@ github.com/pierrec/lz4/v4 v4.1.29 h1:CDQY6qZOLI4DW0Nx6R1vRrifrCeQHnNXkMb0hZWXFjg
 github.com/pierrec/lz4/v4 v4.1.29/go.mod h1:EoQMVJgeeEOMsCqCzqFm2O0cJvljX2nGZjcRIPL34O4=
 github.com/shpaker/kinescope v0.3.0 h1:ptuskpyazvdqVVChTv2wbuIjKjMzRaJMvdIeA3BpQos=
 github.com/shpaker/kinescope v0.3.0/go.mod h1:UMpd3+XyRZAzx5w1HbOjNj2bHAzF+eHJbKXTCShi/Tk=
+github.com/shpaker/koleya v0.1.0 h1:6pew3EzICodwX5xBAIBx7dxzyL+o/HNrh8hhs672lww=
+github.com/shpaker/koleya v0.1.0/go.mod h1:h3MHArRrh/Hor3hF14YU+DPFCKaomuBjsIeNi0wSO+k=
 github.com/srwiley/rasterx v0.0.0-20220730225603-2ab79fcdd4ef h1:Ch6Q+AZUxDBCVqdkI8FSpFyZDtCVBc2VmejdNrm5rRQ=
 github.com/srwiley/rasterx v0.0.0-20220730225603-2ab79fcdd4ef/go.mod h1:nXTWP6+gD5+LUJ8krVhhoeHjvHTutPxMYl5SvkcnJNE=
 github.com/yuin/gopher-lua v1.1.1 h1:kYKnWBjvbNP4XLT3+bPEwAXJx262OhaHDWDVOPjL46M=

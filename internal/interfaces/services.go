@@ -5,11 +5,6 @@ import (
 	image_providers "github.com/shpaker/tnk9x/internal/types/image_providers"
 )
 
-type ITankBrakingService interface {
-	HandleBrakingState(tank *types.TankEntity, dt float64, onIce bool) error
-	HandleRotateWhileBraking(tank *types.TankEntity, direction types.Direction)
-}
-
 type IBoundaryCollisionService interface {
 	CheckLeftBoundaryCollision(entity types.IEntityCollider) bool
 	CheckRightBoundaryCollision(entity types.IEntityCollider) bool

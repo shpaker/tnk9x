@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	game "github.com/shpaker/tnk9x/internal/repositories/game"
-	"github.com/shpaker/tnk9x/internal/services"
 	"github.com/shpaker/tnk9x/internal/services/collision_services"
 	"github.com/shpaker/tnk9x/internal/testutil"
 	"github.com/shpaker/tnk9x/internal/types"
@@ -208,7 +207,6 @@ func newCollisionTestEnvWith(
 		types.Size{Width: 208, Height: 208},
 	)
 	bulletSvc := collision_services.NewBulletCollisionService(8, entities)
-	braking := services.NewTankBrakingService()
 	specsUC := use_cases.NewSpecsUseCases()
 
 	render := &stubRenderUseCases{}
@@ -217,7 +215,6 @@ func newCollisionTestEnvWith(
 
 	bulletUC := use_cases.NewBulletUseCases(bulletsRepo, nil, 16, false)
 	tankCommon := tank_use_cases.NewTankCommonUseCases(
-		braking,
 		render,
 		tanksRepo,
 		specsUC,
@@ -225,7 +222,6 @@ func newCollisionTestEnvWith(
 		session_entities.NewStageSessionEntity(),
 	)
 	tankActions := tank_use_cases.NewTankActionsUseCases(
-		braking,
 		bulletUC,
 		tankCommon,
 		render,
@@ -294,7 +290,7 @@ func (env *collisionTestEnv) newTank(
 	tank := &tankValue
 	tank.Position = types.Position{X: x, Y: y}
 	tank.PrevPosition = tank.Position
-	tank.State = types.TankStateStopped
+	tank.State = types.TankStateActive
 	tank.SetSpecs(env.specsUC.GetTankSpecs(role == types.TankRoleEnemy, level))
 	tank.SetHitPoints(1)
 	return tank
@@ -481,7 +477,7 @@ func TestTankTankCollision_MovingIntoStoppedTank(t *testing.T) {
 	if mover.Position.X+float64(mover.Size.Width) > blocker.Position.X {
 		t.Errorf("движущийся танк заехал в стоящего: %v", mover.Position)
 	}
-	if blocker.State != types.TankStateStopped {
+	if blocker.State != types.TankStateActive {
 		t.Errorf("стоящий танк изменил состояние: %v", blocker.State)
 	}
 }

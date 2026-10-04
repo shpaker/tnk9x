@@ -58,7 +58,7 @@ func (s *stubLifecycle) SpawnPlayer1(level uint) (*types.TankEntity, error) {
 // CompleteSpawn завершает появление, как настоящий жизненный цикл
 func (s *stubLifecycle) CompleteSpawn(tank *types.TankEntity) {
 	if tank != nil && tank.State == types.TankStateSpawning {
-		tank.State = types.TankStateStopped
+		tank.State = types.TankStateActive
 	}
 }
 
@@ -522,7 +522,7 @@ func TestStageUseCases_TrySpawnEnemy_MaxActiveEnemiesCap(t *testing.T) {
 	for i := 0; i < 5; i++ {
 		env.common.tanks = append(
 			env.common.tanks,
-			newTankInState(types.TankRoleEnemy, types.TankStateStopped),
+			newTankInState(types.TankRoleEnemy, types.TankStateActive),
 		)
 	}
 
@@ -537,7 +537,7 @@ func TestStageUseCases_TrySpawnEnemy_MaxActiveEnemiesCap(t *testing.T) {
 	env.common.tanks[0].State = types.TankStateExploded
 	env.common.tanks = append(
 		env.common.tanks,
-		newTankInState(types.TankRolePlayer1, types.TankStateMoving),
+		newTankInState(types.TankRolePlayer1, types.TankStateActive),
 	)
 	if got := env.stage.TrySpawnEnemy(); got == nil {
 		t.Fatal("enemy did not spawn into a free slot")
@@ -552,7 +552,7 @@ func TestStageUseCases_TrySpawnEnemy_CoopRaisesLimit(t *testing.T) {
 	for i := 0; i < 6; i++ {
 		env.common.tanks = append(
 			env.common.tanks,
-			newTankInState(types.TankRoleEnemy, types.TankStateStopped),
+			newTankInState(types.TankRoleEnemy, types.TankStateActive),
 		)
 	}
 
@@ -884,7 +884,7 @@ func TestStageUseCases_TryRespawnPlayersTanks_LastLife(t *testing.T) {
 // Респавнятся только взорванные танки, при одном игроке второй не трогается
 func TestStageUseCases_TryRespawnPlayersTanks_OnlyExploded(t *testing.T) {
 	env := newStageTestEnv(1)
-	alive := newTankInState(types.TankRolePlayer1, types.TankStateStopped)
+	alive := newTankInState(types.TankRolePlayer1, types.TankStateActive)
 	env.lifecycle.players[types.PlayerTankNumPlayer1] = alive
 	// Второй игрок взорван, но playerCount=1 — он вне игры
 	env.lifecycle.players[types.PlayerTankNumPlayer2] = newTankInState(
@@ -949,7 +949,7 @@ func TestStageUseCases_TrackDestroyedEnemies(t *testing.T) {
 	)
 	aliveEnemy := newTankInState(
 		types.TankRoleEnemy,
-		types.TankStateStopped,
+		types.TankStateActive,
 	)
 	deadPlayer := newTankInState(
 		types.TankRolePlayer1,
@@ -1029,7 +1029,7 @@ func TestStageUseCases_TrackDestroyedEnemies_BonusEnemyClearsBonuses(
 	)
 	owned.SetOwner(newTankInState(
 		types.TankRolePlayer1,
-		types.TankStateStopped,
+		types.TankStateActive,
 	))
 	env.bonuses.AddBonus(ownerless)
 	env.bonuses.AddBonus(owned)
@@ -1131,7 +1131,7 @@ func TestStageUseCases_BonusNotSpawnedOnHQ(t *testing.T) {
 
 func TestStageUseCases_GetPlayersTanks(t *testing.T) {
 	env := newStageTestEnv(1)
-	tank1 := newTankInState(types.TankRolePlayer1, types.TankStateStopped)
+	tank1 := newTankInState(types.TankRolePlayer1, types.TankStateActive)
 	env.lifecycle.players[types.PlayerTankNumPlayer1] = tank1
 
 	tanks := env.stage.GetPlayersTanks()
@@ -1146,7 +1146,7 @@ func TestStageUseCases_GetPlayersTanks(t *testing.T) {
 func TestStageUseCases_CarryOver(t *testing.T) {
 	env := newStageTestEnv(1)
 	p1 := types.PlayerTankNumPlayer1
-	playerTank := newTankInState(types.TankRolePlayer1, types.TankStateStopped)
+	playerTank := newTankInState(types.TankRolePlayer1, types.TankStateActive)
 	playerTank.SetSpecs(types.NewSpecsEntity(2, 32, true, 150, 1))
 	env.lifecycle.players[p1] = playerTank
 	env.session.SetPlayerLives(p1, 5)

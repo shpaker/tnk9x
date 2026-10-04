@@ -32,6 +32,8 @@ linters-settings:
         allow:
           - $gostd
           - github.com/shpaker/tnk9x/internal/types
+          # Чистая кинематика по сетке, без движка и IO
+          - github.com/shpaker/koleya
       contracts:
         list-mode: strict
         files:

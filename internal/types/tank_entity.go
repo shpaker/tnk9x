@@ -3,6 +3,8 @@ package types
 import (
 	"fmt"
 	"math"
+
+	"github.com/shpaker/koleya"
 )
 
 type PlayerTankNum int
@@ -22,34 +24,32 @@ const (
 
 type TankState int
 
+// TankState — жизненный цикл танка; движение активного танка
+// описывает motion (см. tank_motion.go)
 const (
 	TankStateSpawning TankState = iota
-	TankStateMoving
-	TankStateStopped
-	TankStateBraking
+	TankStateActive
 	TankStateExploding
 	TankStateExploded
 )
 
 type TankEntity struct {
-	Position      Position
-	PrevPosition  Position // Позиция до движения в текущем тике (для отката коллизий)
-	Size          Size
-	Altitude      Altitude
-	Image         IImageProvider
-	Direction     Direction
-	State         TankState
-	NextDirection *Direction
-	SlideTarget   *float64 // Зафиксированная цель скольжения на льду (nil — обычное торможение)
-	id            uint     // Порядковый номер танка на уровне (для памяти AI)
-	role          TankRole
-	specs         *SpecsEntity // Спецификации танка
-	withBonus     bool
-	blinkCounter  int  // Счетчик тиков для мигания
-	blinkFlag     bool // Флаг видимости
-	hitPoints     uint // Количество попаданий до уничтожения (для тяжёлых танков)
-	shieldTicks   uint // Оставшиеся тики неуязвимости от каски
-	freezeTicks   uint // Оставшиеся тики заморозки игрока таймером врага
+	Position     Position
+	PrevPosition Position // Позиция до движения в текущем тике (для отката коллизий)
+	Size         Size
+	Altitude     Altitude
+	Image        IImageProvider
+	Direction    Direction // Куда смотрит танк; синхронизируется с motion
+	State        TankState
+	id           uint // Порядковый номер танка на уровне (для памяти AI)
+	role         TankRole
+	specs        *SpecsEntity // Спецификации танка
+	withBonus    bool
+	blinkCounter int  // Счетчик тиков для мигания
+	blinkFlag    bool // Флаг видимости
+	hitPoints    uint // Количество попаданий до уничтожения (для тяжёлых танков)
+	shieldTicks  uint // Оставшиеся тики неуязвимости от каски
+	freezeTicks  uint // Оставшиеся тики заморозки игрока таймером врага
 
 	// Графические эффекты: направление фары (радианы, плавно
 	// доворачивается за стволом) и оставшиеся тики отдачи выстрела
@@ -65,6 +65,11 @@ type TankEntity struct {
 	// берега, но снова в воду уже не заедет
 	boat        bool
 	boatSinking bool
+
+	// Движение по сетке: состояние kinematics и команда водителя
+	// (куда ехать; None — отпустил)
+	motion koleya.Mover
+	drive  koleya.Dir
 }
 
 func NewDefaultTankEntity(role TankRole, direction Direction) TankEntity {
@@ -79,6 +84,7 @@ func NewDefaultTankEntity(role TankRole, direction Direction) TankEntity {
 		State:     TankStateSpawning,
 		role:      role,
 		specs:     nil, // Будет установлено при создании танка
+		motion:    koleya.NewMover(koleya.Vec2{}, direction.Dir(), TankLattice),
 	}
 }
 
@@ -204,8 +210,9 @@ func (t *TankEntity) IsDestroyed() bool {
 	return t.State == TankStateExploding || t.State == TankStateExploded
 }
 
+// IsStopped — активный танк стоит на месте
 func (t *TankEntity) IsStopped() bool {
-	return t.State == TankStateStopped
+	return t.State == TankStateActive && !t.motion.Moving()
 }
 
 func PlayerTankNumToRole(num PlayerTankNum) TankRole {

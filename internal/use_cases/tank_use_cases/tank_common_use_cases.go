@@ -3,6 +3,8 @@ package tank_use_cases
 import (
 	"errors"
 
+	"github.com/shpaker/koleya"
+
 	"github.com/shpaker/tnk9x/internal/interfaces"
 	"github.com/shpaker/tnk9x/internal/types"
 	"github.com/shpaker/tnk9x/internal/types/session_entities"
@@ -11,7 +13,6 @@ import (
 var _ interfaces.ITankCommonUseCases = (*TankCommonUseCases)(nil)
 
 type TankCommonUseCases struct {
-	brakingService  interfaces.ITankBrakingService
 	renderUseCases  interfaces.IRenderUseCases
 	tanksRepository interfaces.ITanksRepository
 	specsUseCases   interfaces.ISpecsUseCases
@@ -20,7 +21,6 @@ type TankCommonUseCases struct {
 }
 
 func NewTankCommonUseCases(
-	brakingService interfaces.ITankBrakingService,
 	renderUseCases interfaces.IRenderUseCases,
 	tanksRepository interfaces.ITanksRepository,
 	specsUseCases interfaces.ISpecsUseCases,
@@ -28,7 +28,6 @@ func NewTankCommonUseCases(
 	stageSession *session_entities.StageSessionEntity,
 ) *TankCommonUseCases {
 	return &TankCommonUseCases{
-		brakingService:  brakingService,
 		renderUseCases:  renderUseCases,
 		tanksRepository: tanksRepository,
 		specsUseCases:   specsUseCases,
@@ -50,7 +49,7 @@ func (uc *TankCommonUseCases) Update(tank *types.TankEntity, dt float64) error {
 	if uc.IsFrozen(tank) {
 		tank.PrevPosition = tank.Position
 		if !tank.IsEnemy() {
-			tank.State = types.TankStateStopped
+			tank.Halt()
 		}
 		return nil
 	}
@@ -58,46 +57,43 @@ func (uc *TankCommonUseCases) Update(tank *types.TankEntity, dt float64) error {
 	uc.renderUseCases.SyncTankAnimationWithState(tank)
 
 	tank.PrevPosition = tank.Position
-
-	oldState := tank.State
 	oldDirection := tank.Direction
 
-	if tank.State == types.TankStateBraking {
-		err := uc.brakingService.HandleBrakingState(tank, dt, uc.isOnIce(tank))
+	tank.Move(uc.motionProfile(tank), uc.surface(tank), dt)
 
-		if oldDirection != tank.Direction {
-			uc.renderUseCases.UpdateTankAnimation(tank)
-		}
-
-		if oldState != tank.State {
-			uc.renderUseCases.SyncTankAnimationWithState(tank)
-		}
-		return err
+	if oldDirection != tank.Direction {
+		uc.renderUseCases.UpdateTankAnimation(tank)
 	}
-
-	if tank.State == types.TankStateMoving {
-		// Получаем скорость танка из спецификаций
-		speed := float64(32.0) // Значение по умолчанию
-		if tank.GetSpecs() != nil {
-			speed = tank.GetSpecs().GetSpeed()
-		}
-		delta := speed * dt
-
-		switch tank.Direction {
-		case types.DirectionUp:
-			tank.Position.Y -= delta
-		case types.DirectionDown:
-			tank.Position.Y += delta
-		case types.DirectionLeft:
-			tank.Position.X -= delta
-		case types.DirectionRight:
-			tank.Position.X += delta
-		}
-	}
-
 	uc.renderUseCases.SyncTankAnimationWithState(tank)
 
 	return nil
+}
+
+// defaultTankSpeed — скорость танка без спецификаций, px/s
+const defaultTankSpeed = 32.0
+
+// iceGrip — сцепление льда, px/s²: базовый танк проскальзывает
+// по инерции примерно на узел сетки дальше, быстрый — ещё дальше
+const iceGrip = 128.0
+
+// motionProfile — классическое движение танчиков: полная скорость
+// сразу и докатывание до узла сетки на полной скорости
+func (uc *TankCommonUseCases) motionProfile(
+	tank *types.TankEntity,
+) koleya.Profile {
+	speed := defaultTankSpeed
+	if tank.GetSpecs() != nil {
+		speed = tank.GetSpecs().GetSpeed()
+	}
+	return koleya.Classic(speed)
+}
+
+// surface — грунт под танком: лёд ограничивает разгон и торможение
+func (uc *TankCommonUseCases) surface(tank *types.TankEntity) koleya.Surface {
+	if uc.isOnIce(tank) {
+		return koleya.Surface{Grip: iceGrip}
+	}
+	return koleya.Ground
 }
 
 // isOnIce — центр танка находится на блоке льда
@@ -137,7 +133,7 @@ func (uc *TankCommonUseCases) GetAllPlayerTanks() []*types.TankEntity {
 func (uc *TankCommonUseCases) IsAnyPlayerTankMoving() bool {
 	playerTanks := uc.GetAllPlayerTanks()
 	for _, tank := range playerTanks {
-		if tank != nil && tank.State == types.TankStateMoving {
+		if tank != nil && tank.IsDriving() {
 			return true
 		}
 	}
