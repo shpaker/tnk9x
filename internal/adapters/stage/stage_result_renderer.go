@@ -203,7 +203,12 @@ func (r *StageRendererAdapter) drawResultStats(
 	lineStep := float64(r.regularFontSize) + 4
 	noteTop := height*resultStatsY + lineStep
 	for _, note := range r.resultNotes(view) {
-		r.drawResultLine(screen, note.text, noteTop, withAlpha(note.color, alpha))
+		r.drawResultLine(
+			screen,
+			note.text,
+			noteTop,
+			withAlpha(note.color, alpha),
+		)
 		noteTop += lineStep
 	}
 }
