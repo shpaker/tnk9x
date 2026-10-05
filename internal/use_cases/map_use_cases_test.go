@@ -169,7 +169,8 @@ func TestMapUseCases_RestoreBlock(t *testing.T) {
 	if mapUseCases.IsBlockIntact(brick) {
 		t.Fatal("отколотый кирпич не целый")
 	}
-	if !mapUseCases.RestoreBlock(brick, nil) || !mapUseCases.IsBlockIntact(brick) {
+	if !mapUseCases.RestoreBlock(brick, nil) ||
+		!mapUseCases.IsBlockIntact(brick) {
 		t.Error("отколотый кирпич должен восстановиться")
 	}
 
@@ -181,7 +182,8 @@ func TestMapUseCases_RestoreBlock(t *testing.T) {
 	if mapUseCases.RestoreBlock(brick, []types.IEntityCollider{tank}) {
 		t.Error("кирпич не должен вставать под танком")
 	}
-	if !mapUseCases.RestoreBlock(brick, nil) || len(mapUseCases.GetBlocks()) != 1 {
+	if !mapUseCases.RestoreBlock(brick, nil) ||
+		len(mapUseCases.GetBlocks()) != 1 {
 		t.Error("снесённый кирпич должен вернуться на карту один раз")
 	}
 }

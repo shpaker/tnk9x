@@ -74,7 +74,13 @@ func TestStageResultMenu_RewardItems(t *testing.T) {
 				won: true, nextUnlocked: true, carryOverAdvantage: true,
 				rewardAvailable: true,
 			},
-			want: []types.StageResultItem{next, carry, boostNext, retry, levels},
+			want: []types.StageResultItem{
+				next,
+				carry,
+				boostNext,
+				retry,
+				levels,
+			},
 		},
 		{
 			name: "победа, следующего нет",
