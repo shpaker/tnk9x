@@ -316,9 +316,9 @@ func TestLightingUseCases_GetMaterial(t *testing.T) {
 		lighting.GetMaterial(types.Brick).Reflectivity {
 		t.Error("сталь должна отражать свет сильнее кирпича")
 	}
-	// Светлый лёд приглушает свет фар, но не гасит его совсем
-	if ice := lighting.GetMaterial(types.Ice); ice.Dimming <= 0 ||
-		ice.Dimming >= 1 {
+	// Лёд не отражает прямой свет поверхностью: свет виден только
+	// на белых штрихах спрайта
+	if ice := lighting.GetMaterial(types.Ice); ice.Dimming != 1 {
 		t.Errorf("лёд: приглушение %v", ice.Dimming)
 	}
 	if water := lighting.GetMaterial(types.Water); water.Dimming != 0 {

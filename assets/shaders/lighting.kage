@@ -182,7 +182,7 @@ func Fragment(dstPos vec4, srcPos vec2, color vec4) vec4 {
 	}
 
 	// Светлая поверхность (лёд) под фарой выбеливается: свет источников
-	// на ней приглушён, общий свет остаётся прежним
+	// на ней приглушен вплоть до полного, общий свет остаётся прежним
 	lit := scene.rgb*(Ambient+light*material.a) +
 		glow*Haze + (glint*sparkle+sheen*metalSheen)*material.g
 	return vec4(lit, 1)

@@ -109,14 +109,14 @@ const (
 // surfaceMaterials — свойства поверхностей: кирпич и сталь бросают
 // тень, лес затеняет частично, вода и лёд дают блики только светлыми
 // пикселями спрайта. Сталь — металл, её освещённый фасад блестит;
-// кирпич матовый. Светлый лёд приглушает свет источников, иначе
-// под фарой он выбеливается
+// кирпич матовый. Светлый лёд не отражает прямой свет поверхностью:
+// иначе под фарой он выбеливается, свет ложится только на белые штрихи
 var surfaceMaterials = map[types.BlockType]types.SurfaceMaterial{
 	types.Brick:  {Opacity: 1},
 	types.Steel:  {Opacity: 1, Reflectivity: 1},
 	types.Forest: {Opacity: 0.35},
 	types.Water:  {Reflectivity: 1, Sparkle: 1},
-	types.Ice:    {Reflectivity: 0.5, Sparkle: 1, Dimming: 0.4},
+	types.Ice:    {Reflectivity: 0.5, Sparkle: 1, Dimming: 1},
 }
 
 var _ interfaces.ILightingUseCases = (*LightingUseCases)(nil)
