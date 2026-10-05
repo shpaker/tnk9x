@@ -600,12 +600,12 @@ func TestStageUseCases_TrySpawnEnemy_FailedSpawnKeepsSchedule(t *testing.T) {
 }
 
 // Без явной разметки бонусные враги идут по классической
-// нумерации: 4, 9, 15
+// нумерации: 4, 11, 18
 func TestStageUseCases_BonusEnemySequence(t *testing.T) {
 	env := newStageTestEnv(0)
 	env.lifecycle.nextEnemy = newEnemyFactory()
 
-	bonusNumbers := map[uint]bool{4: true, 9: true, 15: true}
+	bonusNumbers := map[uint]bool{4: true, 11: true, 18: true}
 
 	for number := uint(1); number <= 20; number++ {
 		tank := env.stage.TrySpawnEnemy()
@@ -702,8 +702,8 @@ func TestStageUseCases_WaveWaitsForLeft(t *testing.T) {
 	}
 }
 
-// Начальный спавн: по врагу на спаунер по порядку, не больше
-// лимита активных
+// Начальный спавн: как в оригинале, сразу выходит один враг,
+// остальные — по интервалу волны
 func TestStageUseCases_SpawnInitialEnemyTanks(t *testing.T) {
 	env := newStageTestEnvWithLevel(newTestLevel(
 		2, basicWave(5, 90, types.WaveStart{}),
@@ -712,16 +712,16 @@ func TestStageUseCases_SpawnInitialEnemyTanks(t *testing.T) {
 
 	spawned := env.stage.SpawnInitialEnemyTanks()
 
-	if len(spawned) != 2 {
-		t.Fatalf("spawned %d, want 2 (max_active)", len(spawned))
+	if len(spawned) != 1 {
+		t.Fatalf("spawned %d, want 1 (initialEnemiesCount)", len(spawned))
 	}
 	for i, call := range env.lifecycle.spawnCalls {
 		if call.spawnerIndex != i {
 			t.Errorf("enemy %d at spawner %d", i, call.spawnerIndex)
 		}
 	}
-	if got := env.session.GetNextEnemyNumber(); got != 3 {
-		t.Errorf("next enemy number %d, want 3", got)
+	if got := env.session.GetNextEnemyNumber(); got != 2 {
+		t.Errorf("next enemy number %d, want 2", got)
 	}
 	if env.session.CanSpawnNextEnemy() {
 		t.Error("the wave pause must start after the initial spawn")

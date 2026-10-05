@@ -2,15 +2,15 @@
 
 [level]
 name = GLACIER
-max_active = 5
+max_active = 4
 time_3star = 210
 
 [waves]
 # tanks        delay  start
-BBBbB            89   now
-FBBbP            79   now
-PBFFfA           69   now
-PAPAAa           59   now
+PPPP            94   now
+AA              94   now
+FFFF            94   now
+BBBBBBBBBB      94   now
 
 [map]
 ....@@..##@@.........#....

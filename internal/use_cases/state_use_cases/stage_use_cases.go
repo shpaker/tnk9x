@@ -9,8 +9,9 @@ import (
 
 var _ interfaces.IStageUseCases = (*StageUseCases)(nil)
 
-// initialEnemiesCount — сколько врагов выходит сразу при старте уровня
-const initialEnemiesCount = 3
+// initialEnemiesCount — сколько врагов выходит сразу при старте уровня;
+// как в оригинале: первый танк появляется один, остальные — по интервалу волны
+const initialEnemiesCount = 1
 
 // coopExtraActiveEnemies — прибавка к лимиту активных врагов
 // при игре вдвоём

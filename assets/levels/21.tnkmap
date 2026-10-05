@@ -2,15 +2,15 @@
 
 [level]
 name = BATTLEFIELD
-max_active = 5
+max_active = 4
 time_3star = 200
 
 [waves]
 # tanks        delay  start
-BBBbB            97   now
-FBBbB            87   now
-FBPFa            77   now
-FPPAAA           67   now
+PPPPPPPP        106   now
+FF              106   now
+BBBBBB          106   now
+AAAA            106   now
 
 [map]
 ..........................

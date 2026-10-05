@@ -2,15 +2,15 @@
 
 [level]
 name = ARCHIPELAGO
-max_active = 6
+max_active = 4
 time_3star = 220
 
 [waves]
 # tanks        delay  start
-BBBfB            71   now
-FPBpBF           61   now
-AFFpAP           51   now
-APAAaA           45   now
+PPP             66   now
+FFFFFFFF        66   now
+AAAAAA          66   now
+PPP             66   now
 
 [map]
 ......~~........~~........

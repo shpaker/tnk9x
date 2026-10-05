@@ -2,15 +2,14 @@
 
 [level]
 name = JUNGLE
-max_active = 5
+max_active = 4
 time_3star = 200
 
 [waves]
 # tanks        delay  start
-BBBbB           110   now
-BBBbF           100   left<=2
-BBBBf            90   left<=2
-FPPAAA           80   left<=2
+BBBBBBBBBBBBBBBB  126   now
+FF                126   now
+AA                126   now
 
 [map]
 ..........................

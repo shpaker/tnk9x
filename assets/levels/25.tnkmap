@@ -2,15 +2,14 @@
 
 [level]
 name = IRON CURTAIN
-max_active = 5
+max_active = 4
 time_3star = 210
 
 [waves]
 # tanks        delay  start
-BBBbB            86   now
-BFFfB            76   now
-FBFPpA           66   now
-AAPAPa           56   clear
+PP              90   now
+FFFFFFFF        90   now
+AAAAAAAAAA      90   now
 
 [map]
 ......@@..##..##..##..@@..

@@ -2,15 +2,14 @@
 
 [level]
 name = MARSHLAND
-max_active = 5
+max_active = 4
 time_3star = 200
 
 [waves]
 # tanks        delay  start
-BBBbB           116   now
-BBBbB           106   left<=2
-FBBBf            96   left<=2
-FPAAPA           86   left<=2
+PPPPPPPPPP      134   now
+FFFF            134   now
+AAAAAA          134   now
 
 [map]
 ..........................

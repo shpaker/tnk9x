@@ -2,15 +2,14 @@
 
 [level]
 name = BUNKERS
-max_active = 5
+max_active = 4
 time_3star = 210
 
 [waves]
 # tanks        delay  start
-BBBbF            92   now
-BBFbF            82   now
-BPBAfP           72   now
-APPAAa           62   now
+AAAAAA          98   now
+PPPP            98   now
+FFFFFFFFFF      98   now
 
 [map]
 ..........................

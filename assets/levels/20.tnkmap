@@ -2,15 +2,15 @@
 
 [level]
 name = DELTA
-max_active = 5
+max_active = 4
 time_3star = 200
 
 [waves]
 # tanks        delay  start
-BBBbB           100   now
-BFBbB            90   now
-BFFPp            80   now
-FAPAAA           70   clear
+FFFFFFFF        110   now
+BB              110   now
+PP              110   now
+AAAAAAAA        110   now
 
 [map]
 ......~~..##....##..##....

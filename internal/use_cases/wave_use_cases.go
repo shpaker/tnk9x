@@ -8,6 +8,10 @@ import (
 
 var _ interfaces.IWaveUseCases = (*WaveUseCases)(nil)
 
+// coopSpawnDelayReductionTicks — насколько короче пауза между спаунами
+// при игре вдвоём, как в оригинале
+const coopSpawnDelayReductionTicks = 20
+
 // WaveUseCases выдаёт врагов по волнам сценария уровня;
 // позиция в сценарии хранится в сессии уровня
 type WaveUseCases struct{}
@@ -46,13 +50,19 @@ func (uc *WaveUseCases) CommitSpawn(
 		if _, extra := session.PeekExtraEnemy(); extra &&
 			uc.wavesExhausted(session) {
 			session.PopExtraEnemy()
-			session.RegisterEnemySpawned(spawnerIndex, lastWaveDelay(session))
+			session.RegisterEnemySpawned(
+				spawnerIndex,
+				coopSpawnDelay(session, lastWaveDelay(session)),
+			)
 		}
 		return
 	}
 
 	session.SetWaveCursor(waveIndex, tankIndex+1)
-	session.RegisterEnemySpawned(spawnerIndex, waves[waveIndex].DelayTicks)
+	session.RegisterEnemySpawned(
+		spawnerIndex,
+		coopSpawnDelay(session, waves[waveIndex].DelayTicks),
+	)
 }
 
 // resolveCursor — позиция следующего танка: когда волна исчерпана,
@@ -128,14 +138,22 @@ func isWaveStarted(
 }
 
 // isBonusCarrierNumber — нумерация носителей бонусов по умолчанию
-// для уровней без явной разметки: 4, 9, 15, 22, …
-// (каждый следующий интервал на единицу длиннее предыдущего)
+// для уровней без явной разметки: 4-й, 11-й и 18-й танки, как в оригинале
 func isBonusCarrierNumber(enemyNumber uint) bool {
-	bonusNumber := uint(4)
-	step := uint(5)
-	for bonusNumber < enemyNumber {
-		bonusNumber += step
-		step++
+	return enemyNumber == 4 || enemyNumber == 11 || enemyNumber == 18
+}
+
+// coopSpawnDelay — пауза волны с учётом кооператива:
+// во втором игроке враги выходят чаще
+func coopSpawnDelay(
+	session *session_entities.StageSessionEntity,
+	delay uint,
+) uint {
+	if session.GetPlayerCount() <= 1 {
+		return delay
 	}
-	return bonusNumber == enemyNumber
+	return max(
+		delay,
+		coopSpawnDelayReductionTicks,
+	) - coopSpawnDelayReductionTicks
 }

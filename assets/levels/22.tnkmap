@@ -2,15 +2,15 @@
 
 [level]
 name = CAMOUFLAGE
-max_active = 5
+max_active = 4
 time_3star = 210
 
 [waves]
 # tanks        delay  start
-BBBbB            94   now
-FBBfB            84   now
-BPBFpA           74   now
-FAAAPa           64   now
+FFFFFFFF        102   now
+BBBBBB          102   now
+PP              102   now
+AAAA            102   now
 
 [map]
 ..........%%..............

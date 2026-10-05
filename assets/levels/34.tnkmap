@@ -2,15 +2,14 @@
 
 [level]
 name = LAST WALL
-max_active = 6
+max_active = 4
 time_3star = 230
 
 [waves]
 # tanks        delay  start
-BFFbF            63   now
-FFBpPP           53   now
-PPPaAF           45   now
-AAAAaA           45   now
+PPPP            54   now
+FFFFFFFFFF      54   now
+AAAAAA          54   now
 
 [map]
 ........#..#..............

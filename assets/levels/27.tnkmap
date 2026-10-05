@@ -2,15 +2,15 @@
 
 [level]
 name = STEEL CITY
-max_active = 6
+max_active = 4
 time_3star = 210
 
 [waves]
 # tanks        delay  start
-BBFbB            81   now
-PBBbF            71   now
-FFAFpP           61   now
-AAPAAa           51   now
+PP              82   now
+AAAAAAAA        82   now
+FFFFFFFF        82   now
+BB              82   now
 
 [map]
 ........@@................
