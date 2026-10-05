@@ -2,15 +2,15 @@
 
 [level]
 name = WETLANDS
-max_active = 6
+max_active = 4
 time_3star = 210
 
 [waves]
 # tanks        delay  start
-BBBbB            84   now
-FBFbF            74   now
-FFPAaP           64   now
-PAPAAa           54   now
+FFFFFF          86   now
+AAAAAA          86   now
+BBBB            86   now
+PPPP            86   now
 
 [map]
 ....~~~~..................

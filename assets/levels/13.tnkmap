@@ -2,15 +2,14 @@
 
 [level]
 name = FORTRESS
-max_active = 5
+max_active = 4
 time_3star = 190
 
 [waves]
 # tanks        delay  start
-BBBbF           118   now
-BBBbF           108   left<=2
-BBFBb            98   left<=2
-BPPAA            88   left<=2
+PPPPPPPP        138   now
+FFFFFFFF        138   now
+AAAA            138   now
 
 [map]
 ..........................

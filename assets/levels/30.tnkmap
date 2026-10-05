@@ -2,15 +2,15 @@
 
 [level]
 name = OVERGROWTH
-max_active = 6
+max_active = 4
 time_3star = 220
 
 [waves]
 # tanks        delay  start
-BBBbP            73   now
-FFPpBP           63   now
-BFFfAA           53   now
-APAAaA           45   clear
+BBBB            70   now
+FFFFFFFF        70   now
+PPPP            70   now
+AAAA            70   now
 
 [map]
 ..........................

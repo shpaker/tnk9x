@@ -59,7 +59,7 @@ Each line is one wave: `tanks [delay] [start]`.
 A **lowercase** letter (`b`, `f`, `p`, `a`) is a bonus carrier. It
 flashes, and destroying it drops a power-up. If no wave contains
 a lowercase letter, carriers follow the default numbering: enemies
-number 4, 9, 15 and 22.
+number 4, 11 and 18, like in the original NES game.
 
 The level's enemy total is the sum of the tanks in all waves. The
 sidebar icons show how many are still waiting to spawn.
@@ -67,7 +67,7 @@ sidebar icons show how many are still waiting to spawn.
 **delay** (optional) is the pause between spawns inside this wave, in
 ticks (60 ticks = 1 second). Default: `game.enemy_respawn_delay_ticks`.
 The first tank of a wave waits the same pause after the previous
-spawn.
+spawn. In two-player mode every pause is 20 ticks shorter.
 
 **start** (optional, default `now`) says when the wave may begin. The
 condition is checked only after every tank of the previous wave has
@@ -79,9 +79,9 @@ spawned:
 | `left<=N`  | at most `N` enemies from earlier waves are still alive           |
 | `clear`    | every enemy from earlier waves is destroyed (a "boss" wave)     |
 
-The first wave ignores `start`. When the level begins, the first
-tanks of the first wave (up to 3, and no more than `max_active`)
-appear at once, one per spawn point.
+The first wave ignores `start`. When the level begins, the first tank
+of the first wave appears at once; the rest follow the wave delay,
+like in the original NES game.
 
 ### `[map]`: the field
 

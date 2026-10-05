@@ -2,15 +2,15 @@
 
 [level]
 name = TRENCHES
-max_active = 5
+max_active = 4
 time_3star = 200
 
 [waves]
 # tanks        delay  start
-BBBbB           102   now
-BFFfB            92   left<=2
-BPBBf            82   left<=2
-PPAAAA           72   left<=2
+FFFF            114   now
+AAAAAAAA        114   now
+BBBB            114   now
+PPPP            114   now
 
 [map]
 ..##..##..##..##..##..##..

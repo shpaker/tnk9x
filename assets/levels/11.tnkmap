@@ -2,15 +2,15 @@
 
 [level]
 name = AMBUSH
-max_active = 5
+max_active = 4
 time_3star = 190
 
 [waves]
 # tanks        delay  start
-BBBbB           124   now
-BBBbB           114   left<=2
-BFBBb           104   left<=2
-FFAPA            94   left<=2
+FFFFF           146   now
+AAAAAA          146   now
+PPPP            146   now
+FFFFF           146   now
 
 [map]
 ..........@@..##..####....

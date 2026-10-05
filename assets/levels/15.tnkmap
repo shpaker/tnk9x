@@ -2,15 +2,14 @@
 
 [level]
 name = DEEP WOODS
-max_active = 5
+max_active = 4
 time_3star = 200
 
 [waves]
 # tanks        delay  start
-BBBbB           113   now
-BBFbB           103   left<=2
-BBBFb            93   left<=2
-PPFAAA           83   clear
+BB              130   now
+FFFFFFFFFF      130   now
+AAAAAAAA        130   now
 
 [map]
 ........####....##........

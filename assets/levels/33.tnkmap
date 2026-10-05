@@ -2,15 +2,15 @@
 
 [level]
 name = IRON JUNGLE
-max_active = 6
+max_active = 4
 time_3star = 230
 
 [waves]
 # tanks        delay  start
-BBFfF            65   now
-FFPbPB           55   now
-FAApAA           45   now
-PPAAaA           45   now
+FFFF            58   now
+AAAAAAAA        58   now
+PPPP            58   now
+FFFF            58   now
 
 [map]
 ........@@........@@......

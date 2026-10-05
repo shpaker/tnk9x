@@ -2,15 +2,15 @@
 
 [level]
 name = ICE RINK
-max_active = 5
+max_active = 4
 time_3star = 200
 
 [waves]
 # tanks        delay  start
-BBBbB           108   now
-BBBbF            98   left<=2
-BBFBf            88   left<=2
-FAPPAA           78   left<=2
+AA              122   now
+FF              122   now
+PPPPPPPP        122   now
+BBBBBBBB        122   now
 
 [map]
 ..........................

@@ -2,15 +2,15 @@
 
 [level]
 name = ARMORY
-max_active = 5
+max_active = 4
 time_3star = 200
 
 [waves]
 # tanks        delay  start
-BBBfB           105   now
-FBBbB            95   left<=2
-BBFFa            85   left<=2
-PAPPAA           75   left<=2
+AAAA            118   now
+BB              118   now
+PPPPPP          118   now
+FFFFFFFF        118   now
 
 [map]
 ................@@@@@@%%..

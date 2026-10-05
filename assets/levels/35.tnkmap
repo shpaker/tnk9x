@@ -2,15 +2,14 @@
 
 [level]
 name = FINAL STAND
-max_active = 6
+max_active = 4
 time_3star = 230
 
 [waves]
 # tanks        delay  start
-BFFfF            60   now
-BFBfPP           50   now
-PPAaPA           45   now
-APAAaA           45   clear
+PPPP            50   now
+FFFFFF          50   now
+AAAAAAAAAA      50   now
 
 [map]
 ..........................

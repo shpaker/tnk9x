@@ -7,9 +7,9 @@ time_3star = 160
 
 [waves]
 # tanks        delay  start
-BBBbBB          145   now
-BBbBBB          135   left<=1
-FBbBBF          125   left<=1
+BBBBBBBBBBBBBB  178   now
+FFFF            178   now
+AA              178   now
 
 [map]
 ........##......##........

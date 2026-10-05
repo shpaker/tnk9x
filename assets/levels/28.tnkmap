@@ -2,15 +2,15 @@
 
 [level]
 name = FROZEN WOODS
-max_active = 6
+max_active = 4
 time_3star = 210
 
 [waves]
 # tanks        delay  start
-BBFbB            79   now
-FBBbF            69   now
-FAAFaA           59   now
-PAPPPa           49   now
+FF               78   now
+A                78   now
+BBBBBBBBBBBBBBB  78   now
+PP               78   now
 
 [map]
 .....................@@...
