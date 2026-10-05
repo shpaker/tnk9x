@@ -48,7 +48,10 @@ func TestHelpOverlay_FirstStageOnce(t *testing.T) {
 	}
 
 	// Подтверждение закрывает навсегда
-	env.frame(func() { overlay.Update(2) }, testutil.FakeMenuInput{Confirm: true})
+	env.frame(
+		func() { overlay.Update(2) },
+		testutil.FakeMenuInput{Confirm: true},
+	)
 	if overlay.IsDue(1) || !env.settings.IsHelpShown() {
 		t.Error("после закрытия страница больше не показывается")
 	}

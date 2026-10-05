@@ -65,7 +65,11 @@ func TestApplyDecisionWithoutMoveKeepsTankStopped(t *testing.T) {
 }
 
 func newMotionActions() *tank_use_cases.TankActionsUseCases {
-	mapEntity := types.NewMapEntity(types.Size{Width: 208, Height: 208}, nil, nil)
+	mapEntity := types.NewMapEntity(
+		types.Size{Width: 208, Height: 208},
+		nil,
+		nil,
+	)
 	return tank_use_cases.NewTankActionsUseCases(
 		nil,
 		&testutil.FakeTankCommonUseCases{},
@@ -77,7 +81,10 @@ func newMotionActions() *tank_use_cases.TankActionsUseCases {
 }
 
 func newDrivingTank(x float64) *types.TankEntity {
-	tank := types.NewDefaultTankEntity(types.TankRolePlayer1, types.DirectionRight)
+	tank := types.NewDefaultTankEntity(
+		types.TankRolePlayer1,
+		types.DirectionRight,
+	)
 	tank.Position = types.Position{X: x, Y: 100}
 	return testutil.MovingTank(&tank)
 }
@@ -117,7 +124,11 @@ func TestStopByCollisionHaltsInPlace(t *testing.T) {
 	actions.Stop(tank, true)
 
 	if !tank.IsStopped() || tank.Position.X != 101 {
-		t.Fatalf("stopped=%v X=%v, want halted at 101", tank.IsStopped(), tank.Position.X)
+		t.Fatalf(
+			"stopped=%v X=%v, want halted at 101",
+			tank.IsStopped(),
+			tank.Position.X,
+		)
 	}
 	if _, ok := tank.GetDrive(); ok {
 		t.Fatal("halted tank keeps driving")
@@ -133,7 +144,11 @@ func TestBoundaryHaltsDocking(t *testing.T) {
 	actions.SetMaxXPosition(tank)
 
 	if !tank.IsStopped() || tank.Position.X != 192 {
-		t.Fatalf("stopped=%v X=%v, want halted at 192", tank.IsStopped(), tank.Position.X)
+		t.Fatalf(
+			"stopped=%v X=%v, want halted at 192",
+			tank.IsStopped(),
+			tank.Position.X,
+		)
 	}
 }
 

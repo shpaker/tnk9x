@@ -73,7 +73,12 @@ func (uc *MapUseCases) IsBlockIntact(block *types.BlockEntity) bool {
 }
 
 // overlaps — пересекаются ли прямоугольники
-func overlaps(aPos types.Position, aSize types.Size, bPos types.Position, bSize types.Size) bool {
+func overlaps(
+	aPos types.Position,
+	aSize types.Size,
+	bPos types.Position,
+	bSize types.Size,
+) bool {
 	return aPos.X < bPos.X+float64(bSize.Width) &&
 		bPos.X < aPos.X+float64(aSize.Width) &&
 		aPos.Y < bPos.Y+float64(bSize.Height) &&

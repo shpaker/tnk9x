@@ -217,7 +217,11 @@ func TestSettings_MarkHelpShown(t *testing.T) {
 		t.Fatalf("mark: %v", err)
 	}
 	if !settings.IsHelpShown() || repository.saves != 1 {
-		t.Errorf("флаг %v, сохранений %d", settings.IsHelpShown(), repository.saves)
+		t.Errorf(
+			"флаг %v, сохранений %d",
+			settings.IsHelpShown(),
+			repository.saves,
+		)
 	}
 
 	// Повторная отметка хранилище не трогает

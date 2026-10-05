@@ -66,7 +66,9 @@ func TestProgressRepository_Broken(t *testing.T) {
 	for name, data := range tests {
 		t.Run(name, func(t *testing.T) {
 			repository := NewProgressRepository(
-				&memoryStorage{data: map[string][]byte{ProgressKeyOnePlayer: data}},
+				&memoryStorage{
+					data: map[string][]byte{ProgressKeyOnePlayer: data},
+				},
 				ProgressKeyOnePlayer,
 			)
 			progress, err := repository.GetProgress()
@@ -125,7 +127,11 @@ func TestProgressRepository_SeparateModes(t *testing.T) {
 
 	loaded, err := single.GetProgress()
 	if err != nil || loaded.TotalStars() != 0 {
-		t.Errorf("прогресс 2P не должен попадать в 1P: %v, %d", err, loaded.TotalStars())
+		t.Errorf(
+			"прогресс 2P не должен попадать в 1P: %v, %d",
+			err,
+			loaded.TotalStars(),
+		)
 	}
 	loaded, _ = duo.GetProgress()
 	if loaded.GetStars(1) != 3 {

@@ -115,7 +115,13 @@ func (r *HelpRendererAdapter) Draw(
 	top += lineHeight - helpRowStep + helpHintGap
 
 	if (view.Ticks/helpBlinkTicks)%2 == 0 {
-		r.drawCentered(screen, r.startHint(view), top, width, controlsActiveColor)
+		r.drawCentered(
+			screen,
+			r.startHint(view),
+			top,
+			width,
+			controlsActiveColor,
+		)
 	}
 }
 
