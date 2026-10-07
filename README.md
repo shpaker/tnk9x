@@ -66,7 +66,7 @@ Go + [Ebitengine](https://ebitengine.org/), one codebase for desktop and a singl
 
 ### Building and running
 
-**Requirements:** Go 1.25+, optionally — [Just](https://github.com/casey/just).
+**Requirements:** Go 1.27+, optionally — [Just](https://github.com/casey/just).
 
 ```bash
 git clone https://github.com/shpaker/tnk9x.git
