@@ -54,11 +54,16 @@ func (s *stubRenderUseCases) TankTint(
 }
 
 type stubHQUseCases struct {
-	hq *types.HQEntity
+	hq         *types.HQEntity
+	explosions int
 }
 
-func (s *stubHQUseCases) GetHQ() *types.HQEntity           { return s.hq }
-func (s *stubHQUseCases) Explode(hq *types.HQEntity) error { return nil }
+func (s *stubHQUseCases) GetHQ() *types.HQEntity { return s.hq }
+func (s *stubHQUseCases) Explode(hq *types.HQEntity) error {
+	s.explosions++
+	return nil
+}
+
 func (s *stubHQUseCases) IsExplosionFinished(hq *types.HQEntity) {
 }
 func (s *stubHQUseCases) IsDestroyed() bool { return false }
@@ -816,6 +821,35 @@ func TestBulletWallCollision_BulletPassesOverWater(t *testing.T) {
 	}
 	if got := len(env.mapEntity.GetBlocks()); got != 1 {
 		t.Errorf("вода удалена: осталось %d блоков", got)
+	}
+}
+
+// Пуля, задевшая одновременно кирпич и орла, гасится кирпичом:
+// штаб за уцелевшей стеной не взрывается
+func TestBulletWallCollision_BrickShieldsHQFromSameTickHit(t *testing.T) {
+	env := newCollisionTestEnv(types.MapBlocks{brick(112, 96)})
+	env.hqUseCases.hq = &types.HQEntity{
+		Position: types.Position{X: 120, Y: 100},
+	}
+
+	shooter := env.newTank(
+		types.TankRolePlayer1,
+		types.DirectionRight,
+		0,
+		192,
+		0,
+	)
+	env.tanksRepo.SetPlayer(types.PlayerTankNumPlayer1, shooter)
+	// Пуля 4x4 пересекает и кирпич (x до 120), и штаб (x от 120)
+	env.addBullet(t, 118, 102, types.DirectionRight, 0, shooter)
+
+	env.collision.UpdateCollisions()
+
+	if env.hqUseCases.explosions != 0 {
+		t.Errorf("штаб взорван пулей, которую должен был поглотить кирпич")
+	}
+	if got := len(env.bulletUC.GetBullets()); got != 0 {
+		t.Errorf("пуля не погасла: осталось %d пуль", got)
 	}
 }
 
