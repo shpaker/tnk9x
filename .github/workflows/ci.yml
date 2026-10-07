@@ -12,12 +12,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v7
         with:
-          go-version: '1.25.0'
+          go-version: '1.27.1'
           cache-dependency-path: go.sum
 
       - name: Install Linux dependencies
@@ -38,7 +38,7 @@ jobs:
             pkg-config
 
       - name: Setup Just
-        uses: extractions/setup-just@v3
+        uses: extractions/setup-just@v4
 
       - name: Download dependencies
         run: just deps
@@ -50,7 +50,7 @@ jobs:
           echo "GOCACHE=$(go env GOCACHE)" >> $GITHUB_OUTPUT
 
       - name: Cache Go tools
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             ${{ steps.go-env.outputs.GOCACHE }}
@@ -68,12 +68,12 @@ jobs:
     needs: [prepare-deps]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v7
         with:
-          go-version: '1.25.0'
+          go-version: '1.27.1'
           cache-dependency-path: go.sum
 
       - name: Install Linux dependencies
@@ -94,7 +94,7 @@ jobs:
             pkg-config
 
       - name: Setup Just
-        uses: extractions/setup-just@v3
+        uses: extractions/setup-just@v4
 
       - name: Get Go environment
         id: go-env
@@ -103,7 +103,7 @@ jobs:
           echo "GOCACHE=$(go env GOCACHE)" >> $GITHUB_OUTPUT
 
       - name: Restore Go tools cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             ${{ steps.go-env.outputs.GOCACHE }}
@@ -121,12 +121,12 @@ jobs:
     needs: [prepare-deps]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v7
         with:
-          go-version: '1.25.0'
+          go-version: '1.27.1'
           cache-dependency-path: go.sum
 
       - name: Install Linux dependencies
@@ -147,7 +147,7 @@ jobs:
             pkg-config
 
       - name: Setup Just
-        uses: extractions/setup-just@v3
+        uses: extractions/setup-just@v4
 
       - name: Get Go environment
         id: go-env
@@ -156,7 +156,7 @@ jobs:
           echo "GOCACHE=$(go env GOCACHE)" >> $GITHUB_OUTPUT
 
       - name: Restore Go tools cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             ${{ steps.go-env.outputs.GOCACHE }}
@@ -177,12 +177,12 @@ jobs:
     needs: [prepare-deps]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v7
         with:
-          go-version: '1.25.0'
+          go-version: '1.27.1'
           cache-dependency-path: go.sum
 
       - name: Install Linux dependencies
@@ -204,7 +204,7 @@ jobs:
             xvfb
 
       - name: Setup Just
-        uses: extractions/setup-just@v3
+        uses: extractions/setup-just@v4
 
       - name: Get Go environment
         id: go-env
@@ -213,7 +213,7 @@ jobs:
           echo "GOCACHE=$(go env GOCACHE)" >> $GITHUB_OUTPUT
 
       - name: Restore Go tools cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             ${{ steps.go-env.outputs.GOCACHE }}
@@ -238,15 +238,15 @@ jobs:
     needs: [format, lint, test]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           # Теги нужны для версии архива из git describe
           fetch-depth: 0
 
       - name: Set up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v7
         with:
-          go-version: '1.25.0'
+          go-version: '1.27.1'
           cache-dependency-path: go.sum
 
       - name: Install Linux dependencies
@@ -267,7 +267,7 @@ jobs:
             pkg-config
 
       - name: Setup Just
-        uses: extractions/setup-just@v3
+        uses: extractions/setup-just@v4
 
       - name: Get Go environment
         id: go-env
@@ -276,7 +276,7 @@ jobs:
           echo "GOCACHE=$(go env GOCACHE)" >> $GITHUB_OUTPUT
 
       - name: Restore Go tools cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             ${{ steps.go-env.outputs.GOCACHE }}
@@ -297,7 +297,7 @@ jobs:
       # Архив для ручной загрузки в консоль Яндекс Игр без релиза,
       # в том числе из PR — для проверки черновика до мержа
       - name: Upload Yandex Games archive
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: tnk9x-yandex
           path: _build/tnk9x_yandex_*.zip
