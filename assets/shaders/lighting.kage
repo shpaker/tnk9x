@@ -28,12 +28,21 @@ var Haze float
 // Игровое поле: xy — левый верхний угол, zw — правый нижний
 var FieldRect vec4
 
-// Шаг луча не длиннее stepLength пикселей: дальний луч фары
-// не проскакивает тонкие сколы кирпича, короткий трассируется дешевле
+// Маска материалов выровнена по сетке cellSize пикселей от левого верхнего
+// угла поля, материал внутри клетки однороден: луч обходится по клеткам
+// точно, ни один скол или угол не проскакивает. maxCells покрывает
+// диагональ радиуса фары (145 пикселей — около 74 клеток)
 const (
-	maxSteps   = 48
-	stepLength = 3.0
+	cellSize = 4.0
+	maxCells = 80
 )
+
+// Допуск равенства моментов пересечения вертикальной и горизонтальной
+// границ клетки: луч проходит ровно через угол
+const cornerEpsilon = 1e-4
+
+// Условная «бесконечность» для оси, вдоль которой луч не движется
+const farAway = 1e30
 
 // Плотность частично прозрачной поверхности на пиксель пути луча
 const density = 0.12
@@ -68,30 +77,97 @@ const (
 	coneHaze = 0.45
 )
 
-// visibility — доля света, дошедшего от источника до точки: луч идёт
-// по маске материалов, непрозрачная стена обрывает его, лес ослабляет.
+// cellOpacity — непрозрачность клетки сетки: маска в её центре
+func cellOpacity(cell vec2, origin vec2) float {
+	center := FieldRect.xy + (cell+vec2(0.5))*cellSize
+	return imageSrc1At(center + origin).r
+}
+
+// visibility — доля света, дошедшего от источника до точки: луч обходится
+// по клеткам маски материалов (Amanatides–Woo), непрозрачная стена
+// обрывает его, лес ослабляет на точную длину пути внутри клетки.
+// Когда луч проходит ровно через угол клеток, проверяются и обе боковые
+// клетки: свет не просачивается по диагональному шву между блоками.
 // Стена не затеняет саму себя: пока луч не вышел из стены,
-// в которой начался, препятствия не учитываются
-func visibility(pos vec2, target vec2, origin vec2, steps float) float {
+// в которой начался, препятствия не учитываются.
+// Клетка источника не проверяется: сам источник может стоять в стене
+func visibility(pos vec2, target vec2, origin vec2) float {
+	rayLength := distance(pos, target)
+	if rayLength < 1 {
+		return 1
+	}
+	// Луч в координатах клеток: от start до finish
+	start := (pos - FieldRect.xy) / cellSize
+	finish := (target - FieldRect.xy) / cellSize
+	dir := finish - start
+	cell := floor(start)
+	lastCell := floor(finish)
+
+	stepX := 1.0
+	tMaxX := farAway
+	tDeltaX := farAway
+	if dir.x > 0 {
+		tMaxX = (cell.x + 1 - start.x) / dir.x
+		tDeltaX = 1 / dir.x
+	} else if dir.x < 0 {
+		stepX = -1.0
+		tMaxX = (start.x - cell.x) / -dir.x
+		tDeltaX = -1 / dir.x
+	}
+	stepY := 1.0
+	tMaxY := farAway
+	tDeltaY := farAway
+	if dir.y > 0 {
+		tMaxY = (cell.y + 1 - start.y) / dir.y
+		tDeltaY = 1 / dir.y
+	} else if dir.y < 0 {
+		stepY = -1.0
+		tMaxY = (start.y - cell.y) / -dir.y
+		tDeltaY = -1 / dir.y
+	}
+
 	vis := 1.0
-	stepSize := distance(pos, target) / steps
-	inside := imageSrc1At(pos+origin).r > 0.99
-	for s := 1; s < maxSteps; s++ {
-		if float(s) >= steps {
+	inside := cellOpacity(cell, origin) > 0.99
+	entered := 0.0
+	for i := 0; i < maxCells; i++ {
+		if cell.x == lastCell.x && cell.y == lastCell.y {
 			break
 		}
-		p := mix(pos, target, float(s)/steps)
-		opacity := imageSrc1At(p + origin).r
+		left := min(min(tMaxX, tMaxY), 1.0)
+		opacity := cellOpacity(cell, origin)
 		if inside {
 			if opacity < 0.99 {
 				inside = false
 			}
-			continue
-		}
-		if opacity > 0.99 {
+		} else if opacity > 0.99 {
 			return 0
 		}
-		vis *= exp(-opacity * density * stepSize)
+		if !inside {
+			vis *= exp(-opacity * density * (left - entered) * rayLength)
+		}
+		if left >= 1 {
+			break
+		}
+		entered = left
+
+		corner := abs(tMaxX-tMaxY) < cornerEpsilon
+		if corner && !inside {
+			if cellOpacity(cell+vec2(stepX, 0), origin) > 0.99 ||
+				cellOpacity(cell+vec2(0, stepY), origin) > 0.99 {
+				return 0
+			}
+		}
+		if corner {
+			cell += vec2(stepX, stepY)
+			tMaxX += tDeltaX
+			tMaxY += tDeltaY
+		} else if tMaxX < tMaxY {
+			cell.x += stepX
+			tMaxX += tDeltaX
+		} else {
+			cell.y += stepY
+			tMaxY += tDeltaY
+		}
 	}
 	return vis
 }
@@ -147,8 +223,7 @@ func Fragment(dstPos vec4, srcPos vec2, color vec4) vec4 {
 		if spot <= 0 {
 			continue
 		}
-		steps := clamp(ceil(d/stepLength), 1, maxSteps)
-		vis := visibility(pos, source.xy, origin, steps) * spot
+		vis := visibility(pos, source.xy, origin) * spot
 		if vis <= 0 {
 			continue
 		}

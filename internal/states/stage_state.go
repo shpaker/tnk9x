@@ -203,13 +203,9 @@ func (state *StageState) Update() types.StateTransition {
 
 	transition := types.StateTransition{}
 
-	tps := ebiten.ActualTPS()
-	var dt float64
-	if tps > 0 {
-		dt = 1.0 / tps
-	} else {
-		dt = 1.0 / 60.0
-	}
+	// Шаг симуляции фиксирован: ActualTPS — усреднённое измерение и при лагах
+	// проседает, из-за чего шаг растёт и пули пролетают сквозь тонкие кирпичи
+	dt := 1.0 / float64(ebiten.TPS())
 
 	// Пока открыты настройки, ввод идёт только в них: иначе Esc,
 	// P или тач-пауза сняли бы паузу под оверлеем

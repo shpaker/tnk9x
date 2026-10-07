@@ -112,9 +112,11 @@ func (uc *CollisionUseCases) checkBulletsCollisions(
 		if bullet == nil {
 			continue
 		}
+		// Стена перед орлом поглощает пулю раньше штаба: пуля, задевшая
+		// одновременно кирпич и орла, не должна взорвать штаб
 		if uc.checkBulletBoundaryCollision(bullet) ||
-			uc.checkBulletHQCollision(bullet, hq) ||
-			uc.checkBulletWallCollision(bullet) {
+			uc.checkBulletWallCollision(bullet) ||
+			uc.checkBulletHQCollision(bullet, hq) {
 			_ = uc.bulletUseCases.RemoveBullet(bullet)
 			bullets = uc.bulletUseCases.GetBullets()
 			index--
