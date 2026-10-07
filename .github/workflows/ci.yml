@@ -48,6 +48,7 @@ jobs:
         run: |
           echo "GOPATH=$(go env GOPATH)" >> $GITHUB_OUTPUT
           echo "GOCACHE=$(go env GOCACHE)" >> $GITHUB_OUTPUT
+          echo "GOVERSION=$(go env GOVERSION)" >> $GITHUB_OUTPUT
 
       - name: Cache Go tools
         uses: actions/cache@v6
@@ -55,9 +56,9 @@ jobs:
           path: |
             ${{ steps.go-env.outputs.GOCACHE }}
             ${{ steps.go-env.outputs.GOPATH }}/bin
-          key: ${{ runner.os }}-go-tools-${{ hashFiles('go.sum') }}
+          key: ${{ runner.os }}-go-tools-${{ steps.go-env.outputs.GOVERSION }}-${{ hashFiles('go.sum', 'justfile') }}
           restore-keys: |
-            ${{ runner.os }}-go-tools-
+            ${{ runner.os }}-go-tools-${{ steps.go-env.outputs.GOVERSION }}-
 
       - name: Install tools
         run: just install-tools
@@ -101,6 +102,7 @@ jobs:
         run: |
           echo "GOPATH=$(go env GOPATH)" >> $GITHUB_OUTPUT
           echo "GOCACHE=$(go env GOCACHE)" >> $GITHUB_OUTPUT
+          echo "GOVERSION=$(go env GOVERSION)" >> $GITHUB_OUTPUT
 
       - name: Restore Go tools cache
         uses: actions/cache@v6
@@ -108,9 +110,9 @@ jobs:
           path: |
             ${{ steps.go-env.outputs.GOCACHE }}
             ${{ steps.go-env.outputs.GOPATH }}/bin
-          key: ${{ runner.os }}-go-tools-${{ hashFiles('go.sum') }}
+          key: ${{ runner.os }}-go-tools-${{ steps.go-env.outputs.GOVERSION }}-${{ hashFiles('go.sum', 'justfile') }}
           restore-keys: |
-            ${{ runner.os }}-go-tools-
+            ${{ runner.os }}-go-tools-${{ steps.go-env.outputs.GOVERSION }}-
 
       - name: Check formatting
         run: just fmt-check
@@ -154,6 +156,7 @@ jobs:
         run: |
           echo "GOPATH=$(go env GOPATH)" >> $GITHUB_OUTPUT
           echo "GOCACHE=$(go env GOCACHE)" >> $GITHUB_OUTPUT
+          echo "GOVERSION=$(go env GOVERSION)" >> $GITHUB_OUTPUT
 
       - name: Restore Go tools cache
         uses: actions/cache@v6
@@ -161,9 +164,9 @@ jobs:
           path: |
             ${{ steps.go-env.outputs.GOCACHE }}
             ${{ steps.go-env.outputs.GOPATH }}/bin
-          key: ${{ runner.os }}-go-tools-${{ hashFiles('go.sum') }}
+          key: ${{ runner.os }}-go-tools-${{ steps.go-env.outputs.GOVERSION }}-${{ hashFiles('go.sum', 'justfile') }}
           restore-keys: |
-            ${{ runner.os }}-go-tools-
+            ${{ runner.os }}-go-tools-${{ steps.go-env.outputs.GOVERSION }}-
 
       - name: Run linter
         run: just lint
@@ -211,6 +214,7 @@ jobs:
         run: |
           echo "GOPATH=$(go env GOPATH)" >> $GITHUB_OUTPUT
           echo "GOCACHE=$(go env GOCACHE)" >> $GITHUB_OUTPUT
+          echo "GOVERSION=$(go env GOVERSION)" >> $GITHUB_OUTPUT
 
       - name: Restore Go tools cache
         uses: actions/cache@v6
@@ -218,9 +222,9 @@ jobs:
           path: |
             ${{ steps.go-env.outputs.GOCACHE }}
             ${{ steps.go-env.outputs.GOPATH }}/bin
-          key: ${{ runner.os }}-go-tools-${{ hashFiles('go.sum') }}
+          key: ${{ runner.os }}-go-tools-${{ steps.go-env.outputs.GOVERSION }}-${{ hashFiles('go.sum', 'justfile') }}
           restore-keys: |
-            ${{ runner.os }}-go-tools-
+            ${{ runner.os }}-go-tools-${{ steps.go-env.outputs.GOVERSION }}-
 
       - name: Run tests with virtual display
         run: |
@@ -274,6 +278,7 @@ jobs:
         run: |
           echo "GOPATH=$(go env GOPATH)" >> $GITHUB_OUTPUT
           echo "GOCACHE=$(go env GOCACHE)" >> $GITHUB_OUTPUT
+          echo "GOVERSION=$(go env GOVERSION)" >> $GITHUB_OUTPUT
 
       - name: Restore Go tools cache
         uses: actions/cache@v6
@@ -281,9 +286,9 @@ jobs:
           path: |
             ${{ steps.go-env.outputs.GOCACHE }}
             ${{ steps.go-env.outputs.GOPATH }}/bin
-          key: ${{ runner.os }}-go-tools-${{ hashFiles('go.sum') }}
+          key: ${{ runner.os }}-go-tools-${{ steps.go-env.outputs.GOVERSION }}-${{ hashFiles('go.sum', 'justfile') }}
           restore-keys: |
-            ${{ runner.os }}-go-tools-
+            ${{ runner.os }}-go-tools-${{ steps.go-env.outputs.GOVERSION }}-
 
       - name: Build application
         run: just build
