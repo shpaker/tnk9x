@@ -236,9 +236,10 @@ func (uc *StageUseCases) TryRespawnPlayersTanks() (*types.TankEntity, *types.Tan
 					uc.stageSession.RestorePlayerLife(num)
 				}
 			} else {
-				if num == types.PlayerTankNumPlayer1 {
+				switch num {
+				case types.PlayerTankNumPlayer1:
 					respawned1 = respawned
-				} else if num == types.PlayerTankNumPlayer2 {
+				case types.PlayerTankNumPlayer2:
 					respawned2 = respawned
 				}
 			}
