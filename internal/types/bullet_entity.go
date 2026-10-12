@@ -4,12 +4,12 @@ import "errors"
 
 type BulletEntity struct {
 	Position     Position
-	PrevPosition Position // Позиция на начало тика: от неё мир коллизий ведёт пулю
+	PrevPosition Position
 	Size         Size
 	Altitude     Altitude
 	Image        IImageProvider
 	Direction    Direction
-	specs        *SpecsEntity // Спецификации танка, из которого выпущена пуля
+	specs        *SpecsEntity
 	owner        *TankEntity
 }
 
@@ -31,7 +31,6 @@ func (b *BulletEntity) GetPosition() Position {
 	return b.Position
 }
 
-// GetPrevPosition реализует IMover
 func (b *BulletEntity) GetPrevPosition() Position {
 	return b.PrevPosition
 }
@@ -60,7 +59,7 @@ func (b *BulletEntity) IsReinforced() bool {
 
 func (b *BulletEntity) GetSpeed() float64 {
 	if b == nil || b.specs == nil {
-		return 120.0 // Значение по умолчанию
+		return 120.0
 	}
 	return b.specs.GetBulletsSpeed()
 }

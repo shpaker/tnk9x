@@ -30,8 +30,6 @@ func (env *spawnCollisionTestEnv) newTankAt(
 	return tank
 }
 
-// Позиция спавнера задана в клетках и масштабируется размером танка:
-// клетка {2, 3} при 16px — прямоугольник (32, 48)-(48, 64)
 func TestSpawnCollisionService_IsSpawnerBlocked(t *testing.T) {
 	spawner := types.Position{X: 2, Y: 3}
 	size := types.Size{Width: 16, Height: 16}
@@ -42,7 +40,7 @@ func TestSpawnCollisionService_IsSpawnerBlocked(t *testing.T) {
 		want  bool
 	}{
 		{
-			name: "танк перекрывает клетку спавнера",
+			name: "tank overlaps the spawner cell",
 			tanks: func(env *spawnCollisionTestEnv) []*types.TankEntity {
 				return []*types.TankEntity{
 					env.newTankAt(40, 56, types.TankStateActive),
@@ -51,7 +49,7 @@ func TestSpawnCollisionService_IsSpawnerBlocked(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "танк далеко от спавнера",
+			name: "tank far from the spawner",
 			tanks: func(env *spawnCollisionTestEnv) []*types.TankEntity {
 				return []*types.TankEntity{
 					env.newTankAt(100, 100, types.TankStateActive),
@@ -60,7 +58,7 @@ func TestSpawnCollisionService_IsSpawnerBlocked(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "танк вплотную к границе клетки",
+			name: "tank flush against the cell border",
 			tanks: func(env *spawnCollisionTestEnv) []*types.TankEntity {
 				return []*types.TankEntity{
 					env.newTankAt(48, 48, types.TankStateActive),
@@ -69,7 +67,7 @@ func TestSpawnCollisionService_IsSpawnerBlocked(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "взрывающийся танк не блокирует спавнер",
+			name: "exploding tank does not block the spawner",
 			tanks: func(env *spawnCollisionTestEnv) []*types.TankEntity {
 				return []*types.TankEntity{
 					env.newTankAt(40, 56, types.TankStateExploding),
@@ -78,7 +76,7 @@ func TestSpawnCollisionService_IsSpawnerBlocked(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "взорванный танк не блокирует спавнер",
+			name: "exploded tank does not block the spawner",
 			tanks: func(env *spawnCollisionTestEnv) []*types.TankEntity {
 				return []*types.TankEntity{
 					env.newTankAt(40, 56, types.TankStateExploded),
@@ -87,7 +85,7 @@ func TestSpawnCollisionService_IsSpawnerBlocked(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "nil-танки пропускаются",
+			name: "nil tanks are skipped",
 			tanks: func(env *spawnCollisionTestEnv) []*types.TankEntity {
 				return []*types.TankEntity{
 					nil,
@@ -97,7 +95,7 @@ func TestSpawnCollisionService_IsSpawnerBlocked(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "без танков спавнер свободен",
+			name: "spawner is free without tanks",
 			tanks: func(env *spawnCollisionTestEnv) []*types.TankEntity {
 				return nil
 			},
@@ -115,7 +113,7 @@ func TestSpawnCollisionService_IsSpawnerBlocked(t *testing.T) {
 			)
 			if got != tt.want {
 				t.Errorf(
-					"IsSpawnerBlocked() = %v, ожидалось %v",
+					"IsSpawnerBlocked() = %v, want %v",
 					got,
 					tt.want,
 				)
@@ -124,7 +122,6 @@ func TestSpawnCollisionService_IsSpawnerBlocked(t *testing.T) {
 	}
 }
 
-// Нулевой размер отключает проверку блокировки
 func TestSpawnCollisionService_IsSpawnerBlocked_ZeroSize(t *testing.T) {
 	env := newSpawnCollisionTestEnv()
 	tanks := []*types.TankEntity{
@@ -137,7 +134,7 @@ func TestSpawnCollisionService_IsSpawnerBlocked_ZeroSize(t *testing.T) {
 		{Height: 16},
 	} {
 		if env.service.IsSpawnerBlocked(types.Position{}, size, tanks) {
-			t.Errorf("размер %v: спавнер считается заблокированным", size)
+			t.Errorf("size %v: spawner reported as blocked", size)
 		}
 	}
 }

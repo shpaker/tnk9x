@@ -17,20 +17,10 @@ type IGameRepositoriesRegistry interface {
 	GetCollisionWorldRepository() ICollisionWorldRepository
 }
 
-// ICollisionWorldRepository — пространственный индекс сущностей уровня:
-// где каждая стоит на конец прошлого тика и кого встретит на пути
 type ICollisionWorldRepository interface {
-	// Sync сверяет мир с уровнем: неподвижные сущности встают на свои
-	// текущие места, новые движущиеся — на позицию начала тика,
-	// пропавшие убираются
 	Sync(static []types.IEntityCollider, movers []types.IMover)
-	// Update переносит сущность на её текущее место без коллизий:
-	// сколотый кирпич, восстановленный блок
 	Update(entity types.IEntityCollider)
-	// Remove убирает сущность из мира
 	Remove(entity types.IEntityCollider)
-	// Move ведёт сущность из её места в мире к goal и возвращает, где
-	// она остановилась, и встречи на пути по порядку
 	Move(
 		entity types.IEntityCollider,
 		goal types.Position,
@@ -38,24 +28,17 @@ type ICollisionWorldRepository interface {
 	) (types.Position, []types.CollisionEntity)
 }
 
-// ISoundEventsRepository хранит очередь звуковых событий кадра
 type ISoundEventsRepository interface {
 	Add(event types.SoundEntity)
 	Drain() []types.SoundEntity
 }
 
-// IVisualEffectsRepository хранит runtime-состояние графических эффектов
-// уровня: очередь визуальных событий кадра, частицы, вспышки и тряску
 type IVisualEffectsRepository interface {
 	AddEvent(event types.VisualEventEntity)
-	// DrainEvents возвращает накопленные события и очищает очередь
 	DrainEvents() []types.VisualEventEntity
 
-	// AddParticle добавляет частицу; сверх лимита частица отбрасывается
 	AddParticle(particle types.ParticleEntity)
-	// GetParticles возвращает частицы для изменения на месте
 	GetParticles() []types.ParticleEntity
-	// SetParticles заменяет набор частиц, например уплотнённым срезом
 	SetParticles(particles []types.ParticleEntity)
 
 	AddFlash(flash types.FlashEntity)
@@ -100,58 +83,43 @@ type IBonusesRepository interface {
 }
 
 type IMapsDataRepository interface {
-	// GetLevel читает уровень; каждый вызов создаёт новую карту
 	GetLevel(num int, tileBaseSize int) (*types.LevelEntity, error)
-	// GetSceneLevel читает карту вне кампании (демо-сцена) по имени
 	GetSceneLevel(name string, tileBaseSize int) (*types.LevelEntity, error)
-	// HasLevel — существует ли файл уровня
 	HasLevel(num int) bool
 
 	GetLevelsCount() (int, error)
 }
 
-// ICampaignRepository — кампании: пачки уровней и условия открытия
 type ICampaignRepository interface {
 	GetCampaign(name string) (*types.CampaignEntity, error)
 }
 
-// IStorageRepository — долговременное хранилище пользовательских
-// данных (сохранения) по ключу
 type IStorageRepository interface {
-	// Load возвращает nil без ошибки, если ключа ещё нет
+	// Load returns nil without error if the key does not exist.
 	Load(key string) ([]byte, error)
 	Save(key string, data []byte) error
 }
 
-// IProgressRepository — прогресс игрока в кампании
 type IProgressRepository interface {
 	GetProgress() (*types.ProgressEntity, error)
 	SaveProgress(progress *types.ProgressEntity) error
 }
 
-// IInventoryRepository — купленное игроком: разовые покупки и жетоны
 type IInventoryRepository interface {
-	// GetInventory возвращает пустой инвентарь, если сохранения ещё нет
 	GetInventory() (*types.InventoryEntity, error)
 	SaveInventory(inventory *types.InventoryEntity) error
 }
 
-// ISettingsRepository — пользовательские настройки (графика,
-// полный экран, громкость)
 type ISettingsRepository interface {
-	// GetSettings возвращает дефолты, если сохранения ещё нет
 	GetSettings() (*types.SettingsEntity, error)
 	SaveSettings(settings *types.SettingsEntity) error
 }
 
-// IControlsRepository — раскладка управления игроков и хоткеев
 type IControlsRepository interface {
-	// GetControls возвращает умолчания, если сохранения ещё нет
 	GetControls() (*types.ControlsEntity, error)
 	SaveControls(controls *types.ControlsEntity) error
 }
 
-// ITilesetRepositoryRegistry — единая точка доступа к тайлсетам по типу
 type ITilesetRepositoryRegistry interface {
 	GetImageData(
 		tilesetType types.TilesetType,
@@ -172,17 +140,14 @@ type IScriptsRepository interface {
 	GetScript(name string) (string, error)
 }
 
-// IShadersRepository отдаёт исходники Kage-шейдеров по имени
 type IShadersRepository interface {
 	GetShader(name string) ([]byte, error)
 }
 
-// IImagesRepository — картинки экранов (логотипы) по имени
 type IImagesRepository interface {
 	GetImage(name string) (image.Image, error)
 }
 
-// ITextsRepository отдаёт файлы локалей: тексты интерфейса языка
 type ITextsRepository interface {
 	GetLocale(language types.Language) ([]byte, error)
 }

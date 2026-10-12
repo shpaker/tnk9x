@@ -37,49 +37,34 @@ import (
 
 const audioSampleRate = 44100
 
-// hudFontSize — размер пиксельного шрифта HUD: глифы PressStart2P
-// нарисованы сеткой 8x8, целый размер даёт чёткие пиксели без фильтрации
+// PressStart2P glyphs are an 8x8 grid; an integer size keeps pixels crisp.
 const hudFontSize = 8
 
-// screenScaleFactor — во сколько раз окно крупнее логического экрана
-// (768x672 -> 256x224)
 const screenScaleFactor = 3
 
-// Логотип сплеша: картинка assets/images/<splashLogoName>.png, пока её
-// нет — надпись splashLogoText
 const (
 	splashLogoName = "shpaker"
 	splashLogoText = "SHPAKER"
 )
 
-// progressKeys — ключи прогресса по режимам: у одиночной игры и игры
-// вдвоём раздельное прохождение
 var progressKeys = [types.MaxPlayers]string{
 	processed.ProgressKeyOnePlayer,
 	processed.ProgressKeyTwoPlayers,
 }
 
-// gameState — контракт состояния приложения, определён у потребителя;
-// Update возвращает запрос перехода (нулевое значение — остаться)
 type gameState interface {
 	Update() types.StateTransition
 	Draw(screen *ebiten.Image)
 }
 
-// frameInput — источник ввода, опрашиваемый раз в кадр до состояния
 type frameInput interface {
 	Update()
 }
 
-// Необязательные возможности состояния, определены у потребителя:
-// состояния сообщают факты, а площадке их передаёт App
 type (
-	// suspendable — состояние реагирует на приостановку игры
-	// площадкой (уровень уходит на паузу)
 	suspendable interface {
 		Suspend()
 	}
-	// gameplayReporter — состояние сообщает, идёт ли активный геймплей
 	gameplayReporter interface {
 		IsGameplayActive() bool
 	}
@@ -90,25 +75,17 @@ var (
 	_ gameplayReporter = (*states.StageState)(nil)
 )
 
-// App — composition root. New собирает только то, что нужно сплешу;
-// остальной граф достраивают шаги загрузчика на сплеше, а стейты,
-// которым он нужен, собираются только после её завершения
-// (переход TransitionToMainMenu отдаёт сплеш)
 type App struct {
 	config *Config
 	state  gameState
 
-	// Контекст приложения: отмена (например, SIGINT) завершает игровой цикл
 	ctx context.Context
 
 	session *session_entities.GameSessionEntity
 
-	// Источники ввода кадра по порядку: тач, меню, затем хоткеи
-	// (добавляются в конце загрузки)
 	frameInputs []frameInput
 	loader      *bootLoader
 
-	// Старт: собирается в New
 	audioContext       *audio.Context
 	fileRepository     interfaces.IFileRepository
 	storageRepository  interfaces.IStorageRepository
@@ -120,27 +97,20 @@ type App struct {
 	menuInput          interfaces.IMenuInputAdapter
 	effectsRenderer    *effects.EffectsRendererAdapter
 	windowAdapter      interfaces.IWindowAdapter
-	// Площадка запуска: десктоп или браузер (страница, портал);
-	// один адаптер реализует все три контракта
-	platformAdapter interfaces.IPlatformAdapter
-	rewardAdapter   interfaces.IRewardAdapter
-	purchaseAdapter interfaces.IPurchaseAdapter
+	platformAdapter    interfaces.IPlatformAdapter
+	rewardAdapter      interfaces.IRewardAdapter
+	purchaseAdapter    interfaces.IPurchaseAdapter
 
-	// Купленное игроком: общее для всех режимов
 	inventory           *types.InventoryEntity
 	inventoryRepository interfaces.IInventoryRepository
 	inventoryUseCases   interfaces.IInventoryUseCases
 
-	// Пользовательские настройки (графика, полный экран, громкость,
-	// язык, режим) и раскладка управления
 	settings *types.SettingsEntity
 	controls *types.ControlsEntity
 
-	// Тексты интерфейса на языке из настроек или языке площадки
 	texts                interfaces.ITextsAdapter
 	localizationUseCases interfaces.ILocalizationUseCases
 
-	// Загружается на сплеше: долгоживущая инфраструктура
 	tilesetRegistry   interfaces.ITilesetRepositoryRegistry
 	spriteCache       *stage.SpriteCache
 	mapsRepository    interfaces.IMapsDataRepository
@@ -149,40 +119,31 @@ type App struct {
 	scriptEngine      interfaces.IAIScriptEngine
 	soundAdapter      *stage.SoundAdapter
 
-	// Экраны настроек общие для главного меню и паузы, хоткеи
-	// работают на всех экранах после загрузки
 	settingsUseCases interfaces.ISettingsUseCases
 	settingsOverlay  *states.SettingsOverlay
 	helpOverlay      *states.HelpOverlay
 
-	// Магазин главного меню
 	shopUseCases   interfaces.IShopUseCases
 	shopOverlay    *states.ShopOverlay
 	hotkeysHandler *states.HotkeysHandler
 
-	// Кампания; уровни для превью экрана выбора не мутируются —
-	// для игры уровень каждый раз читается заново
+	// Preview levels are never mutated; the game re-reads the level each time.
 	campaign            *types.CampaignEntity
 	campaignLevels      map[int]*types.LevelEntity
 	levelSelectRenderer *level_select.LevelSelectRendererAdapter
 	mainMenuRenderer    *main_menu.MainMenuRendererAdapter
 
-	// Stateless-сервисы
 	randomService          interfaces.IRandomService
 	tankCollisionService   interfaces.ITankCollisionService
 	bulletCollisionService interfaces.IBulletCollisionService
 	spawnCollisionService  interfaces.ISpawnCollisionService
 
-	// Use Cases; прогресс и выбор уровня — свои у каждого режима
 	specsUseCases       interfaces.ISpecsUseCases
 	waveUseCases        interfaces.IWaveUseCases
 	progressionUseCases [types.MaxPlayers]interfaces.IProgressionUseCases
 	levelSelectUseCases [types.MaxPlayers]interfaces.ILevelSelectUseCases
 }
 
-// New собирает минимум для сплеша: хранилище, настройки и раскладку,
-// тексты на языке игрока, шрифты, эффекты финального экрана и ввод
-// меню; ресурсы игры грузятся на сплеше по шагу за кадр
 func New(cfg *Config) *App {
 	fileRepository := raw.NewFileRepository(assetsFS())
 	storageRepository := newStorageRepository(cfg)
@@ -193,8 +154,7 @@ func New(cfg *Config) *App {
 	inventoryRepository := processed.NewInventoryRepository(storageRepository)
 	inventory := loadInventory(inventoryRepository)
 
-	// Шейдеры нужны финальному экрану с первого кадра: ошибка
-	// в исходнике останавливает запуск до открытия окна
+	// Shaders are needed from the first frame: fail before the window opens.
 	effectsRenderer, err := effects.NewEffectsRendererAdapter(
 		processed.NewShadersRepository(fileRepository),
 	)
@@ -214,8 +174,6 @@ func New(cfg *Config) *App {
 	menuInput := menu_input.NewMenuInputAdapter(touchControls)
 	platformAdapter := platform.NewPlatformAdapter()
 
-	// Язык определяется при запуске, до первого кадра: язык из
-	// настроек, иначе язык площадки
 	textsAdapter, err := texts.NewTextsAdapter(
 		processed.NewTextsRepository(fileRepository),
 		cfg.Languages,
@@ -277,8 +235,6 @@ func New(cfg *Config) *App {
 	return app
 }
 
-// mustLoad останавливает запуск при ошибке ресурса: проблемы данных
-// видны сразу, а не посреди игры
 func mustLoad(what string, err error) {
 	if err != nil {
 		fmt.Printf("Error %s: %v\n", what, err)
@@ -286,8 +242,6 @@ func mustLoad(what string, err error) {
 	}
 }
 
-// splashLogo — логотип дизайнера из assets/images, пока его нет —
-// текстовая заглушка
 func (app *App) splashLogo() splash.Logo {
 	img, err := processed.NewImagesRepository(app.fileRepository).
 		GetImage(splashLogoName)
@@ -298,8 +252,6 @@ func (app *App) splashLogo() splash.Logo {
 	return splash.NewImageLogo(img)
 }
 
-// loadSprites — тайлсеты и fail-fast проверка спрайтов: все
-// идентификаторы, на которые ссылается код, существуют в тайлсетах
 func (app *App) loadSprites() {
 	tilesetRegistry, err := processed.NewTilesetRepositoryRegistry(
 		app.fileRepository,
@@ -318,8 +270,6 @@ func (app *App) loadSprites() {
 	app.tilesetRegistry = tilesetRegistry
 }
 
-// preloadSprites — кэш GPU-спрайтов общий для всех уровней; прогрев
-// делает стоимость кадра детерминированной
 func (app *App) preloadSprites() {
 	app.spriteCache = stage.NewSpriteCache(
 		use_cases.NewSpriteUseCases(app.tilesetRegistry),
@@ -327,8 +277,6 @@ func (app *App) preloadSprites() {
 	app.spriteCache.Preload(types.AllTilesetTypes())
 }
 
-// loadCampaign — карты и fail-fast проверка кампании: все уровни
-// существуют и разбираются
 func (app *App) loadCampaign() {
 	app.mapsRepository = processed.NewMapsDataRepository(
 		app.fileRepository,
@@ -353,8 +301,6 @@ func (app *App) loadCampaign() {
 	app.campaignLevels = campaignLevels
 }
 
-// loadProgress — прогресс кампании каждого режима в своём ключе
-// хранилища
 func (app *App) loadProgress() {
 	for mode, key := range progressKeys {
 		repository := processed.NewProgressRepository(
@@ -378,8 +324,6 @@ func (app *App) loadScripts() {
 	app.scriptEngine = scripting.NewLuaEngine(services.NewNavigationService())
 }
 
-// loadSounds — звуковой адаптер общий для всех уровней: PCM
-// декодируется один раз, плееры живут на единственном audio.Context
 func (app *App) loadSounds() {
 	app.soundsRepository = processed.NewSoundsRepository(app.fileRepository)
 	soundAdapter, err := stage.NewSoundAdapter(
@@ -391,10 +335,8 @@ func (app *App) loadSounds() {
 	app.soundAdapter = soundAdapter
 }
 
-// assembleGame достраивает граф: сервисы, use cases, экраны настроек
-// и раскладки, хоткеи и рендеры меню. FULLSCREEN в настройках —
-// только там, где окно можно развернуть при старте (в браузере —
-// только жестом)
+// FULLSCREEN in settings only where the window can be maximized at start
+// (in a browser, only by gesture).
 func (app *App) assembleGame() {
 	cfg := app.config
 	app.tankCollisionService = collision_services.NewTankCollisionService(
@@ -485,8 +427,6 @@ func (app *App) assembleGame() {
 	app.assembleShop()
 }
 
-// assembleShop — магазин главного меню и зачисление покупок,
-// сделанных до запуска (в том числе не списанных площадкой)
 func (app *App) assembleShop() {
 	cfg := app.config
 	app.shopUseCases = use_cases.NewShopUseCases(
@@ -514,8 +454,6 @@ func (app *App) assembleShop() {
 	)
 }
 
-// loadCampaignLevels читает все уровни кампании: ошибка в любом
-// файле останавливает запуск
 func loadCampaignLevels(
 	campaign *types.CampaignEntity,
 	mapsRepository interfaces.IMapsDataRepository,
@@ -534,9 +472,6 @@ func loadCampaignLevels(
 	return levels, nil
 }
 
-// newStorageRepository — пользовательское хранилище прогресса,
-// настроек и раскладки: файлы в каталоге конфигурации ОС на десктопе,
-// хранилище площадки (мост window.tnk9xPlatform) в браузере
 func newStorageRepository(cfg *Config) interfaces.IStorageRepository {
 	dir, err := raw.DefaultStorageDir(cfg.GetGameTitle())
 	if err != nil {
@@ -546,8 +481,6 @@ func newStorageRepository(cfg *Config) interfaces.IStorageRepository {
 	return raw.NewStorageRepository(dir)
 }
 
-// loadSettings читает настройки; повреждённое или недоступное
-// сохранение не мешает игре — начинаем с настроек по умолчанию
 func loadSettings(
 	repository interfaces.ISettingsRepository,
 ) *types.SettingsEntity {
@@ -558,8 +491,6 @@ func loadSettings(
 	return settings
 }
 
-// loadControls читает раскладку; повреждённое сохранение не мешает
-// игре, а неизвестные движку имена заменяются умолчаниями
 func loadControls(
 	repository interfaces.IControlsRepository,
 ) *types.ControlsEntity {
@@ -571,8 +502,6 @@ func loadControls(
 	return controls
 }
 
-// loadInventory читает купленное; повреждённое сохранение
-// не мешает игре, покупки площадки зачислятся при синхронизации
 func loadInventory(
 	repository interfaces.IInventoryRepository,
 ) *types.InventoryEntity {
@@ -583,8 +512,6 @@ func loadInventory(
 	return inventory
 }
 
-// loadProgress читает прогресс; повреждённое или недоступное
-// сохранение не мешает игре — начинаем с чистого прогресса
 func loadProgress(
 	repository interfaces.IProgressRepository,
 ) *types.ProgressEntity {
@@ -595,21 +522,16 @@ func loadProgress(
 	return progress
 }
 
-// mode — индекс текущего режима: 0 — один игрок, 1 — двое
 func (app *App) mode() int {
 	return int(app.settings.GetPlayers()) - 1
 }
 
-// newMainMenuState собирает главное меню над живой сценой с названием
-// из блоков; в браузере ebiten.Termination заморозил бы canvas,
-// поэтому выход есть только на десктопе, а магазин — только там,
-// где площадка продаёт товары
+// No exit in the browser: ebiten.Termination would freeze the canvas.
 func (app *App) newMainMenuState() (*states.MainMenuState, error) {
 	scene, err := app.newDemoScene()
 	if err != nil {
 		return nil, err
 	}
-	// Площадка могла ответить о покупках позже запуска игры
 	if err := app.shopUseCases.Sync(); err != nil {
 		log.Printf("sync purchases: %v", err)
 	}
@@ -627,8 +549,6 @@ func (app *App) newMainMenuState() (*states.MainMenuState, error) {
 	}), nil
 }
 
-// newLevelSelectState собирает экран выбора уровня кампании текущего
-// режима; курсор встаёт на lastLevel или на последний открытый уровень
 func (app *App) newLevelSelectState(lastLevel int) *states.LevelSelectState {
 	return states.NewLevelSelectState(states.LevelSelectStateDependencies{
 		LevelSelectUseCases: app.levelSelectUseCases[app.mode()],
@@ -654,10 +574,8 @@ func (app *App) Update() error {
 		}
 	}
 
-	// Площадка опрашивается первой: пока она приостановила игру
-	// (реклама, скрытая вкладка), кадр пропускается целиком — ни
-	// ввода, ни обновления состояния. Начало приостановки отдаётся
-	// состоянию: уровень уходит на паузу
+	// Poll the platform first: while it suspends the game (ads, hidden tab)
+	// the whole frame is skipped.
 	app.platformAdapter.Update()
 	if app.platformAdapter.IsJustSuspended() {
 		if state, ok := app.state.(suspendable); ok {
@@ -670,9 +588,7 @@ func (app *App) Update() error {
 		return nil
 	}
 
-	// Ввод опрашивается один раз на кадр до обновления состояния:
-	// тач — первым, меню собирает в том числе его события; затем
-	// глобальные хоткеи
+	// Input is polled once per frame before the state update: touch first, then hotkeys.
 	for _, input := range app.frameInputs {
 		input.Update()
 	}
@@ -681,31 +597,24 @@ func (app *App) Update() error {
 	err := app.applyTransition(transition)
 	gameplayActive := app.isGameplayActive()
 	app.platformAdapter.SetGameplayActive(gameplayActive)
-	// Мышь управляет только меню: в бою курсор спрятан
 	app.windowAdapter.SetCursorVisible(!gameplayActive)
 
 	return err
 }
 
-// isGameplayActive — идёт ли в текущем состоянии активный геймплей
 func (app *App) isGameplayActive() bool {
 	state, ok := app.state.(gameplayReporter)
 	return ok && state.IsGameplayActive()
 }
 
-// applyTransition применяет запрошенный стейтом переход:
-// записывает параметры в сессию и собирает новое состояние
 func (app *App) applyTransition(transition types.StateTransition) error {
-	// Логическая пауза: площадка может показать рекламу до первого
-	// кадра нового состояния; купленное «без рекламы» её отключает
+	// Logical pause: the platform may show an ad before the new state's first frame.
 	if transition.Intermission {
 		app.platformAdapter.SetGameplayActive(false)
 		if !app.inventoryUseCases.HasNoAds() {
 			app.platformAdapter.RequestIntermission()
 		}
 	}
-	// Победа: после нескольких за сессию площадка может попросить
-	// оценить игру
 	if transition.Victory {
 		app.session.AddVictory()
 		after := app.config.RatingAfterVictories
@@ -737,12 +646,8 @@ func (app *App) applyTransition(transition types.StateTransition) error {
 			return err
 		}
 		app.state = mainMenu
-		// Главное меню — первый экран, где игрок может играть:
-		// загрузка позади (повторные вызовы площадка игнорирует)
 		app.platformAdapter.Ready()
 	case types.TransitionToQuit:
-		// Пункт QUIT главного меню; в js-сборке выхода нет,
-		// поэтому переход возможен только на десктопе
 		return ebiten.Termination
 	}
 
@@ -764,7 +669,7 @@ func (app *App) Run(ctx context.Context) error {
 	ebiten.SetWindowTitle(
 		fmt.Sprintf("%s v%s", app.config.GetGameTitle(), Version),
 	)
-	// В браузере полный экран разрешён только по жесту пользователя
+	// In a browser, fullscreen is allowed only on a user gesture.
 	if runtime.GOOS != "js" {
 		app.windowAdapter.SetFullscreen(app.settings.IsFullscreen())
 	}
@@ -772,8 +677,6 @@ func (app *App) Run(ctx context.Context) error {
 	return ebiten.RunGame(app)
 }
 
-// Close освобождает ресурсы; игру могут закрыть ещё на сплеше,
-// до загрузки скриптов и звуков
 func (app *App) Close() {
 	if app.scriptEngine != nil {
 		app.scriptEngine.Close()

@@ -39,7 +39,6 @@ func TestApplyDecisionRotatesAndMoves(t *testing.T) {
 	}
 }
 
-// Решение без движения только поворачивает танк: он стоит и целится
 func TestApplyDecisionWithoutMoveKeepsTankStopped(t *testing.T) {
 	actions := tank_use_cases.NewTankActionsUseCases(
 		nil,
@@ -80,7 +79,6 @@ func newDrivingTank(x float64) *types.TankEntity {
 	return testutil.MovingTank(&tank)
 }
 
-// Поворот на ходу не поворачивает сразу: танк сначала докатывает
 func TestRotateWhileMovingDefersTurn(t *testing.T) {
 	actions := newMotionActions()
 	tank := newDrivingTank(101)
@@ -93,7 +91,6 @@ func TestRotateWhileMovingDefersTurn(t *testing.T) {
 	}
 }
 
-// Повторное нажатие во время докатывания едет дальше
 func TestMoveCancelsDocking(t *testing.T) {
 	actions := newMotionActions()
 	tank := newDrivingTank(101)
@@ -107,7 +104,6 @@ func TestMoveCancelsDocking(t *testing.T) {
 	}
 }
 
-// Упёршийся танк встаёт на месте, без выравнивания по сетке
 func TestStopByCollisionHaltsInPlace(t *testing.T) {
 	actions := newMotionActions()
 	tank := newDrivingTank(101)

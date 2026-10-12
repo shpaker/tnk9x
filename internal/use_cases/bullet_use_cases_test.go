@@ -56,7 +56,6 @@ func (env *bulletTestEnv) newShooter(
 	return tank
 }
 
-// Позиции вылета пули по направлениям (танк 16px в точке 100,60)
 func TestBulletUseCases_ShootBullet_MuzzlePositions(t *testing.T) {
 	tests := []struct {
 		name      string
@@ -64,10 +63,10 @@ func TestBulletUseCases_ShootBullet_MuzzlePositions(t *testing.T) {
 		wantX     float64
 		wantY     float64
 	}{
-		{"вверх", types.DirectionUp, 106, 56},
-		{"вниз", types.DirectionDown, 106, 68},
-		{"влево", types.DirectionLeft, 96, 66},
-		{"вправо", types.DirectionRight, 108, 66},
+		{"up", types.DirectionUp, 106, 56},
+		{"down", types.DirectionDown, 106, 68},
+		{"left", types.DirectionLeft, 96, 66},
+		{"right", types.DirectionRight, 108, 66},
 	}
 
 	for _, tt := range tests {
@@ -76,70 +75,67 @@ func TestBulletUseCases_ShootBullet_MuzzlePositions(t *testing.T) {
 			tank := env.newShooter(tt.direction, 100, 60, 0)
 
 			if _, err := env.bulletUC.ShootBullet(tank); err != nil {
-				t.Fatalf("выстрел не удался: %v", err)
+				t.Fatalf("shot failed: %v", err)
 			}
 
 			bullets := env.bulletUC.GetBullets()
 			if len(bullets) != 1 {
-				t.Fatalf("ожидалась 1 пуля, получено %d", len(bullets))
+				t.Fatalf("want 1 bullet, got %d", len(bullets))
 			}
 
 			bullet := bullets[0]
 			want := types.Position{X: tt.wantX, Y: tt.wantY}
 			if bullet.Position != want {
 				t.Errorf(
-					"позиция пули %v, ожидалась %v",
+					"bullet position %v, want %v",
 					bullet.Position,
 					want,
 				)
 			}
 			if bullet.Direction != tt.direction {
-				t.Errorf("направление пули %v", bullet.Direction)
+				t.Errorf("bullet direction %v", bullet.Direction)
 			}
 			if bullet.GetSize() != (types.Size{Width: 4, Height: 4}) {
-				t.Errorf("размер пули %v", bullet.GetSize())
+				t.Errorf("bullet size %v", bullet.GetSize())
 			}
 			if bullet.GetAltitude() != types.SURFACE {
-				t.Errorf("высота пули %v", bullet.GetAltitude())
+				t.Errorf("bullet altitude %v", bullet.GetAltitude())
 			}
 			if bullet.GetOwner() != tank {
-				t.Errorf("владелец пули не танк-стрелок")
+				t.Errorf("bullet owner is not the shooter")
 			}
 			if bullet.GetSpecs() != tank.GetSpecs() {
-				t.Errorf("спецификации пули не от танка")
+				t.Errorf("bullet specs are not the tank specs")
 			}
 			if id, err := bullet.GetImageID(); err != nil || id != "bullet" {
-				t.Errorf("изображение пули: id=%q err=%v", id, err)
+				t.Errorf("bullet image: id=%q err=%v", id, err)
 			}
 		})
 	}
 }
 
-// Лимит пуль одного владельца: вторая пуля молча не добавляется,
-// выстрел не засчитывается
+// The second bullet is silently rejected; the shot does not count.
 func TestBulletUseCases_ShootBullet_OwnerLimit(t *testing.T) {
 	env := newBulletTestEnv()
 
-	// Уровень 0: лимит 1 пуля
 	tank := env.newShooter(types.DirectionUp, 100, 60, 0)
 	if fired, err := env.bulletUC.ShootBullet(tank); err != nil || !fired {
-		t.Fatalf("первый выстрел: fired=%v err=%v", fired, err)
+		t.Fatalf("first shot: fired=%v err=%v", fired, err)
 	}
 	if fired, err := env.bulletUC.ShootBullet(tank); err != nil || fired {
-		t.Fatalf("повторный выстрел: fired=%v err=%v", fired, err)
+		t.Fatalf("second shot: fired=%v err=%v", fired, err)
 	}
 	if got := len(env.bulletUC.GetBullets()); got != 1 {
-		t.Fatalf("ожидалась 1 пуля при лимите 1, получено %d", got)
+		t.Fatalf("want 1 bullet at limit 1, got %d", got)
 	}
 
-	// Уровень 3: лимит 2 пули
 	env = newBulletTestEnv()
 	tank = env.newShooter(types.DirectionUp, 100, 60, 3)
 	_, _ = env.bulletUC.ShootBullet(tank)
 	_, _ = env.bulletUC.ShootBullet(tank)
 	_, _ = env.bulletUC.ShootBullet(tank)
 	if got := len(env.bulletUC.GetBullets()); got != 2 {
-		t.Fatalf("ожидалось 2 пули при лимите 2, получено %d", got)
+		t.Fatalf("want 2 bullets at limit 2, got %d", got)
 	}
 }
 
@@ -149,13 +145,13 @@ func TestBulletUseCases_ShootBullet_InactiveTank(t *testing.T) {
 	tank.State = types.TankStateSpawning
 
 	if fired, err := env.bulletUC.ShootBullet(tank); err != nil || fired {
-		t.Fatalf("неактивный танк: fired=%v err=%v", fired, err)
+		t.Fatalf("inactive tank: fired=%v err=%v", fired, err)
 	}
 	if got := len(env.bulletUC.GetBullets()); got != 0 {
-		t.Errorf("неактивный танк выстрелил: %d пуль", got)
+		t.Errorf("inactive tank fired: %d bullets", got)
 	}
 	if got := len(env.registry.Requested); got != 0 {
-		t.Errorf("тайл пули запрошен для неактивного танка: %d", got)
+		t.Errorf("bullet tile requested for inactive tank: %d", got)
 	}
 }
 
@@ -165,14 +161,13 @@ func TestBulletUseCases_ShootBullet_TileError(t *testing.T) {
 	tank := env.newShooter(types.DirectionUp, 100, 60, 0)
 
 	if _, err := env.bulletUC.ShootBullet(tank); err == nil {
-		t.Fatal("ожидалась ошибка создания тайла")
+		t.Fatal("want tile creation error")
 	}
 	if got := len(env.bulletUC.GetBullets()); got != 0 {
-		t.Errorf("пуля добавлена при ошибке тайла: %d", got)
+		t.Errorf("bullet added despite tile error: %d", got)
 	}
 }
 
-// Движение пуль по направлениям со скоростью из спецификаций
 func TestBulletUseCases_UpdateBullets_Movement(t *testing.T) {
 	tests := []struct {
 		name      string
@@ -182,13 +177,11 @@ func TestBulletUseCases_UpdateBullets_Movement(t *testing.T) {
 		wantDX    float64
 		wantDY    float64
 	}{
-		// Уровень 0: скорость пули 120
-		{"вверх", types.DirectionUp, 0, 0.5, 0, -60},
-		{"вниз", types.DirectionDown, 0, 0.5, 0, 60},
-		{"влево", types.DirectionLeft, 0, 0.5, -60, 0},
-		{"вправо", types.DirectionRight, 0, 0.5, 60, 0},
-		// Уровень 1: скорость пули 150
-		{"вверх быстрее", types.DirectionUp, 1, 0.5, 0, -75},
+		{"up", types.DirectionUp, 0, 0.5, 0, -60},
+		{"down", types.DirectionDown, 0, 0.5, 0, 60},
+		{"left", types.DirectionLeft, 0, 0.5, -60, 0},
+		{"right", types.DirectionRight, 0, 0.5, 60, 0},
+		{"up faster", types.DirectionUp, 1, 0.5, 0, -75},
 	}
 
 	for _, tt := range tests {
@@ -196,14 +189,14 @@ func TestBulletUseCases_UpdateBullets_Movement(t *testing.T) {
 			env := newBulletTestEnv()
 			tank := env.newShooter(tt.direction, 100, 60, tt.level)
 			if _, err := env.bulletUC.ShootBullet(tank); err != nil {
-				t.Fatalf("выстрел: %v", err)
+				t.Fatalf("shot: %v", err)
 			}
 
 			bullet := env.bulletUC.GetBullets()[0]
 			start := bullet.Position
 
 			if err := env.bulletUC.UpdateBullets(tt.dt); err != nil {
-				t.Fatalf("обновление: %v", err)
+				t.Fatalf("update: %v", err)
 			}
 
 			want := types.Position{
@@ -212,7 +205,7 @@ func TestBulletUseCases_UpdateBullets_Movement(t *testing.T) {
 			}
 			if bullet.Position != want {
 				t.Errorf(
-					"позиция %v, ожидалась %v",
+					"position %v, want %v",
 					bullet.Position,
 					want,
 				)
@@ -225,23 +218,22 @@ func TestBulletUseCases_RemoveBullet(t *testing.T) {
 	env := newBulletTestEnv()
 	tank := env.newShooter(types.DirectionUp, 100, 60, 0)
 	if _, err := env.bulletUC.ShootBullet(tank); err != nil {
-		t.Fatalf("выстрел: %v", err)
+		t.Fatalf("shot: %v", err)
 	}
 	bullet := env.bulletUC.GetBullets()[0]
 
 	if err := env.bulletUC.RemoveBullet(bullet); err != nil {
-		t.Fatalf("удаление: %v", err)
+		t.Fatalf("removal: %v", err)
 	}
 	if got := len(env.bulletUC.GetBullets()); got != 0 {
-		t.Errorf("пуля не удалена: %d", got)
+		t.Errorf("bullet not removed: %d", got)
 	}
 	if err := env.bulletUC.RemoveBullet(bullet); err == nil {
-		t.Error("повторное удаление не вернуло ошибку")
+		t.Error("second removal returned no error")
 	}
 }
 
-// Пока пуля в полёте, повторное нажатие не даёт ни звука, ни вспышки
-// с отдачей: выстрела не было
+// While a bullet is in flight, pressing again gives no sound or flash.
 func TestTankActionsUseCases_Shoot_NoEffectsWhileBulletFlies(t *testing.T) {
 	env := newBulletTestEnv()
 	soundUC := use_cases.NewSoundUseCases(game.NewSoundEventsRepository())
@@ -257,20 +249,19 @@ func TestTankActionsUseCases_Shoot_NoEffectsWhileBulletFlies(t *testing.T) {
 
 	for range 3 {
 		if err := tankActions.Shoot(tank); err != nil {
-			t.Fatalf("выстрел: %v", err)
+			t.Fatalf("shot: %v", err)
 		}
 	}
 
 	if got := len(effects.Events); got != 1 {
-		t.Errorf("эффектов выстрела %d, ожидался 1", got)
+		t.Errorf("shot effects %d, want 1", got)
 	}
 	if got := countSounds(soundUC.GetEvents(), types.SoundIDFire); got != 1 {
-		t.Errorf("звуков выстрела %d, ожидался 1", got)
+		t.Errorf("shot sounds %d, want 1", got)
 	}
 }
 
-// С перезарядкой повторный выстрел возможен только после паузы,
-// даже если прошлая пуля уже исчезла
+// With cooldown a repeat shot needs a pause, even if the last bullet is gone.
 func TestBulletUseCases_ShootBullet_Reload(t *testing.T) {
 	env := newBulletTestEnv()
 	tilesUC := use_cases.NewTilesUseCases(
@@ -283,18 +274,17 @@ func TestBulletUseCases_ShootBullet_Reload(t *testing.T) {
 	tank := env.newShooter(types.DirectionUp, 100, 60, 0)
 
 	if fired, _ := bulletUC.ShootBullet(tank); !fired {
-		t.Fatal("первый выстрел должен пройти")
+		t.Fatal("first shot must succeed")
 	}
-	// Пуля попала в стену вплотную и исчезла
 	for _, bullet := range bulletUC.GetBullets() {
 		_ = bulletUC.RemoveBullet(bullet)
 	}
 	if fired, _ := bulletUC.ShootBullet(tank); fired {
-		t.Fatal("во время перезарядки выстрела быть не должно")
+		t.Fatal("no shot expected during cooldown")
 	}
 
 	tank.UpdateReload(tank.GetSpecs().GetReloadTime())
 	if fired, _ := bulletUC.ShootBullet(tank); !fired {
-		t.Error("после перезарядки выстрел должен пройти")
+		t.Error("shot must succeed after cooldown")
 	}
 }

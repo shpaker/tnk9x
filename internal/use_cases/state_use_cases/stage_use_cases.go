@@ -9,12 +9,9 @@ import (
 
 var _ interfaces.IStageUseCases = (*StageUseCases)(nil)
 
-// initialEnemiesCount — сколько врагов выходит сразу при старте уровня;
-// как в оригинале: первый танк появляется один, остальные — по интервалу волны
+// As in the original: the first tank spawns alone, the rest follow the wave interval.
 const initialEnemiesCount = 1
 
-// coopExtraActiveEnemies — прибавка к лимиту активных врагов
-// при игре вдвоём
 const coopExtraActiveEnemies = 2
 
 type StageUseCases struct {
@@ -73,8 +70,6 @@ func (uc *StageUseCases) ResumeStageState() {
 	}
 }
 
-// SpawnPlayerTank реализует IStageUseCases: возрождение танка игрока
-// всегда с нулевой прокачкой
 func (uc *StageUseCases) SpawnPlayerTank(
 	role types.TankRole,
 ) *types.TankEntity {
@@ -117,10 +112,6 @@ func (uc *StageUseCases) spawnPlayerTank(
 	return playerTank
 }
 
-// PlacePlayerTank реализует IStageUseCases: на старте уровня танк
-// игрока сразу стоит на карте — со светом и зрением с первого кадра;
-// возрождение после гибели по-прежнему идёт через анимацию появления.
-// Прокачка — из снимка прошлого уровня при переносе
 func (uc *StageUseCases) PlacePlayerTank(
 	role types.TankRole,
 ) *types.TankEntity {
@@ -136,14 +127,11 @@ func (uc *StageUseCases) PlacePlayerTank(
 	return tank
 }
 
-// SpawnInitialEnemyTanks выводит первых врагов сценария сразу
-// на разные спаунеры по порядку
 func (uc *StageUseCases) SpawnInitialEnemyTanks() []*types.TankEntity {
 	if uc.stageSession == nil {
 		return nil
 	}
 
-	// Сбрасываем учёт уничтоженных врагов при спавне начальных врагов
 	uc.stageSession.ClearDestroyedEnemiesTracking()
 
 	count := min(
@@ -230,8 +218,7 @@ func (uc *StageUseCases) TryRespawnPlayersTanks() (*types.TankEntity, *types.Tan
 			respawned := uc.SpawnPlayerTank(role)
 
 			if respawned == nil {
-				// Спаунер занят: жизнь вернётся и спишется
-				// при следующей попытке
+				// Spawner is busy: the life is returned and charged again on the next attempt.
 				if !uc.stageSession.IsPlayerDefeated(num) {
 					uc.stageSession.RestorePlayerLife(num)
 				}
@@ -275,8 +262,6 @@ func (uc *StageUseCases) TrySpawnEnemy() *types.TankEntity {
 	return uc.spawnWaveTank(spawnerIndex)
 }
 
-// spawnWaveTank выводит следующий танк сценария на спаунер;
-// nil — волна ещё не началась или спаун не удался
 func (uc *StageUseCases) spawnWaveTank(spawnerIndex int) *types.TankEntity {
 	tank, ok := uc.waveUseCases.NextTank(uc.stageSession)
 	if !ok {
@@ -296,7 +281,6 @@ func (uc *StageUseCases) spawnWaveTank(spawnerIndex int) *types.TankEntity {
 	return spawned
 }
 
-// maxActiveEnemies — лимит активных врагов уровня с учётом кооператива
 func (uc *StageUseCases) maxActiveEnemies() uint {
 	limit := uc.stageSession.GetMaxActiveEnemies()
 	if uc.stageSession.GetPlayerCount() > 1 {
@@ -365,7 +349,6 @@ func (uc *StageUseCases) IsStageFinished() bool {
 	return uc.IsStageWon() || uc.IsStageLost()
 }
 
-// GetStageResult — итог уровня: исход, потерянные жизни и время
 func (uc *StageUseCases) GetStageResult() types.StageResult {
 	if uc.stageSession == nil {
 		return types.StageResult{}
@@ -378,8 +361,6 @@ func (uc *StageUseCases) GetStageResult() types.StageResult {
 	}
 }
 
-// SaveCarryOver реализует IStageUseCases: жизни и прокачка танков
-// игроков на момент победы
 func (uc *StageUseCases) SaveCarryOver() {
 	if uc.stageSession == nil {
 		return
@@ -393,7 +374,7 @@ func (uc *StageUseCases) SaveCarryOver() {
 		switch {
 		case tank == nil:
 		case tank.IsDestroyed():
-			// Жизнь списывается при возрождении, которого уже не будет
+			// The life is charged on respawn, which will no longer happen.
 			if lives > 0 {
 				lives--
 			}
@@ -404,15 +385,12 @@ func (uc *StageUseCases) SaveCarryOver() {
 	}
 }
 
-// BoostCarryOver реализует IStageUseCases
 func (uc *StageUseCases) BoostCarryOver() {
 	uc.stageSession.BoostCarryOver()
 }
 
-// CanRevivePlayers реализует IStageUseCases: второй шанс — только
-// при поражении потерей жизней. Штаб должен быть цел, а не просто
-// не разрушен: взрывающийся на паузе штаб так и остался бы
-// взрывающимся. Без оставшихся врагов возрождение дало бы победу
+// Second chance only after losing by lives. HQ must be intact (an exploding one would
+// stay exploding on pause); with no enemies left, reviving would turn the loss into a win.
 func (uc *StageUseCases) CanRevivePlayers() bool {
 	if uc.stageSession.IsReviveUsed() || !uc.IsStageLost() {
 		return false
@@ -422,7 +400,6 @@ func (uc *StageUseCases) CanRevivePlayers() bool {
 		uc.stageSession.GetRemainingEnemies() > 0
 }
 
-// RevivePlayers реализует IStageUseCases
 func (uc *StageUseCases) RevivePlayers() {
 	uc.stageSession.RevivePlayers()
 }
@@ -447,7 +424,6 @@ func (uc *StageUseCases) trackDestroyedEnemies() {
 				continue
 			}
 
-			// Если враг с бонусом уничтожен, удаляем все бонусы без owner'а и спавним новый
 			if tank.GetWithBonus() {
 				uc.handleEnemyWithBonusDestroyed()
 			}
@@ -456,17 +432,14 @@ func (uc *StageUseCases) trackDestroyedEnemies() {
 }
 
 func (uc *StageUseCases) handleEnemyWithBonusDestroyed() {
-	// Удаляем все бонусы без owner'а
 	if uc.bonusesRepository != nil {
 		uc.bonusesRepository.RemoveBonusesWithoutOwner()
 	}
 
-	// Спавним новый рандомный бонус используя BonusUseCases.SpawnRandomBonusEntity
 	if uc.mapUseCases == nil || uc.bonusUseCases == nil {
 		return
 	}
 
-	// Получаем размер базового тайла для проверки коллизий
 	baseSizePx := uint(16)
 	bonusSize := types.Size{
 		Width:  int(baseSizePx),
@@ -475,18 +448,15 @@ func (uc *StageUseCases) handleEnemyWithBonusDestroyed() {
 
 	const maxAttempts = 3
 	for attempt := 0; attempt < maxAttempts; attempt++ {
-		// Получаем случайную позицию для спавна бонуса
 		position := uc.mapUseCases.GetRandomBonusSpawnPosition()
 
-		// Создаем временную сущность бонуса для проверки коллизий
 		bonusCandidate := types.NewBonusEntity(
-			types.BonusTypeGrenade, // Тип не важен для проверки коллизий
+			types.BonusTypeGrenade,
 			position,
 			bonusSize,
-			nil, // Изображение не нужно для проверки коллизий
+			nil,
 		)
 
-		// Проверяем коллизии с танками используя collisionUseCases
 		hasTankCollision := false
 		if uc.collisionUseCases != nil {
 			hasTankCollision = uc.collisionUseCases.IsSpawnerBlocked(
@@ -502,13 +472,11 @@ func (uc *StageUseCases) handleEnemyWithBonusDestroyed() {
 			continue
 		}
 
-		// Бонус не должен лечь на штаб
 		if hq := uc.hqUseCases.GetHQ(); hq != nil &&
 			types.Overlaps(bonusCandidate, hq) {
 			continue
 		}
 
-		// Проверяем коллизии с блоками
 		blocks := uc.mapUseCases.GetBlocks()
 		hasBlockCollision := false
 		for _, block := range blocks {
@@ -522,7 +490,6 @@ func (uc *StageUseCases) handleEnemyWithBonusDestroyed() {
 		}
 
 		if !hasBlockCollision {
-			// Используем BonusUseCases для создания бонуса
 			bonus := uc.bonusUseCases.SpawnRandomBonusEntity(position)
 			if bonus != nil && uc.bonusesRepository != nil {
 				uc.bonusesRepository.AddBonus(bonus)

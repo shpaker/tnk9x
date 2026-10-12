@@ -1,7 +1,5 @@
 package types
 
-// BorderEntity — невидимая стена за краем карты: танки упираются
-// в неё, пули гаснут
 type BorderEntity struct {
 	Position Position
 	Size     Size
@@ -10,11 +8,9 @@ type BorderEntity struct {
 func (b *BorderEntity) GetSize() Size         { return b.Size }
 func (b *BorderEntity) GetPosition() Position { return b.Position }
 
-// GetAltitude — край карты преграждает путь на любой высоте
 func (b *BorderEntity) GetAltitude() Altitude { return SURFACE }
 
-// NewMapBorders окружает карту размера sizePx четырьмя стенами
-// толщиной в саму карту: их не перелететь ни на какой скорости
+// Borders are as thick as the map itself, so no speed can tunnel through them.
 func NewMapBorders(sizePx Size) []*BorderEntity {
 	w, h := sizePx.Width, sizePx.Height
 	thick := max(w, h)

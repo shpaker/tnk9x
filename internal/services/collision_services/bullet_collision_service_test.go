@@ -41,61 +41,61 @@ func TestBulletCollisionService_Response(t *testing.T) {
 		want   types.CollisionResponse
 	}{
 		{
-			"кирпич",
+			"brick",
 			playerBullet,
 			types.NewBlockEntity("brick", 0, 0, 8, nil),
 			types.CollisionCross,
 		},
 		{
-			"сталь",
+			"steel",
 			playerBullet,
 			types.NewBlockEntity("steel", 0, 0, 8, nil),
 			types.CollisionCross,
 		},
 		{
-			"вода",
+			"water",
 			playerBullet,
 			types.NewBlockEntity("water", 0, 0, 8, nil),
 			types.CollisionIgnore,
 		},
 		{
-			"лес",
+			"forest",
 			playerBullet,
 			types.NewBlockEntity("forest", 0, 0, 8, nil),
 			types.CollisionIgnore,
 		},
 		{
-			"лёд",
+			"ice",
 			playerBullet,
 			types.NewBlockEntity("ice", 0, 0, 8, nil),
 			types.CollisionIgnore,
 		},
 		{
-			"край карты",
+			"map edge",
 			playerBullet,
 			&types.BorderEntity{},
 			types.CollisionCross,
 		},
-		{"штаб", playerBullet, &types.HQEntity{}, types.CollisionCross},
+		{"HQ", playerBullet, &types.HQEntity{}, types.CollisionCross},
 		{
-			"штаб, пуля без владельца",
+			"HQ, bullet without owner",
 			newTestBullet(nil),
 			&types.HQEntity{},
 			types.CollisionIgnore,
 		},
-		{"враг", playerBullet, enemy, types.CollisionCross},
-		{"второй игрок", playerBullet, player2, types.CollisionCross},
-		{"свой танк", playerBullet, player, types.CollisionIgnore},
-		{"враг по врагу", enemyBullet, enemy2, types.CollisionIgnore},
-		{"враг по игроку", enemyBullet, player, types.CollisionCross},
-		{"танк на спавне", playerBullet, spawning, types.CollisionIgnore},
-		{"пуля", playerBullet, enemyBullet, types.CollisionCross},
+		{"enemy", playerBullet, enemy, types.CollisionCross},
+		{"second player", playerBullet, player2, types.CollisionCross},
+		{"own tank", playerBullet, player, types.CollisionIgnore},
+		{"enemy hits enemy", enemyBullet, enemy2, types.CollisionIgnore},
+		{"enemy hits player", enemyBullet, player, types.CollisionCross},
+		{"spawning tank", playerBullet, spawning, types.CollisionIgnore},
+		{"bullet", playerBullet, enemyBullet, types.CollisionCross},
 	}
 
 	service := NewBulletCollisionService()
 	for _, tt := range tests {
 		if got := service.Response(tt.bullet, tt.other); got != tt.want {
-			t.Errorf("%s: %v, ожидалось %v", tt.name, got, tt.want)
+			t.Errorf("%s: %v, want %v", tt.name, got, tt.want)
 		}
 	}
 }

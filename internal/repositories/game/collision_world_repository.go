@@ -7,21 +7,17 @@ import (
 	"github.com/shpaker/tnk9x/internal/types"
 )
 
-// collisionCellSizePx — ячейка пространственного индекса: размер танка.
-// Влияет на скорость запросов, не на их результат
+// Cell size only affects query speed, not results.
 const collisionCellSizePx = 16
 
 var _ interfaces.ICollisionWorldRepository = (*CollisionWorldRepository)(nil)
 
-// CollisionWorldRepository хранит прямоугольники сущностей уровня
-// в мире obstenku. Движущиеся сущности стоят там, где закончили прошлый
-// тик, и Move ведёт их оттуда без пролёта сквозь стены
+// Moving entities rest where the last tick ended and Move sweeps them from there,
+// so they cannot tunnel through walls.
 type CollisionWorldRepository struct {
-	world *obstenku.World[types.IEntityCollider]
-	// Поколение Sync, в котором сущность видели последней
+	world      *obstenku.World[types.IEntityCollider]
 	seen       map[types.IEntityCollider]uint64
 	generation uint64
-	// Буфер встреч, переиспользуемый между вызовами Move
 	collisions []obstenku.Collision[types.IEntityCollider]
 }
 
@@ -32,7 +28,6 @@ func NewCollisionWorldRepository() *CollisionWorldRepository {
 	}
 }
 
-// Sync реализует ICollisionWorldRepository
 func (r *CollisionWorldRepository) Sync(
 	static []types.IEntityCollider,
 	movers []types.IMover,
@@ -56,21 +51,18 @@ func (r *CollisionWorldRepository) Sync(
 	}
 }
 
-// Update реализует ICollisionWorldRepository
 func (r *CollisionWorldRepository) Update(entity types.IEntityCollider) {
 	if r.world.Has(entity) {
 		r.place(entity, entity.GetPosition())
 	}
 }
 
-// Remove реализует ICollisionWorldRepository
 func (r *CollisionWorldRepository) Remove(entity types.IEntityCollider) {
 	_ = r.world.Remove(entity)
 	delete(r.seen, entity)
 }
 
-// Move реализует ICollisionWorldRepository. Сущность не из мира
-// встаёт на goal без коллизий
+// Move: an entity not in the world lands on goal without collisions.
 func (r *CollisionWorldRepository) Move(
 	entity types.IEntityCollider,
 	goal types.Position,
@@ -107,7 +99,6 @@ func (r *CollisionWorldRepository) Move(
 	return types.Position{X: pos.X, Y: pos.Y}, result
 }
 
-// place ставит сущность в мир на position без коллизий
 func (r *CollisionWorldRepository) place(
 	entity types.IEntityCollider,
 	position types.Position,

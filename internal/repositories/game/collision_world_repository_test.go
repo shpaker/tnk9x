@@ -26,28 +26,25 @@ func TestCollisionWorldRepository(t *testing.T) {
 		nil,
 	)
 
-	// Новая движущаяся сущность встаёт на позицию начала тика
 	bullet.Position.X = 100
 	repo.Sync([]types.IEntityCollider{wall}, []types.IMover{bullet})
 	pos, collisions := repo.Move(bullet, bullet.Position, slideAll)
 	if pos.X != 16 || len(collisions) != 1 || collisions[0].Other != wall {
-		t.Fatalf("пуля в %v, встречи %+v", pos, collisions)
+		t.Fatalf("bullet at %v, collisions %+v", pos, collisions)
 	}
 
-	// Пропавшая стена убирается из мира
 	repo.Sync(nil, []types.IMover{bullet})
 	if pos, collisions = repo.Move(bullet, types.Position{X: 100}, slideAll); pos.X != 100 ||
 		len(collisions) != 0 {
 		t.Errorf(
-			"стена осталась в мире: пуля в %v, встречи %+v",
+			"wall remained in the world: bullet at %v, collisions %+v",
 			pos,
 			collisions,
 		)
 	}
 
-	// Сущность не из мира встаёт на цель без коллизий
 	repo.Remove(bullet)
 	if pos, _ = repo.Move(bullet, types.Position{X: 7}, slideAll); pos.X != 7 {
-		t.Errorf("пуля не из мира в %v", pos)
+		t.Errorf("bullet not in the world at %v", pos)
 	}
 }

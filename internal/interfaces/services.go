@@ -5,8 +5,6 @@ import (
 	image_providers "github.com/shpaker/tnk9x/internal/types/image_providers"
 )
 
-// ITankCollisionService решает, как едущий танк встречает другую
-// сущность
 type ITankCollisionService interface {
 	Response(
 		tank *types.TankEntity,
@@ -14,7 +12,6 @@ type ITankCollisionService interface {
 	) types.CollisionResponse
 }
 
-// IBulletCollisionService решает, что пуля встречает на пути
 type IBulletCollisionService interface {
 	Response(
 		bullet *types.BulletEntity,
@@ -47,8 +44,6 @@ type ITileService interface {
 	) (*image_providers.AnimationProvider, error)
 }
 
-// INavigationService отвечает на навигационные запросы AI по сетке карты:
-// поиск пути и первое препятствие на линии огня
 type INavigationService interface {
 	FindPath(
 		grid *types.NavGridEntity,
@@ -63,8 +58,6 @@ type INavigationService interface {
 	) types.RayHit
 }
 
-// IRandomService — источник случайных чисел; подменяется в тестах
 type IRandomService interface {
-	// Float64 возвращает число из [0, 1)
 	Float64() float64
 }

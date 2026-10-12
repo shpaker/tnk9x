@@ -7,16 +7,12 @@ import (
 
 var _ interfaces.IBulletCollisionService = (*BulletCollisionService)(nil)
 
-// BulletCollisionService решает, что пуля встречает на пути. Пуля
-// проходит всё насквозь (CollisionCross): что из встреченного её
-// гасит и в каком порядке, решают use cases
 type BulletCollisionService struct{}
 
 func NewBulletCollisionService() *BulletCollisionService {
 	return &BulletCollisionService{}
 }
 
-// Response реализует IBulletCollisionService
 func (s *BulletCollisionService) Response(
 	bullet *types.BulletEntity,
 	other types.IEntityCollider,
@@ -25,7 +21,7 @@ func (s *BulletCollisionService) Response(
 	case *types.BorderEntity:
 		return types.CollisionCross
 	case *types.BlockEntity:
-		// Вода, лёд и лес пулю не останавливают
+		// Water, ice and forest do not stop bullets.
 		if other.Data == nil || other.Data.Name == types.Water ||
 			other.GetAltitude() != bullet.GetAltitude() {
 			return types.CollisionIgnore
@@ -49,8 +45,6 @@ func (s *BulletCollisionService) Response(
 	return types.CollisionIgnore
 }
 
-// hitsTank — пуля бьёт активный танк чужой стороны: враги друг друга
-// не задевают, свой танк пуля не трогает
 func (s *BulletCollisionService) hitsTank(
 	bullet *types.BulletEntity,
 	tank *types.TankEntity,

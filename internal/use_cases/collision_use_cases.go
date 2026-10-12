@@ -5,35 +5,28 @@ import (
 	"github.com/shpaker/tnk9x/internal/types"
 )
 
-// brickHitDepthPx — глубина скола кирпича за одно попадание обычной
-// пули: половина тайла (нетипизированная константа: годится и для
-// float64-позиции, и для int-размера)
+// Untyped on purpose: it must fit both float64 positions and int sizes.
 const brickHitDepthPx = 4
 
-// simultaneousHit — встречи, разделённые меньшей долей пути, считаются
-// одновременными: пуля на стыке тайлов бьёт оба
+// Hits closer than this fraction of the path are simultaneous:
+// a bullet on a tile seam hits both tiles.
 const simultaneousHit = 1e-9
 
 var _ interfaces.ICollisionUseCases = (*CollisionUseCases)(nil)
 
-// CollisionUseCases проводит пули и танки через мир коллизий и
-// применяет последствия встреч: сколы, попадания, упоры, подбор бонусов
 type CollisionUseCases struct {
-	// Use Cases
-	bulletUseCases        interfaces.IBulletUseCases
-	tankActions           interfaces.ITankActionsUseCases
-	mapUseCases           interfaces.IMapUseCases
-	hqUseCases            interfaces.IHQUseCases
-	tankCommonUseCases    interfaces.ITankCommonUseCases
-	tankLifecycleUseCases interfaces.ITankLifecycleUseCases
-	bonusUseCases         interfaces.IBonusUseCases
-	soundUseCases         interfaces.ISoundUseCases
-	visualEffectsUseCases interfaces.IVisualEffectsUseCases
-	// Services
-	tankCollisionService   interfaces.ITankCollisionService
-	bulletCollisionService interfaces.IBulletCollisionService
-	spawnCollisionService  interfaces.ISpawnCollisionService
-	// Repositories
+	bulletUseCases           interfaces.IBulletUseCases
+	tankActions              interfaces.ITankActionsUseCases
+	mapUseCases              interfaces.IMapUseCases
+	hqUseCases               interfaces.IHQUseCases
+	tankCommonUseCases       interfaces.ITankCommonUseCases
+	tankLifecycleUseCases    interfaces.ITankLifecycleUseCases
+	bonusUseCases            interfaces.IBonusUseCases
+	soundUseCases            interfaces.ISoundUseCases
+	visualEffectsUseCases    interfaces.IVisualEffectsUseCases
+	tankCollisionService     interfaces.ITankCollisionService
+	bulletCollisionService   interfaces.IBulletCollisionService
+	spawnCollisionService    interfaces.ISpawnCollisionService
 	bonusesRepository        interfaces.IBonusesRepository
 	collisionWorldRepository interfaces.ICollisionWorldRepository
 }
@@ -72,10 +65,8 @@ func NewCollisionUseCases(
 	}
 }
 
-// UpdateCollisions реализует ICollisionUseCases: сначала летят пули,
-// затем едут танки. Каждая сущность идёт от места, где закончила
-// прошлый тик, к текущей позиции и встречает всё на пути, как бы
-// далеко ни ушла за тик
+// Bullets move first, then tanks. Each entity travels from its previous-tick
+// position, so fast movers cannot skip obstacles.
 func (uc *CollisionUseCases) UpdateCollisions() {
 	allTanks := uc.tankCommonUseCases.GetAllTanks()
 	uc.syncWorld(allTanks)
@@ -94,7 +85,6 @@ func (uc *CollisionUseCases) IsSpawnerBlocked(
 	)
 }
 
-// syncWorld сверяет мир коллизий с уровнем
 func (uc *CollisionUseCases) syncWorld(allTanks []*types.TankEntity) {
 	var static []types.IEntityCollider
 	for _, block := range uc.mapUseCases.GetBlocks() {
@@ -126,10 +116,6 @@ func (uc *CollisionUseCases) syncWorld(allTanks []*types.TankEntity) {
 	uc.collisionWorldRepository.Sync(static, movers)
 }
 
-// Пули
-
-// moveBullets проводит каждую пулю к её позиции: пуля гаснет о первое,
-// что встретила
 func (uc *CollisionUseCases) moveBullets() {
 	bullets := append(
 		[]*types.BulletEntity(nil),
@@ -159,7 +145,6 @@ func (uc *CollisionUseCases) moveBullets() {
 	}
 }
 
-// firstHits — встречи, случившиеся раньше всех остальных
 func firstHits(collisions []types.CollisionEntity) []types.CollisionEntity {
 	if len(collisions) == 0 {
 		return nil
@@ -177,9 +162,8 @@ func firstHits(collisions []types.CollisionEntity) []types.CollisionEntity {
 	return hits
 }
 
-// hitByBullet применяет одновременные встречи пули и возвращает пули,
-// которые гаснут. Стена и край карты гасят пулю раньше штаба: пуля,
-// задевшая одновременно кирпич и орла, не взрывает штаб
+// Walls and the map edge stop a bullet before the HQ: a brick and the eagle
+// hit at the same time do not blow up the HQ.
 func (uc *CollisionUseCases) hitByBullet(
 	bullet *types.BulletEntity,
 	hits []types.CollisionEntity,
@@ -226,8 +210,6 @@ func (uc *CollisionUseCases) hitByBullet(
 	return []*types.BulletEntity{bullet}
 }
 
-// hitBlocks скалывает и сносит задетые пулей блоки; пуля на стыке
-// тайлов задевает несколько
 func (uc *CollisionUseCases) hitBlocks(
 	bullet *types.BulletEntity,
 	blocks []*types.BlockEntity,
@@ -238,7 +220,6 @@ func (uc *CollisionUseCases) hitBlocks(
 		case types.Brick:
 			hitBrick = true
 			if bullet.IsReinforced() {
-				// Усиленные пули сносят кирпич целиком
 				uc.requestDebris(block, block.Position, block.GetSize(), bullet)
 				uc.removeBlock(block)
 			} else {
@@ -247,14 +228,13 @@ func (uc *CollisionUseCases) hitBlocks(
 		case types.Steel:
 			hitSteel = true
 			if bullet.IsReinforced() {
-				// Усиленные пули могут ломать стальные блоки
 				uc.requestDebris(block, block.Position, block.GetSize(), bullet)
 				uc.removeBlock(block)
 			}
 		}
 	}
 
-	// Один звук на попадание, а не на каждый задетый блок
+	// One sound per hit, not per damaged block.
 	if hitBrick {
 		uc.soundUseCases.RequestSound(types.SoundIDBrick, false)
 		uc.requestBulletEffect(types.VisualEventBrickHit, bullet)
@@ -265,13 +245,11 @@ func (uc *CollisionUseCases) hitBlocks(
 	}
 }
 
-// removeBlock убирает блок с карты и из мира коллизий
 func (uc *CollisionUseCases) removeBlock(block *types.BlockEntity) {
 	_ = uc.mapUseCases.RemoveBlock(block)
 	uc.collisionWorldRepository.Remove(block)
 }
 
-// hitTank применяет попадание пули в танк
 func (uc *CollisionUseCases) hitTank(
 	tank *types.TankEntity,
 	bullet *types.BulletEntity,
@@ -279,20 +257,16 @@ func (uc *CollisionUseCases) hitTank(
 	if !tank.IsActive() {
 		return
 	}
-	// Щит от каски поглощает попадание без урона
 	if tank.HasShield() {
 		uc.requestBulletEffect(types.VisualEventShieldHit, bullet)
 		return
 	}
-	// Лодка поглощает попадание: танк
-	// теряет лодку, но не уровень и не жизнь
 	if tank.HasBoat() {
 		tank.LoseBoat()
 		uc.requestBulletEffect(types.VisualEventShieldHit, bullet)
 		uc.soundUseCases.RequestSound(types.SoundIDSteel, false)
 		return
 	}
-	// Для игроков понижаем уровень вместо взрыва
 	if !tank.IsEnemy() {
 		currentLevel := uint(0)
 		if tank.GetSpecs() != nil {
@@ -300,7 +274,6 @@ func (uc *CollisionUseCases) hitTank(
 		}
 
 		if currentLevel > 0 {
-			// Понижаем уровень
 			uc.tankCommonUseCases.LevelDown(tank)
 			uc.requestBulletEffect(
 				types.VisualEventPlayerHit,
@@ -311,8 +284,7 @@ func (uc *CollisionUseCases) hitTank(
 				false,
 			)
 		} else {
-			// Уровень уже минимальный - взрываем танк
-			// Жизни будут уменьшены при респавне в TryRespawnPlayersTanks()
+			// Lives are decremented on respawn in TryRespawnPlayersTanks().
 			uc.soundUseCases.RequestSound(
 				types.SoundIDExplosion,
 				false,
@@ -320,11 +292,8 @@ func (uc *CollisionUseCases) hitTank(
 			_ = uc.tankLifecycleUseCases.Explode(tank)
 		}
 	} else {
-		// Для врагов проверяем здоровье
-		// Тяжёлый танк (уровень 3) требует несколько попаданий
 		currentHitPoints := tank.GetHitPoints()
 
-		// Если здоровье уже 1 или меньше, взрываем сразу
 		if currentHitPoints <= 1 {
 			uc.soundUseCases.RequestSound(
 				types.SoundIDExplosion,
@@ -332,33 +301,25 @@ func (uc *CollisionUseCases) hitTank(
 			)
 			_ = uc.tankLifecycleUseCases.Explode(tank)
 		} else {
-			// Уменьшаем здоровье
 			tank.DecrementHitPoints()
 			uc.requestBulletEffect(
 				types.VisualEventEnemyHit,
 				bullet,
 			)
-			// Танк ещё жив - воспроизводим звук попадания
 			uc.soundUseCases.RequestSound(
 				types.SoundIDExplosion,
 				false,
 			)
-			// Можно добавить визуальный эффект (мигание) для тяжёлого танка
 		}
 	}
 }
 
-// Танки
-
-// moveTanks проводит каждый активный танк к его позиции: стена, край
-// карты, целый штаб и другие танки останавливают его вплотную, бонусы
-// и пули встречаются на ходу
 func (uc *CollisionUseCases) moveTanks(allTanks []*types.TankEntity) {
 	for _, tank := range allTanks {
 		if tank == nil || !tank.IsActive() {
 			continue
 		}
-		// Танк без лодки выплыл на берег: в воду больше не заехать
+		// A boatless tank that left the water cannot re-enter it.
 		if tank.IsBoatSinking() &&
 			!uc.mapUseCases.IsWaterUnder(tank.Position, tank.Size) {
 			tank.RemoveBoat()
@@ -382,7 +343,6 @@ func (uc *CollisionUseCases) moveTanks(allTanks []*types.TankEntity) {
 				if hitByBullet || uc.bulletCollisionService.Response(other, tank) == types.CollisionIgnore {
 					continue
 				}
-				// Одно попадание за тик
 				hitByBullet = true
 				_ = uc.bulletUseCases.RemoveBullet(other)
 				uc.collisionWorldRepository.Remove(other)
@@ -391,7 +351,7 @@ func (uc *CollisionUseCases) moveTanks(allTanks []*types.TankEntity) {
 				if tookBonus || !tank.IsActive() {
 					continue
 				}
-				// Один бонус за тик; Apply убирает бонус
+				// Apply removes the bonus, so take only one per tick.
 				tookBonus = true
 				uc.bonusUseCases.Apply(other, tank)
 				uc.collisionWorldRepository.Remove(other)
@@ -405,19 +365,13 @@ func (uc *CollisionUseCases) moveTanks(allTanks []*types.TankEntity) {
 		case blocked:
 			uc.tankActions.Stop(tank, true)
 		case atBorder && tank.IsDocking():
-			// У края карты докатывание прерывается: узел за краем
-			// недостижим. Едущий в край танк продолжает ехать —
-			// клавиша зажата
+			// At the map edge docking is aborted: the node beyond it is unreachable.
+			// A tank driving into the edge keeps going because the key is held.
 			tank.Halt()
 		}
 	}
 }
 
-// Блоки
-
-// shaveBrickBlock срезает с кирпича слой brickHitDepthPx на всю
-// ширину остатка от грани, в которую попала пуля; остаток не толще
-// слоя уничтожается целиком
 func (uc *CollisionUseCases) shaveBrickBlock(
 	bullet *types.BulletEntity,
 	block *types.BlockEntity,
@@ -437,8 +391,8 @@ func (uc *CollisionUseCases) shaveBrickBlock(
 		return
 	}
 
-	// Срезанный слой — у грани, в которую вошла пуля: Up бьёт в нижнюю,
-	// Left — в правую, Right и Down — в левую и верхнюю
+	// The shaved slab is at the face the bullet entered: Up hits the bottom,
+	// Left the right, Right and Down the left and top.
 	slab := block.Position
 	slabSize := types.Size{Width: size.Width, Height: brickHitDepthPx}
 	if horizontal {
@@ -452,8 +406,8 @@ func (uc *CollisionUseCases) shaveBrickBlock(
 	}
 	uc.requestDebris(block, slab, slabSize, bullet)
 
-	// Right бьёт в левую грань, Down — в верхнюю: у них вместе с
-	// размером смещается и позиция остатка
+	// Right hits the left face and Down the top: the remainder position
+	// shifts together with its size.
 	switch bullet.Direction {
 	case types.DirectionRight:
 		block.Position.X += brickHitDepthPx
@@ -475,10 +429,6 @@ func (uc *CollisionUseCases) shaveBrickBlock(
 	uc.collisionWorldRepository.Update(block)
 }
 
-// Эффекты
-
-// requestBulletEffect запрашивает эффект попадания в точке пули
-// с направлением её полёта
 func (uc *CollisionUseCases) requestBulletEffect(
 	kind types.VisualEventKind,
 	bullet *types.BulletEntity,
@@ -494,8 +444,6 @@ func (uc *CollisionUseCases) requestBulletEffect(
 	})
 }
 
-// requestBulletClash запрашивает эффект столкновения пуль
-// в точке между их центрами
 func (uc *CollisionUseCases) requestBulletClash(
 	first *types.BulletEntity,
 	second *types.BulletEntity,
@@ -513,8 +461,7 @@ func (uc *CollisionUseCases) requestBulletClash(
 	})
 }
 
-// requestDebris запрашивает обломки разрушенной области стены:
-// они вылетают из самой области, а не из точки попадания
+// Debris fly from the destroyed area itself, not from the hit point.
 func (uc *CollisionUseCases) requestDebris(
 	block *types.BlockEntity,
 	position types.Position,

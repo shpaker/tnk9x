@@ -13,8 +13,6 @@ func NewSpawnCollisionService() *SpawnCollisionService {
 	return &SpawnCollisionService{}
 }
 
-// IsSpawnerBlocked проверяет, перекрыт ли спавнер одним из живых танков.
-// Позиция спавнера задаётся в клетках и масштабируется размером танка.
 func (s *SpawnCollisionService) IsSpawnerBlocked(
 	position types.Position,
 	size types.Size,

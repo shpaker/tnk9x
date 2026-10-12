@@ -44,8 +44,6 @@ func (uc *TankActionsUseCases) Update(
 	return uc.commonUseCases.Update(tank, dt)
 }
 
-// Rotate поворачивает стоящий танк на месте; едущий сначала докатывает
-// до узла сетки, затем едет в новом направлении
 func (uc *TankActionsUseCases) Rotate(
 	tank *types.TankEntity,
 	direction types.Direction,
@@ -66,8 +64,6 @@ func (uc *TankActionsUseCases) Rotate(
 	return nil
 }
 
-// Move трогает танк в направлении, куда он смотрит; докатывающий танк
-// едет дальше, если не ждёт поворота
 func (uc *TankActionsUseCases) Move(tank *types.TankEntity) error {
 	if !tank.IsActive() {
 		return errors.New("tank is not active")
@@ -81,9 +77,8 @@ func (uc *TankActionsUseCases) Move(tank *types.TankEntity) error {
 	return nil
 }
 
-// Stop: водитель отпустил — танк докатывает до узла сетки; упёрся
-// (byCollision) — встаёт на месте: позиция уже разрешена коллизией,
-// округление сдвигало бы танк с места контакта и порождало дрожание
+// Stop: when halted by a collision (byCollision) the tank stays put, since rounding
+// would shift it off the contact point and cause jitter.
 func (uc *TankActionsUseCases) Stop(tank *types.TankEntity, byCollision bool) {
 	if !tank.IsActive() {
 		return
@@ -106,8 +101,8 @@ func (uc *TankActionsUseCases) Shoot(tank *types.TankEntity) error {
 	if err != nil || !fired {
 		return err
 	}
-	// Звук, вспышка у ствола и отдача — только у вылетевшей пули:
-	// пока пуля в полёте, повторные нажатия танк не дёргают
+	// Sound, muzzle flash and recoil only for a bullet that actually launched,
+	// so repeated presses while it is in flight do not jerk the tank.
 	if !tank.IsEnemy() {
 		uc.soundUseCases.RequestSound(types.SoundIDFire, false)
 	}
@@ -119,8 +114,6 @@ func (uc *TankActionsUseCases) Shoot(tank *types.TankEntity) error {
 	return nil
 }
 
-// ApplyDecision поворачивает остановленный танк по решению AI
-// и трогает его с места, если решение требует движения
 func (uc *TankActionsUseCases) ApplyDecision(
 	tank *types.TankEntity,
 	decision types.EnemyAIDecision,

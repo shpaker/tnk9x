@@ -20,7 +20,6 @@ linters:
     - unused
   settings:
     depguard:
-      # Границы слоёв Clean Architecture (см. AGENTS.md)
       rules:
         application:
           files:
@@ -29,15 +28,15 @@ linters:
             - '!$test'
           deny:
             - pkg: github.com/hajimehoshi/ebiten
-              desc: движок — только в Presentation и internal/app
+              desc: engine only in Presentation and internal/app
             - pkg: github.com/shpaker/tnk9x/internal/adapters
-              desc: Application не зависит от Presentation
+              desc: Application must not depend on Presentation
             - pkg: github.com/shpaker/tnk9x/internal/states
-              desc: Application не зависит от Presentation
+              desc: Application must not depend on Presentation
             - pkg: github.com/shpaker/tnk9x/internal/repositories
-              desc: доступ к данным — только через интерфейсы
+              desc: data access only through interfaces
             - pkg: github.com/shpaker/tnk9x/internal/app
-              desc: composition root никем не импортируется
+              desc: composition root is imported by no one
         contracts:
           list-mode: strict
           files:
@@ -54,9 +53,7 @@ linters:
           allow:
             - $gostd
             - github.com/shpaker/tnk9x/internal/types
-            # Чистая кинематика по сетке, без движка и IO
             - github.com/shpaker/koleya
-            # Чистая геометрия коллизий прямоугольников, без движка и IO
             - github.com/shpaker/obstenku
         i18n-isolation:
           files:
@@ -65,24 +62,24 @@ linters:
             - '!**/internal/adapters/texts/**'
           deny:
             - pkg: github.com/nicksnyder/go-i18n
-              desc: go-i18n — только в internal/adapters/texts за ITextsAdapter
+              desc: go-i18n only in internal/adapters/texts behind ITextsAdapter
         infrastructure:
           files:
             - '**/internal/repositories/**'
             - '!$test'
           deny:
             - pkg: github.com/hajimehoshi/ebiten
-              desc: движок — только в Presentation и internal/app
+              desc: engine only in Presentation and internal/app
             - pkg: github.com/shpaker/tnk9x/internal/use_cases
-              desc: Infrastructure не зависит от Application
+              desc: Infrastructure must not depend on Application
             - pkg: github.com/shpaker/tnk9x/internal/services
-              desc: Infrastructure не зависит от Application
+              desc: Infrastructure must not depend on Application
             - pkg: github.com/shpaker/tnk9x/internal/adapters
-              desc: Infrastructure не зависит от Presentation
+              desc: Infrastructure must not depend on Presentation
             - pkg: github.com/shpaker/tnk9x/internal/states
-              desc: Infrastructure не зависит от Presentation
+              desc: Infrastructure must not depend on Presentation
             - pkg: github.com/shpaker/tnk9x/internal/app
-              desc: composition root никем не импортируется
+              desc: composition root is imported by no one
         js-isolation:
           files:
             - '**/internal/**'
@@ -91,7 +88,7 @@ linters:
             - '!**/internal/repositories/raw/**'
           deny:
             - pkg: syscall/js
-              desc: браузер — только в internal/adapters/platform за IPlatformAdapter и в хранилище internal/repositories/raw
+              desc: browser only in internal/adapters/platform behind IPlatformAdapter and in internal/repositories/raw
         kinescope-isolation:
           files:
             - '**/internal/**'
@@ -99,7 +96,7 @@ linters:
             - '!**/internal/adapters/effects/**'
           deny:
             - pkg: github.com/shpaker/kinescope
-              desc: ламповый телевизор — только в internal/adapters/effects за EffectsRendererAdapter
+              desc: CRT effect only in internal/adapters/effects behind EffectsRendererAdapter
         lua-isolation:
           files:
             - '**/internal/**'
@@ -108,7 +105,7 @@ linters:
             - '!$test'
           deny:
             - pkg: github.com/yuin/gopher-lua
-              desc: lua — только в internal/adapters/scripting за IAIScriptEngine
+              desc: Lua only in internal/adapters/scripting behind IAIScriptEngine
         presentation:
           files:
             - '**/internal/states/**'
@@ -116,9 +113,9 @@ linters:
             - '!$test'
           deny:
             - pkg: github.com/shpaker/tnk9x/internal/repositories
-              desc: доступ к данным — только через интерфейсы
+              desc: data access only through interfaces
             - pkg: github.com/shpaker/tnk9x/internal/app
-              desc: composition root никем не импортируется
+              desc: composition root is imported by no one
     dupl:
       threshold: 100
     goconst:

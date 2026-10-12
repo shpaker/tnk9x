@@ -33,10 +33,7 @@ func (uc *MapUseCases) RemoveBlock(block *types.BlockEntity) error {
 	return uc.mapEntity.RemoveBlock(block)
 }
 
-// RestoreBlock возвращает блок в исходное целое состояние: отколотый
-// кирпич — в полный размер, снесённый — обратно на карту. Блок не
-// восстанавливается, пока его клетку занимает кто-то из obstacles
-// (танк или пуля): возвращает false
+// Refuses to restore while a tank or bullet occupies the block cell.
 func (uc *MapUseCases) RestoreBlock(
 	block *types.BlockEntity,
 	obstacles []types.IEntityCollider,
@@ -64,7 +61,6 @@ func (uc *MapUseCases) RestoreBlock(
 	return true
 }
 
-// IsBlockIntact — блок на карте в исходном размере
 func (uc *MapUseCases) IsBlockIntact(block *types.BlockEntity) bool {
 	if block.Position != block.Data.Position || block.Size != block.Data.Size {
 		return false
@@ -84,7 +80,6 @@ func (uc *MapUseCases) GetSizePx() types.Size {
 	return uc.mapEntity.GetSizePx()
 }
 
-// GetBorders реализует IMapUseCases
 func (uc *MapUseCases) GetBorders() []*types.BorderEntity {
 	if uc.mapEntity == nil {
 		return nil
@@ -99,9 +94,6 @@ func (uc *MapUseCases) GetRandomBonusSpawnPosition() types.Position {
 	return uc.mapEntity.GetRandomBonusSpawnPosition()
 }
 
-// IsIceAt проверяет, лежит ли точка на блоке льда;
-// CheckColliders не подходит — лёд на GROUND, танки на SURFACE
-// IsWaterUnder реализует IMapUseCases
 func (uc *MapUseCases) IsWaterUnder(
 	position types.Position,
 	size types.Size,
