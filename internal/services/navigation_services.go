@@ -10,18 +10,14 @@ import (
 
 var _ interfaces.INavigationService = (*NavigationService)(nil)
 
-// rayWidth — ширина полосы луча, совпадает с шириной пули
+// Matches the bullet width.
 const rayWidth = 4
 
-// NavigationService — поиск пути и проверка линии огня по сетке карты.
-// Только отвечает на запросы, решений не принимает.
 type NavigationService struct{}
 
 func NewNavigationService() *NavigationService {
 	return &NavigationService{}
 }
-
-// Поиск пути
 
 type navNode struct {
 	col, row int
@@ -57,10 +53,6 @@ var navDirections = []struct {
 	{types.DirectionRight, 1, 0},
 }
 
-// FindPath ищет путь танка алгоритмом Дейкстры по позициям с шагом
-// в половину танка и возвращает первый шаг. Бетон и вода непроходимы
-// (бетон — если не SteelPassable), кирпич проходим с доплатой BrickCost.
-// Реализует interfaces.INavigationService.
 func (s *NavigationService) FindPath(
 	grid *types.NavGridEntity,
 	from, to types.Position,
@@ -116,7 +108,7 @@ func (s *NavigationService) FindPath(
 			}
 
 			stepCost, passable := s.stepCost(grid, next, step, options)
-			// Клетка цели достижима всегда: цель может стоять вплотную к стене
+			// The target cell is always reachable: the target may stand flush against a wall.
 			if !passable && next != target {
 				continue
 			}
@@ -135,7 +127,6 @@ func (s *NavigationService) FindPath(
 		return types.PathStep{}, false
 	}
 
-	// Поднимаемся от цели к первому шагу после старта
 	first := index(target)
 	for parents[first] != index(start) {
 		first = parents[first]
@@ -160,8 +151,6 @@ func (s *NavigationService) toNode(
 	}
 }
 
-// stepCost оценивает шаг в позицию: танк занимает квадрат TankSize,
-// проверяются все клетки сетки под ним
 func (s *NavigationService) stepCost(
 	grid *types.NavGridEntity,
 	node navNode,
@@ -214,12 +203,6 @@ func (s *NavigationService) directionBetween(
 	}
 }
 
-// Линия огня
-
-// CastRay ведёт полосу шириной с пулю из точки origin в направлении
-// direction и возвращает первое препятствие: кирпич, бетон, объект
-// из targets или край карты. Вода, лес и лёд пулю не останавливают.
-// Реализует interfaces.INavigationService.
 func (s *NavigationService) CastRay(
 	grid *types.NavGridEntity,
 	origin types.Position,
@@ -252,7 +235,6 @@ func (s *NavigationService) CastRay(
 			return types.RayHit{Kind: types.RayHitEdge, Distance: distance}
 		}
 
-		// Поперечный отрезок полосы в текущей точке
 		left, top, right, bottom := x, y, x+1, y+1
 		if dx == 0 {
 			left, right = x-half, x+half
@@ -299,8 +281,10 @@ func (s *NavigationService) intersects(
 	target types.RayTarget,
 	left, top, right, bottom float64,
 ) bool {
-	return left < target.Position.X+float64(target.Size.Width) &&
-		right > target.Position.X &&
-		top < target.Position.Y+float64(target.Size.Height) &&
-		bottom > target.Position.Y
+	return types.RectsOverlap(
+		types.Position{X: left, Y: top},
+		types.Size{Width: int(right - left), Height: int(bottom - top)},
+		target.Position,
+		target.Size,
+	)
 }

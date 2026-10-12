@@ -17,22 +17,16 @@ import (
 	tank_use_cases "github.com/shpaker/tnk9x/internal/use_cases/tank_use_cases"
 )
 
-// Раскладка экрана уровня: поле 208x208 со смещением (16,8),
-// справа остаётся панель HUD шириной 32px
+// Field 208x208 at offset (16,8); 32px HUD panel on the right.
 const (
 	stageMapOffsetX = 16
 	stageMapOffsetY = 8
 )
 
-// hqSizePx — размер штаба в пикселях логического экрана
 const hqSizePx = 16
 
-// demoSceneLevel — карта демо-сцены главного меню:
-// levels/demo/title.tnkmap, вне кампании
 const demoSceneLevel = "demo/title"
 
-// stageFactoryRequiredSprites перечисляет спрайты, запрашиваемые
-// фабрикой уровня (см. createHQ)
 func stageFactoryRequiredSprites() types.SpriteManifest {
 	return types.SpriteManifest{
 		Images: map[types.TilesetType][]string{
@@ -41,7 +35,6 @@ func stageFactoryRequiredSprites() types.SpriteManifest {
 	}
 }
 
-// stageGraph — граф уровня: общий для игры и демо-сцены главного меню
 type stageGraph struct {
 	mapUseCases           interfaces.IMapUseCases
 	tankTilesUseCases     *use_cases.TilesUseCases
@@ -59,8 +52,6 @@ type stageGraph struct {
 	renderer              *stage.StageRendererAdapter
 }
 
-// newStageState собирает уровень кампании: граф уровня со штабом
-// и вводом обоих игроков
 func (app *App) newStageState() (*states.StageState, error) {
 	level, err := app.mapsRepository.GetLevel(
 		app.session.Level,
@@ -77,9 +68,6 @@ func (app *App) newStageState() (*states.StageState, error) {
 		return nil, err
 	}
 
-	// Каждый игрок управляется своей раскладкой клавиатуры, своим
-	// геймпадом и своими экранными контроллами: композит применяет
-	// все источники каждый кадр
 	playerInput := func(player types.PlayerTankNum) interfaces.IInputAdapter {
 		return input_adapters.NewCompositeInputAdapter(
 			input_adapters.NewStageKeyboardInputAdapter(
@@ -126,10 +114,7 @@ func (app *App) newStageState() (*states.StageState, error) {
 	}), nil
 }
 
-// newDemoScene собирает живую сцену главного меню: карта с названием
-// игры из блоков, без игроков и без штаба, по танку каждого типа
-// врагов под управлением настоящего ИИ. Своя сессия — прогресс
-// и перенос кампании не затрагиваются
+// Own session, so campaign progress and carry-over are untouched.
 func (app *App) newDemoScene() (*states.DemoScene, error) {
 	level, err := app.mapsRepository.GetSceneLevel(
 		demoSceneLevel,
@@ -167,10 +152,6 @@ func (app *App) newDemoScene() (*states.DemoScene, error) {
 	}), nil
 }
 
-// buildStageGraph собирает граф уровня в топологическом порядке:
-// репозитории и сервисы приложения переиспользуются, игровое
-// runtime-состояние (танки, пули, бонусы, анимации, звуковые события)
-// создаётся заново. withHQ=false — без штаба (демо-сцена)
 func (app *App) buildStageGraph(
 	level *types.LevelEntity,
 	stageSession *session_entities.StageSessionEntity,
@@ -179,7 +160,6 @@ func (app *App) buildStageGraph(
 	mapEntity := level.GetMap()
 	gameRepositories := game_repos.NewGameRepositoriesRegistry()
 
-	// анимации блоков карты (вода) продвигаются общим UpdateAnimations
 	for _, block := range mapEntity.GetBlocks() {
 		if anim, ok := block.Image.(*image_providers.AnimationProvider); ok {
 			gameRepositories.GetAnimationsRepository().AddAnimation(anim)
@@ -247,7 +227,6 @@ func (app *App) buildStageGraph(
 		bulletUseCases,
 		tankCommonUseCases,
 		renderUseCases,
-		mapUseCases,
 		soundUseCases,
 		visualEffectsUseCases,
 	)
@@ -310,17 +289,15 @@ func (app *App) buildStageGraph(
 		mapUseCases,
 		tankCommonUseCases,
 		tankLifecycleUseCases,
-		app.boundaryCollisionService,
-		app.wallCollisionService,
+		app.tankCollisionService,
 		app.bulletCollisionService,
-		app.entitiesCollisionService,
 		app.spawnCollisionService,
 		hqUseCases,
 		bonusUseCases,
 		bonusesRepository,
+		gameRepositories.GetCollisionWorldRepository(),
 		soundUseCases,
 		visualEffectsUseCases,
-		app.config.EnemyBonusPickup,
 	)
 
 	enemySpawnSelectionUseCases := use_cases.NewEnemySpawnSelectionUseCases(
@@ -380,8 +357,6 @@ func (app *App) buildStageGraph(
 	}, nil
 }
 
-// buildTankTilesUseCases — тайлы танков с анимациями спавна и взрыва;
-// использует пер-стейдж репозиторий анимаций
 func (app *App) buildTankTilesUseCases(
 	gameRepositories interfaces.IGameRepositoriesRegistry,
 ) *use_cases.TilesUseCases {
@@ -400,7 +375,6 @@ func (app *App) buildTankTilesUseCases(
 	)
 }
 
-// buildHQTilesUseCases — тайлы штаба с анимацией взрыва
 func (app *App) buildHQTilesUseCases(
 	gameRepositories interfaces.IGameRepositoriesRegistry,
 ) *use_cases.TilesUseCases {
@@ -418,7 +392,6 @@ func (app *App) buildHQTilesUseCases(
 	)
 }
 
-// buildTilesUseCases — тайлы одного тайлсета без анимаций спавна/взрыва
 func (app *App) buildTilesUseCases(
 	tilesetType types.TilesetType,
 	animationService interfaces.IAnimationService,
@@ -459,8 +432,6 @@ func (app *App) createHQ(
 	}, nil
 }
 
-// loadEnemyAIScript задаёт скрипту глобальные параметры карты
-// и загружает сценарий поведения врагов
 func (app *App) loadEnemyAIScript(
 	mapEntity *types.MapEntity,
 	baseSizePx uint,
@@ -491,8 +462,6 @@ func (app *App) loadEnemyAIScript(
 	return app.scriptEngine.LoadScript(enemyScript)
 }
 
-// buildStageRenderer собирает рендер-адаптер уровня с отдельным
-// набором тайлов для отрисовки
 func (app *App) buildStageRenderer(
 	mapUseCases interfaces.IMapUseCases,
 	tankCommonUseCases interfaces.ITankCommonUseCases,

@@ -8,10 +8,11 @@ type MapEntity struct {
 	sizePx              Size
 	blocks              MapBlocks
 	bonusSpawnPositions []Position
+	borders             []*BorderEntity
 
-	hqFortifyTicks uint      // Оставшиеся тики укрепления штаба лопатой
-	hqSavedBlocks  MapBlocks // Блоки, заменённые бетоном при укреплении
-	hqSteelBlocks  MapBlocks // Установленные при укреплении бетонные блоки
+	hqFortifyTicks uint
+	hqSavedBlocks  MapBlocks
+	hqSteelBlocks  MapBlocks
 }
 
 func NewMapEntity(
@@ -23,7 +24,12 @@ func NewMapEntity(
 		sizePx:              sizePx,
 		blocks:              blocks,
 		bonusSpawnPositions: bonusSpawnPositions,
+		borders:             NewMapBorders(sizePx),
 	}
+}
+
+func (m *MapEntity) GetBorders() []*BorderEntity {
+	return m.borders
 }
 
 func (m *MapEntity) GetSizePx() Size {
@@ -61,8 +67,6 @@ func (m *MapEntity) IsHQFortified() bool {
 	return m.hqFortifyTicks > 0
 }
 
-// SetHQFortification сохраняет заменённые и установленные блоки укрепления
-// и запускает его отсчёт
 func (m *MapEntity) SetHQFortification(
 	savedBlocks MapBlocks,
 	steelBlocks MapBlocks,
@@ -73,15 +77,12 @@ func (m *MapEntity) SetHQFortification(
 	m.hqFortifyTicks = ticks
 }
 
-// ResetHQFortifyCountdown продлевает действующее укрепление
 func (m *MapEntity) ResetHQFortifyCountdown(ticks uint) {
 	if m.hqFortifyTicks > 0 {
 		m.hqFortifyTicks = ticks
 	}
 }
 
-// UpdateHQFortifyCountdown уменьшает отсчёт укрепления;
-// true — укрепление истекло в этом тике
 func (m *MapEntity) UpdateHQFortifyCountdown() bool {
 	if m.hqFortifyTicks == 0 {
 		return false
@@ -90,7 +91,6 @@ func (m *MapEntity) UpdateHQFortifyCountdown() bool {
 	return m.hqFortifyTicks == 0
 }
 
-// TakeHQFortification возвращает блоки укрепления и очищает его состояние
 func (m *MapEntity) TakeHQFortification() (MapBlocks, MapBlocks) {
 	savedBlocks := m.hqSavedBlocks
 	steelBlocks := m.hqSteelBlocks

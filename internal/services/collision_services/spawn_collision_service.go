@@ -7,20 +7,12 @@ import (
 
 var _ interfaces.ISpawnCollisionService = (*SpawnCollisionService)(nil)
 
-type SpawnCollisionService struct {
-	entitiesCollisionService interfaces.IEntitiesCollisionService
+type SpawnCollisionService struct{}
+
+func NewSpawnCollisionService() *SpawnCollisionService {
+	return &SpawnCollisionService{}
 }
 
-func NewSpawnCollisionService(
-	entitiesCollisionService interfaces.IEntitiesCollisionService,
-) *SpawnCollisionService {
-	return &SpawnCollisionService{
-		entitiesCollisionService: entitiesCollisionService,
-	}
-}
-
-// IsSpawnerBlocked проверяет, перекрыт ли спавнер одним из живых танков.
-// Позиция спавнера задаётся в клетках и масштабируется размером танка.
 func (s *SpawnCollisionService) IsSpawnerBlocked(
 	position types.Position,
 	size types.Size,
@@ -30,25 +22,17 @@ func (s *SpawnCollisionService) IsSpawnerBlocked(
 		return false
 	}
 
-	candidate := types.NewDefaultTankEntity(
-		types.TankRoleEnemy,
-		types.DirectionUp,
-	)
-	candidate.Size = size
-	candidate.Position = types.Position{
+	spawner := types.Position{
 		X: position.X * float64(size.Width),
 		Y: position.Y * float64(size.Height),
 	}
-
-	for _, otherTank := range tanks {
-		if otherTank == nil || otherTank.IsDestroyed() {
+	for _, tank := range tanks {
+		if tank == nil || tank.IsDestroyed() {
 			continue
 		}
-
-		if s.entitiesCollisionService.CheckColliders(&candidate, otherTank) {
+		if types.RectsOverlap(spawner, size, tank.Position, tank.GetSize()) {
 			return true
 		}
 	}
-
 	return false
 }

@@ -7,53 +7,54 @@ import (
 
 var _ interfaces.IBulletCollisionService = (*BulletCollisionService)(nil)
 
-type BulletCollisionService struct {
-	tileMinSize              int
-	entitiesCollisionService interfaces.IEntitiesCollisionService
+type BulletCollisionService struct{}
+
+func NewBulletCollisionService() *BulletCollisionService {
+	return &BulletCollisionService{}
 }
 
-func NewBulletCollisionService(
-	tileMinSize int,
-	entitiesCollisionService interfaces.IEntitiesCollisionService,
-) *BulletCollisionService {
-	return &BulletCollisionService{
-		tileMinSize:              tileMinSize,
-		entitiesCollisionService: entitiesCollisionService,
-	}
-}
-
-func (s *BulletCollisionService) CheckBulletBlockCollision(
+func (s *BulletCollisionService) Response(
 	bullet *types.BulletEntity,
-	block *types.BlockEntity,
-) bool {
-	if block.Data == nil {
-		return false
+	other types.IEntityCollider,
+) types.CollisionResponse {
+	switch other := other.(type) {
+	case *types.BorderEntity:
+		return types.CollisionCross
+	case *types.BlockEntity:
+		// Water, ice and forest do not stop bullets.
+		if other.Data == nil || other.Data.Name == types.Water ||
+			other.GetAltitude() != bullet.GetAltitude() {
+			return types.CollisionIgnore
+		}
+		return types.CollisionCross
+	case *types.HQEntity:
+		if bullet.GetOwner() == nil ||
+			other.GetAltitude() != bullet.GetAltitude() {
+			return types.CollisionIgnore
+		}
+		return types.CollisionCross
+	case *types.TankEntity:
+		if s.hitsTank(bullet, other) {
+			return types.CollisionCross
+		}
+	case *types.BulletEntity:
+		if other.GetAltitude() == bullet.GetAltitude() {
+			return types.CollisionCross
+		}
 	}
-	return s.entitiesCollisionService.CheckColliders(bullet, block)
+	return types.CollisionIgnore
 }
 
-func (s *BulletCollisionService) CheckBulletTankCollision(
+func (s *BulletCollisionService) hitsTank(
 	bullet *types.BulletEntity,
 	tank *types.TankEntity,
 ) bool {
 	owner := bullet.GetOwner()
-	if tank == nil || owner == nil ||
-		owner == tank {
+	if owner == nil || owner == tank || !tank.IsActive() {
 		return false
 	}
-
-	if tank.IsEnemy() && owner.IsEnemy() == tank.IsEnemy() {
+	if tank.IsEnemy() && owner.IsEnemy() {
 		return false
 	}
-	return s.entitiesCollisionService.CheckColliders(bullet, tank)
-}
-
-func (s *BulletCollisionService) CheckBulletHQCollision(
-	bullet *types.BulletEntity,
-	hq *types.HQEntity,
-) bool {
-	if hq == nil || bullet.GetOwner() == nil {
-		return false
-	}
-	return s.entitiesCollisionService.CheckColliders(bullet, hq)
+	return tank.GetAltitude() == bullet.GetAltitude()
 }

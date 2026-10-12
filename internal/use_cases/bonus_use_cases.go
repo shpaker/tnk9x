@@ -9,7 +9,6 @@ import (
 	"github.com/shpaker/tnk9x/internal/types/session_entities"
 )
 
-// Длительности эффектов бонусов в тиках (60 тиков = 1 секунда)
 const (
 	helmetShieldDurationTicks = 10 * 60
 	enemyFreezeDurationTicks  = 10 * 60
@@ -87,19 +86,15 @@ func (uc *BonusUseCases) Apply(
 	case types.BonusTypeTank:
 		uc.applyTank(tank)
 	case types.BonusTypeBoat:
-		// Лодка: проезд по воде и одно поглощённое попадание
 		tank.SetBoat()
 	case types.BonusTypePistol:
-		// Пистолет: сразу максимальный уровень —
-		// игрок переживает три попадания, теряя по уровню
+		// Max level so the player survives three hits, losing a level each time.
 		uc.tankCommonUseCases.SetMaxLevel(tank)
 	}
 
 	uc.removeBonus(bonus)
 }
 
-// UpdateEffects продвигает отсчёты действующих эффектов бонусов:
-// щиты и заморозку танков, заморозку врагов и укрепление штаба
 func (uc *BonusUseCases) UpdateEffects() {
 	for _, tank := range uc.tankCommonUseCases.GetAllTanks() {
 		tank.UpdateShieldCountdown()
@@ -115,13 +110,9 @@ func (uc *BonusUseCases) UpdateEffects() {
 	}
 }
 
-// armorHitPoints — прочность тяжёлого танка: столько попаданий
-// выдерживает враг, получивший пистолет
+// Hits a heavy tank survives after an enemy picks up a pistol.
 const armorHitPoints = 4
 
-// applyForEnemy — бонус, подобранный врагом: каска
-// и лодка достаются ему самому, звезда и пистолет усиливают его,
-// остальные бонусы бьют по игрокам
 func (uc *BonusUseCases) applyForEnemy(
 	bonusType types.BonusType,
 	tank *types.TankEntity,
@@ -132,7 +123,6 @@ func (uc *BonusUseCases) applyForEnemy(
 	case types.BonusTypeBoat:
 		tank.SetBoat()
 	case types.BonusTypeStar:
-		// Следующий тип танка и лишнее попадание в запас
 		hitPoints := tank.GetHitPoints()
 		uc.tankCommonUseCases.LevelUp(tank)
 		tank.SetHitPoints(hitPoints + 1)
@@ -154,7 +144,6 @@ func (uc *BonusUseCases) applyForEnemy(
 	}
 }
 
-// activePlayers возвращает танки игроков, находящиеся в игре
 func (uc *BonusUseCases) activePlayers() []*types.TankEntity {
 	var players []*types.TankEntity
 	for _, tank := range uc.tankCommonUseCases.GetAllTanks() {
@@ -166,7 +155,6 @@ func (uc *BonusUseCases) activePlayers() []*types.TankEntity {
 	return players
 }
 
-// explodePlayers взрывает активных игроков без щита — граната врага
 func (uc *BonusUseCases) explodePlayers() {
 	for _, player := range uc.activePlayers() {
 		if player.HasShield() {
@@ -176,16 +164,13 @@ func (uc *BonusUseCases) explodePlayers() {
 	}
 }
 
-// freezePlayers замораживает активных игроков — таймер врага. Заморозка
-// живёт на танке и снимается вместе с ним при гибели
 func (uc *BonusUseCases) freezePlayers() {
 	for _, player := range uc.activePlayers() {
 		player.Freeze(enemyFreezeDurationTicks)
 	}
 }
 
-// stripHQWalls снимает стены вокруг штаба — лопата врага: укрепление
-// отменяется без возврата прежних стен, кольцо остаётся пустым
+// The ring is left empty: the previous walls are not restored.
 func (uc *BonusUseCases) stripHQWalls() {
 	if uc.mapEntity == nil {
 		return
@@ -207,12 +192,10 @@ func (uc *BonusUseCases) stripHQWalls() {
 }
 
 func (uc *BonusUseCases) applyHelmet(tank *types.TankEntity) {
-	// Защита - временная неуязвимость танка
 	tank.ActivateShield(helmetShieldDurationTicks)
 }
 
 func (uc *BonusUseCases) applyTimer() {
-	// Заморозка врагов - все враги замирают до конца отсчёта
 	if uc.stageSession == nil {
 		return
 	}
@@ -220,12 +203,10 @@ func (uc *BonusUseCases) applyTimer() {
 }
 
 func (uc *BonusUseCases) applyShovel() {
-	// Укрепление базы - стены вокруг штаба временно становятся бетонными
 	if uc.mapEntity == nil {
 		return
 	}
 
-	// Повторная лопата лишь продлевает действующее укрепление
 	if uc.mapEntity.IsHQFortified() {
 		uc.mapEntity.ResetHQFortifyCountdown(hqFortifyDurationTicks)
 		return
@@ -261,8 +242,6 @@ func (uc *BonusUseCases) applyShovel() {
 	)
 }
 
-// unfortifyHQ снимает укрепление: убирает уцелевший бетон
-// и возвращает заменённые им блоки
 func (uc *BonusUseCases) unfortifyHQ() {
 	savedBlocks, steelBlocks := uc.mapEntity.TakeHQFortification()
 	for _, block := range steelBlocks {
@@ -273,7 +252,6 @@ func (uc *BonusUseCases) unfortifyHQ() {
 	}
 }
 
-// hqWallPositions возвращает клетки кольца вокруг штаба в пределах карты
 func (uc *BonusUseCases) hqWallPositions(blockSize float64) []types.Position {
 	hq := uc.hqUseCases.GetHQ()
 	if hq == nil {
@@ -288,12 +266,10 @@ func (uc *BonusUseCases) hqWallPositions(blockSize float64) []types.Position {
 	var positions []types.Position
 	for y := hqPosition.Y - blockSize; y < hqPosition.Y+hqHeight+blockSize; y += blockSize {
 		for x := hqPosition.X - blockSize; x < hqPosition.X+hqWidth+blockSize; x += blockSize {
-			// Клетки самого штаба не трогаем
 			if x >= hqPosition.X && x < hqPosition.X+hqWidth &&
 				y >= hqPosition.Y && y < hqPosition.Y+hqHeight {
 				continue
 			}
-			// Клетки за границей карты пропускаем
 			if x < 0 || y < 0 ||
 				x+blockSize > float64(mapSize.Width) ||
 				y+blockSize > float64(mapSize.Height) {
@@ -305,26 +281,22 @@ func (uc *BonusUseCases) hqWallPositions(blockSize float64) []types.Position {
 	return positions
 }
 
-// blocksAt возвращает блоки карты, пересекающие заданную клетку:
-// сколотый пулями остаток кирпича меньше клетки и может не совпадать
-// с ней по позиции
 func (uc *BonusUseCases) blocksAt(
 	position types.Position,
 	blockSize float64,
 ) types.MapBlocks {
+	cell := types.Size{Width: int(blockSize), Height: int(blockSize)}
 	var blocks types.MapBlocks
 	for _, block := range uc.mapEntity.GetBlocks() {
 		if block == nil {
 			continue
 		}
-		blockPosition := block.GetPosition()
-		size := block.GetSize()
-		// Строгие неравенства: соседние клетки, касающиеся гранью,
-		// пересечением не считаются
-		if blockPosition.X < position.X+blockSize &&
-			blockPosition.X+float64(size.Width) > position.X &&
-			blockPosition.Y < position.Y+blockSize &&
-			blockPosition.Y+float64(size.Height) > position.Y {
+		if types.RectsOverlap(
+			block.GetPosition(),
+			block.GetSize(),
+			position,
+			cell,
+		) {
 			blocks = append(blocks, block)
 		}
 	}
@@ -332,39 +304,31 @@ func (uc *BonusUseCases) blocksAt(
 }
 
 func (uc *BonusUseCases) applyStar(tank *types.TankEntity) {
-	// Улучшение танка - повышаем уровень на единицу
 	if tank == nil {
 		return
 	}
 
-	// Повышаем уровень танка (максимум 3)
 	uc.tankCommonUseCases.LevelUp(tank)
-	// Обновляем анимацию танка для отображения нового уровня
 	uc.renderUseCases.UpdateTankAnimation(tank)
 }
 
 func (uc *BonusUseCases) applyGrenade() {
-	// Уничтожение всех врагов
 	allTanks := uc.tankCommonUseCases.GetAllTanks()
 	for _, enemyTank := range allTanks {
 		if enemyTank == nil || !enemyTank.IsEnemy() || !enemyTank.IsActive() {
 			continue
 		}
-		// Уничтожаем врага
 		_ = uc.tankLifecycleUseCases.Explode(enemyTank)
 	}
 }
 
 func (uc *BonusUseCases) applyTank(tank *types.TankEntity) {
-	// Дополнительная жизнь игроку
 	if tank == nil || uc.stageSession == nil {
 		return
 	}
 
-	// Определяем номер игрока по роли танка
 	playerNum := types.RoleToPlayerTankNum(tank.GetRole())
 
-	// Увеличиваем количество жизней
 	currentLives := uc.stageSession.GetPlayerLives(playerNum)
 	uc.stageSession.SetPlayerLives(playerNum, currentLives+1)
 }
@@ -376,7 +340,6 @@ func (uc *BonusUseCases) removeBonus(bonus *types.BonusEntity) {
 	_ = uc.bonusesRepository.RemoveBonus(bonus)
 }
 
-// VisibleBonuses возвращает бонусы в видимой фазе мигания
 func (uc *BonusUseCases) VisibleBonuses() []*types.BonusEntity {
 	var visible []*types.BonusEntity
 	for _, bonus := range uc.bonusesRepository.GetAllBonuses() {
@@ -388,25 +351,21 @@ func (uc *BonusUseCases) VisibleBonuses() []*types.BonusEntity {
 	return visible
 }
 
-// GetRandomBonusType возвращает случайный тип бонуса
 func (uc *BonusUseCases) GetRandomBonusType() types.BonusType {
 	return types.BonusTypes[rand.Intn(len(types.BonusTypes))]
 }
 
-// SpawnRandomBonusEntity создает новый бонус со случайным типом
 func (uc *BonusUseCases) SpawnRandomBonusEntity(
 	position types.Position,
 ) *types.BonusEntity {
 	randomType := uc.GetRandomBonusType()
 
-	// Получаем размер базового тайла
 	baseSizePx := uc.configProvider.GetBaseSizePx()
 	size := types.Size{
 		Width:  int(baseSizePx),
 		Height: int(baseSizePx),
 	}
 
-	// Создаем изображение для бонуса по его типу
 	imageProvider, err := uc.tilesUseCases.CreateStaticTile(string(randomType))
 	if err != nil {
 		return nil

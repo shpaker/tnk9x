@@ -19,7 +19,6 @@ type stubImageProvider struct{}
 
 func (s *stubImageProvider) GetImageID() (string, error) { return "stub", nil }
 
-// stubRenderUseCases — no-op рендер для сценариев движения и стрельбы
 type stubRenderUseCases struct{}
 
 func (s *stubRenderUseCases) IsTankSpawnAnimationFinished(
@@ -132,6 +131,10 @@ func (s *stubMapUseCases) RemoveBlock(block *types.BlockEntity) error {
 
 func (s *stubMapUseCases) GetSizePx() types.Size { return s.mapEntity.GetSizePx() }
 
+func (s *stubMapUseCases) GetBorders() []*types.BorderEntity {
+	return s.mapEntity.GetBorders()
+}
+
 func (s *stubMapUseCases) GetRandomBonusSpawnPosition() types.Position {
 	return types.Position{}
 }
@@ -145,7 +148,6 @@ func (s *stubMapUseCases) IsWaterUnder(
 	return use_cases.NewMapUseCases(s.mapEntity).IsWaterUnder(position, size)
 }
 
-// recordingBonusUseCases записывает танки, подобравшие бонус
 type recordingBonusUseCases struct {
 	takenBy []*types.TankEntity
 }
@@ -179,7 +181,6 @@ type collisionTestEnv struct {
 	tankCommon  *tank_use_cases.TankCommonUseCases
 	tankActions *tank_use_cases.TankActionsUseCases
 	collision   *use_cases.CollisionUseCases
-	entities    *collision_services.EntitiesCollisionService
 	lifecycle   *stubTankLifecycle
 	specsUC     *use_cases.SpecsUseCases
 	soundUC     *use_cases.SoundUseCases
@@ -191,8 +192,6 @@ func newCollisionTestEnv(blocks types.MapBlocks) *collisionTestEnv {
 	return newCollisionTestEnvWith(blocks, false)
 }
 
-// newCollisionTestEnvWith — окружение коллизий; enemyBonusPickup
-// разрешает врагам подбирать бонусы
 func newCollisionTestEnvWith(
 	blocks types.MapBlocks,
 	enemyBonusPickup bool,
@@ -206,12 +205,6 @@ func newCollisionTestEnvWith(
 	)
 	mapUC := &stubMapUseCases{mapEntity: mapEntity}
 
-	entities := collision_services.NewEntitiesCollisionService()
-	wall := collision_services.NewWallCollisionService(entities)
-	boundary := collision_services.NewBoundaryCollisionService(
-		types.Size{Width: 208, Height: 208},
-	)
-	bulletSvc := collision_services.NewBulletCollisionService(8, entities)
 	specsUC := use_cases.NewSpecsUseCases()
 
 	render := &stubRenderUseCases{}
@@ -230,7 +223,6 @@ func newCollisionTestEnvWith(
 		bulletUC,
 		tankCommon,
 		render,
-		mapUC,
 		soundUC,
 		effects,
 	)
@@ -245,17 +237,15 @@ func newCollisionTestEnvWith(
 		mapUC,
 		tankCommon,
 		lifecycle,
-		boundary,
-		wall,
-		bulletSvc,
-		entities,
-		collision_services.NewSpawnCollisionService(entities),
+		collision_services.NewTankCollisionService(enemyBonusPickup),
+		collision_services.NewBulletCollisionService(),
+		collision_services.NewSpawnCollisionService(),
 		hqUseCases,
 		bonuses,
 		bonusesRepo,
+		game.NewCollisionWorldRepository(),
 		soundUC,
 		effects,
-		enemyBonusPickup,
 	)
 
 	return &collisionTestEnv{
@@ -268,7 +258,6 @@ func newCollisionTestEnvWith(
 		tankCommon:  tankCommon,
 		tankActions: tankActions,
 		collision:   collision,
-		entities:    entities,
 		lifecycle:   lifecycle,
 		specsUC:     specsUC,
 		soundUC:     soundUC,
@@ -277,8 +266,8 @@ func newCollisionTestEnvWith(
 	}
 }
 
-// tick воспроизводит порядок игрового цикла: движение танков → движение пуль →
-// разрешение коллизий
+// Mirrors the game loop order: tank movement, bullet movement,
+// then collision resolution.
 func (env *collisionTestEnv) tick() {
 	_ = env.tankCommon.UpdateAllTanks(testDT)
 	_ = env.bulletUC.UpdateBullets(testDT)
@@ -313,8 +302,6 @@ func steel(x, y float64) *types.BlockEntity {
 	return types.NewBlockEntity("steel", x, y, 8, &stubImageProvider{})
 }
 
-// brickRemnant создаёт сколотый остаток кирпича: от тайла с origin
-// (dataX, dataY) осталась часть (x, y) размером w на h
 func brickRemnant(
 	dataX, dataY, x, y float64,
 	w, h int,
@@ -331,8 +318,6 @@ func brickRemnant(
 	return block
 }
 
-// addBullet создаёт пулю 4x4 со спеками игрока заданного уровня
-// и кладёт её в репозиторий
 func (env *collisionTestEnv) addBullet(
 	t *testing.T,
 	x, y float64,
@@ -351,7 +336,7 @@ func (env *collisionTestEnv) addBullet(
 		owner,
 	)
 	if err := env.bulletsRepo.AddBullet(bullet); err != nil {
-		t.Fatalf("не удалось добавить пулю: %v", err)
+		t.Fatalf("failed to add bullet: %v", err)
 	}
 	return bullet
 }
@@ -376,7 +361,7 @@ func assertBlockRect(
 	if block.Position.X != x || block.Position.Y != y ||
 		block.Size.Width != w || block.Size.Height != h {
 		t.Errorf(
-			"остаток блока (%v, %dx%d), ожидалось ({%v %v}, %dx%d)",
+			"block remnant (%v, %dx%d), want ({%v %v}, %dx%d)",
 			block.Position,
 			block.Size.Width,
 			block.Size.Height,
@@ -388,8 +373,6 @@ func assertBlockRect(
 	}
 }
 
-// M1: регрессия бага QA — два танка давят друг на друга лоб-в-лоб,
-// позиции должны стабилизироваться без осцилляции и перекрытия
 func TestTankTankCollision_HeadOnNoJitter(t *testing.T) {
 	env := newCollisionTestEnv(nil)
 
@@ -406,14 +389,13 @@ func TestTankTankCollision_HeadOnNoJitter(t *testing.T) {
 
 	var prevA, prevB types.Position
 	for i := 0; i < 160; i++ {
-		// Эмулируем зажатые клавиши: оба игрока продолжают давить
 		_ = env.tankActions.Move(tankA)
 		_ = env.tankActions.Move(tankB)
 		env.tick()
 
-		if env.entities.CheckColliders(tankA, tankB) {
+		if types.Overlaps(tankA, tankB) {
 			t.Fatalf(
-				"тик %d: танки перекрылись: A=%v B=%v",
+				"tick %d: tanks overlap: A=%v B=%v",
 				i,
 				tankA.Position,
 				tankB.Position,
@@ -423,7 +405,7 @@ func TestTankTankCollision_HeadOnNoJitter(t *testing.T) {
 		if i >= 40 {
 			if tankA.Position != prevA || tankB.Position != prevB {
 				t.Fatalf(
-					"тик %d: дрожание — позиции меняются после контакта: A %v→%v, B %v→%v",
+					"tick %d: jitter, positions change after contact: A %v→%v, B %v→%v",
 					i,
 					prevA,
 					tankA.Position,
@@ -438,14 +420,13 @@ func TestTankTankCollision_HeadOnNoJitter(t *testing.T) {
 
 	if tankA.Position.X+float64(tankA.Size.Width) > tankB.Position.X {
 		t.Errorf(
-			"танки перекрыты по X: A=%v B=%v",
+			"tanks overlap on X: A=%v B=%v",
 			tankA.Position,
 			tankB.Position,
 		)
 	}
 }
 
-// M2: упор в стоящий танк — стоящий не сдвигается, движущийся останавливается
 func TestTankTankCollision_MovingIntoStoppedTank(t *testing.T) {
 	env := newCollisionTestEnv(nil)
 
@@ -468,26 +449,28 @@ func TestTankTankCollision_MovingIntoStoppedTank(t *testing.T) {
 
 		if blocker.Position != blockerStart {
 			t.Fatalf(
-				"тик %d: стоящий танк сдвинут с %v на %v",
+				"tick %d: stationary tank moved from %v to %v",
 				i,
 				blockerStart,
 				blocker.Position,
 			)
 		}
-		if env.entities.CheckColliders(mover, blocker) {
-			t.Fatalf("тик %d: перекрытие танков", i)
+		if types.Overlaps(mover, blocker) {
+			t.Fatalf("tick %d: tanks overlap", i)
 		}
 	}
 
 	if mover.Position.X+float64(mover.Size.Width) > blocker.Position.X {
-		t.Errorf("движущийся танк заехал в стоящего: %v", mover.Position)
+		t.Errorf(
+			"moving tank drove into the stationary one: %v",
+			mover.Position,
+		)
 	}
 	if blocker.State != types.TankStateActive {
-		t.Errorf("стоящий танк изменил состояние: %v", blocker.State)
+		t.Errorf("stationary tank changed state: %v", blocker.State)
 	}
 }
 
-// M3: погоня — быстрый догоняющий не наезжает на лидера
 func TestTankTankCollision_ChaseNoOverlap(t *testing.T) {
 	env := newCollisionTestEnv(nil)
 
@@ -498,7 +481,7 @@ func TestTankTankCollision_ChaseNoOverlap(t *testing.T) {
 		100,
 		0,
 	)
-	// Враг 1 уровня быстрее игрока (48 против 32)
+	// A level-1 enemy is faster than the player (48 vs 32).
 	chaser := env.newTank(types.TankRoleEnemy, types.DirectionRight, 64, 100, 1)
 	env.tanksRepo.SetPlayer(types.PlayerTankNumPlayer1, leader)
 	env.tanksRepo.AddEnemy(chaser)
@@ -509,28 +492,26 @@ func TestTankTankCollision_ChaseNoOverlap(t *testing.T) {
 		_ = env.tankActions.Move(chaser)
 		env.tick()
 
-		if env.entities.CheckColliders(leader, chaser) {
+		if types.Overlaps(leader, chaser) {
 			t.Fatalf(
-				"тик %d: догоняющий перекрыл лидера: leader=%v chaser=%v",
+				"tick %d: chaser overlaps leader: leader=%v chaser=%v",
 				i,
 				leader.Position,
 				chaser.Position,
 			)
 		}
 		if leader.Position.X < prevLeaderX {
-			t.Fatalf("тик %d: лидер откатился назад", i)
+			t.Fatalf("tick %d: leader rolled back", i)
 		}
 		prevLeaderX = leader.Position.X
 
 		if leader.Position.X+float64(leader.Size.Width) >
 			float64(208) {
-			break // лидер дошёл до края — дальше сценарий не показателен
+			break // the leader reached the edge; the rest is not representative
 		}
 	}
 }
 
-// M4: упор в стену из нескольких блоков по фронту — все блоки разрешаются
-// за тик, танк стоит вплотную без дрожания
 func TestTankBlockCollision_FlushAgainstWall(t *testing.T) {
 	blocks := types.MapBlocks{
 		brick(120, 96),
@@ -548,7 +529,7 @@ func TestTankBlockCollision_FlushAgainstWall(t *testing.T) {
 
 		if i >= 80 && tank.Position.X != 104 {
 			t.Fatalf(
-				"тик %d: танк не стоит вплотную к стене: X=%v (ожидалось 104)",
+				"tick %d: tank is not flush with the wall: X=%v (want 104)",
 				i,
 				tank.Position.X,
 			)
@@ -557,13 +538,12 @@ func TestTankBlockCollision_FlushAgainstWall(t *testing.T) {
 
 	if len(env.mapEntity.GetBlocks()) != 3 {
 		t.Errorf(
-			"танк разрушил блоки: осталось %d",
+			"tank destroyed blocks: %d left",
 			len(env.mapEntity.GetBlocks()),
 		)
 	}
 }
 
-// Целый орёл — препятствие: танк упирается в штаб и стоит вплотную
 func TestTankHQCollision_IntactHQBlocksTank(t *testing.T) {
 	env := newCollisionTestEnv(nil)
 	env.hqUseCases.hq = &types.HQEntity{
@@ -579,12 +559,11 @@ func TestTankHQCollision_IntactHQBlocksTank(t *testing.T) {
 	}
 
 	if tank.Position.X != 104 {
-		t.Errorf("танк не стоит вплотную к штабу: X=%v (ожидалось 104)",
+		t.Errorf("tank is not flush with the HQ: X=%v (want 104)",
 			tank.Position.X)
 	}
 }
 
-// Разрушенный орёл проходим
 func TestTankHQCollision_DestroyedHQPassable(t *testing.T) {
 	env := newCollisionTestEnv(nil)
 	env.hqUseCases.hq = &types.HQEntity{
@@ -601,16 +580,14 @@ func TestTankHQCollision_DestroyedHQPassable(t *testing.T) {
 	}
 
 	if tank.Position.X <= 120 {
-		t.Errorf("танк не проехал разрушенный штаб: X=%v", tank.Position.X)
+		t.Errorf("tank did not pass the destroyed HQ: X=%v", tank.Position.X)
 	}
 }
 
-// M5: из существующего перекрытия можно выехать, но нельзя углубиться
 func TestTankTankCollision_EscapeFromOverlap(t *testing.T) {
-	t.Run("выезд разрешён", func(t *testing.T) {
+	t.Run("escape allowed", func(t *testing.T) {
 		env := newCollisionTestEnv(nil)
 
-		// Частичное перекрытие: escaper левее, выезжает влево
 		escaper := env.newTank(
 			types.TankRolePlayer1,
 			types.DirectionLeft,
@@ -636,16 +613,16 @@ func TestTankTankCollision_EscapeFromOverlap(t *testing.T) {
 
 		if escaper.Position.X >= startX {
 			t.Errorf(
-				"танк не смог выехать из перекрытия: X=%v",
+				"tank could not escape the overlap: X=%v",
 				escaper.Position.X,
 			)
 		}
-		if env.entities.CheckColliders(escaper, other) {
-			t.Errorf("перекрытие не устранено после выезда")
+		if types.Overlaps(escaper, other) {
+			t.Errorf("overlap remains after escaping")
 		}
 	})
 
-	t.Run("углубление запрещено", func(t *testing.T) {
+	t.Run("going deeper forbidden", func(t *testing.T) {
 		env := newCollisionTestEnv(nil)
 
 		digger := env.newTank(
@@ -671,7 +648,7 @@ func TestTankTankCollision_EscapeFromOverlap(t *testing.T) {
 
 			if digger.Position.X > 90 {
 				t.Fatalf(
-					"тик %d: танк углубился в перекрытие: X=%v",
+					"tick %d: tank went deeper into the overlap: X=%v",
 					i,
 					digger.Position.X,
 				)
@@ -680,7 +657,6 @@ func TestTankTankCollision_EscapeFromOverlap(t *testing.T) {
 	})
 }
 
-// B1: два попадания за один тик — удаляются именно попавшие пули
 func TestBulletTankCollision_TwoHitsSameTick(t *testing.T) {
 	env := newCollisionTestEnv(nil)
 
@@ -695,7 +671,6 @@ func TestBulletTankCollision_TwoHitsSameTick(t *testing.T) {
 	env.tanksRepo.SetPlayer(types.PlayerTankNumPlayer1, shooter1)
 	env.tanksRepo.SetPlayer(types.PlayerTankNumPlayer2, shooter2)
 
-	// Тяжёлые враги (2 hp), чтобы проверить и удаление пуль, и урон
 	enemy1 := env.newTank(types.TankRoleEnemy, types.DirectionDown, 64, 64, 0)
 	enemy1.SetHitPoints(2)
 	enemy2 := env.newTank(types.TankRoleEnemy, types.DirectionDown, 128, 64, 0)
@@ -723,26 +698,25 @@ func TestBulletTankCollision_TwoHitsSameTick(t *testing.T) {
 		shooter2,
 	)
 	if err := env.bulletsRepo.AddBullet(bullet1); err != nil {
-		t.Fatalf("не удалось добавить пулю 1: %v", err)
+		t.Fatalf("failed to add bullet 1: %v", err)
 	}
 	if err := env.bulletsRepo.AddBullet(bullet2); err != nil {
-		t.Fatalf("не удалось добавить пулю 2: %v", err)
+		t.Fatalf("failed to add bullet 2: %v", err)
 	}
 
 	env.collision.UpdateCollisions()
 
 	if got := len(env.bulletUC.GetBullets()); got != 0 {
-		t.Errorf("ожидалось 0 пуль после двух попаданий, осталось %d", got)
+		t.Errorf("want 0 bullets after two hits, got %d", got)
 	}
 	if enemy1.GetHitPoints() != 1 {
-		t.Errorf("враг 1 не получил урон: hp=%d", enemy1.GetHitPoints())
+		t.Errorf("enemy 1 took no damage: hp=%d", enemy1.GetHitPoints())
 	}
 	if enemy2.GetHitPoints() != 1 {
-		t.Errorf("враг 2 не получил урон: hp=%d", enemy2.GetHitPoints())
+		t.Errorf("enemy 2 took no damage: hp=%d", enemy2.GetHitPoints())
 	}
 }
 
-// Щит от каски: пуля поглощается без урона и понижения уровня
 func TestBulletTankCollision_ShieldAbsorbsHit(t *testing.T) {
 	env := newCollisionTestEnv(nil)
 
@@ -763,30 +737,29 @@ func TestBulletTankCollision_ShieldAbsorbsHit(t *testing.T) {
 		enemy,
 	)
 	if err := env.bulletsRepo.AddBullet(bullet); err != nil {
-		t.Fatalf("не удалось добавить пулю: %v", err)
+		t.Fatalf("failed to add bullet: %v", err)
 	}
 
 	env.collision.UpdateCollisions()
 
 	if got := len(env.bulletUC.GetBullets()); got != 0 {
-		t.Errorf("пуля не поглощена щитом: осталось %d", got)
+		t.Errorf("bullet not absorbed by shield: %d left", got)
 	}
 	if player.GetSpecs().GetLevel() != 1 {
 		t.Errorf(
-			"уровень игрока изменился под щитом: %d",
+			"player level changed under shield: %d",
 			player.GetSpecs().GetLevel(),
 		)
 	}
 	if player.IsDestroyed() {
-		t.Error("игрок уничтожен под щитом")
+		t.Error("player destroyed under shield")
 	}
 	if kinds := env.effects.Kinds(); len(kinds) != 1 ||
 		kinds[0] != types.VisualEventShieldHit {
-		t.Errorf("события эффектов %v, ожидался удар по щиту", kinds)
+		t.Errorf("effect events %v, want shield hit", kinds)
 	}
 }
 
-// Вода не останавливает пули: пуля над водой выживает, блок цел
 func TestBulletWallCollision_BulletPassesOverWater(t *testing.T) {
 	blocks := types.MapBlocks{water(120, 96)}
 	env := newCollisionTestEnv(blocks)
@@ -811,21 +784,19 @@ func TestBulletWallCollision_BulletPassesOverWater(t *testing.T) {
 		shooter,
 	)
 	if err := env.bulletsRepo.AddBullet(bullet); err != nil {
-		t.Fatalf("не удалось добавить пулю: %v", err)
+		t.Fatalf("failed to add bullet: %v", err)
 	}
 
 	env.collision.UpdateCollisions()
 
 	if got := len(env.bulletUC.GetBullets()); got != 1 {
-		t.Errorf("пуля погибла над водой: осталось %d пуль", got)
+		t.Errorf("bullet died over water: %d left", got)
 	}
 	if got := len(env.mapEntity.GetBlocks()); got != 1 {
-		t.Errorf("вода удалена: осталось %d блоков", got)
+		t.Errorf("water removed: %d blocks left", got)
 	}
 }
 
-// Пуля, задевшая одновременно кирпич и орла, гасится кирпичом:
-// штаб за уцелевшей стеной не взрывается
 func TestBulletWallCollision_BrickShieldsHQFromSameTickHit(t *testing.T) {
 	env := newCollisionTestEnv(types.MapBlocks{brick(112, 96)})
 	env.hqUseCases.hq = &types.HQEntity{
@@ -840,20 +811,18 @@ func TestBulletWallCollision_BrickShieldsHQFromSameTickHit(t *testing.T) {
 		0,
 	)
 	env.tanksRepo.SetPlayer(types.PlayerTankNumPlayer1, shooter)
-	// Пуля 4x4 пересекает и кирпич (x до 120), и штаб (x от 120)
 	env.addBullet(t, 118, 102, types.DirectionRight, 0, shooter)
 
 	env.collision.UpdateCollisions()
 
 	if env.hqUseCases.explosions != 0 {
-		t.Errorf("штаб взорван пулей, которую должен был поглотить кирпич")
+		t.Errorf("HQ blown up by a bullet the brick should have absorbed")
 	}
 	if got := len(env.bulletUC.GetBullets()); got != 0 {
-		t.Errorf("пуля не погасла: осталось %d пуль", got)
+		t.Errorf("bullet not extinguished: %d left", got)
 	}
 }
 
-// Вода блокирует танки как обычная стена
 func TestTankWallCollision_WaterBlocksTank(t *testing.T) {
 	blocks := types.MapBlocks{water(120, 96), water(120, 104)}
 	env := newCollisionTestEnv(blocks)
@@ -867,13 +836,10 @@ func TestTankWallCollision_WaterBlocksTank(t *testing.T) {
 	}
 
 	if tank.Position.X != 104 {
-		t.Errorf("танк не упёрся в воду: X=%v, ожидалось 104", tank.Position.X)
+		t.Errorf("tank did not stop at water: X=%v, want 104", tank.Position.X)
 	}
 }
 
-// B2/B3: два выстрела в один кирпич за тик — первая пуля скалывает
-// ближнюю половину, вторая не пересекает остаток и летит дальше,
-// а не бьёт фантом
 func TestBulletWallCollision_NoPhantomHitOnDestroyedBrick(t *testing.T) {
 	blocks := types.MapBlocks{brick(120, 96)}
 	env := newCollisionTestEnv(blocks)
@@ -896,7 +862,6 @@ func TestBulletWallCollision_NoPhantomHitOnDestroyedBrick(t *testing.T) {
 	env.tanksRepo.SetPlayer(types.PlayerTankNumPlayer2, shooter2)
 
 	specs := env.specsUC.GetTankSpecs(false, 0)
-	// Обе пули пересекают один и тот же кирпич, но не друг друга
 	hitting := types.NewBulletEntity(
 		types.Position{X: 121, Y: 97},
 		types.Size{Width: 4, Height: 4},
@@ -916,10 +881,10 @@ func TestBulletWallCollision_NoPhantomHitOnDestroyedBrick(t *testing.T) {
 		shooter2,
 	)
 	if err := env.bulletsRepo.AddBullet(hitting); err != nil {
-		t.Fatalf("не удалось добавить пулю: %v", err)
+		t.Fatalf("failed to add bullet: %v", err)
 	}
 	if err := env.bulletsRepo.AddBullet(trailing); err != nil {
-		t.Fatalf("не удалось добавить пулю: %v", err)
+		t.Fatalf("failed to add bullet: %v", err)
 	}
 
 	env.collision.UpdateCollisions()
@@ -927,7 +892,7 @@ func TestBulletWallCollision_NoPhantomHitOnDestroyedBrick(t *testing.T) {
 	blocksLeft := env.mapEntity.GetBlocks()
 	if len(blocksLeft) != 1 {
 		t.Fatalf(
-			"ожидался 1 остаток кирпича, осталось %d блоков",
+			"want 1 brick remnant, got %d blocks",
 			len(blocksLeft),
 		)
 	}
@@ -936,17 +901,15 @@ func TestBulletWallCollision_NoPhantomHitOnDestroyedBrick(t *testing.T) {
 	remaining := env.bulletUC.GetBullets()
 	if len(remaining) != 1 {
 		t.Fatalf(
-			"ожидалась 1 выжившая пуля (вторая не должна бить фантомный кирпич), осталось %d",
+			"want 1 surviving bullet (the second must not hit a phantom brick), got %d",
 			len(remaining),
 		)
 	}
 	if remaining[0] != trailing {
-		t.Errorf("выжила не та пуля")
+		t.Errorf("wrong bullet survived")
 	}
 }
 
-// Обычная пуля скалывает половину тайла от грани попадания:
-// остаётся дальняя половина на всю ширину тайла
 func TestBulletWallCollision_BrickShavedByDirection(t *testing.T) {
 	tests := []struct {
 		name      string
@@ -957,14 +920,13 @@ func TestBulletWallCollision_BrickShavedByDirection(t *testing.T) {
 		wantY     float64
 		wantW     int
 		wantH     int
-		// Срезанный слой, из которого летят обломки
-		debrisX float64
-		debrisY float64
+		debrisX   float64
+		debrisY   float64
 	}{
-		{"вправо", types.DirectionRight, 117, 98, 124, 96, 4, 8, 120, 96},
-		{"влево", types.DirectionLeft, 127, 98, 120, 96, 4, 8, 124, 96},
-		{"вниз", types.DirectionDown, 122, 93, 120, 100, 8, 4, 120, 96},
-		{"вверх", types.DirectionUp, 122, 103, 120, 96, 8, 4, 120, 100},
+		{"right", types.DirectionRight, 117, 98, 124, 96, 4, 8, 120, 96},
+		{"left", types.DirectionLeft, 127, 98, 120, 96, 4, 8, 124, 96},
+		{"down", types.DirectionDown, 122, 93, 120, 100, 8, 4, 120, 96},
+		{"up", types.DirectionUp, 122, 103, 120, 96, 8, 4, 120, 100},
 	}
 
 	for _, tt := range tests {
@@ -984,7 +946,7 @@ func TestBulletWallCollision_BrickShavedByDirection(t *testing.T) {
 
 			blocks := env.mapEntity.GetBlocks()
 			if len(blocks) != 1 {
-				t.Fatalf("ожидался 1 остаток, блоков %d", len(blocks))
+				t.Fatalf("want 1 remnant, got %d blocks", len(blocks))
 			}
 			assertBlockRect(
 				t,
@@ -995,25 +957,24 @@ func TestBulletWallCollision_BrickShavedByDirection(t *testing.T) {
 				tt.wantH,
 			)
 			if got := len(env.bulletUC.GetBullets()); got != 0 {
-				t.Errorf("пуля не удалена: %d", got)
+				t.Errorf("bullet not removed: %d", got)
 			}
 			events := env.soundUC.GetEvents()
 			if got := countSounds(events, types.SoundIDBrick); got != 1 {
-				t.Errorf("звуков кирпича %d, ожидался 1", got)
+				t.Errorf("brick sounds %d, want 1", got)
 			}
 			debris := env.effects.Events[0]
 			want := types.Position{X: tt.debrisX, Y: tt.debrisY}
 			if debris.Kind != types.VisualEventBlockDebris ||
 				debris.Position != want ||
 				!isSlab(debris.Size, tt.wantW, tt.wantH) {
-				t.Errorf("обломки %v в %v размером %v", debris.Kind,
+				t.Errorf("debris %v at %v of size %v", debris.Kind,
 					debris.Position, debris.Size)
 			}
 		})
 	}
 }
 
-// Второй выстрел с той же стороны добивает остаток тайла
 func TestBulletWallCollision_SecondHitSameDirectionDestroys(t *testing.T) {
 	env := newCollisionTestEnv(types.MapBlocks{brick(120, 96)})
 	shooter := env.newTank(
@@ -1029,18 +990,17 @@ func TestBulletWallCollision_SecondHitSameDirectionDestroys(t *testing.T) {
 	env.collision.UpdateCollisions()
 
 	if got := len(env.mapEntity.GetBlocks()); got != 1 {
-		t.Fatalf("после первого выстрела ожидался остаток, блоков %d", got)
+		t.Fatalf("want a remnant after the first shot, got %d blocks", got)
 	}
 
 	env.addBullet(t, 121, 98, types.DirectionRight, 0, shooter)
 	env.collision.UpdateCollisions()
 
 	if got := len(env.mapEntity.GetBlocks()); got != 0 {
-		t.Errorf("второй выстрел не добил тайл: блоков %d", got)
+		t.Errorf("second shot did not finish the tile: %d blocks", got)
 	}
 }
 
-// Боковое попадание в половинку 8x4 оставляет четвертинку 4x4
 func TestBulletWallCollision_SideHitOnHalfLeavesQuarter(t *testing.T) {
 	env := newCollisionTestEnv(
 		types.MapBlocks{brickRemnant(120, 96, 120, 100, 8, 4)},
@@ -1059,13 +1019,12 @@ func TestBulletWallCollision_SideHitOnHalfLeavesQuarter(t *testing.T) {
 
 	blocks := env.mapEntity.GetBlocks()
 	if len(blocks) != 1 {
-		t.Fatalf("ожидалась четвертинка, блоков %d", len(blocks))
+		t.Fatalf("want a quarter, got %d blocks", len(blocks))
 	}
 	assertBlockRect(t, blocks[0], 124, 100, 4, 4)
 }
 
-// Удар в тонкий остаток со стороны «пустой» половины тайла сносит его:
-// глубина остатка вдоль полёта пули не больше слоя скола
+// A remnant thin along the bullet path is destroyed entirely.
 func TestBulletWallCollision_HitFromOpenSideDestroysThinRemnant(
 	t *testing.T,
 ) {
@@ -1085,11 +1044,10 @@ func TestBulletWallCollision_HitFromOpenSideDestroysThinRemnant(
 	env.collision.UpdateCollisions()
 
 	if got := len(env.mapEntity.GetBlocks()); got != 0 {
-		t.Errorf("тонкий остаток не уничтожен: блоков %d", got)
+		t.Errorf("thin remnant not destroyed: %d blocks", got)
 	}
 }
 
-// Усиленная пуля сносит кирпич целиком: и полный тайл, и остаток
 func TestBulletWallCollision_ReinforcedDestroysWholeBrick(t *testing.T) {
 	blocks := types.MapBlocks{
 		brick(120, 96),
@@ -1118,14 +1076,16 @@ func TestBulletWallCollision_ReinforcedDestroysWholeBrick(t *testing.T) {
 	env.collision.UpdateCollisions()
 
 	if got := len(env.mapEntity.GetBlocks()); got != 0 {
-		t.Errorf("усиленные пули не снесли кирпич целиком: блоков %d", got)
+		t.Errorf(
+			"reinforced bullets did not destroy the whole brick: %d blocks",
+			got,
+		)
 	}
 	if got := len(env.bulletUC.GetBullets()); got != 0 {
-		t.Errorf("пули не удалены: %d", got)
+		t.Errorf("bullets not removed: %d", got)
 	}
 }
 
-// Пуля на стыке двух кирпичей скалывает оба тайла, звук один
 func TestBulletWallCollision_SeamStraddleShavesBothTiles(t *testing.T) {
 	top := brick(120, 96)
 	bottom := brick(120, 104)
@@ -1143,21 +1103,19 @@ func TestBulletWallCollision_SeamStraddleShavesBothTiles(t *testing.T) {
 	env.collision.UpdateCollisions()
 
 	if got := len(env.mapEntity.GetBlocks()); got != 2 {
-		t.Fatalf("ожидались 2 остатка, блоков %d", got)
+		t.Fatalf("want 2 remnants, got %d blocks", got)
 	}
 	assertBlockRect(t, top, 124, 96, 4, 8)
 	assertBlockRect(t, bottom, 124, 104, 4, 8)
 	if got := len(env.bulletUC.GetBullets()); got != 0 {
-		t.Errorf("пуля не удалена: %d", got)
+		t.Errorf("bullet not removed: %d", got)
 	}
 	events := env.soundUC.GetEvents()
 	if got := countSounds(events, types.SoundIDBrick); got != 1 {
-		t.Errorf("звуков кирпича %d, ожидался 1", got)
+		t.Errorf("brick sounds %d, want 1", got)
 	}
 }
 
-// Пуля на стыке кирпича и стали: кирпич скалывается, сталь цела,
-// звучат оба материала
 func TestBulletWallCollision_BrickAndSteelSeam(t *testing.T) {
 	brickBlock := brick(120, 96)
 	steelBlock := steel(120, 104)
@@ -1177,34 +1135,31 @@ func TestBulletWallCollision_BrickAndSteelSeam(t *testing.T) {
 	assertBlockRect(t, brickBlock, 124, 96, 4, 8)
 	assertBlockRect(t, steelBlock, 120, 104, 8, 8)
 	if got := len(env.bulletUC.GetBullets()); got != 0 {
-		t.Errorf("пуля не удалена: %d", got)
+		t.Errorf("bullet not removed: %d", got)
 	}
 	events := env.soundUC.GetEvents()
 	if got := countSounds(events, types.SoundIDBrick); got != 1 {
-		t.Errorf("звуков кирпича %d, ожидался 1", got)
+		t.Errorf("brick sounds %d, want 1", got)
 	}
 	if got := countSounds(events, types.SoundIDSteel); got != 1 {
-		t.Errorf("звуков стали %d, ожидался 1", got)
+		t.Errorf("steel sounds %d, want 1", got)
 	}
-	// Обломки срезанного слоя и один эффект на материал в точке
-	// и по направлению пули
 	kinds := env.effects.Kinds()
 	if len(kinds) != 3 || kinds[0] != types.VisualEventBlockDebris ||
 		kinds[1] != types.VisualEventBrickHit ||
 		kinds[2] != types.VisualEventSteelHit {
 		t.Fatalf(
-			"события эффектов %v, ожидались обломки, кирпич и сталь",
+			"effect events %v, want debris, brick and steel",
 			kinds,
 		)
 	}
 	hit := env.effects.Events[1]
 	if hit.Position != (types.Position{X: 119, Y: 104}) ||
 		hit.Direction != types.DirectionRight {
-		t.Errorf("эффект в %v по %v", hit.Position, hit.Direction)
+		t.Errorf("effect at %v along %v", hit.Position, hit.Direction)
 	}
 }
 
-// Сталь: обычная пуля отскакивает, усиленная сносит блок целиком
 func TestBulletWallCollision_SteelBouncesNormalBullet(t *testing.T) {
 	env := newCollisionTestEnv(types.MapBlocks{steel(120, 96)})
 	normal := env.newTank(
@@ -1228,23 +1183,21 @@ func TestBulletWallCollision_SteelBouncesNormalBullet(t *testing.T) {
 	env.collision.UpdateCollisions()
 
 	if got := len(env.mapEntity.GetBlocks()); got != 1 {
-		t.Fatalf("обычная пуля повредила сталь: блоков %d", got)
+		t.Fatalf("normal bullet damaged steel: %d blocks", got)
 	}
 	events := env.soundUC.GetEvents()
 	if got := countSounds(events, types.SoundIDSteel); got != 1 {
-		t.Errorf("звуков стали %d, ожидался 1", got)
+		t.Errorf("steel sounds %d, want 1", got)
 	}
 
 	env.addBullet(t, 117, 98, types.DirectionRight, 2, reinforced)
 	env.collision.UpdateCollisions()
 
 	if got := len(env.mapEntity.GetBlocks()); got != 0 {
-		t.Errorf("усиленная пуля не снесла сталь: блоков %d", got)
+		t.Errorf("reinforced bullet did not destroy steel: %d blocks", got)
 	}
 }
 
-// Две пули за один тик с одной стороны добивают тайл целиком:
-// вторая пуля скалывает остаток, оставленный первой
 func TestBulletWallCollision_TwoBulletsSameTickFinishTile(t *testing.T) {
 	env := newCollisionTestEnv(types.MapBlocks{brick(120, 96)})
 	shooter1 := env.newTank(
@@ -1264,21 +1217,19 @@ func TestBulletWallCollision_TwoBulletsSameTickFinishTile(t *testing.T) {
 	env.tanksRepo.SetPlayer(types.PlayerTankNumPlayer1, shooter1)
 	env.tanksRepo.SetPlayer(types.PlayerTankNumPlayer2, shooter2)
 
-	// Пули пересекают кирпич, но не друг друга (касание — не коллизия)
+	// Bullets touch the brick but not each other (touching is not a collision).
 	env.addBullet(t, 121, 97, types.DirectionRight, 0, shooter1)
 	env.addBullet(t, 121, 101, types.DirectionRight, 0, shooter2)
 	env.collision.UpdateCollisions()
 
 	if got := len(env.mapEntity.GetBlocks()); got != 0 {
-		t.Errorf("тайл не добит второй пулей: блоков %d", got)
+		t.Errorf("tile not finished by the second bullet: %d blocks", got)
 	}
 	if got := len(env.bulletUC.GetBullets()); got != 0 {
-		t.Errorf("пули не удалены: %d", got)
+		t.Errorf("bullets not removed: %d", got)
 	}
 }
 
-// isSlab проверяет, что срезан слой толщиной в полтайла вдоль
-// сохранившегося размера остатка
 func isSlab(size types.Size, remainW, remainH int) bool {
 	if remainW < 8 {
 		return size == types.Size{Width: 8 - remainW, Height: remainH}
@@ -1286,7 +1237,6 @@ func isSlab(size types.Size, remainW, remainH int) bool {
 	return size == types.Size{Width: remainW, Height: 8 - remainH}
 }
 
-// Столкновение пуль: обе удаляются, эффект — между их центрами
 func TestBulletBulletCollision_Effect(t *testing.T) {
 	env := newCollisionTestEnv(nil)
 	player := env.newTank(types.TankRolePlayer1, types.DirectionUp, 0, 96, 0)
@@ -1308,7 +1258,6 @@ func TestBulletBulletCollision_Effect(t *testing.T) {
 	}
 }
 
-// Танк с лодкой проходит по воде
 func TestTankWallCollision_BoatSailsOverWater(t *testing.T) {
 	blocks := types.MapBlocks{water(120, 96), water(120, 104)}
 	env := newCollisionTestEnv(blocks)
@@ -1322,13 +1271,11 @@ func TestTankWallCollision_BoatSailsOverWater(t *testing.T) {
 		env.tick()
 	}
 
-	// Без лодки танк упирается в воду на X=104
 	if tank.Position.X <= 104 {
-		t.Errorf("танк с лодкой не заехал в воду: X=%v", tank.Position.X)
+		t.Errorf("tank with boat did not enter water: X=%v", tank.Position.X)
 	}
 }
 
-// Лодка поглощает попадание: уровень цел, лодка сбита
 func TestBulletTankCollision_BoatAbsorbsHit(t *testing.T) {
 	env := newCollisionTestEnv(nil)
 
@@ -1349,21 +1296,19 @@ func TestBulletTankCollision_BoatAbsorbsHit(t *testing.T) {
 		enemy,
 	)
 	if err := env.bulletsRepo.AddBullet(bullet); err != nil {
-		t.Fatalf("не удалось добавить пулю: %v", err)
+		t.Fatalf("failed to add bullet: %v", err)
 	}
 
 	env.collision.UpdateCollisions()
 
 	if player.HasBoat() {
-		t.Error("лодка не сбита попаданием")
+		t.Error("boat not knocked out by the hit")
 	}
 	if player.GetSpecs().GetLevel() != 1 {
-		t.Errorf("уровень игрока изменился: %d", player.GetSpecs().GetLevel())
+		t.Errorf("player level changed: %d", player.GetSpecs().GetLevel())
 	}
 }
 
-// Лодку сбили на воде: танк доплывает до берега, но снова в воду
-// уже не заедет
 func TestTankWallCollision_SunkBoatReachesShore(t *testing.T) {
 	blocks := types.MapBlocks{
 		water(104, 96), water(104, 104), water(112, 96), water(112, 104),
@@ -1380,10 +1325,10 @@ func TestTankWallCollision_SunkBoatReachesShore(t *testing.T) {
 		env.tick()
 	}
 	if tank.Position.X < 120 {
-		t.Fatalf("танк не доплыл до берега: X=%v", tank.Position.X)
+		t.Fatalf("tank did not reach the shore: X=%v", tank.Position.X)
 	}
 	if tank.CanSail() {
-		t.Fatal("на берегу танк не должен больше плавать")
+		t.Fatal("tank must not sail on the shore")
 	}
 
 	_ = env.tankActions.Rotate(tank, types.DirectionLeft)
@@ -1393,11 +1338,10 @@ func TestTankWallCollision_SunkBoatReachesShore(t *testing.T) {
 		env.tick()
 	}
 	if tank.Position.X < 120 {
-		t.Errorf("танк без лодки заехал в воду: X=%v", tank.Position.X)
+		t.Errorf("boatless tank entered water: X=%v", tank.Position.X)
 	}
 }
 
-// Враг подбирает бонус, только если это включено в конфиге
 func TestTankBonusCollision_EnemyPickupFlag(t *testing.T) {
 	for _, enabled := range []bool{true, false} {
 		env := newCollisionTestEnvWith(nil, enabled)
@@ -1419,7 +1363,101 @@ func TestTankBonusCollision_EnemyPickupFlag(t *testing.T) {
 		env.collision.UpdateCollisions()
 
 		if picked := len(env.bonuses.takenBy) == 1; picked != enabled {
-			t.Errorf("подбор включён=%v, враг подобрал=%v", enabled, picked)
+			t.Errorf("pickup enabled=%v, enemy picked=%v", enabled, picked)
 		}
+	}
+}
+
+func TestBulletWallCollision_LongStepHitsThinRemnant(t *testing.T) {
+	remnant := brickRemnant(120, 96, 124, 96, 4, 8)
+	env := newCollisionTestEnv(types.MapBlocks{remnant})
+	shooter := env.newTank(
+		types.TankRolePlayer1,
+		types.DirectionRight,
+		0,
+		192,
+		0,
+	)
+	env.tanksRepo.SetPlayer(types.PlayerTankNumPlayer1, shooter)
+	bullet := env.addBullet(t, 100, 98, types.DirectionRight, 0, shooter)
+
+	_ = env.bulletUC.UpdateBullets(0.5)
+	if bullet.Position.X < 140 {
+		t.Fatalf(
+			"bullet flew only to X=%v, step too small for the check",
+			bullet.Position.X,
+		)
+	}
+	env.collision.UpdateCollisions()
+
+	if got := len(env.mapEntity.GetBlocks()); got != 0 {
+		t.Errorf("brick remnant intact: %d blocks", got)
+	}
+	if got := len(env.bulletUC.GetBullets()); got != 0 {
+		t.Errorf("bullet flew through the brick: %d bullets", got)
+	}
+}
+
+func TestTankBlockCollision_LongStepStopsFlush(t *testing.T) {
+	env := newCollisionTestEnv(types.MapBlocks{brick(120, 96), brick(120, 104)})
+	tank := env.newTank(types.TankRolePlayer1, types.DirectionRight, 64, 96, 0)
+	env.tanksRepo.SetPlayer(types.PlayerTankNumPlayer1, tank)
+
+	tank.Position.X = 180
+	env.collision.UpdateCollisions()
+
+	if tank.Position.X != 104 {
+		t.Errorf(
+			"tank did not stop flush with the wall: X=%v, want 104",
+			tank.Position.X,
+		)
+	}
+}
+
+func TestTankBorderCollision_HaltsDocking(t *testing.T) {
+	env := newCollisionTestEnv(nil)
+	tank := env.newTank(
+		types.TankRolePlayer1,
+		types.DirectionRight,
+		190,
+		100,
+		0,
+	)
+	testutil.DockingTank(tank)
+	env.tanksRepo.SetPlayer(types.PlayerTankNumPlayer1, tank)
+
+	tank.Position.X = 193
+	env.collision.UpdateCollisions()
+
+	if !tank.IsStopped() || tank.Position.X != 192 {
+		t.Fatalf(
+			"stopped=%v X=%v, want stop at 192",
+			tank.IsStopped(),
+			tank.Position.X,
+		)
+	}
+}
+
+func TestTankBorderCollision_KeepsDriving(t *testing.T) {
+	env := newCollisionTestEnv(nil)
+	tank := env.newTank(
+		types.TankRolePlayer1,
+		types.DirectionRight,
+		190,
+		100,
+		0,
+	)
+	testutil.MovingTank(tank)
+	env.tanksRepo.SetPlayer(types.PlayerTankNumPlayer1, tank)
+
+	tank.Position.X = 193
+	env.collision.UpdateCollisions()
+
+	if !tank.IsDriving() || tank.Position.X != 192 {
+		t.Fatalf(
+			"driving=%v X=%v, want driving at the edge at 192",
+			tank.IsDriving(),
+			tank.Position.X,
+		)
 	}
 }

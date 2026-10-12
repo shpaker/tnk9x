@@ -5,42 +5,18 @@ import (
 	image_providers "github.com/shpaker/tnk9x/internal/types/image_providers"
 )
 
-type IBoundaryCollisionService interface {
-	CheckLeftBoundaryCollision(entity types.IEntityCollider) bool
-	CheckRightBoundaryCollision(entity types.IEntityCollider) bool
-	CheckTopBoundaryCollision(entity types.IEntityCollider) bool
-	CheckBottomBoundaryCollision(entity types.IEntityCollider) bool
-}
-
-type IWallCollisionService interface {
-	CheckTankWallCollision(
+type ITankCollisionService interface {
+	Response(
 		tank *types.TankEntity,
-		block *types.BlockEntity,
-	) bool
+		other types.IEntityCollider,
+	) types.CollisionResponse
 }
 
 type IBulletCollisionService interface {
-	CheckBulletBlockCollision(
+	Response(
 		bullet *types.BulletEntity,
-		block *types.BlockEntity,
-	) bool
-	CheckBulletTankCollision(
-		bullet *types.BulletEntity,
-		tank *types.TankEntity,
-	) bool
-	CheckBulletHQCollision(
-		bullet *types.BulletEntity,
-		hq *types.HQEntity,
-	) bool
-}
-
-type IEntitiesCollisionService interface {
-	CheckColliders(obj1 types.IEntityCollider, obj2 types.IEntityCollider) bool
-	ResolveCollisionPosition(
-		entity types.IEntityCollider,
-		obstacle types.IEntityCollider,
-		direction types.Direction,
-	) (types.Position, error)
+		other types.IEntityCollider,
+	) types.CollisionResponse
 }
 
 type ISpawnCollisionService interface {
@@ -68,8 +44,6 @@ type ITileService interface {
 	) (*image_providers.AnimationProvider, error)
 }
 
-// INavigationService отвечает на навигационные запросы AI по сетке карты:
-// поиск пути и первое препятствие на линии огня
 type INavigationService interface {
 	FindPath(
 		grid *types.NavGridEntity,
@@ -84,8 +58,6 @@ type INavigationService interface {
 	) types.RayHit
 }
 
-// IRandomService — источник случайных чисел; подменяется в тестах
 type IRandomService interface {
-	// Float64 возвращает число из [0, 1)
 	Float64() float64
 }

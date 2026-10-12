@@ -30,6 +30,8 @@ github.com/shpaker/kinescope v0.3.0 h1:ptuskpyazvdqVVChTv2wbuIjKjMzRaJMvdIeA3BpQ
 github.com/shpaker/kinescope v0.3.0/go.mod h1:UMpd3+XyRZAzx5w1HbOjNj2bHAzF+eHJbKXTCShi/Tk=
 github.com/shpaker/koleya v0.1.0 h1:6pew3EzICodwX5xBAIBx7dxzyL+o/HNrh8hhs672lww=
 github.com/shpaker/koleya v0.1.0/go.mod h1:h3MHArRrh/Hor3hF14YU+DPFCKaomuBjsIeNi0wSO+k=
+github.com/shpaker/obstenku v0.1.0 h1:Ph+Js55OyVexQPkthaYpoKiq4Nmj2TlxiZYvCi13oSU=
+github.com/shpaker/obstenku v0.1.0/go.mod h1:n63Q/Svz17mjCpEWVpYq7yqRH58YLXk5WSOMjs/EW/k=
 github.com/srwiley/rasterx v0.0.0-20220730225603-2ab79fcdd4ef h1:Ch6Q+AZUxDBCVqdkI8FSpFyZDtCVBc2VmejdNrm5rRQ=
 github.com/srwiley/rasterx v0.0.0-20220730225603-2ab79fcdd4ef/go.mod h1:nXTWP6+gD5+LUJ8krVhhoeHjvHTutPxMYl5SvkcnJNE=
 github.com/yuin/gopher-lua v1.1.1 h1:kYKnWBjvbNP4XLT3+bPEwAXJx262OhaHDWDVOPjL46M=

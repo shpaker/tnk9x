@@ -8,11 +8,9 @@ import (
 var _ interfaces.IBulletUseCases = (*BulletUseCases)(nil)
 
 type BulletUseCases struct {
-	bulletsRepository interfaces.IBulletsRepository
-	tilesUseCases     interfaces.ITilesUseCases
-	tankSpriteSize    uint
-	// shotCooldownEnabled — между выстрелами танк перезаряжается
-	// (game.shot_cooldown): в упор нельзя стрелять каждый кадр
+	bulletsRepository   interfaces.IBulletsRepository
+	tilesUseCases       interfaces.ITilesUseCases
+	tankSpriteSize      uint
 	shotCooldownEnabled bool
 }
 
@@ -57,7 +55,6 @@ func (uc *BulletUseCases) ShootBullet(tank *types.TankEntity) (bool, error) {
 		bulletX = tank.Position.X + float64(uc.tankSpriteSize)/2
 	}
 
-	// Получаем спецификации танка для пули
 	specs := tank.GetSpecs()
 
 	bullet := types.NewBulletEntity(
@@ -73,7 +70,7 @@ func (uc *BulletUseCases) ShootBullet(tank *types.TankEntity) (bool, error) {
 		tank,
 	)
 
-	// Отказ репозитория — исчерпанный лимит пуль: выстрела просто нет
+	// A rejected bullet means the bullet limit is reached: no shot.
 	if err := uc.bulletsRepository.AddBullet(bullet); err != nil {
 		return false, nil
 	}
@@ -91,6 +88,7 @@ func (uc *BulletUseCases) UpdateBullets(dt float64) error {
 			continue
 		}
 
+		bullet.PrevPosition = bullet.Position
 		delta := bullet.GetSpeed() * dt
 		switch bullet.Direction {
 		case types.DirectionUp:

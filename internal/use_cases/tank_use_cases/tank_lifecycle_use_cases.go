@@ -42,7 +42,6 @@ func NewTankLifecycleUseCases(
 	}
 }
 
-// SpawnEnemy создаёт врага заданного уровня на спаунере spawnerIndex
 func (uc *TankLifecycleUseCases) SpawnEnemy(
 	spawnerIndex int,
 	level uint,
@@ -111,7 +110,6 @@ func (uc *TankLifecycleUseCases) SpawnPlayer2(
 	return tankPtr, nil
 }
 
-// isSpawnerBlocked проверяет перекрытие спавнера живыми танками
 func (uc *TankLifecycleUseCases) isSpawnerBlocked(
 	position types.Position,
 ) bool {
@@ -147,19 +145,17 @@ func (uc *TankLifecycleUseCases) spawnTank(
 		X: spawnAt.X * float64(uc.spawnLayout.BaseSize.Width),
 		Y: spawnAt.Y * float64(uc.spawnLayout.BaseSize.Height),
 	}
+	tank.PrevPosition = tank.Position
 
-	// Устанавливаем спецификации танка с указанным уровнем
 	specs := uc.specsUseCases.GetTankSpecs(
 		role == types.TankRoleEnemy,
 		level,
 	)
 	if specs != nil {
 		tank.SetSpecs(specs)
-		// Для тяжёлого танка (враг уровня 3) устанавливаем 4 попадания
 		if role == types.TankRoleEnemy && level == 3 {
 			tank.SetHitPoints(4)
 		} else {
-			// Для остальных танков 1 попадание
 			tank.SetHitPoints(1)
 		}
 	}
@@ -194,7 +190,6 @@ func (uc *TankLifecycleUseCases) Explode(tank *types.TankEntity) error {
 	return nil
 }
 
-// CompleteSpawn реализует ITankLifecycleUseCases
 func (uc *TankLifecycleUseCases) CompleteSpawn(tank *types.TankEntity) {
 	if tank == nil || tank.State != types.TankStateSpawning {
 		return
@@ -202,8 +197,6 @@ func (uc *TankLifecycleUseCases) CompleteSpawn(tank *types.TankEntity) {
 	uc.finishSpawnAnimation(tank)
 }
 
-// spawnShieldDurationTicks — неуязвимость танка игрока после появления,
-// и на старте уровня, и после гибели
 const spawnShieldDurationTicks = 3 * 60
 
 func (uc *TankLifecycleUseCases) finishSpawnAnimation(
