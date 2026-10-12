@@ -292,9 +292,10 @@ func (s *StageSessionEntity) GetPlayerInitialLives(
 ) uint {
 	if int(num) >= 0 && int(num) < len(s.playerInitialLives) {
 		if s.playerInitialLives[num] == 0 {
-			if num == types.PlayerTankNumPlayer1 {
+			switch num {
+			case types.PlayerTankNumPlayer1:
 				return defaultStagePlayer1Lives
-			} else if num == types.PlayerTankNumPlayer2 {
+			case types.PlayerTankNumPlayer2:
 				return defaultStagePlayer2Lives
 			}
 		}
