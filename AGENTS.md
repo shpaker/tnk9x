@@ -37,7 +37,7 @@ web/                # Браузерный слой: загрузчик wasm и 
 - Use cases: stateless, одна ответственность, работают только с интерфейсами. Допустимые поля: единственные на уровень сущности (`StageSessionEntity`, `MapEntity`, `HQEntity`) и иммутабельная конфигурация.
 - Все зависимости — через конструктор `New*`; сеттеры и nil-проверки зависимостей запрещены: граф гарантирует composition root (`internal/app`). У каждой реализации — compile-time `var _ interfaces.X = (*Y)(nil)`.
 - Экземпляры use cases общие для всех сущностей одного типа; entity передаются как параметры методов.
-- Сервисы коллизий (`internal/services/collision_services/`) только проверяют коллизии и возвращают `bool`; изменения вносят use cases. Универсальная проверка — через `IEntityCollider`.
+- Коллизии — через мир коллизий (`ICollisionWorldRepository`, библиотека obstenku): он ведёт сущность по всему пути и возвращает встречи. Сервисы коллизий (`internal/services/collision_services/`) только решают, как пара встречается (`bool` или `CollisionResponse`); изменения вносят use cases. Пересечение прямоугольников — `types.Overlaps`/`types.RectsOverlap`, без ручных сравнений координат.
 - Entity живут только в Domain, поля унифицированы по порядку и смыслу.
 - `GameSessionEntity` допустима только в `internal/app`; в стейтах и их use cases — `StageSessionEntity` (источник данных о прогрессе уровня для `StageState`).
 - Переходы между состояниями — через `types.StateTransition`, возвращаемый из `Update()`; контракт стейта определён у потребителя (`internal/app`).

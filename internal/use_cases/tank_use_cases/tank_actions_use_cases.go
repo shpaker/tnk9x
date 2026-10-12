@@ -13,7 +13,6 @@ type TankActionsUseCases struct {
 	bulletUseCases        interfaces.IBulletUseCases
 	commonUseCases        interfaces.ITankCommonUseCases
 	renderUseCases        interfaces.IRenderUseCases
-	mapUseCases           interfaces.IMapUseCases
 	soundUseCases         interfaces.ISoundUseCases
 	visualEffectsUseCases interfaces.IVisualEffectsUseCases
 }
@@ -22,7 +21,6 @@ func NewTankActionsUseCases(
 	bulletUseCases interfaces.IBulletUseCases,
 	commonUseCases interfaces.ITankCommonUseCases,
 	renderUseCases interfaces.IRenderUseCases,
-	mapUseCases interfaces.IMapUseCases,
 	soundUseCases interfaces.ISoundUseCases,
 	visualEffectsUseCases interfaces.IVisualEffectsUseCases,
 ) *TankActionsUseCases {
@@ -30,7 +28,6 @@ func NewTankActionsUseCases(
 		bulletUseCases:        bulletUseCases,
 		commonUseCases:        commonUseCases,
 		renderUseCases:        renderUseCases,
-		mapUseCases:           mapUseCases,
 		soundUseCases:         soundUseCases,
 		visualEffectsUseCases: visualEffectsUseCases,
 	}
@@ -134,38 +131,5 @@ func (uc *TankActionsUseCases) ApplyDecision(
 	_ = uc.Rotate(tank, decision.Direction)
 	if decision.Move {
 		_ = uc.Move(tank)
-	}
-}
-
-func (uc *TankActionsUseCases) SetMinXPosition(tank *types.TankEntity) {
-	tank.Position.X = 0
-	uc.haltAtBoundary(tank)
-}
-
-func (uc *TankActionsUseCases) SetMaxXPosition(tank *types.TankEntity) {
-	mapSizePx := uc.mapUseCases.GetSizePx()
-	maxX := float64(mapSizePx.Width - tank.Size.Width)
-	tank.Position.X = maxX
-	uc.haltAtBoundary(tank)
-}
-
-func (uc *TankActionsUseCases) SetMinYPosition(tank *types.TankEntity) {
-	tank.Position.Y = 0
-	uc.haltAtBoundary(tank)
-}
-
-func (uc *TankActionsUseCases) SetMaxYPosition(tank *types.TankEntity) {
-	mapSizePx := uc.mapUseCases.GetSizePx()
-	maxY := float64(mapSizePx.Height - tank.Size.Height)
-	tank.Position.Y = maxY
-	uc.haltAtBoundary(tank)
-}
-
-// haltAtBoundary прерывает докатывание у края карты: танк клампится
-// каждый тик, узел за краем недостижим — без остановки он навсегда
-// останется докатывающим
-func (uc *TankActionsUseCases) haltAtBoundary(tank *types.TankEntity) {
-	if tank.IsDocking() {
-		tank.Halt()
 	}
 }

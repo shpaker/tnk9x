@@ -1056,8 +1056,10 @@ func (s *stubBonusMap) RestoreBlock(
 }
 func (s *stubBonusMap) IsBlockIntact(*types.BlockEntity) bool { return true }
 
-func (s *stubBonusMap) GetSizePx() types.Size       { return types.Size{} }
-func (s *stubBonusMap) IsIceAt(types.Position) bool { return false }
+func (s *stubBonusMap) GetSizePx() types.Size             { return types.Size{} }
+func (s *stubBonusMap) IsIceAt(types.Position) bool       { return false }
+func (s *stubBonusMap) GetBorders() []*types.BorderEntity { return nil }
+
 func (s *stubBonusMap) IsWaterUnder(types.Position, types.Size) bool {
 	return false
 }

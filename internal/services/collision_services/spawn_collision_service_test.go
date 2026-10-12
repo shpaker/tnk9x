@@ -12,7 +12,7 @@ type spawnCollisionTestEnv struct {
 
 func newSpawnCollisionTestEnv() *spawnCollisionTestEnv {
 	return &spawnCollisionTestEnv{
-		service: NewSpawnCollisionService(NewEntitiesCollisionService()),
+		service: NewSpawnCollisionService(),
 	}
 }
 

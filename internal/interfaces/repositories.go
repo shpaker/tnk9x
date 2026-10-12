@@ -14,6 +14,28 @@ type IGameRepositoriesRegistry interface {
 	GetBonusesRepository() IBonusesRepository
 	GetSoundEventsRepository() ISoundEventsRepository
 	GetVisualEffectsRepository() IVisualEffectsRepository
+	GetCollisionWorldRepository() ICollisionWorldRepository
+}
+
+// ICollisionWorldRepository — пространственный индекс сущностей уровня:
+// где каждая стоит на конец прошлого тика и кого встретит на пути
+type ICollisionWorldRepository interface {
+	// Sync сверяет мир с уровнем: неподвижные сущности встают на свои
+	// текущие места, новые движущиеся — на позицию начала тика,
+	// пропавшие убираются
+	Sync(static []types.IEntityCollider, movers []types.IMover)
+	// Update переносит сущность на её текущее место без коллизий:
+	// сколотый кирпич, восстановленный блок
+	Update(entity types.IEntityCollider)
+	// Remove убирает сущность из мира
+	Remove(entity types.IEntityCollider)
+	// Move ведёт сущность из её места в мире к goal и возвращает, где
+	// она остановилась, и встречи на пути по порядку
+	Move(
+		entity types.IEntityCollider,
+		goal types.Position,
+		filter types.CollisionFilter,
+	) (types.Position, []types.CollisionEntity)
 }
 
 // ISoundEventsRepository хранит очередь звуковых событий кадра

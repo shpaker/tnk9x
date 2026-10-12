@@ -299,8 +299,10 @@ func (s *NavigationService) intersects(
 	target types.RayTarget,
 	left, top, right, bottom float64,
 ) bool {
-	return left < target.Position.X+float64(target.Size.Width) &&
-		right > target.Position.X &&
-		top < target.Position.Y+float64(target.Size.Height) &&
-		bottom > target.Position.Y
+	return types.RectsOverlap(
+		types.Position{X: left, Y: top},
+		types.Size{Width: int(right - left), Height: int(bottom - top)},
+		target.Position,
+		target.Size,
+	)
 }

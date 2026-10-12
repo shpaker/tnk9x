@@ -30,6 +30,8 @@ type IMapUseCases interface {
 	// IsBlockIntact — блок на карте в исходном размере
 	IsBlockIntact(block *types.BlockEntity) bool
 	GetSizePx() types.Size
+	// GetBorders — невидимые стены за краями карты
+	GetBorders() []*types.BorderEntity
 	GetRandomBonusSpawnPosition() types.Position
 	IsIceAt(position types.Position) bool
 	// IsWaterUnder сообщает, перекрывает ли прямоугольник блок воды
@@ -114,10 +116,6 @@ type ITankActionsUseCases interface {
 	Stop(tank *types.TankEntity, byCollision bool)
 	Shoot(tank *types.TankEntity) error
 	ApplyDecision(tank *types.TankEntity, decision types.EnemyAIDecision)
-	SetMinXPosition(tank *types.TankEntity)
-	SetMaxXPosition(tank *types.TankEntity)
-	SetMinYPosition(tank *types.TankEntity)
-	SetMaxYPosition(tank *types.TankEntity)
 }
 
 // IAIUseCases собирает снимок мира для вражеского танка и получает

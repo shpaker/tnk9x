@@ -10,26 +10,32 @@ import (
 // float64-позиции, и для int-размера)
 const brickHitDepthPx = 4
 
+// simultaneousHit — встречи, разделённые меньшей долей пути, считаются
+// одновременными: пуля на стыке тайлов бьёт оба
+const simultaneousHit = 1e-9
+
 var _ interfaces.ICollisionUseCases = (*CollisionUseCases)(nil)
 
+// CollisionUseCases проводит пули и танки через мир коллизий и
+// применяет последствия встреч: сколы, попадания, упоры, подбор бонусов
 type CollisionUseCases struct {
-	bulletUseCases           interfaces.IBulletUseCases
-	tankActions              interfaces.ITankActionsUseCases
-	mapUseCases              interfaces.IMapUseCases
-	hqUseCases               interfaces.IHQUseCases
-	tankCommonUseCases       interfaces.ITankCommonUseCases
-	tankLifecycleUseCases    interfaces.ITankLifecycleUseCases
-	boundaryCollisionService interfaces.IBoundaryCollisionService
-	wallCollisionService     interfaces.IWallCollisionService
-	bulletCollisionService   interfaces.IBulletCollisionService
-	entitiesCollisionService interfaces.IEntitiesCollisionService
-	spawnCollisionService    interfaces.ISpawnCollisionService
-	bonusUseCases            interfaces.IBonusUseCases
+	// Use Cases
+	bulletUseCases        interfaces.IBulletUseCases
+	tankActions           interfaces.ITankActionsUseCases
+	mapUseCases           interfaces.IMapUseCases
+	hqUseCases            interfaces.IHQUseCases
+	tankCommonUseCases    interfaces.ITankCommonUseCases
+	tankLifecycleUseCases interfaces.ITankLifecycleUseCases
+	bonusUseCases         interfaces.IBonusUseCases
+	soundUseCases         interfaces.ISoundUseCases
+	visualEffectsUseCases interfaces.IVisualEffectsUseCases
+	// Services
+	tankCollisionService   interfaces.ITankCollisionService
+	bulletCollisionService interfaces.IBulletCollisionService
+	spawnCollisionService  interfaces.ISpawnCollisionService
+	// Repositories
 	bonusesRepository        interfaces.IBonusesRepository
-	soundUseCases            interfaces.ISoundUseCases
-	visualEffectsUseCases    interfaces.IVisualEffectsUseCases
-	// enemyBonusPickup — враги подбирают бонусы (game.enemy_bonus_pickup)
-	enemyBonusPickup bool
+	collisionWorldRepository interfaces.ICollisionWorldRepository
 }
 
 func NewCollisionUseCases(
@@ -38,17 +44,15 @@ func NewCollisionUseCases(
 	mapUseCases interfaces.IMapUseCases,
 	tankCommonUseCases interfaces.ITankCommonUseCases,
 	tankLifecycleUseCases interfaces.ITankLifecycleUseCases,
-	boundaryCollisionService interfaces.IBoundaryCollisionService,
-	wallCollisionService interfaces.IWallCollisionService,
+	tankCollisionService interfaces.ITankCollisionService,
 	bulletCollisionService interfaces.IBulletCollisionService,
-	entitiesCollisionService interfaces.IEntitiesCollisionService,
 	spawnCollisionService interfaces.ISpawnCollisionService,
 	hqUseCases interfaces.IHQUseCases,
 	bonusUseCases interfaces.IBonusUseCases,
 	bonusesRepository interfaces.IBonusesRepository,
+	collisionWorldRepository interfaces.ICollisionWorldRepository,
 	soundUseCases interfaces.ISoundUseCases,
 	visualEffectsUseCases interfaces.IVisualEffectsUseCases,
-	enemyBonusPickup bool,
 ) *CollisionUseCases {
 	return &CollisionUseCases{
 		bulletUseCases:           bulletUseCases,
@@ -57,182 +61,26 @@ func NewCollisionUseCases(
 		hqUseCases:               hqUseCases,
 		tankCommonUseCases:       tankCommonUseCases,
 		tankLifecycleUseCases:    tankLifecycleUseCases,
-		boundaryCollisionService: boundaryCollisionService,
-		wallCollisionService:     wallCollisionService,
-		bulletCollisionService:   bulletCollisionService,
-		entitiesCollisionService: entitiesCollisionService,
-		spawnCollisionService:    spawnCollisionService,
 		bonusUseCases:            bonusUseCases,
-		bonusesRepository:        bonusesRepository,
 		soundUseCases:            soundUseCases,
 		visualEffectsUseCases:    visualEffectsUseCases,
-		enemyBonusPickup:         enemyBonusPickup,
+		tankCollisionService:     tankCollisionService,
+		bulletCollisionService:   bulletCollisionService,
+		spawnCollisionService:    spawnCollisionService,
+		bonusesRepository:        bonusesRepository,
+		collisionWorldRepository: collisionWorldRepository,
 	}
 }
 
+// UpdateCollisions реализует ICollisionUseCases: сначала летят пули,
+// затем едут танки. Каждая сущность идёт от места, где закончила
+// прошлый тик, к текущей позиции и встречает всё на пути, как бы
+// далеко ни ушла за тик
 func (uc *CollisionUseCases) UpdateCollisions() {
 	allTanks := uc.tankCommonUseCases.GetAllTanks()
-
-	bullets := uc.bulletUseCases.GetBullets()
-
-	hq := uc.hqUseCases.GetHQ()
-
-	bonuses := uc.getBonuses()
-
-	uc.checkBulletsCollisions(bullets, hq)
-
-	uc.checkTanksCollisions(allTanks, bonuses, hq)
-}
-
-func (uc *CollisionUseCases) checkTanksCollisions(
-	allTanks []*types.TankEntity,
-	bonuses []*types.BonusEntity,
-	hq *types.HQEntity,
-) {
-	for _, tank := range allTanks {
-
-		if !tank.IsActive() {
-			continue
-		}
-		uc.checkTankBlockCollisions(tank)
-		uc.checkTankHQCollision(tank, hq)
-		uc.checkTankTankCollision(tank, allTanks)
-		uc.checkTankBoundaryCollision(tank)
-		uc.checkTankBulletCollisions(tank)
-		uc.checkTankBonusCollisions(tank, bonuses)
-	}
-}
-
-func (uc *CollisionUseCases) checkBulletsCollisions(
-	bullets []*types.BulletEntity,
-	hq *types.HQEntity,
-) {
-	for index := 0; index < len(bullets); index++ {
-		bullet := bullets[index]
-		if bullet == nil {
-			continue
-		}
-		// Стена перед орлом поглощает пулю раньше штаба: пуля, задевшая
-		// одновременно кирпич и орла, не должна взорвать штаб
-		if uc.checkBulletBoundaryCollision(bullet) ||
-			uc.checkBulletWallCollision(bullet) ||
-			uc.checkBulletHQCollision(bullet, hq) {
-			_ = uc.bulletUseCases.RemoveBullet(bullet)
-			bullets = uc.bulletUseCases.GetBullets()
-			index--
-			continue
-		}
-
-		for j := index + 1; j < len(bullets); j++ {
-			other := bullets[j]
-			if uc.checkBulletBulletCollision(bullet, other) {
-				uc.requestBulletClash(bullet, other)
-				_ = uc.bulletUseCases.RemoveBullet(other)
-				_ = uc.bulletUseCases.RemoveBullet(bullet)
-				bullets = uc.bulletUseCases.GetBullets()
-				index--
-				break
-			}
-		}
-	}
-}
-
-func (uc *CollisionUseCases) checkBulletBulletCollision(
-	first *types.BulletEntity,
-	second *types.BulletEntity,
-) bool {
-	if first == nil || second == nil {
-		return false
-	}
-
-	return uc.entitiesCollisionService.CheckColliders(first, second)
-}
-
-func (uc *CollisionUseCases) checkTankBulletCollisions(
-	tank *types.TankEntity,
-) {
-	bullets := uc.bulletUseCases.GetBullets()
-	for _, bullet := range bullets {
-		if bullet == nil {
-			continue
-		}
-		if uc.bulletCollisionService.CheckBulletTankCollision(
-			bullet,
-			tank,
-		) {
-			_ = uc.bulletUseCases.RemoveBullet(bullet)
-			if tank.IsActive() {
-				// Щит от каски поглощает попадание без урона
-				if tank.HasShield() {
-					uc.requestBulletEffect(types.VisualEventShieldHit, bullet)
-					return
-				}
-				// Лодка поглощает попадание: танк
-				// теряет лодку, но не уровень и не жизнь
-				if tank.HasBoat() {
-					tank.LoseBoat()
-					uc.requestBulletEffect(types.VisualEventShieldHit, bullet)
-					uc.soundUseCases.RequestSound(types.SoundIDSteel, false)
-					return
-				}
-				// Для игроков понижаем уровень вместо взрыва
-				if !tank.IsEnemy() {
-					currentLevel := uint(0)
-					if tank.GetSpecs() != nil {
-						currentLevel = tank.GetSpecs().GetLevel()
-					}
-
-					if currentLevel > 0 {
-						// Понижаем уровень
-						uc.tankCommonUseCases.LevelDown(tank)
-						uc.requestBulletEffect(
-							types.VisualEventPlayerHit,
-							bullet,
-						)
-						uc.soundUseCases.RequestSound(
-							types.SoundIDExplosion,
-							false,
-						)
-					} else {
-						// Уровень уже минимальный - взрываем танк
-						// Жизни будут уменьшены при респавне в TryRespawnPlayersTanks()
-						uc.soundUseCases.RequestSound(
-							types.SoundIDExplosion,
-							false,
-						)
-						_ = uc.tankLifecycleUseCases.Explode(tank)
-					}
-				} else {
-					// Для врагов проверяем здоровье
-					// Тяжёлый танк (уровень 3) требует несколько попаданий
-					currentHitPoints := tank.GetHitPoints()
-
-					// Если здоровье уже 1 или меньше, взрываем сразу
-					if currentHitPoints <= 1 {
-						uc.soundUseCases.RequestSound(
-							types.SoundIDExplosion,
-							false,
-						)
-						_ = uc.tankLifecycleUseCases.Explode(tank)
-					} else {
-						// Уменьшаем здоровье
-						tank.DecrementHitPoints()
-						uc.requestBulletEffect(
-							types.VisualEventEnemyHit,
-							bullet,
-						)
-						// Танк ещё жив - воспроизводим звук попадания
-						uc.soundUseCases.RequestSound(
-							types.SoundIDExplosion,
-							false,
-						)
-						// Можно добавить визуальный эффект (мигание) для тяжёлого танка
-					}
-				}
-			}
-			return
-		}
-	}
+	uc.syncWorld(allTanks)
+	uc.moveBullets()
+	uc.moveTanks(allTanks)
 }
 
 func (uc *CollisionUseCases) IsSpawnerBlocked(
@@ -246,185 +94,153 @@ func (uc *CollisionUseCases) IsSpawnerBlocked(
 	)
 }
 
-func (uc *CollisionUseCases) checkTankBlockCollisions(
-	tank *types.TankEntity,
-) {
-	// Танк без лодки выплыл на берег: в воду больше не заехать
-	if tank.IsBoatSinking() &&
-		!uc.mapUseCases.IsWaterUnder(tank.Position, tank.Size) {
-		tank.RemoveBoat()
-	}
-
-	mapBlocks := uc.mapUseCases.GetBlocks()
-	for _, block := range mapBlocks {
-		// Танк с лодкой проходит по воде
-		if tank.CanSail() && block.Data != nil &&
-			block.Data.Name == types.Water {
-			continue
-		}
-		if uc.wallCollisionService.CheckTankWallCollision(tank, block) {
-
-			correctedPos, err := uc.entitiesCollisionService.ResolveCollisionPosition(
-				tank,
-				block,
-				tank.Direction,
-			)
-			if err != nil {
-				// Блок сбоку/сзади: перекрытие не от текущего движения,
-				// оставляем возможность выехать из него
-				continue
-			}
-
-			tank.Position = correctedPos
-			uc.tankActions.Stop(tank, true)
-		}
-	}
-}
-
-// checkTankHQCollision не пускает танк на целый штаб: орёл —
-// препятствие, как блок; разрушенный штаб проходим
-func (uc *CollisionUseCases) checkTankHQCollision(
-	tank *types.TankEntity,
-	hq *types.HQEntity,
-) {
-	if hq == nil || !hq.IsIntact() ||
-		!uc.entitiesCollisionService.CheckColliders(tank, hq) {
-		return
-	}
-
-	correctedPos, err := uc.entitiesCollisionService.ResolveCollisionPosition(
-		tank,
-		hq,
-		tank.Direction,
-	)
-	if err != nil {
-		// Штаб сбоку/сзади: перекрытие не от текущего движения
-		return
-	}
-
-	tank.Position = correctedPos
-	uc.tankActions.Stop(tank, true)
-}
-
-func (uc *CollisionUseCases) checkTankTankCollision(
-	tank *types.TankEntity,
-	allTanks []*types.TankEntity,
-) {
-	for _, otherTank := range allTanks {
-
-		if tank == otherTank || otherTank == nil || otherTank.IsDestroyed() {
-			continue
-		}
-
-		if !uc.entitiesCollisionService.CheckColliders(tank, otherTank) {
-			continue
-		}
-
-		// Откатываем только танк, который в этом тике ехал в сторону другого:
-		// его движение «не произошло». Другой танк не трогаем — если он тоже
-		// ехал навстречу, откатится в собственной итерации. Перекрытие, не
-		// вызванное текущим движением (например, спавн поверх другого танка),
-		// не откатывается, чтобы из него можно было выехать.
-		if !uc.tankMovedTowards(tank, otherTank) {
-			continue
-		}
-
-		switch tank.Direction {
-		case types.DirectionUp, types.DirectionDown:
-			tank.Position.Y = tank.PrevPosition.Y
-		case types.DirectionLeft, types.DirectionRight:
-			tank.Position.X = tank.PrevPosition.X
-		}
-		uc.tankActions.Stop(tank, true)
-	}
-}
-
-// tankMovedTowards сообщает, сместился ли танк в текущем тике по своей оси
-// движения в сторону другого танка
-func (uc *CollisionUseCases) tankMovedTowards(
-	tank *types.TankEntity,
-	otherTank *types.TankEntity,
-) bool {
-	switch tank.Direction {
-	case types.DirectionUp:
-		return tank.Position.Y < tank.PrevPosition.Y &&
-			otherTank.Position.Y < tank.Position.Y
-	case types.DirectionDown:
-		return tank.Position.Y > tank.PrevPosition.Y &&
-			otherTank.Position.Y > tank.Position.Y
-	case types.DirectionLeft:
-		return tank.Position.X < tank.PrevPosition.X &&
-			otherTank.Position.X < tank.Position.X
-	case types.DirectionRight:
-		return tank.Position.X > tank.PrevPosition.X &&
-			otherTank.Position.X > tank.Position.X
-	}
-	return false
-}
-
-func (uc *CollisionUseCases) checkTankBoundaryCollision(
-	tank *types.TankEntity,
-) {
-	if uc.boundaryCollisionService.CheckLeftBoundaryCollision(tank) {
-		uc.tankActions.SetMinXPosition(tank)
-	}
-	if uc.boundaryCollisionService.CheckRightBoundaryCollision(tank) {
-		uc.tankActions.SetMaxXPosition(tank)
-	}
-	if uc.boundaryCollisionService.CheckTopBoundaryCollision(tank) {
-		uc.tankActions.SetMinYPosition(tank)
-	}
-	if uc.boundaryCollisionService.CheckBottomBoundaryCollision(tank) {
-		uc.tankActions.SetMaxYPosition(tank)
-	}
-}
-
-func (uc *CollisionUseCases) checkBulletBoundaryCollision(
-	bullet *types.BulletEntity,
-) bool {
-	if uc.boundaryCollisionService.CheckLeftBoundaryCollision(bullet) ||
-		uc.boundaryCollisionService.CheckRightBoundaryCollision(bullet) ||
-		uc.boundaryCollisionService.CheckTopBoundaryCollision(bullet) ||
-		uc.boundaryCollisionService.CheckBottomBoundaryCollision(bullet) {
-		return true
-	}
-	return false
-}
-
-func (uc *CollisionUseCases) checkBulletWallCollision(
-	bullet *types.BulletEntity,
-) bool {
-	// Пуля на стыке тайлов накрывает несколько блоков — сначала
-	// собираем все пересечённые, потом меняем карту: RemoveBlock
-	// уплотняет срез блоков, менять его во время обхода нельзя
-	var hitBlocks []*types.BlockEntity
+// syncWorld сверяет мир коллизий с уровнем
+func (uc *CollisionUseCases) syncWorld(allTanks []*types.TankEntity) {
+	var static []types.IEntityCollider
 	for _, block := range uc.mapUseCases.GetBlocks() {
-		// вода не останавливает снаряды
-		if block.Data != nil && block.Data.Name == types.Water {
-			continue
-		}
-
-		if uc.bulletCollisionService.CheckBulletBlockCollision(
-			bullet,
-			block,
-		) {
-			hitBlocks = append(hitBlocks, block)
+		static = append(static, block)
+	}
+	for _, border := range uc.mapUseCases.GetBorders() {
+		static = append(static, border)
+	}
+	if hq := uc.hqUseCases.GetHQ(); hq != nil {
+		static = append(static, hq)
+	}
+	for _, bonus := range uc.bonusesRepository.GetAllBonuses() {
+		if bonus != nil {
+			static = append(static, bonus)
 		}
 	}
 
-	hitBrick, hitSteel := false, false
-	for _, block := range hitBlocks {
-		if block.Data == nil {
+	var movers []types.IMover
+	for _, tank := range allTanks {
+		if tank != nil {
+			movers = append(movers, tank)
+		}
+	}
+	for _, bullet := range uc.bulletUseCases.GetBullets() {
+		if bullet != nil {
+			movers = append(movers, bullet)
+		}
+	}
+	uc.collisionWorldRepository.Sync(static, movers)
+}
+
+// Пули
+
+// moveBullets проводит каждую пулю к её позиции: пуля гаснет о первое,
+// что встретила
+func (uc *CollisionUseCases) moveBullets() {
+	bullets := append(
+		[]*types.BulletEntity(nil),
+		uc.bulletUseCases.GetBullets()...)
+	gone := make(map[*types.BulletEntity]bool)
+	for _, bullet := range bullets {
+		if bullet == nil || gone[bullet] {
 			continue
 		}
+		_, collisions := uc.collisionWorldRepository.Move(
+			bullet,
+			bullet.Position,
+			func(_, other types.IEntityCollider) types.CollisionResponse {
+				return uc.bulletCollisionService.Response(bullet, other)
+			},
+		)
+		hits := firstHits(collisions)
+		if len(hits) == 0 {
+			continue
+		}
+		bullet.Position = hits[0].Touch
+		for _, removed := range uc.hitByBullet(bullet, hits) {
+			gone[removed] = true
+			_ = uc.bulletUseCases.RemoveBullet(removed)
+			uc.collisionWorldRepository.Remove(removed)
+		}
+	}
+}
 
+// firstHits — встречи, случившиеся раньше всех остальных
+func firstHits(collisions []types.CollisionEntity) []types.CollisionEntity {
+	if len(collisions) == 0 {
+		return nil
+	}
+	first := collisions[0].Time
+	for _, c := range collisions[1:] {
+		first = min(first, c.Time)
+	}
+	var hits []types.CollisionEntity
+	for _, c := range collisions {
+		if c.Time <= first+simultaneousHit {
+			hits = append(hits, c)
+		}
+	}
+	return hits
+}
+
+// hitByBullet применяет одновременные встречи пули и возвращает пули,
+// которые гаснут. Стена и край карты гасят пулю раньше штаба: пуля,
+// задевшая одновременно кирпич и орла, не взрывает штаб
+func (uc *CollisionUseCases) hitByBullet(
+	bullet *types.BulletEntity,
+	hits []types.CollisionEntity,
+) []*types.BulletEntity {
+	var (
+		blocks []*types.BlockEntity
+		border bool
+		hq     *types.HQEntity
+		tank   *types.TankEntity
+		other  *types.BulletEntity
+	)
+	for _, hit := range hits {
+		switch entity := hit.Other.(type) {
+		case *types.BlockEntity:
+			blocks = append(blocks, entity)
+		case *types.BorderEntity:
+			border = true
+		case *types.HQEntity:
+			hq = entity
+		case *types.TankEntity:
+			if tank == nil {
+				tank = entity
+			}
+		case *types.BulletEntity:
+			if other == nil {
+				other = entity
+			}
+		}
+	}
+
+	switch {
+	case len(blocks) > 0 || border:
+		uc.hitBlocks(bullet, blocks)
+	case hq != nil:
+		if !hq.IsDestroyed() {
+			_ = uc.hqUseCases.Explode(hq)
+		}
+	case tank != nil:
+		uc.hitTank(tank, bullet)
+	case other != nil:
+		uc.requestBulletClash(bullet, other)
+		return []*types.BulletEntity{bullet, other}
+	}
+	return []*types.BulletEntity{bullet}
+}
+
+// hitBlocks скалывает и сносит задетые пулей блоки; пуля на стыке
+// тайлов задевает несколько
+func (uc *CollisionUseCases) hitBlocks(
+	bullet *types.BulletEntity,
+	blocks []*types.BlockEntity,
+) {
+	hitBrick, hitSteel := false, false
+	for _, block := range blocks {
 		switch block.Data.Name {
 		case types.Brick:
 			hitBrick = true
 			if bullet.IsReinforced() {
 				// Усиленные пули сносят кирпич целиком
 				uc.requestDebris(block, block.Position, block.GetSize(), bullet)
-				_ = uc.mapUseCases.RemoveBlock(block)
+				uc.removeBlock(block)
 			} else {
 				uc.shaveBrickBlock(bullet, block)
 			}
@@ -433,7 +249,7 @@ func (uc *CollisionUseCases) checkBulletWallCollision(
 			if bullet.IsReinforced() {
 				// Усиленные пули могут ломать стальные блоки
 				uc.requestDebris(block, block.Position, block.GetSize(), bullet)
-				_ = uc.mapUseCases.RemoveBlock(block)
+				uc.removeBlock(block)
 			}
 		}
 	}
@@ -447,9 +263,157 @@ func (uc *CollisionUseCases) checkBulletWallCollision(
 		uc.soundUseCases.RequestSound(types.SoundIDSteel, false)
 		uc.requestBulletEffect(types.VisualEventSteelHit, bullet)
 	}
-
-	return len(hitBlocks) > 0
 }
+
+// removeBlock убирает блок с карты и из мира коллизий
+func (uc *CollisionUseCases) removeBlock(block *types.BlockEntity) {
+	_ = uc.mapUseCases.RemoveBlock(block)
+	uc.collisionWorldRepository.Remove(block)
+}
+
+// hitTank применяет попадание пули в танк
+func (uc *CollisionUseCases) hitTank(
+	tank *types.TankEntity,
+	bullet *types.BulletEntity,
+) {
+	if !tank.IsActive() {
+		return
+	}
+	// Щит от каски поглощает попадание без урона
+	if tank.HasShield() {
+		uc.requestBulletEffect(types.VisualEventShieldHit, bullet)
+		return
+	}
+	// Лодка поглощает попадание: танк
+	// теряет лодку, но не уровень и не жизнь
+	if tank.HasBoat() {
+		tank.LoseBoat()
+		uc.requestBulletEffect(types.VisualEventShieldHit, bullet)
+		uc.soundUseCases.RequestSound(types.SoundIDSteel, false)
+		return
+	}
+	// Для игроков понижаем уровень вместо взрыва
+	if !tank.IsEnemy() {
+		currentLevel := uint(0)
+		if tank.GetSpecs() != nil {
+			currentLevel = tank.GetSpecs().GetLevel()
+		}
+
+		if currentLevel > 0 {
+			// Понижаем уровень
+			uc.tankCommonUseCases.LevelDown(tank)
+			uc.requestBulletEffect(
+				types.VisualEventPlayerHit,
+				bullet,
+			)
+			uc.soundUseCases.RequestSound(
+				types.SoundIDExplosion,
+				false,
+			)
+		} else {
+			// Уровень уже минимальный - взрываем танк
+			// Жизни будут уменьшены при респавне в TryRespawnPlayersTanks()
+			uc.soundUseCases.RequestSound(
+				types.SoundIDExplosion,
+				false,
+			)
+			_ = uc.tankLifecycleUseCases.Explode(tank)
+		}
+	} else {
+		// Для врагов проверяем здоровье
+		// Тяжёлый танк (уровень 3) требует несколько попаданий
+		currentHitPoints := tank.GetHitPoints()
+
+		// Если здоровье уже 1 или меньше, взрываем сразу
+		if currentHitPoints <= 1 {
+			uc.soundUseCases.RequestSound(
+				types.SoundIDExplosion,
+				false,
+			)
+			_ = uc.tankLifecycleUseCases.Explode(tank)
+		} else {
+			// Уменьшаем здоровье
+			tank.DecrementHitPoints()
+			uc.requestBulletEffect(
+				types.VisualEventEnemyHit,
+				bullet,
+			)
+			// Танк ещё жив - воспроизводим звук попадания
+			uc.soundUseCases.RequestSound(
+				types.SoundIDExplosion,
+				false,
+			)
+			// Можно добавить визуальный эффект (мигание) для тяжёлого танка
+		}
+	}
+}
+
+// Танки
+
+// moveTanks проводит каждый активный танк к его позиции: стена, край
+// карты, целый штаб и другие танки останавливают его вплотную, бонусы
+// и пули встречаются на ходу
+func (uc *CollisionUseCases) moveTanks(allTanks []*types.TankEntity) {
+	for _, tank := range allTanks {
+		if tank == nil || !tank.IsActive() {
+			continue
+		}
+		// Танк без лодки выплыл на берег: в воду больше не заехать
+		if tank.IsBoatSinking() &&
+			!uc.mapUseCases.IsWaterUnder(tank.Position, tank.Size) {
+			tank.RemoveBoat()
+		}
+
+		pos, collisions := uc.collisionWorldRepository.Move(
+			tank,
+			tank.Position,
+			func(_, other types.IEntityCollider) types.CollisionResponse {
+				return uc.tankCollisionService.Response(tank, other)
+			},
+		)
+		tank.Position = pos
+
+		blocked, atBorder, hitByBullet, tookBonus := false, false, false, false
+		for _, collision := range collisions {
+			switch other := collision.Other.(type) {
+			case *types.BorderEntity:
+				atBorder = true
+			case *types.BulletEntity:
+				if hitByBullet || uc.bulletCollisionService.Response(other, tank) == types.CollisionIgnore {
+					continue
+				}
+				// Одно попадание за тик
+				hitByBullet = true
+				_ = uc.bulletUseCases.RemoveBullet(other)
+				uc.collisionWorldRepository.Remove(other)
+				uc.hitTank(tank, other)
+			case *types.BonusEntity:
+				if tookBonus || !tank.IsActive() {
+					continue
+				}
+				// Один бонус за тик; Apply убирает бонус
+				tookBonus = true
+				uc.bonusUseCases.Apply(other, tank)
+				uc.collisionWorldRepository.Remove(other)
+			default:
+				if collision.Response != types.CollisionCross {
+					blocked = true
+				}
+			}
+		}
+		switch {
+		case blocked:
+			uc.tankActions.Stop(tank, true)
+		case atBorder && tank.IsDocking():
+			// У края карты докатывание прерывается: узел за краем
+			// недостижим. Едущий в край танк продолжает ехать —
+			// клавиша зажата
+			tank.Halt()
+		}
+	}
+}
+
+// Блоки
 
 // shaveBrickBlock срезает с кирпича слой brickHitDepthPx на всю
 // ширину остатка от грани, в которую попала пуля; остаток не толще
@@ -469,7 +433,7 @@ func (uc *CollisionUseCases) shaveBrickBlock(
 	}
 	if depth <= brickHitDepthPx {
 		uc.requestDebris(block, block.Position, size, bullet)
-		_ = uc.mapUseCases.RemoveBlock(block)
+		uc.removeBlock(block)
 		return
 	}
 
@@ -508,52 +472,10 @@ func (uc *CollisionUseCases) shaveBrickBlock(
 			Height: size.Height - brickHitDepthPx,
 		}
 	}
+	uc.collisionWorldRepository.Update(block)
 }
 
-func (uc *CollisionUseCases) checkBulletHQCollision(
-	bullet *types.BulletEntity,
-	hq *types.HQEntity,
-) bool {
-	if uc.bulletCollisionService.CheckBulletHQCollision(bullet, hq) {
-
-		if !hq.IsDestroyed() {
-			_ = uc.hqUseCases.Explode(hq)
-		}
-		return true
-	}
-	return false
-}
-
-func (uc *CollisionUseCases) getBonuses() []*types.BonusEntity {
-	return uc.bonusesRepository.GetAllBonuses()
-}
-
-func (uc *CollisionUseCases) checkTankBonusCollisions(
-	tank *types.TankEntity,
-	bonuses []*types.BonusEntity,
-) {
-	if tank == nil {
-		return
-	}
-
-	// Враги подбирают бонусы, только если это включено в конфиге
-	if tank.IsEnemy() && !uc.enemyBonusPickup {
-		return
-	}
-
-	for _, bonus := range bonuses {
-		if bonus == nil {
-			continue
-		}
-
-		if uc.entitiesCollisionService.CheckColliders(tank, bonus) {
-			// Применяем бонус
-			uc.bonusUseCases.Apply(bonus, tank)
-			// Бонус будет удален внутри Apply для гранаты и танка
-			return
-		}
-	}
-}
+// Эффекты
 
 // requestBulletEffect запрашивает эффект попадания в точке пули
 // с направлением её полёта

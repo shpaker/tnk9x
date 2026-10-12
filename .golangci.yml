@@ -34,6 +34,8 @@ linters-settings:
           - github.com/shpaker/tnk9x/internal/types
           # Чистая кинематика по сетке, без движка и IO
           - github.com/shpaker/koleya
+          # Чистая геометрия коллизий прямоугольников, без движка и IO
+          - github.com/shpaker/obstenku
       contracts:
         list-mode: strict
         files:

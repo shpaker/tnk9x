@@ -8,6 +8,7 @@ type MapEntity struct {
 	sizePx              Size
 	blocks              MapBlocks
 	bonusSpawnPositions []Position
+	borders             []*BorderEntity
 
 	hqFortifyTicks uint      // Оставшиеся тики укрепления штаба лопатой
 	hqSavedBlocks  MapBlocks // Блоки, заменённые бетоном при укреплении
@@ -23,7 +24,13 @@ func NewMapEntity(
 		sizePx:              sizePx,
 		blocks:              blocks,
 		bonusSpawnPositions: bonusSpawnPositions,
+		borders:             NewMapBorders(sizePx),
 	}
+}
+
+// GetBorders — невидимые стены за краями карты
+func (m *MapEntity) GetBorders() []*BorderEntity {
+	return m.borders
 }
 
 func (m *MapEntity) GetSizePx() Size {

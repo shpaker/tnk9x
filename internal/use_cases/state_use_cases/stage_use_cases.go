@@ -503,7 +503,7 @@ func (uc *StageUseCases) handleEnemyWithBonusDestroyed() {
 
 		// Бонус не должен лечь на штаб
 		if hq := uc.hqUseCases.GetHQ(); hq != nil &&
-			overlaps(bonusCandidate, hq) {
+			types.Overlaps(bonusCandidate, hq) {
 			continue
 		}
 
@@ -514,7 +514,7 @@ func (uc *StageUseCases) handleEnemyWithBonusDestroyed() {
 			if block == nil {
 				continue
 			}
-			if overlaps(bonusCandidate, block) {
+			if types.Overlaps(bonusCandidate, block) {
 				hasBlockCollision = true
 				break
 			}
@@ -529,19 +529,6 @@ func (uc *StageUseCases) handleEnemyWithBonusDestroyed() {
 			}
 		}
 	}
-}
-
-// overlaps проверяет пересечение прямоугольников бонуса и препятствия
-func overlaps(bonus *types.BonusEntity, obstacle types.IEntityCollider) bool {
-	bonusPos := bonus.GetPosition()
-	bonusSize := bonus.GetSize()
-	obstaclePos := obstacle.GetPosition()
-	obstacleSize := obstacle.GetSize()
-
-	return bonusPos.X < obstaclePos.X+float64(obstacleSize.Width) &&
-		bonusPos.X+float64(bonusSize.Width) > obstaclePos.X &&
-		bonusPos.Y < obstaclePos.Y+float64(obstacleSize.Height) &&
-		bonusPos.Y+float64(bonusSize.Height) > obstaclePos.Y
 }
 
 func (uc *StageUseCases) GetPlayersTanks() []*types.TankEntity {

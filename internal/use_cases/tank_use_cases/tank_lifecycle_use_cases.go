@@ -147,6 +147,7 @@ func (uc *TankLifecycleUseCases) spawnTank(
 		X: spawnAt.X * float64(uc.spawnLayout.BaseSize.Width),
 		Y: spawnAt.Y * float64(uc.spawnLayout.BaseSize.Height),
 	}
+	tank.PrevPosition = tank.Position
 
 	// Устанавливаем спецификации танка с указанным уровнем
 	specs := uc.specsUseCases.GetTankSpecs(

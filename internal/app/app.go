@@ -168,12 +168,10 @@ type App struct {
 	mainMenuRenderer    *main_menu.MainMenuRendererAdapter
 
 	// Stateless-сервисы
-	randomService            interfaces.IRandomService
-	boundaryCollisionService interfaces.IBoundaryCollisionService
-	entitiesCollisionService interfaces.IEntitiesCollisionService
-	wallCollisionService     interfaces.IWallCollisionService
-	bulletCollisionService   interfaces.IBulletCollisionService
-	spawnCollisionService    interfaces.ISpawnCollisionService
+	randomService          interfaces.IRandomService
+	tankCollisionService   interfaces.ITankCollisionService
+	bulletCollisionService interfaces.IBulletCollisionService
+	spawnCollisionService  interfaces.ISpawnCollisionService
 
 	// Use Cases; прогресс и выбор уровня — свои у каждого режима
 	specsUseCases       interfaces.ISpecsUseCases
@@ -399,25 +397,11 @@ func (app *App) loadSounds() {
 // только жестом)
 func (app *App) assembleGame() {
 	cfg := app.config
-	mapSizePx := types.Size{
-		Width:  cfg.MapBlocksCount.Width * int(cfg.TileBaseSize),
-		Height: cfg.MapBlocksCount.Height * int(cfg.TileBaseSize),
-	}
-	entitiesCollisionService := collision_services.NewEntitiesCollisionService()
-	app.boundaryCollisionService = collision_services.NewBoundaryCollisionService(
-		mapSizePx,
+	app.tankCollisionService = collision_services.NewTankCollisionService(
+		cfg.EnemyBonusPickup,
 	)
-	app.entitiesCollisionService = entitiesCollisionService
-	app.wallCollisionService = collision_services.NewWallCollisionService(
-		entitiesCollisionService,
-	)
-	app.bulletCollisionService = collision_services.NewBulletCollisionService(
-		int(cfg.GetTileBaseSize()),
-		entitiesCollisionService,
-	)
-	app.spawnCollisionService = collision_services.NewSpawnCollisionService(
-		entitiesCollisionService,
-	)
+	app.bulletCollisionService = collision_services.NewBulletCollisionService()
+	app.spawnCollisionService = collision_services.NewSpawnCollisionService()
 	app.randomService = services.NewRandomService()
 	app.specsUseCases = use_cases.NewSpecsUseCases()
 	app.waveUseCases = use_cases.NewWaveUseCases()

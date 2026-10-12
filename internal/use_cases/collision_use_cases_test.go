@@ -132,6 +132,10 @@ func (s *stubMapUseCases) RemoveBlock(block *types.BlockEntity) error {
 
 func (s *stubMapUseCases) GetSizePx() types.Size { return s.mapEntity.GetSizePx() }
 
+func (s *stubMapUseCases) GetBorders() []*types.BorderEntity {
+	return s.mapEntity.GetBorders()
+}
+
 func (s *stubMapUseCases) GetRandomBonusSpawnPosition() types.Position {
 	return types.Position{}
 }
@@ -179,7 +183,6 @@ type collisionTestEnv struct {
 	tankCommon  *tank_use_cases.TankCommonUseCases
 	tankActions *tank_use_cases.TankActionsUseCases
 	collision   *use_cases.CollisionUseCases
-	entities    *collision_services.EntitiesCollisionService
 	lifecycle   *stubTankLifecycle
 	specsUC     *use_cases.SpecsUseCases
 	soundUC     *use_cases.SoundUseCases
@@ -206,12 +209,6 @@ func newCollisionTestEnvWith(
 	)
 	mapUC := &stubMapUseCases{mapEntity: mapEntity}
 
-	entities := collision_services.NewEntitiesCollisionService()
-	wall := collision_services.NewWallCollisionService(entities)
-	boundary := collision_services.NewBoundaryCollisionService(
-		types.Size{Width: 208, Height: 208},
-	)
-	bulletSvc := collision_services.NewBulletCollisionService(8, entities)
 	specsUC := use_cases.NewSpecsUseCases()
 
 	render := &stubRenderUseCases{}
@@ -230,7 +227,6 @@ func newCollisionTestEnvWith(
 		bulletUC,
 		tankCommon,
 		render,
-		mapUC,
 		soundUC,
 		effects,
 	)
@@ -245,17 +241,15 @@ func newCollisionTestEnvWith(
 		mapUC,
 		tankCommon,
 		lifecycle,
-		boundary,
-		wall,
-		bulletSvc,
-		entities,
-		collision_services.NewSpawnCollisionService(entities),
+		collision_services.NewTankCollisionService(enemyBonusPickup),
+		collision_services.NewBulletCollisionService(),
+		collision_services.NewSpawnCollisionService(),
 		hqUseCases,
 		bonuses,
 		bonusesRepo,
+		game.NewCollisionWorldRepository(),
 		soundUC,
 		effects,
-		enemyBonusPickup,
 	)
 
 	return &collisionTestEnv{
@@ -268,7 +262,6 @@ func newCollisionTestEnvWith(
 		tankCommon:  tankCommon,
 		tankActions: tankActions,
 		collision:   collision,
-		entities:    entities,
 		lifecycle:   lifecycle,
 		specsUC:     specsUC,
 		soundUC:     soundUC,
@@ -411,7 +404,7 @@ func TestTankTankCollision_HeadOnNoJitter(t *testing.T) {
 		_ = env.tankActions.Move(tankB)
 		env.tick()
 
-		if env.entities.CheckColliders(tankA, tankB) {
+		if types.Overlaps(tankA, tankB) {
 			t.Fatalf(
 				"тик %d: танки перекрылись: A=%v B=%v",
 				i,
@@ -474,7 +467,7 @@ func TestTankTankCollision_MovingIntoStoppedTank(t *testing.T) {
 				blocker.Position,
 			)
 		}
-		if env.entities.CheckColliders(mover, blocker) {
+		if types.Overlaps(mover, blocker) {
 			t.Fatalf("тик %d: перекрытие танков", i)
 		}
 	}
@@ -509,7 +502,7 @@ func TestTankTankCollision_ChaseNoOverlap(t *testing.T) {
 		_ = env.tankActions.Move(chaser)
 		env.tick()
 
-		if env.entities.CheckColliders(leader, chaser) {
+		if types.Overlaps(leader, chaser) {
 			t.Fatalf(
 				"тик %d: догоняющий перекрыл лидера: leader=%v chaser=%v",
 				i,
@@ -640,7 +633,7 @@ func TestTankTankCollision_EscapeFromOverlap(t *testing.T) {
 				escaper.Position.X,
 			)
 		}
-		if env.entities.CheckColliders(escaper, other) {
+		if types.Overlaps(escaper, other) {
 			t.Errorf("перекрытие не устранено после выезда")
 		}
 	})
@@ -1421,5 +1414,105 @@ func TestTankBonusCollision_EnemyPickupFlag(t *testing.T) {
 		if picked := len(env.bonuses.takenBy) == 1; picked != enabled {
 			t.Errorf("подбор включён=%v, враг подобрал=%v", enabled, picked)
 		}
+	}
+}
+
+// Пуля за один большой шаг не пролетает тонкий остаток кирпича:
+// мир коллизий ведёт её по всему пути
+func TestBulletWallCollision_LongStepHitsThinRemnant(t *testing.T) {
+	remnant := brickRemnant(120, 96, 124, 96, 4, 8)
+	env := newCollisionTestEnv(types.MapBlocks{remnant})
+	shooter := env.newTank(
+		types.TankRolePlayer1,
+		types.DirectionRight,
+		0,
+		192,
+		0,
+	)
+	env.tanksRepo.SetPlayer(types.PlayerTankNumPlayer1, shooter)
+	bullet := env.addBullet(t, 100, 98, types.DirectionRight, 0, shooter)
+
+	// Шаг в полсекунды уносит пулю далеко за кирпич
+	_ = env.bulletUC.UpdateBullets(0.5)
+	if bullet.Position.X < 140 {
+		t.Fatalf(
+			"пуля пролетела всего до X=%v, шаг слишком мал для проверки",
+			bullet.Position.X,
+		)
+	}
+	env.collision.UpdateCollisions()
+
+	if got := len(env.mapEntity.GetBlocks()); got != 0 {
+		t.Errorf("остаток кирпича цел: блоков %d", got)
+	}
+	if got := len(env.bulletUC.GetBullets()); got != 0 {
+		t.Errorf("пуля пролетела сквозь кирпич: пуль %d", got)
+	}
+}
+
+// Танк за один большой шаг не проезжает стену, а встаёт вплотную
+func TestTankBlockCollision_LongStepStopsFlush(t *testing.T) {
+	env := newCollisionTestEnv(types.MapBlocks{brick(120, 96), brick(120, 104)})
+	tank := env.newTank(types.TankRolePlayer1, types.DirectionRight, 64, 96, 0)
+	env.tanksRepo.SetPlayer(types.PlayerTankNumPlayer1, tank)
+
+	tank.Position.X = 180
+	env.collision.UpdateCollisions()
+
+	if tank.Position.X != 104 {
+		t.Errorf(
+			"танк не встал вплотную к стене: X=%v, ожидалось 104",
+			tank.Position.X,
+		)
+	}
+}
+
+// У края карты докатывание прерывается: узел за краем недостижим
+func TestTankBorderCollision_HaltsDocking(t *testing.T) {
+	env := newCollisionTestEnv(nil)
+	tank := env.newTank(
+		types.TankRolePlayer1,
+		types.DirectionRight,
+		190,
+		100,
+		0,
+	)
+	testutil.DockingTank(tank)
+	env.tanksRepo.SetPlayer(types.PlayerTankNumPlayer1, tank)
+
+	tank.Position.X = 193
+	env.collision.UpdateCollisions()
+
+	if !tank.IsStopped() || tank.Position.X != 192 {
+		t.Fatalf(
+			"stopped=%v X=%v, ожидалась остановка на 192",
+			tank.IsStopped(),
+			tank.Position.X,
+		)
+	}
+}
+
+// Едущий в край танк продолжает ехать: клавиша зажата
+func TestTankBorderCollision_KeepsDriving(t *testing.T) {
+	env := newCollisionTestEnv(nil)
+	tank := env.newTank(
+		types.TankRolePlayer1,
+		types.DirectionRight,
+		190,
+		100,
+		0,
+	)
+	testutil.MovingTank(tank)
+	env.tanksRepo.SetPlayer(types.PlayerTankNumPlayer1, tank)
+
+	tank.Position.X = 193
+	env.collision.UpdateCollisions()
+
+	if !tank.IsDriving() || tank.Position.X != 192 {
+		t.Fatalf(
+			"driving=%v X=%v, ожидалось движение у края на 192",
+			tank.IsDriving(),
+			tank.Position.X,
+		)
 	}
 }

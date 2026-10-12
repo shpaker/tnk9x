@@ -7,22 +7,24 @@ import (
 var _ interfaces.IGameRepositoriesRegistry = (*GameRepositoriesRegistry)(nil)
 
 type GameRepositoriesRegistry struct {
-	bulletsRepository       interfaces.IBulletsRepository
-	animationsRepository    interfaces.IAnimationsRepository
-	tanksRepository         interfaces.ITanksRepository
-	bonusesRepository       interfaces.IBonusesRepository
-	soundEventsRepository   interfaces.ISoundEventsRepository
-	visualEffectsRepository interfaces.IVisualEffectsRepository
+	bulletsRepository        interfaces.IBulletsRepository
+	animationsRepository     interfaces.IAnimationsRepository
+	tanksRepository          interfaces.ITanksRepository
+	bonusesRepository        interfaces.IBonusesRepository
+	soundEventsRepository    interfaces.ISoundEventsRepository
+	visualEffectsRepository  interfaces.IVisualEffectsRepository
+	collisionWorldRepository interfaces.ICollisionWorldRepository
 }
 
 func NewGameRepositoriesRegistry() *GameRepositoriesRegistry {
 	return &GameRepositoriesRegistry{
-		bulletsRepository:       NewBulletsRepository(),
-		animationsRepository:    NewAnimationsRepository(),
-		tanksRepository:         NewTanksRepository(),
-		bonusesRepository:       NewBonusesRepository(),
-		soundEventsRepository:   NewSoundEventsRepository(),
-		visualEffectsRepository: NewVisualEffectsRepository(),
+		bulletsRepository:        NewBulletsRepository(),
+		animationsRepository:     NewAnimationsRepository(),
+		tanksRepository:          NewTanksRepository(),
+		bonusesRepository:        NewBonusesRepository(),
+		soundEventsRepository:    NewSoundEventsRepository(),
+		visualEffectsRepository:  NewVisualEffectsRepository(),
+		collisionWorldRepository: NewCollisionWorldRepository(),
 	}
 }
 
@@ -48,4 +50,8 @@ func (gr *GameRepositoriesRegistry) GetSoundEventsRepository() interfaces.ISound
 
 func (gr *GameRepositoriesRegistry) GetVisualEffectsRepository() interfaces.IVisualEffectsRepository {
 	return gr.visualEffectsRepository
+}
+
+func (gr *GameRepositoriesRegistry) GetCollisionWorldRepository() interfaces.ICollisionWorldRepository {
+	return gr.collisionWorldRepository
 }

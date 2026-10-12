@@ -43,7 +43,12 @@ func (uc *MapUseCases) RestoreBlock(
 ) bool {
 	origin, size := block.Data.Position, block.Data.Size
 	for _, obstacle := range obstacles {
-		if overlaps(origin, size, obstacle.GetPosition(), obstacle.GetSize()) {
+		if types.RectsOverlap(
+			origin,
+			size,
+			obstacle.GetPosition(),
+			obstacle.GetSize(),
+		) {
 			return false
 		}
 	}
@@ -72,24 +77,19 @@ func (uc *MapUseCases) IsBlockIntact(block *types.BlockEntity) bool {
 	return false
 }
 
-// overlaps — пересекаются ли прямоугольники
-func overlaps(
-	aPos types.Position,
-	aSize types.Size,
-	bPos types.Position,
-	bSize types.Size,
-) bool {
-	return aPos.X < bPos.X+float64(bSize.Width) &&
-		bPos.X < aPos.X+float64(aSize.Width) &&
-		aPos.Y < bPos.Y+float64(bSize.Height) &&
-		bPos.Y < aPos.Y+float64(aSize.Height)
-}
-
 func (uc *MapUseCases) GetSizePx() types.Size {
 	if uc.mapEntity == nil {
 		return types.Size{}
 	}
 	return uc.mapEntity.GetSizePx()
+}
+
+// GetBorders реализует IMapUseCases
+func (uc *MapUseCases) GetBorders() []*types.BorderEntity {
+	if uc.mapEntity == nil {
+		return nil
+	}
+	return uc.mapEntity.GetBorders()
 }
 
 func (uc *MapUseCases) GetRandomBonusSpawnPosition() types.Position {
@@ -110,12 +110,12 @@ func (uc *MapUseCases) IsWaterUnder(
 		if block == nil || block.Data == nil || block.Data.Name != types.Water {
 			continue
 		}
-		blockPos := block.GetPosition()
-		blockSize := block.GetSize()
-		if position.X < blockPos.X+float64(blockSize.Width) &&
-			blockPos.X < position.X+float64(size.Width) &&
-			position.Y < blockPos.Y+float64(blockSize.Height) &&
-			blockPos.Y < position.Y+float64(size.Height) {
+		if types.RectsOverlap(
+			position,
+			size,
+			block.GetPosition(),
+			block.GetSize(),
+		) {
 			return true
 		}
 	}
@@ -128,13 +128,7 @@ func (uc *MapUseCases) IsIceAt(position types.Position) bool {
 			continue
 		}
 
-		blockPos := block.GetPosition()
-		blockSize := block.GetSize()
-
-		if position.X >= blockPos.X &&
-			position.X < blockPos.X+float64(blockSize.Width) &&
-			position.Y >= blockPos.Y &&
-			position.Y < blockPos.Y+float64(blockSize.Height) {
+		if types.RectContains(block.GetPosition(), block.GetSize(), position) {
 			return true
 		}
 	}

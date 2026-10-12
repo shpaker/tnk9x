@@ -247,7 +247,6 @@ func (app *App) buildStageGraph(
 		bulletUseCases,
 		tankCommonUseCases,
 		renderUseCases,
-		mapUseCases,
 		soundUseCases,
 		visualEffectsUseCases,
 	)
@@ -310,17 +309,15 @@ func (app *App) buildStageGraph(
 		mapUseCases,
 		tankCommonUseCases,
 		tankLifecycleUseCases,
-		app.boundaryCollisionService,
-		app.wallCollisionService,
+		app.tankCollisionService,
 		app.bulletCollisionService,
-		app.entitiesCollisionService,
 		app.spawnCollisionService,
 		hqUseCases,
 		bonusUseCases,
 		bonusesRepository,
+		gameRepositories.GetCollisionWorldRepository(),
 		soundUseCases,
 		visualEffectsUseCases,
-		app.config.EnemyBonusPickup,
 	)
 
 	enemySpawnSelectionUseCases := use_cases.NewEnemySpawnSelectionUseCases(

@@ -91,6 +91,7 @@ func (uc *BulletUseCases) UpdateBullets(dt float64) error {
 			continue
 		}
 
+		bullet.PrevPosition = bullet.Position
 		delta := bullet.GetSpeed() * dt
 		switch bullet.Direction {
 		case types.DirectionUp:

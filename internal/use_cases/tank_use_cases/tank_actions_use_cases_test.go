@@ -5,7 +5,6 @@ import (
 
 	"github.com/shpaker/tnk9x/internal/testutil"
 	"github.com/shpaker/tnk9x/internal/types"
-	"github.com/shpaker/tnk9x/internal/use_cases"
 	"github.com/shpaker/tnk9x/internal/use_cases/tank_use_cases"
 )
 
@@ -20,7 +19,6 @@ func TestApplyDecisionRotatesAndMoves(t *testing.T) {
 		nil,
 		&testutil.FakeTankCommonUseCases{},
 		&stubRenderUseCases{},
-		nil,
 		nil,
 		&testutil.FakeVisualEffectsUseCases{},
 	)
@@ -48,7 +46,6 @@ func TestApplyDecisionWithoutMoveKeepsTankStopped(t *testing.T) {
 		&testutil.FakeTankCommonUseCases{},
 		&stubRenderUseCases{},
 		nil,
-		nil,
 		&testutil.FakeVisualEffectsUseCases{},
 	)
 	tank := newStoppedTank()
@@ -65,16 +62,10 @@ func TestApplyDecisionWithoutMoveKeepsTankStopped(t *testing.T) {
 }
 
 func newMotionActions() *tank_use_cases.TankActionsUseCases {
-	mapEntity := types.NewMapEntity(
-		types.Size{Width: 208, Height: 208},
-		nil,
-		nil,
-	)
 	return tank_use_cases.NewTankActionsUseCases(
 		nil,
 		&testutil.FakeTankCommonUseCases{},
 		&stubRenderUseCases{},
-		use_cases.NewMapUseCases(mapEntity),
 		nil,
 		&testutil.FakeVisualEffectsUseCases{},
 	)
@@ -132,34 +123,5 @@ func TestStopByCollisionHaltsInPlace(t *testing.T) {
 	}
 	if _, ok := tank.GetDrive(); ok {
 		t.Fatal("halted tank keeps driving")
-	}
-}
-
-// У края карты докатывание прерывается: узел за краем недостижим
-func TestBoundaryHaltsDocking(t *testing.T) {
-	actions := newMotionActions()
-	tank := newDrivingTank(193)
-	testutil.DockingTank(tank)
-
-	actions.SetMaxXPosition(tank)
-
-	if !tank.IsStopped() || tank.Position.X != 192 {
-		t.Fatalf(
-			"stopped=%v X=%v, want halted at 192",
-			tank.IsStopped(),
-			tank.Position.X,
-		)
-	}
-}
-
-// Едущий в край танк продолжает ехать: клавиша зажата
-func TestBoundaryKeepsDriving(t *testing.T) {
-	actions := newMotionActions()
-	tank := newDrivingTank(193)
-
-	actions.SetMaxXPosition(tank)
-
-	if !tank.IsDriving() {
-		t.Fatal("tank stopped driving at the boundary")
 	}
 }

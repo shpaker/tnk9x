@@ -312,19 +312,19 @@ func (uc *BonusUseCases) blocksAt(
 	position types.Position,
 	blockSize float64,
 ) types.MapBlocks {
+	// Касание гранью пересечением не считается
+	cell := types.Size{Width: int(blockSize), Height: int(blockSize)}
 	var blocks types.MapBlocks
 	for _, block := range uc.mapEntity.GetBlocks() {
 		if block == nil {
 			continue
 		}
-		blockPosition := block.GetPosition()
-		size := block.GetSize()
-		// Строгие неравенства: соседние клетки, касающиеся гранью,
-		// пересечением не считаются
-		if blockPosition.X < position.X+blockSize &&
-			blockPosition.X+float64(size.Width) > position.X &&
-			blockPosition.Y < position.Y+blockSize &&
-			blockPosition.Y+float64(size.Height) > position.Y {
+		if types.RectsOverlap(
+			block.GetPosition(),
+			block.GetSize(),
+			position,
+			cell,
+		) {
 			blocks = append(blocks, block)
 		}
 	}

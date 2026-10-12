@@ -3,13 +3,14 @@ package types
 import "errors"
 
 type BulletEntity struct {
-	Position  Position
-	Size      Size
-	Altitude  Altitude
-	Image     IImageProvider
-	Direction Direction
-	specs     *SpecsEntity // Спецификации танка, из которого выпущена пуля
-	owner     *TankEntity
+	Position     Position
+	PrevPosition Position // Позиция на начало тика: от неё мир коллизий ведёт пулю
+	Size         Size
+	Altitude     Altitude
+	Image        IImageProvider
+	Direction    Direction
+	specs        *SpecsEntity // Спецификации танка, из которого выпущена пуля
+	owner        *TankEntity
 }
 
 func (b *BulletEntity) GetImageID() (string, error) {
@@ -28,6 +29,11 @@ func (b *BulletEntity) GetSize() Size {
 
 func (b *BulletEntity) GetPosition() Position {
 	return b.Position
+}
+
+// GetPrevPosition реализует IMover
+func (b *BulletEntity) GetPrevPosition() Position {
+	return b.PrevPosition
 }
 
 func (b *BulletEntity) GetAltitude() Altitude {
@@ -69,12 +75,13 @@ func NewBulletEntity(
 	owner *TankEntity,
 ) *BulletEntity {
 	return &BulletEntity{
-		Position:  position,
-		Size:      size,
-		Altitude:  altitude,
-		Image:     image,
-		Direction: direction,
-		specs:     specs,
-		owner:     owner,
+		Position:     position,
+		PrevPosition: position,
+		Size:         size,
+		Altitude:     altitude,
+		Image:        image,
+		Direction:    direction,
+		specs:        specs,
+		owner:        owner,
 	}
 }

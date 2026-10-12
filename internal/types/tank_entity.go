@@ -193,6 +193,11 @@ func (t *TankEntity) GetPosition() Position {
 	return t.Position
 }
 
+// GetPrevPosition реализует IMover
+func (t *TankEntity) GetPrevPosition() Position {
+	return t.PrevPosition
+}
+
 func (t *TankEntity) GetAltitude() Altitude {
 	if t.State == TankStateExploding {
 		return AIR
